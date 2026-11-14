@@ -79,9 +79,18 @@ solo (UPnP); si tu router no lo permite:
 
 ### Tu progreso
 
-Tus partidas, victorias y puntos se guardan **en tu PC** (`%APPDATA%\CrimeSightRevival`). Cuando juegas en
-el servidor de un amigo, tu progreso se junta con el suyo al entrar y vuelve a tu PC al salir: nunca se
-duplica ni se pierde nada.
+Tus partidas, victorias y puntos se guardan **en tu PC** (`%APPDATA%\CrimeSightRevival`), no en la carpeta
+del juego: aunque lo desinstales o reinstales, no pierdes nada. Cuando juegas en el servidor de un amigo,
+tu progreso se junta con el suyo al entrar y vuelve a tu PC al salir: nunca se duplica ni se pierde nada.
+
+Con el botón **«Tu progreso»** del lanzador puedes:
+
+- **Exportarlo / importarlo** en un archivo `.csrsave` para llevarlo a otro PC. Importar solo suma las
+  partidas que falten, así que nunca duplica nada.
+- Activar la **copia automática** en una carpeta de OneDrive, Google Drive o Dropbox: se guarda una copia
+  al terminar cada sesión y, en otro PC, tu progreso vuelve solo al elegir la misma carpeta.
+
+Steam Cloud no se usa porque el espacio en la nube de cada juego lo controla su editora.
 
 ## Qué funciona
 

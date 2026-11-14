@@ -4,7 +4,7 @@ CRIMESIGHT Revival - lanzador con interfaz grafica (HTML con pywebview / WebView
 Si el equipo no tiene WebView2 o pywebview falla, se abre la interfaz sencilla (app.py).
 Este proyecto solo ofrece la herramienta; no gestiona ni aloja servidores.
 """
-import json, logging, os, sys, threading, traceback, webbrowser
+import json, logging, os, re, sys, threading, traceback, webbrowser
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -17,6 +17,10 @@ from i18n import t  # noqa: E402
 from version import VERSION  # noqa: E402
 
 KOFI = "https://ko-fi.com/amrasmithandir95"
+SAVE_FILTER = "CRIMESIGHT Revival (*.csrsave)"
+ALL_FILTER = "All files (*.*)"
+# Tipos de dialogo de pywebview (iguales en 5.x y 6.x; los nombres antiguos estan obsoletos)
+DIALOGS = {"OPEN_DIALOG": 10, "FOLDER_DIALOG": 20, "SAVE_DIALOG": 30}
 
 UI_DIR = os.path.join(getattr(sys, "_MEIPASS", HERE), "ui")
 _window = None
@@ -55,9 +59,18 @@ class Api:
                 art.extract(gd, core.app_dir())
             except Exception:  # noqa: BLE001
                 logging.getLogger("crimesight").exception("No pude sacar las ilustraciones")
+        notice = t("notice_imported") if imported else None
+        try:
+            added = core.backup_now(self._cfg, self._steam[0])
+            if added:
+                notice = t("backup_restored", n=added)
+        except ValueError as e:
+            notice = str(e)
+        except Exception:  # noqa: BLE001
+            logging.getLogger("crimesight").exception("Fallo la copia automatica al arrancar")
         state = self._state()
-        if imported:
-            state["notice"] = t("notice_imported")
+        if notice:
+            state["notice"] = notice
         return state
 
     def _self_update(self):
@@ -82,7 +95,8 @@ class Api:
               "record": core.local_record(sid) if sid else {},
               "game_dir": self._cfg.get("game_dir"), "servers": self._cfg.get("servers", []),
               "port": self._cfg.get("port", core.DEFAULT_PORT), "last_friend": self._cfg.get("last_friend", ""),
-              "lang": i18n.get_lang(), "i18n": i18n.table(), "version": VERSION, "kofi": KOFI}
+              "lang": i18n.get_lang(), "i18n": i18n.table(), "version": VERSION, "kofi": KOFI,
+              "backup_dir": self._cfg.get("backup_dir", "")}
         if with_art:
             st["art"] = art.data_urls(core.app_dir())
         return st
@@ -123,9 +137,17 @@ class Api:
             logging.getLogger("crimesight").exception("Error en la sesion")
         finally:
             self._busy = False
+            self._auto_backup()
             self._update_lang()          # el juego pudo cambiar de idioma durante la partida
             js("state", self._state(with_art=False))
             js("busy", False)
+
+    def _auto_backup(self):
+        try:
+            if core.backup_now(self._cfg, self._steam[0]) is not None:
+                self.log(t("backup_saved"), "ok")
+        except Exception as e:  # noqa: BLE001
+            self.log(t("backup_failed", err=e), "err")
 
     def stop(self):
         self._cancel = True
@@ -150,11 +172,9 @@ class Api:
             webbrowser.open(url)
 
     def pick_game(self):
-        import webview
-        res = _window.create_file_dialog(webview.FOLDER_DIALOG)
-        if not res:
+        d = self._dialog("FOLDER_DIALOG")
+        if not d:
             return None
-        d = res[0] if isinstance(res, (list, tuple)) else res
         if not core.is_game_dir(d):
             js("error", t("err_bad_folder"))
             return None
@@ -175,6 +195,75 @@ class Api:
         if not gd:
             return None
         return t("restored") if core.restore_game(gd) else t("already_original")
+
+    # ---------------------------------------------------------------- progreso
+    def _dialog(self, kind, **kw):
+        res = _window.create_file_dialog(DIALOGS[kind], **kw)
+        if not res:
+            return None
+        return res[0] if isinstance(res, (list, tuple)) else res
+
+    def _need_account(self):
+        if not self._steam[0]:
+            self._steam = core.steam_account()
+        if self._busy:
+            return t("err_finish_first")
+        if not self._steam[0]:
+            return t("err_no_steam")
+        return None
+
+    def export_progress(self):
+        err = self._need_account()
+        if err:
+            return {"msg": err}
+        name = re.sub(r"[^\w.-]+", "_", self._steam[1] or "") or str(self._steam[0])
+        path = self._dialog("SAVE_DIALOG", save_filename=f"CrimeSightRevival_{name}{core.SAVE_EXT}",
+                            file_types=(SAVE_FILTER,))
+        if not path:
+            return None
+        if not path.lower().endswith(core.SAVE_EXT):
+            path += core.SAVE_EXT
+        try:
+            core.export_save(self._steam[0], path)
+        except (OSError, ValueError) as e:
+            return {"msg": t("err_save_write", err=e)}
+        return {"msg": t("exported", path=path)}
+
+    def import_progress(self):
+        err = self._need_account()
+        if err:
+            return {"msg": err}
+        path = self._dialog("OPEN_DIALOG", file_types=(SAVE_FILTER, ALL_FILTER))
+        if not path:
+            return None
+        try:
+            added = core.import_save(self._steam[0], path)
+        except ValueError as e:
+            return {"msg": str(e)}
+        self._auto_backup()
+        msg = t("imported", n=added) if added else t("import_nothing")
+        return {"msg": msg, "state": self._state(with_art=False)}
+
+    def pick_backup(self):
+        err = self._need_account()
+        if err:
+            return {"msg": err}
+        folder = self._dialog("FOLDER_DIALOG")
+        if not folder:
+            return None
+        self._cfg["backup_dir"] = os.path.normpath(folder)
+        core.save_config(self._cfg)
+        try:
+            added = core.backup_now(self._cfg, self._steam[0])
+        except (OSError, ValueError) as e:
+            return {"msg": t("backup_failed", err=e), "state": self._state(with_art=False)}
+        msg = t("backup_restored", n=added) if added else t("backup_set")
+        return {"msg": msg, "state": self._state(with_art=False)}
+
+    def clear_backup(self):
+        self._cfg.pop("backup_dir", None)
+        core.save_config(self._cfg)
+        return {"msg": t("backup_removed"), "state": self._state(with_art=False)}
 
     def save_server(self, name, address, password):
         name = (name or address or "").strip()

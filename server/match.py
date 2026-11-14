@@ -42,6 +42,7 @@ ROLE_KEY = {ROLE_DETECTIVE: "detective", ROLE_CRIMINAL: "criminal", ROLE_IRENE: 
 INSTRUCT_TARGET = 5          # Pawn.InstructData.InstructType.TARGET -> "Asalto" de Moriarty
 INSTRUCT_SEARCH = 3          # buscar en un mueble: el servidor decide que objeto aparece
 INSTRUCT_PICK = 7            # recoger un objeto del suelo
+FOOD_OPEN_COUNT = 2          # MatchSettings.foodOpenCount: comida que ven los que no son Moriarty
 DEFAULT_PAWNS = 6            # personajes por partida (la mansion tiene 6 sospechosos)
 COUNTDOWN_SECONDS = 3
 DEFAULT_AI_DIFFICULTY = "normal"   # se puede cambiar con --ai-difficulty
@@ -293,6 +294,13 @@ class Hub:
 
 
 # ------------------------------------------------------------------ sala / partida
+def same_order(a, b):
+    """Dos ordenes que hacen lo mismo (Pawn.CheckInstructAllSame)."""
+    keys = ("type", "grid", "targetId")
+    return all(int(a.get(k, -1) if a.get(k) is not None else -1) == int(b.get(k, -1) if b.get(k) is not None else -1)
+               for k in keys)
+
+
 class Room:
     def __init__(self, hub, rid, owner):
         self.hub, self.id = hub, rid
@@ -312,7 +320,8 @@ class Room:
         self.countdown_task = None
         self.created = time.time()
         self.bot_seq = 0
-        self.item_deck = []        # indices de la lista de objetos de la partida aun sin encontrar
+        self.object_items = {}     # mueble (cottage id) -> objeto que contiene (se reparte al empezar)
+        self.food_items, self.weapon_items = set(), set()
         self.searched = {}         # mueble (cottage id) -> objeto que salio
         self.drops = {}            # objeto en el suelo (cottage id) -> indice de objeto
         self.disabled_objects = set()
@@ -476,6 +485,10 @@ class Room:
 
     async def control(self, cmd, data=None):
         await self.hub.emit(self.topic, {"Control": {cmd: data}}, var=self.vars)
+
+    async def control_to(self, pids, cmd, data=None):
+        """Como control(), pero solo para esos jugadores."""
+        await self.hub.emit(self.topic, {"Control": {cmd: data}}, var=self.vars, eligible=set(pids))
 
     def humans(self):
         return [pid for pid in self.members if pid in self.sessions and not self.sessions[pid].ws.closed]
@@ -656,16 +669,44 @@ class Room:
         self.match_data = ad or {}
         if self.phase != "playing" and not self.pending.get("prepare"):
             self.hazard_prob = {}
-        if not self.item_deck and not self.searched:
-            n = int(self.match_data.get("matchItemCount", 42) or 42)
-            self.item_deck = list(range(n))
-            random.shuffle(self.item_deck)
+        if not self.object_items and not self.searched:
+            self.deal_items()
         self.pending.setdefault("prepare", {})[sess.player_id] = True
         if self._complete("prepare"):
             self.pending.pop("prepare", None)
             self.phase = "playing"
-            await self.control("RoleData", {"weaponList": [], "foodList": []})
+            # Cada jugador recibe lo que sabe su papel (GameManager.SelectOpenWeapon/SelectOpenFood)
+            for pid in self.humans():
+                await self.control_to([pid], "RoleData", self.role_data(pid))
         return rc({})
+
+    def deal_items(self):
+        """Reparte los objetos de la partida entre los muebles, como el servidor original.
+        Los indices siguen ItemManager.CreateMatchItemList en linea: primero la comida, luego
+        las armas y despues el resto (pizarras, bocetos, notas, pociones, sprays). Hay un mueble
+        por objeto (MatchSettings.GetNeedSearchObjectCount)."""
+        md = self.match_data or {}
+        n = int(md.get("matchItemCount", 42) or 42)
+        food = int(md.get("foodCount", 17) or 0)
+        weapons = int(md.get("weaponCount", 15) or 0)
+        items = list(range(n))
+        random.shuffle(items)
+        self.object_items = dict(enumerate(items))
+        self.food_items = set(range(food))
+        self.weapon_items = set(range(food, food + weapons))
+        log.info("Sala %s: %s objetos repartidos (%s comida, %s armas)", self.id, n, food, weapons)
+
+    def objects_with(self, items):
+        """Muebles aun sin registrar que contienen alguno de esos objetos."""
+        return sorted(o for o, i in self.object_items.items() if i in items and o not in self.searched)
+
+    def role_data(self, pid):
+        """Lo que sabe cada papel al empezar: todas las armas (el cliente solo se las ensena a
+        Moriarty) y la comida: Moriarty toda, los demas solo unas pocas."""
+        foods = self.objects_with(self.food_items)
+        if self.members.get(pid, {}).get("role") != ROLE_CRIMINAL:
+            foods = sorted(random.sample(foods, min(FOOD_OPEN_COUNT, len(foods))))
+        return {"weaponList": self.objects_with(self.weapon_items), "foodList": foods}
 
     # ---- fases de turno
     def _store(self, phase, sess, p):
@@ -798,6 +839,7 @@ class Room:
             return
         gone = set(self.searched) | self.disabled_objects
         views = {"moriarty": ai.View(ref, gone), "sherlock": ai.View(ref, gone)}   # cada bando, lo suyo
+        views["moriarty"].weapon_objects = set(self.objects_with(self.weapon_items))
         self.last_view = view = views["sherlock"]
         rng = random.Random()
         det_players = self.players_by_role([ROLE_DETECTIVE])
@@ -828,17 +870,22 @@ class Room:
                      m["difficulty"], [(o["pawnId"], o["type"], o["grid"], o["targetId"]) for o in orders])
 
     def build_action_data(self, payloads):
-        """Junta las ordenes de todos. Si Moriarty y Sherlock mueven el mismo peon, gana Moriarty."""
-        by_pawn, from_criminal, kill = {}, set(), False
+        """Junta las ordenes de todos. Si varios ordenan al mismo personaje: Moriarty gana a todos,
+        Irene a Sherlock/Watson y entre los demas se sortea. Si Moriarty pisa una orden distinta de
+        Sherlock/Watson, la orden va marcada (isBatting) y el bando de Sherlock lo detecta.
+        Los personajes que nadie ha ordenado actuan por su cuenta (en linea lo decide el servidor)."""
+        by_pawn, from_criminal, from_detective, kill = {}, set(), {}, False
         criminals = set(self.players_by_role([ROLE_CRIMINAL]))
         payloads = dict(payloads)
         for bot, orders in (getattr(self, "bot_orders", None) or {}).items():
             if orders:
                 payloads[bot] = {"payload": {"list": orders}}
         self.bot_orders = {}
+        rank = {ROLE_IRENE: 1, ROLE_CRIMINAL: 2}
         order = list(payloads)
-        random.shuffle(order)       # Sherlock/Watson/Irene en conflicto: se sortea
-        for pid in sorted(order, key=lambda x: x in criminals):  # Moriarty al final: siempre gana
+        random.shuffle(order)
+        for pid in sorted(order, key=lambda x: rank.get(self.members.get(x, {}).get("role"), 0)):
+            role = self.members.get(pid, {}).get("role")
             pl = payloads[pid].get("payload")
             if isinstance(pl, str):
                 try:
@@ -848,12 +895,23 @@ class Room:
             for item in (pl or {}).get("list", []) or []:
                 if not isinstance(item, dict) or "pawnId" not in item:
                     continue
-                by_pawn[int(item["pawnId"])] = item
+                pawn = int(item["pawnId"])
+                by_pawn[pawn] = item
+                if role in (ROLE_DETECTIVE, ROLE_WATSON):
+                    from_detective.setdefault(pawn, item)
                 if pid in criminals:
-                    from_criminal.add(int(item["pawnId"]))
+                    from_criminal.add(pawn)
                     if int(item.get("type", 0)) == INSTRUCT_TARGET:
                         kill = True
-        commands = [self.resolve_item(by_pawn[k]) for k in sorted(by_pawn)]
+        commands = []
+        for k in sorted(by_pawn):
+            c = self.resolve_item(by_pawn[k])
+            det = from_detective.get(k)
+            c["isBatting"] = bool(k in from_criminal and det is not None and not same_order(det, by_pawn[k]))
+            if c["isBatting"]:
+                log.info("Sala %s turno %s: Moriarty pisa la orden de Sherlock sobre %s", self.id, self.turn, k)
+            commands.append(c)
+        commands += self.npc_orders(by_pawn)
         threat_i, gas_i = self.roll_hazard("threat"), self.roll_hazard("gaspipe")
         self.assault = kill
         data = {}
@@ -869,6 +927,25 @@ class Room:
                 d.update({"killer": self.killer, "target": self.target})
             data[key] = d
         return data
+
+    def npc_orders(self, by_pawn):
+        """Pawn.RunNpcAction: quien no recibe ordenes registra algo cercano o da un paseo."""
+        ref = self.turn_ref or {}
+        if not ref.get("pawns"):
+            return []
+        busy = {int(c.get("targetId", -1)) for c in by_pawn.values() if int(c.get("type", 0)) == INSTRUCT_SEARCH}
+        view = ai.View(ref, set(self.searched) | self.disabled_objects | busy)
+        rng, out = random.Random(), []
+        for pid in view.ids():
+            if pid in by_pawn or pid >= self.pawn_count:
+                continue
+            o = ai.npc_order(view, pid, rng)
+            if o:
+                out.append(dict(self.resolve_item(o), isBatting=False))
+        if out:
+            log.info("Sala %s turno %s: actuan por su cuenta %s", self.id, self.turn,
+                     [(o["pawnId"], o["type"], o["grid"], o["targetId"]) for o in out])
+        return out
 
     def roll_hazard(self, kind):
         """Aparicion de perros/amenazas y escapes de gas, con las mismas reglas que el cliente offline:
@@ -909,9 +986,10 @@ class Room:
         target = int(c.get("targetId", -1))
         if kind == INSTRUCT_SEARCH and target >= 0:
             if target not in self.searched:
-                self.searched[target] = self.item_deck.pop() if self.item_deck else -1
-                log.info("Sala %s: mueble %s -> objeto %s (%s restantes)", self.id, target,
-                         self.searched[target], len(self.item_deck))
+                self.searched[target] = self.object_items.get(target, -1)
+                log.info("Sala %s: mueble %s -> objeto %s (%s)", self.id, target, self.searched[target],
+                         "arma" if self.searched[target] in self.weapon_items else
+                         "comida" if self.searched[target] in self.food_items else "otro")
                 c["itemId"] = self.searched[target]
             else:
                 c["itemId"] = -1   # ya registrado: no queda nada
@@ -1041,7 +1119,8 @@ class Room:
     async def p_Rematch(self, sess, p):
         self.phase = "lobby"
         self.killer = self.target = -1
-        self.item_deck, self.searched, self.drops = [], {}, {}
+        self.object_items, self.searched, self.drops = {}, {}, {}
+        self.disabled_objects = set()
         self.recorded, self.hazard_prob = False, {}
         self.vars["random_seed"] = random.randint(1, 2**31 - 1)
         await self.control("Rematch", {"RandomSeed": "random_seed"})

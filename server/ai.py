@@ -16,7 +16,10 @@ Reglas (guias de la comunidad + codigo del cliente):
   actue el ultimo y vaya directo a por la victima; si falla, ambos quedan al
   descubierto.
 - Watson (bando Sherlock) e Irene (bando Moriarty) dan 1 orden cada uno. Irene no puede
-  asaltar ni dar ordenes a la victima. Los conflictos entre ellos y Sherlock se sortean.
+  asaltar ni dar ordenes a la victima. Irene gana a Sherlock/Watson sin dejar rastro; si
+  Moriarty pisa una orden distinta de Sherlock/Watson, se nota (isBatting).
+- El bando de Moriarty sabe en que muebles hay armas desde el principio.
+- Los personajes sin ordenes actuan por su cuenta (en linea lo decide el servidor).
 - Peligros: los escapes de gas hieren a quien acabe el turno en esa habitacion; los perros
   salvajes atacan a los personajes cercanos (algunas amenazas cuentan como testigo).
 """
@@ -63,6 +66,7 @@ class View:
         self.turn = int(ref.get("turn", 1))
         self.pawns = {int(p["pawnId"]): p for p in ref.get("pawns", []) if isinstance(p, dict)}
         self.unavailable = set(unavailable_objects)
+        self.weapon_objects = set()     # muebles con arma (solo lo sabe el bando de Moriarty)
         self.threats = [t for t in ref.get("threatList") or [] if isinstance(t, dict) and not t.get("isDie")]
         self.gas_rooms = {g.get("roomId") for g in ref.get("gaspipeList") or [] if isinstance(g, dict)}
 
@@ -149,6 +153,34 @@ def search_or_move(view, idx, pid, grids, rng, prefer=None):
     return order(view, idx, pid, MOVE, g)
 
 
+def seek_weapon(view, idx, pid, grids, rng, prefer=None):
+    """Registrar un mueble que se sabe que tiene un arma, si hay alguno a mano."""
+    options = [(g, o) for g in grids for o in view.searchable(g) if o in view.weapon_objects]
+    if not options:
+        return None
+    options.sort(key=lambda go: (view.danger(go[0]), view.dist(go[0], prefer) if prefer is not None else 0,
+                                 rng.random()))
+    g, o = options[0]
+    return order(view, idx, pid, SEARCH, g, o)
+
+
+NPC_SEARCH_PROB = 0.5
+
+
+def npc_order(view, pid, rng):
+    """Pawn.RunNpcAction: sin ordenes, el personaje registra algo a su alcance andando o se
+    mueve a una casilla cercana (a veces se queda donde esta)."""
+    grids = [g for g in view.grids(pid) if view.self_dist(pid, g) <= WALK_RANGE]
+    if not grids:
+        return None
+    if rng.random() < NPC_SEARCH_PROB:
+        options = [(g, o) for g in grids for o in view.searchable(g)]
+        if options:
+            g, o = rng.choice(options)
+            return order(view, -1, pid, SEARCH, g, o)
+    return order(view, -1, pid, MOVE, rng.choice(grids))
+
+
 def away_from(view, pid, other):
     """Casilla alcanzable por pid lo mas lejos posible de 'other' (sin meterse en peligro si se puede)."""
     return max(view.grids(pid), key=lambda g: (view.dist(g, other) - 2 * view.danger(g), view.dist(g, other)))
@@ -192,7 +224,8 @@ def plan_moriarty(view, idx, killer, target, n_orders, difficulty, rng, taken=()
         if difficulty == "easy":
             o = search_or_move(view, idx, killer, kgrids, rng)
         elif not armed:
-            o = search_or_move(view, idx, killer, kgrids, rng, prefer=target)
+            o = seek_weapon(view, idx, killer, kgrids, rng, prefer=target) or \
+                search_or_move(view, idx, killer, kgrids, rng, prefer=target)
         else:
             want = 2 if difficulty == "hard" else 1
             g = min(kgrids, key=lambda g: (abs(view.dist(g, target) - want), view.danger(g), rng.random()))
@@ -284,7 +317,8 @@ def plan_irene(view, idx, killer, target, difficulty, rng, taken=()):
         return [order(view, idx, w, MOVE, away_from(view, w, target))]
     k = view.pawns.get(killer, {})
     if killer not in used and view.grids(killer) and not k.get("isHaveWeapon"):
-        o = search_or_move(view, idx, killer, view.grids(killer), rng, prefer=target)
+        o = (seek_weapon(view, idx, killer, view.grids(killer), rng, prefer=target) if difficulty != "easy" else None) \
+            or search_or_move(view, idx, killer, view.grids(killer), rng, prefer=target)
         return [o] if o else []
     pool = [q for q in view.ids() if q not in used and q != killer and view.grids(q)]
     if not pool:

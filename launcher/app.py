@@ -16,6 +16,7 @@ from tkinter import filedialog, messagebox, ttk
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import core  # noqa: E402
 import sessions  # noqa: E402
+from i18n import t  # noqa: E402
 
 TITLE = "CRIMESIGHT Revival"
 
@@ -64,6 +65,8 @@ class App:
         self.btn_stop = ttk.Button(bottom, text="Terminar sesión", command=self.stop, state="disabled")
         self.btn_stop.pack(side="left")
         ttk.Button(bottom, text="Dejar el juego original", command=self.restore).pack(side="right")
+        ttk.Button(bottom, text=t("import_btn") + "…", command=self.import_progress).pack(side="right", padx=4)
+        ttk.Button(bottom, text=t("export_btn") + "…", command=self.export_progress).pack(side="right")
 
         self.log_box = tk.Text(root, height=12, wrap="word", state="disabled")
         self.log_box.pack(fill="both", expand=True, **pad)
@@ -71,6 +74,7 @@ class App:
         if not self.cfg.get("game_dir") or not core.is_game_dir(self.cfg.get("game_dir")):
             self.cfg["game_dir"] = core.find_game()
             core.save_config(self.cfg)
+        self.auto_backup()
         self.refresh_header()
         if imported:
             self.log(f"He traído tus partidas de la versión anterior ({imported}).")
@@ -226,6 +230,45 @@ class App:
         else:
             self.log("El juego ya estaba en su estado original.")
 
+    # ---------------------------------------------------------------- progreso
+    def auto_backup(self):
+        try:
+            added = core.backup_now(self.cfg, self.steam_id)
+            if added:
+                self.log(t("backup_restored", n=added))
+        except Exception as e:  # noqa: BLE001
+            self.log(t("backup_failed", err=e))
+
+    def export_progress(self):
+        if self.busy or not self.steam_id:
+            return
+        path = filedialog.asksaveasfilename(title=t("export_btn"), defaultextension=core.SAVE_EXT,
+                                            initialfile=f"CrimeSightRevival_{self.steam_id}{core.SAVE_EXT}",
+                                            filetypes=[("CRIMESIGHT Revival", "*" + core.SAVE_EXT)])
+        if not path:
+            return
+        try:
+            core.export_save(self.steam_id, path)
+            self.log(t("exported", path=path))
+        except (OSError, ValueError) as e:
+            messagebox.showerror(TITLE, t("err_save_write", err=e))
+
+    def import_progress(self):
+        if self.busy or not self.steam_id:
+            return
+        path = filedialog.askopenfilename(title=t("import_btn"),
+                                          filetypes=[("CRIMESIGHT Revival", "*" + core.SAVE_EXT), ("*", "*.*")])
+        if not path:
+            return
+        try:
+            added = core.import_save(self.steam_id, path)
+        except ValueError as e:
+            messagebox.showerror(TITLE, str(e))
+            return
+        self.auto_backup()
+        self.log(t("imported", n=added) if added else t("import_nothing"))
+        self.refresh_header()
+
     def stop(self):
         self.cancel = True
         self.log("Terminando la sesión…")
@@ -263,6 +306,7 @@ class App:
                 self.log("✗ Error inesperado:\n" + traceback.format_exc())
                 self.q.put(("error", f"Error inesperado: {e}"))
             finally:
+                self.auto_backup()
                 self.q.put(("idle", None))
         threading.Thread(target=work, daemon=True).start()
 

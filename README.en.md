@@ -78,9 +78,19 @@ itself (UPnP); if your router doesn't allow it:
 
 ### Your progress
 
-Your matches, wins and points are saved **on your PC** (`%APPDATA%\CrimeSightRevival`). When you play on
-a friend's server, your progress is merged with theirs when you join and comes back to your PC when you
-leave: nothing is ever duplicated or lost.
+Your matches, wins and points are saved **on your PC** (`%APPDATA%\CrimeSightRevival`), not in the game
+folder: even if you uninstall or reinstall the game, you lose nothing. When you play on a friend's server,
+your progress is merged with theirs when you join and comes back to your PC when you leave: nothing is
+ever duplicated or lost.
+
+With the launcher's **"Your progress"** button you can:
+
+- **Export / import** it as a `.csrsave` file to take it to another PC. Importing only adds the matches
+  you're missing, so nothing is ever duplicated.
+- Turn on **automatic backup** to a OneDrive, Google Drive or Dropbox folder: a copy is saved after every
+  session and, on another PC, your progress comes back by itself when you choose the same folder.
+
+Steam Cloud isn't used, because each game's cloud storage is controlled by its publisher.
 
 ## What works
 

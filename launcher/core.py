@@ -11,7 +11,7 @@ El progreso de cada jugador vive en SU PC (carpeta de datos del lanzador). Los s
 otros solo lo tienen prestado: al entrar se sube, al salir se traen las partidas nuevas, y las
 dos copias se juntan sumando partidas (cada una tiene un id unico, nunca se duplican).
 """
-import json, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
+import json, logging, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
 
 from i18n import t
 
@@ -331,16 +331,22 @@ def server_info(url, timeout=6):
         raise ValueError(t("err_unreachable", url=url, reason=e.reason))
 
 
-def sync_profile(url, steam_id, password=""):
-    """Sube el perfil local, recibe el del servidor ya juntado y lo junta aqui. Devuelve el registro."""
-    import server, stats
-    st = _store()
+def _local_user(st, steam_id):
+    """El perfil local de esa cuenta de Steam (lo crea si aun no ha jugado)."""
+    import server
     pid, token = server.derived_ids(3, steam_id)
     user = st.db["users"].setdefault(pid, {"name": "", "progress": 0, "tutorial_step": 0, "config": {},
                                            "created": int(time.time())})
-    key = f"3:{steam_id}"
-    st.db["accounts"].setdefault(key, {"player_id": pid, "token": token, "platform": 3,
-                                       "platform_id": steam_id, "country": ""})
+    st.db["accounts"].setdefault(f"3:{steam_id}", {"player_id": pid, "token": token, "platform": 3,
+                                                  "platform_id": steam_id, "country": ""})
+    return user
+
+
+def sync_profile(url, steam_id, password=""):
+    """Sube el perfil local, recibe el del servidor ya juntado y lo junta aqui. Devuelve el registro."""
+    import stats
+    st = _store()
+    user = _local_user(st, steam_id)
     body = json.dumps({"platform": 3, "platform_id": steam_id, "password": password,
                        "profile": stats.export_profile(user)}).encode()
     req = urllib.request.Request(url + "/revival/sync", body, {"Content-Type": "application/json"})
@@ -356,6 +362,82 @@ def sync_profile(url, steam_id, password=""):
     stats.merge_into(user, remote.get("profile") or {})
     st.save()
     return local_record(steam_id)
+
+
+# ------------------------------------------------------------------ copias del progreso
+SAVE_FORMAT = "crimesight-revival-save"
+SAVE_EXT = ".csrsave"
+
+
+def _write_json(path, data):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+    os.replace(tmp, path)
+
+
+def export_save(steam_id, path):
+    """Guarda todo el progreso de esa cuenta en un archivo que el jugador se puede llevar."""
+    import stats
+    if not steam_id:
+        raise ValueError(t("err_no_steam"))
+    st = _store()
+    user = _local_user(st, steam_id)
+    _write_json(path, {"format": SAVE_FORMAT, "version": 1, "steam_id": str(steam_id),
+                       "exported": int(time.time()), "profile": stats.export_profile(user)})
+    return path
+
+
+def _read_save(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        raise ValueError(t("err_save_bad"))
+    if not isinstance(data, dict) or data.get("format") != SAVE_FORMAT or not isinstance(data.get("profile"), dict):
+        raise ValueError(t("err_save_bad"))
+    return data
+
+
+def import_save(steam_id, path):
+    """Junta un archivo de progreso con el local. Solo suma: nunca duplica ni borra partidas.
+    Devuelve cuantas partidas nuevas trajo."""
+    import stats
+    if not steam_id:
+        raise ValueError(t("err_no_steam"))
+    data = _read_save(path)
+    if str(data.get("steam_id", steam_id)) != str(steam_id):
+        raise ValueError(t("err_save_other"))
+    st = _store()
+    user = _local_user(st, steam_id)
+    before = len(user.get("history") or [])
+    stats.merge_into(user, data["profile"])
+    st.save()
+    return len(user.get("history") or []) - before
+
+
+def backup_path(folder, steam_id):
+    return os.path.join(folder, f"CrimeSightRevival_{steam_id}{SAVE_EXT}")
+
+
+def backup_now(cfg, steam_id):
+    """Copia automatica en la carpeta que eligio el jugador (OneDrive, Google Drive...).
+    Primero recoge lo que haya dejado ahi otro PC y luego escribe la copia juntada.
+    Devuelve las partidas nuevas que trajo, o None si no hay carpeta elegida."""
+    folder = cfg.get("backup_dir")
+    if not folder or not steam_id:
+        return None
+    if not os.path.isdir(folder):
+        raise ValueError(t("err_backup_missing", path=folder))
+    path = backup_path(folder, steam_id)
+    added = 0
+    if os.path.isfile(path):
+        try:
+            added = import_save(steam_id, path)
+        except ValueError:
+            logging.getLogger("crimesight").warning("Copia de seguridad ilegible, se sobrescribe: %s", path)
+    export_save(steam_id, path)
+    return added
 
 
 def public_ip():

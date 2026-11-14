@@ -23,6 +23,7 @@ def _add(lang, **kw):
 
 
 _add("en",
+     progress_btn='Your progress', progress_title='Your progress', progress_desc='Your matches, wins and points are saved on this PC. You can take them to another PC or keep a copy so you never lose them.', export_btn='Export to a file', import_btn='Import a file', backup_label='Automatic backup', backup_off='Off', backup_pick='Choose folder', backup_remove='Turn off', backup_hint='Tip: choose your OneDrive, Google Drive or Dropbox folder. A copy is saved after every session, and on another PC your progress comes back by itself when you choose the same folder.', close='Close', exported='Progress saved to {path}', imported='Done: {n} new matches added to your progress.', import_nothing="That file had no matches you didn't already have.", err_save_bad="That file isn't a CRIMESIGHT Revival progress file.", err_save_other='That file belongs to another Steam account.', err_save_write="Couldn't save the file ({err}).", backup_set='Automatic backup turned on.', backup_removed='Automatic backup turned off.', backup_restored='Progress recovered from your backup: {n} new matches.', backup_saved='Progress backed up.', backup_failed="Couldn't make the backup ({err}).", err_backup_missing='Backup folder not found: {path}',
      updating='Updating the launcher to version {v}…', update_failed="Couldn't update ({err}); using the current version.", kofi='Support me on Ko-fi',
      loading="Preparing the launcher…",
      tagline="Community server for people who already own the game · no Konami files included",
@@ -73,6 +74,7 @@ _add("en",
      ev_gas="A gas leak appears", ev_synced="Profile synced")
 
 _add("es",
+     progress_btn='Tu progreso', progress_title='Tu progreso', progress_desc='Tus partidas, victorias y puntos se guardan en este PC. Puedes llevártelos a otro PC o guardar una copia para no perderlos nunca.', export_btn='Exportar a un archivo', import_btn='Importar un archivo', backup_label='Copia automática', backup_off='Desactivada', backup_pick='Elegir carpeta', backup_remove='Desactivar', backup_hint='Consejo: elige tu carpeta de OneDrive, Google Drive o Dropbox. Se guarda una copia al terminar cada sesión, y en otro PC tu progreso vuelve solo al elegir la misma carpeta.', close='Cerrar', exported='Progreso guardado en {path}', imported='Hecho: {n} partidas nuevas añadidas a tu progreso.', import_nothing='Ese archivo no tenía partidas que no tuvieras ya.', err_save_bad='Ese archivo no es un progreso de CRIMESIGHT Revival.', err_save_other='Ese archivo es de otra cuenta de Steam.', err_save_write='No se pudo guardar el archivo ({err}).', backup_set='Copia automática activada.', backup_removed='Copia automática desactivada.', backup_restored='Progreso recuperado de tu copia: {n} partidas nuevas.', backup_saved='Copia del progreso guardada.', backup_failed='No se pudo hacer la copia ({err}).', err_backup_missing='No encuentro la carpeta de copia: {path}',
      updating='Actualizando el lanzador a la versión {v}…', update_failed='No se pudo actualizar ({err}); sigo con la versión actual.', kofi='Apóyame en Ko-fi',
      loading="Preparando el lanzador…",
      tagline="Servidor comunitario para quien ya tiene el juego · sin archivos de Konami",
@@ -123,6 +125,7 @@ _add("es",
      ev_gas="Aparece un escape de gas", ev_synced="Perfil sincronizado")
 
 _add("fr",
+     progress_btn='Ta progression', progress_title='Ta progression', progress_desc='Tes parties, victoires et points sont enregistrés sur ce PC. Tu peux les emporter sur un autre PC ou garder une copie pour ne jamais les perdre.', export_btn='Exporter dans un fichier', import_btn='Importer un fichier', backup_label='Sauvegarde automatique', backup_off='Désactivée', backup_pick='Choisir un dossier', backup_remove='Désactiver', backup_hint='Astuce : choisis ton dossier OneDrive, Google Drive ou Dropbox. Une copie est faite après chaque session, et sur un autre PC ta progression revient toute seule en choisissant le même dossier.', close='Fermer', exported='Progression enregistrée dans {path}', imported='Terminé : {n} nouvelles parties ajoutées à ta progression.', import_nothing="Ce fichier ne contenait aucune partie que tu n'avais pas déjà.", err_save_bad="Ce fichier n'est pas une progression CRIMESIGHT Revival.", err_save_other='Ce fichier appartient à un autre compte Steam.', err_save_write="Impossible d'enregistrer le fichier ({err}).", backup_set='Sauvegarde automatique activée.', backup_removed='Sauvegarde automatique désactivée.', backup_restored='Progression récupérée depuis ta sauvegarde : {n} nouvelles parties.', backup_saved='Progression sauvegardée.', backup_failed='Impossible de faire la sauvegarde ({err}).', err_backup_missing='Dossier de sauvegarde introuvable : {path}',
      updating='Mise à jour du lanceur vers la version {v}…', update_failed='Mise à jour impossible ({err}) ; la version actuelle est conservée.', kofi='Soutenez-moi sur Ko-fi',
      loading="Préparation du lanceur…",
      tagline="Serveur communautaire pour ceux qui possèdent déjà le jeu · aucun fichier de Konami",
@@ -173,6 +176,7 @@ _add("fr",
      ev_gas="Une fuite de gaz apparaît", ev_synced="Profil synchronisé")
 
 _add("it",
+     progress_btn='I tuoi progressi', progress_title='I tuoi progressi', progress_desc='Le tue partite, vittorie e punti sono salvati su questo PC. Puoi portarli su un altro PC o tenerne una copia per non perderli mai.', export_btn='Esporta in un file', import_btn='Importa un file', backup_label='Backup automatico', backup_off='Disattivato', backup_pick='Scegli cartella', backup_remove='Disattiva', backup_hint='Consiglio: scegli la tua cartella di OneDrive, Google Drive o Dropbox. Viene salvata una copia alla fine di ogni sessione e, su un altro PC, i progressi tornano da soli scegliendo la stessa cartella.', close='Chiudi', exported='Progressi salvati in {path}', imported='Fatto: {n} nuove partite aggiunte ai tuoi progressi.', import_nothing='Quel file non conteneva partite che non avessi già.', err_save_bad='Quel file non è un salvataggio di CRIMESIGHT Revival.', err_save_other='Quel file appartiene a un altro account Steam.', err_save_write='Impossibile salvare il file ({err}).', backup_set='Backup automatico attivato.', backup_removed='Backup automatico disattivato.', backup_restored='Progressi recuperati dal backup: {n} nuove partite.', backup_saved='Backup dei progressi salvato.', backup_failed='Impossibile fare il backup ({err}).', err_backup_missing='Cartella di backup non trovata: {path}',
      updating='Aggiornamento del launcher alla versione {v}…', update_failed='Impossibile aggiornare ({err}); continuo con la versione attuale.', kofi='Sostienimi su Ko-fi',
      loading="Preparazione del launcher…",
      tagline="Server della community per chi possiede già il gioco · nessun file di Konami",
@@ -223,6 +227,7 @@ _add("it",
      ev_gas="Appare una fuga di gas", ev_synced="Profilo sincronizzato")
 
 _add("de",
+     progress_btn='Dein Fortschritt', progress_title='Dein Fortschritt', progress_desc='Deine Partien, Siege und Punkte werden auf diesem PC gespeichert. Du kannst sie auf einen anderen PC mitnehmen oder eine Kopie behalten, damit nichts verloren geht.', export_btn='In Datei exportieren', import_btn='Datei importieren', backup_label='Automatische Sicherung', backup_off='Aus', backup_pick='Ordner wählen', backup_remove='Ausschalten', backup_hint='Tipp: Wähle deinen OneDrive-, Google-Drive- oder Dropbox-Ordner. Nach jeder Sitzung wird eine Kopie gespeichert, und auf einem anderen PC kommt dein Fortschritt von selbst zurück, wenn du denselben Ordner wählst.', close='Schließen', exported='Fortschritt gespeichert unter {path}', imported='Fertig: {n} neue Partien zu deinem Fortschritt hinzugefügt.', import_nothing='Diese Datei enthielt keine Partien, die du nicht schon hattest.', err_save_bad='Diese Datei ist kein CRIMESIGHT-Revival-Fortschritt.', err_save_other='Diese Datei gehört zu einem anderen Steam-Konto.', err_save_write='Datei konnte nicht gespeichert werden ({err}).', backup_set='Automatische Sicherung eingeschaltet.', backup_removed='Automatische Sicherung ausgeschaltet.', backup_restored='Fortschritt aus deiner Sicherung wiederhergestellt: {n} neue Partien.', backup_saved='Fortschritt gesichert.', backup_failed='Sicherung fehlgeschlagen ({err}).', err_backup_missing='Sicherungsordner nicht gefunden: {path}',
      updating='Launcher wird auf Version {v} aktualisiert…', update_failed='Aktualisierung fehlgeschlagen ({err}); die aktuelle Version wird weiter verwendet.', kofi='Unterstütze mich auf Ko-fi',
      loading="Launcher wird vorbereitet…",
      tagline="Community-Server für alle, die das Spiel bereits besitzen · ohne Dateien von Konami",
@@ -273,6 +278,7 @@ _add("de",
      ev_gas="Ein Gasleck tritt auf", ev_synced="Profil synchronisiert")
 
 _add("pt",
+     progress_btn='Seu progresso', progress_title='Seu progresso', progress_desc='Suas partidas, vitórias e pontos ficam salvos neste PC. Você pode levá-los para outro PC ou guardar uma cópia para nunca perdê-los.', export_btn='Exportar para um arquivo', import_btn='Importar um arquivo', backup_label='Cópia automática', backup_off='Desativada', backup_pick='Escolher pasta', backup_remove='Desativar', backup_hint='Dica: escolha sua pasta do OneDrive, Google Drive ou Dropbox. Uma cópia é salva ao fim de cada sessão e, em outro PC, seu progresso volta sozinho ao escolher a mesma pasta.', close='Fechar', exported='Progresso salvo em {path}', imported='Pronto: {n} partidas novas adicionadas ao seu progresso.', import_nothing='Esse arquivo não tinha partidas que você já não tivesse.', err_save_bad='Esse arquivo não é um progresso do CRIMESIGHT Revival.', err_save_other='Esse arquivo é de outra conta Steam.', err_save_write='Não foi possível salvar o arquivo ({err}).', backup_set='Cópia automática ativada.', backup_removed='Cópia automática desativada.', backup_restored='Progresso recuperado da sua cópia: {n} partidas novas.', backup_saved='Cópia do progresso salva.', backup_failed='Não foi possível fazer a cópia ({err}).', err_backup_missing='Pasta de cópia não encontrada: {path}',
      updating='Atualizando o inicializador para a versão {v}…', update_failed='Não foi possível atualizar ({err}); continuo com a versão atual.', kofi='Me apoie no Ko-fi',
      loading="Preparando o inicializador…",
      tagline="Servidor da comunidade para quem já tem o jogo · sem arquivos da Konami",
@@ -323,6 +329,7 @@ _add("pt",
      ev_gas="Surge um vazamento de gás", ev_synced="Perfil sincronizado")
 
 _add("ru",
+     progress_btn='Ваш прогресс', progress_title='Ваш прогресс', progress_desc='Ваши матчи, победы и очки хранятся на этом ПК. Их можно перенести на другой ПК или сохранить копию, чтобы ничего не потерять.', export_btn='Экспорт в файл', import_btn='Импорт файла', backup_label='Автоматическая копия', backup_off='Выключена', backup_pick='Выбрать папку', backup_remove='Выключить', backup_hint='Совет: выберите папку OneDrive, Google Drive или Dropbox. Копия сохраняется после каждой сессии, а на другом ПК прогресс вернётся сам, если выбрать ту же папку.', close='Закрыть', exported='Прогресс сохранён в {path}', imported='Готово: добавлено новых матчей: {n}.', import_nothing='В этом файле нет матчей, которых у вас ещё нет.', err_save_bad='Это не файл прогресса CRIMESIGHT Revival.', err_save_other='Этот файл принадлежит другому аккаунту Steam.', err_save_write='Не удалось сохранить файл ({err}).', backup_set='Автоматическая копия включена.', backup_removed='Автоматическая копия выключена.', backup_restored='Прогресс восстановлен из копии: новых матчей: {n}.', backup_saved='Копия прогресса сохранена.', backup_failed='Не удалось сделать копию ({err}).', err_backup_missing='Папка для копии не найдена: {path}',
      updating='Обновление лаунчера до версии {v}…', update_failed='Не удалось обновить ({err}); используется текущая версия.', kofi='Поддержать меня на Ko-fi',
      loading="Подготовка лаунчера…",
      tagline="Сервер сообщества для тех, у кого уже есть игра · без файлов Konami",
@@ -373,6 +380,7 @@ _add("ru",
      ev_gas="Появляется утечка газа", ev_synced="Профиль синхронизирован")
 
 _add("ja",
+     progress_btn='進行状況', progress_title='進行状況', progress_desc='試合・勝利・ポイントはこのPCに保存されています。別のPCに移したり、失わないようにコピーを残したりできます。', export_btn='ファイルに書き出す', import_btn='ファイルを読み込む', backup_label='自動バックアップ', backup_off='オフ', backup_pick='フォルダを選ぶ', backup_remove='オフにする', backup_hint='ヒント：OneDrive、Google ドライブ、Dropbox のフォルダを選んでください。セッション終了ごとにコピーが保存され、別のPCでも同じフォルダを選べば進行状況が自動で戻ります。', close='閉じる', exported='進行状況を保存しました：{path}', imported='完了：新しい試合を {n} 件追加しました。', import_nothing='このファイルには新しい試合がありませんでした。', err_save_bad='CRIMESIGHT Revival の進行状況ファイルではありません。', err_save_other='このファイルは別の Steam アカウントのものです。', err_save_write='ファイルを保存できませんでした（{err}）。', backup_set='自動バックアップをオンにしました。', backup_removed='自動バックアップをオフにしました。', backup_restored='バックアップから進行状況を復元しました：新しい試合 {n} 件。', backup_saved='進行状況をバックアップしました。', backup_failed='バックアップできませんでした（{err}）。', err_backup_missing='バックアップ先のフォルダが見つかりません：{path}',
      updating='ランチャーをバージョン {v} に更新しています…', update_failed='更新できませんでした（{err}）。現在のバージョンを使います。', kofi='Ko-fiで応援する',
      loading="ランチャーを準備しています…",
      tagline="ゲームを持っている人のためのコミュニティサーバー · KONAMIのファイルは含みません",
@@ -422,6 +430,7 @@ _add("ja",
      ev_gas="ガス漏れが発生しました", ev_synced="プロフィールを同期しました")
 
 _add("ko",
+     progress_btn='내 진행 상황', progress_title='내 진행 상황', progress_desc='경기, 승리, 포인트는 이 PC에 저장됩니다. 다른 PC로 옮기거나 잃어버리지 않도록 사본을 보관할 수 있습니다.', export_btn='파일로 내보내기', import_btn='파일 가져오기', backup_label='자동 백업', backup_off='꺼짐', backup_pick='폴더 선택', backup_remove='끄기', backup_hint='팁: OneDrive, Google Drive 또는 Dropbox 폴더를 선택하세요. 세션이 끝날 때마다 사본이 저장되고, 다른 PC에서 같은 폴더를 선택하면 진행 상황이 자동으로 돌아옵니다.', close='닫기', exported='진행 상황을 저장했습니다: {path}', imported='완료: 새 경기 {n}개를 추가했습니다.', import_nothing='이 파일에는 새로운 경기가 없습니다.', err_save_bad='CRIMESIGHT Revival 진행 상황 파일이 아닙니다.', err_save_other='이 파일은 다른 Steam 계정의 것입니다.', err_save_write='파일을 저장할 수 없습니다 ({err}).', backup_set='자동 백업을 켰습니다.', backup_removed='자동 백업을 껐습니다.', backup_restored='백업에서 진행 상황을 복구했습니다: 새 경기 {n}개.', backup_saved='진행 상황을 백업했습니다.', backup_failed='백업할 수 없습니다 ({err}).', err_backup_missing='백업 폴더를 찾을 수 없습니다: {path}',
      updating='런처를 {v} 버전으로 업데이트하는 중…', update_failed='업데이트하지 못했습니다({err}). 현재 버전을 계속 사용합니다.', kofi='Ko-fi에서 후원하기',
      loading="런처를 준비하는 중…",
      tagline="게임을 이미 가진 사람을 위한 커뮤니티 서버 · Konami 파일 미포함",
@@ -471,6 +480,7 @@ _add("ko",
      ev_gas="가스 누출이 발생했습니다", ev_synced="프로필을 동기화했습니다")
 
 _add("zh-CN",
+     progress_btn='我的进度', progress_title='我的进度', progress_desc='你的对局、胜场和积分保存在这台电脑上。你可以把它们带到另一台电脑，或保留一份副本以免丢失。', export_btn='导出到文件', import_btn='导入文件', backup_label='自动备份', backup_off='已关闭', backup_pick='选择文件夹', backup_remove='关闭', backup_hint='提示：选择你的 OneDrive、Google 云端硬盘或 Dropbox 文件夹。每次会话结束都会保存一份副本，在另一台电脑上选择同一个文件夹，进度会自动恢复。', close='关闭', exported='进度已保存到 {path}', imported='完成：已添加 {n} 场新对局。', import_nothing='该文件中没有你尚未拥有的对局。', err_save_bad='该文件不是 CRIMESIGHT Revival 进度文件。', err_save_other='该文件属于另一个 Steam 账号。', err_save_write='无法保存文件（{err}）。', backup_set='已开启自动备份。', backup_removed='已关闭自动备份。', backup_restored='已从备份恢复进度：{n} 场新对局。', backup_saved='进度已备份。', backup_failed='无法备份（{err}）。', err_backup_missing='找不到备份文件夹：{path}',
      updating='正在将启动器更新到 {v} 版…', update_failed='无法更新（{err}），继续使用当前版本。', kofi='在 Ko-fi 上支持我',
      loading="正在准备启动器…",
      tagline="面向已拥有游戏玩家的社区服务器 · 不含任何 Konami 文件",
@@ -520,6 +530,7 @@ _add("zh-CN",
      ev_gas="发生了燃气泄漏", ev_synced="资料已同步")
 
 _add("zh-TW",
+     progress_btn='我的進度', progress_title='我的進度', progress_desc='你的對局、勝場和積分儲存在這台電腦上。你可以把它們帶到另一台電腦，或保留一份副本以免遺失。', export_btn='匯出到檔案', import_btn='匯入檔案', backup_label='自動備份', backup_off='已關閉', backup_pick='選擇資料夾', backup_remove='關閉', backup_hint='提示：選擇你的 OneDrive、Google 雲端硬碟或 Dropbox 資料夾。每次工作階段結束都會儲存一份副本，在另一台電腦上選擇同一個資料夾，進度會自動恢復。', close='關閉', exported='進度已儲存到 {path}', imported='完成：已新增 {n} 場新對局。', import_nothing='該檔案中沒有你尚未擁有的對局。', err_save_bad='該檔案不是 CRIMESIGHT Revival 進度檔案。', err_save_other='該檔案屬於另一個 Steam 帳號。', err_save_write='無法儲存檔案（{err}）。', backup_set='已開啟自動備份。', backup_removed='已關閉自動備份。', backup_restored='已從備份恢復進度：{n} 場新對局。', backup_saved='進度已備份。', backup_failed='無法備份（{err}）。', err_backup_missing='找不到備份資料夾：{path}',
      updating='正在將啟動器更新至 {v} 版…', update_failed='無法更新（{err}），繼續使用目前版本。', kofi='在 Ko-fi 上支持我',
      loading="正在準備啟動器…",
      tagline="為已擁有遊戲的玩家架設的社群伺服器 · 不含任何 Konami 檔案",
