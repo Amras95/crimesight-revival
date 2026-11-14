@@ -14,6 +14,17 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 <a href="https://ko-fi.com/amrasmithandir95">☕ Ko-fi</a>
 </p>
 
+
+<p align="center">
+<img src="assets/screenshots/launcher.jpg" width="820" alt="Lanzador">
+</p>
+
+<p align="center">
+<img src="assets/screenshots/title.jpg" width="32%" alt="Pantalla de título">
+<img src="assets/screenshots/lobby.jpg" width="32%" alt="Sala con IA">
+<img src="assets/screenshots/gameplay.jpg" width="32%" alt="Partida">
+</p>
+
 ---
 
 > [!WARNING]
