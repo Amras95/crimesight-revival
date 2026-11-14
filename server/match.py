@@ -780,8 +780,10 @@ class Room:
                     return False
         return True
 
-    async def end_by_kill(self):
-        log.info("Sala %s turno %s: la victima ha muerto", self.id, self.turn)
+    async def send_result(self, is_kill):
+        """GameManager.ResultPhaseCallback: el resultado final de la partida en linea.
+        isKill True -> KILL_SUCCESS (gana Moriarty); False -> ARREST_SUCCESS (detenido el asesino).
+        Sin este mensaje el cliente se queda esperando (pantalla en negro)."""
         self.phase = "ended"
 
         def first(role):
@@ -789,9 +791,13 @@ class Room:
             return (p[0], self.members[p[0]]["name"]) if p else ("", "")
         det, cri, ire, wat = (first(r) for r in (ROLE_DETECTIVE, ROLE_CRIMINAL, ROLE_IRENE, ROLE_WATSON))
         await self.control("StartResultPhase", {"Data": {
-            "isKill": True, "killer": self.killer, "target": self.target,
+            "isKill": bool(is_kill), "killer": self.killer, "target": self.target,
             "detective_player": det[0], "detective_name": det[1], "criminal_player": cri[0], "criminal_name": cri[1],
             "irene_player": ire[0], "irene_name": ire[1], "watson_player": wat[0], "watson_name": wat[1]}})
+
+    async def end_by_kill(self):
+        log.info("Sala %s turno %s: la victima ha muerto", self.id, self.turn)
+        await self.send_result(True)
         self.conclude("moriarty", {ROLE_CRIMINAL: [ACT_ASSAIL_KILL] if self.assault else []})
 
     def settle_kill(self):
@@ -839,13 +845,14 @@ class Room:
                     for pid in self.members:
                         if self.side(pid) == "sherlock":
                             self.note(pid, ACT_FOILED)
-                await self.control("StartTransitionPhase", {"Turn": self.turn, "Data": {"isDanger": self.is_danger()}})
                 if int(ref.get("isLastTurn", 0) or 0):
                     # Era el turno final tras descubrirse al asesino (Asalto fallido o deduccion) y la
-                    # victima sigue viva: el cliente muestra la detencion, gana el bando de Sherlock.
+                    # victima sigue viva: resultado ARREST_SUCCESS, gana el bando de Sherlock.
                     log.info("Sala %s turno %s: fin del turno final sin asesinato, detenido el asesino", self.id, self.turn)
-                    self.phase = "ended"
+                    await self.send_result(False)
                     self.conclude("sherlock", {ROLE_DETECTIVE: [ACT_DEDUCED]})
+                else:
+                    await self.control("StartTransitionPhase", {"Turn": self.turn, "Data": {"isDanger": self.is_danger()}})
         if "answer" in self.pending and self._complete("answer"):
             await self.finish_answers()
 

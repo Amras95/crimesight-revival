@@ -503,11 +503,15 @@ def plan_moriarty_hard(view, idx, killer, target, n_orders, rng, taken=()):
     - Asalto solo cuando es seguro: la victima no puede escapar del alcance del asesino y ningun
       testigo puede acabar en su habitacion (calculando hasta donde puede andar cada uno). Con
       apagon solo cuenta quien acabe en la misma casilla, asi que aprovecha la oscuridad.
-    - Si no, con arma prefiere plantarse en la casilla de la victima cuando nadie puede verlo:
-      si la victima no se mueve, cae al final del turno sin revelarse.
-    - Usa su otra orden para quitar testigos de en medio, llevandolos a peligros.
+    - Su asesino siempre armado y alimentado: si no tiene arma va a por la que sabe donde esta (o
+      se acerca a ella) y si tiene hambre o no lleva comida, coge la que conoce.
+    - Con arma prefiere plantarse en la casilla de la victima cuando nadie puede verlo: si la
+      victima no se mueve, cae al final del turno sin revelarse.
+    - Da las menos ordenes posibles: cada orden que choca con una de Sherlock le delata. Solo usa
+      la segunda orden si con ella consigue matar (apartar al unico testigo); a veces ni mueve a su
+      asesino y deja que actue por su cuenta, como uno mas.
     - Nunca hace correr a nadie (Sherlock sospecha de quien corre) y no deja que los demas cojan
-      comida, salvo su asesino si tiene hambre."""
+      comida."""
     used = set(taken) | {target}
     orders = []
     k = view.pawns[killer]
@@ -523,91 +527,73 @@ def plan_moriarty_hard(view, idx, killer, target, n_orders, rng, taken=()):
 
     blockers = sorted([q for q in others if q not in used and view.grids(q) and threatens(q)],
                       key=lambda q: (view.pawns[q].get("roomId") != troom, view.pair_distance(q, target)))
-    can_order_killer = killer not in used and view.grids(killer)
-    kwalk = walk(view, killer) if can_order_killer else []
+    if killer in used or not view.grids(killer):
+        return [], False
+    kwalk = walk(view, killer)
+    dark = view.dark and not view.pawns[target].get("isNoBlack")
 
+    def with_one_lure(test):
+        """Prueba sin ordenes extra y, si no basta, apartando a un unico testigo."""
+        if test(watchers):
+            return []
+        if n_orders < 2:
+            return None
+        for w in blockers[:3]:
+            extra, g = lure(view, idx, w, target, rng)
+            ws = dict(watchers)
+            ws[w] = [g]
+            if test(ws):
+                return [extra]
+        return None
 
-    def feed_killer():
-        """Su asesino si come: con hambre y sin comida, a por la comida que conoce (andando)."""
-        if not (k.get("isHungry") and not has_food(view, killer)):
+    def grab(kinds, prefer=None):
+        """Registrar un mueble conocido (arma o comida) al alcance andando."""
+        opts = [(g, o) for g in kwalk for o in view.searchable(g) if o in kinds]
+        if not opts:
             return None
-        food = [(g, o) for g in kwalk for o in view.searchable(g) if o in view.food_objects]
-        if not food:
-            return None
-        g, o = min(food, key=lambda go: (view.danger(go[0]), view.dist(go[0], target), rng.random()))
+        g, o = min(opts, key=lambda go: (view.danger(go[0]), view.dist(go[0], prefer) if prefer is not None else 0,
+                                          rng.random()))
         return order(view, idx, killer, SEARCH, g, o)
 
-    if armed and can_order_killer:
-        # 1. Asalto seguro (si hace falta, apartando antes a un testigo con la otra orden)
-        plans = [None] + (blockers[:3] if n_orders >= 2 else [])
-        for w in plans:
-            ws = dict(watchers)
-            extra = None
-            if w is not None:
-                extra, g = lure(view, idx, w, target, rng)
-                ws[w] = [g]
-            if assault_is_certain(view, killer, target, ws):
-                t = view.pawns[target]
-                orders.append({**order(view, idx, killer, TARGET, {"gridId": t.get("gridId"), "pawnDistance": []}),
-                               "targetId": int(t.get("uniqId", -1)), "isRun": 0})
-                if extra:
-                    orders.append(extra)
-                return orders, True
-        # 2. Si tiene hambre, comer antes de seguir (con hambre llega menos lejos)
-        o = feed_killer()
-        if o:
-            orders.append(o)
-            return fill_moriarty(view, idx, killer, target, n_orders, rng, used | {killer}, orders, blockers), False
-        # 3. Plantarse en la casilla de la victima si nadie puede verlo (sin revelarse)
-        here = next((g for g in kwalk if view.dist(g, target) == 0), None)    # andando: sin llamar la atencion
-        if here is not None:
-            dark = view.dark and not view.pawns[target].get("isNoBlack")
-            for w in [None] + (blockers[:3] if n_orders >= 2 else []):
-                ws = dict(watchers)
-                extra = None
-                if w is not None:
-                    extra, g = lure(view, idx, w, target, rng)
-                    ws[w] = [g]
-                if not watched(view, here, dark, ws):
-                    orders.append(order(view, idx, killer, MOVE, here))
-                    if extra:
-                        orders.append(extra)
-                    return fill_moriarty(view, idx, killer, target, n_orders, rng, used | {killer} |
-                                         {o["pawnId"] for o in orders}, orders, blockers), False
-        # 4. Acecharla a 2 casillas, sin peligro, a la espera de una ocasion
-        g = min(kwalk, key=lambda g: (abs(view.dist(g, target) - 2), view.danger(g), rng.random()))
-        orders.append(order(view, idx, killer, MOVE, g))
-    elif can_order_killer:
-        o = feed_killer() or seek_weapon(view, idx, killer, kwalk, rng, prefer=target) or \
-            search_or_move(view, idx, killer, kwalk, rng, prefer=target)
-        if o:
-            orders.append(o)
-    used |= {killer} | {o["pawnId"] for o in orders}
-    return fill_moriarty(view, idx, killer, target, n_orders, rng, used, orders, blockers), False
+    def toward(kinds):
+        """Acercarse a un mueble conocido que aun no esta a su alcance: algun personaje lo tiene cerca."""
+        holders = [q for q in view.ids() if q != killer and
+                   any(o in kinds for g in view.grids(q) for o in view.searchable(g))]
+        if not holders:
+            return None
+        q = min(holders, key=lambda q: view.pair_distance(killer, q))
+        g = min(kwalk, key=lambda g: (view.dist(g, q), view.danger(g), rng.random()))
+        return order(view, idx, killer, MOVE, g)
 
-
-def fill_moriarty(view, idx, killer, target, n_orders, rng, used, orders, blockers):
-    """Ordenes que sobran: debilitar y apartar a los acompanantes de la victima."""
-    for w in blockers:
-        if len(orders) >= n_orders:
-            break
-        if w in used or not view.grids(w):
-            continue
-        o, _ = lure(view, idx, w, target, rng)
-        orders.append(o)
-        used.add(w)
-    while len(orders) < n_orders:
-        pool = [q for q in view.ids() if q not in used and q != target and view.grids(q)]
-        if not pool:
-            break
-        # Registrar muebles (asi tambien puede dar con el plano del cuadro electrico y provocar el
-        # apagon), sin coger comida y andando, como haria cualquiera por su cuenta
-        q = rng.choice(pool)
-        o = search_no_food(view, idx, q, walk(view, q), rng)
-        if o:
-            orders.append(o)
-        used.add(q)
-    return orders
+    if armed:
+        # 1. Asalto seguro
+        extra = with_one_lure(lambda ws: assault_is_certain(view, killer, target, ws))
+        if extra is not None:
+            return [assault_order(view, idx, killer, target)] + extra, True
+    food = grab(view.food_objects, prefer=target) if not has_food(view, killer) or k.get("isHungry") else None
+    # 2. Con hambre, comer primero (con hambre llega menos lejos)
+    if food and k.get("isHungry"):
+        return [food], False
+    if not armed:
+        # 3. Armarse: el arma que conoce; si no la tiene a mano, coger comida de reserva o acercarse al arma
+        o = grab(view.weapon_objects, prefer=target) or food or toward(view.weapon_objects) or \
+            search_no_food(view, idx, killer, kwalk, rng, prefer=target)
+        return ([o] if o else []), False
+    # 3b. Armado y sin comida encima: hacerse con comida de reserva (a veces, para no ser predecible)
+    if food and rng.random() < 0.5:
+        return [food], False
+    # 4. Plantarse en la casilla de la victima sin que nadie lo vea
+    here = next((g for g in kwalk if view.dist(g, target) == 0), None)
+    if here is not None:
+        extra = with_one_lure(lambda ws: not watched(view, here, dark, ws))
+        if extra is not None:
+            return [order(view, idx, killer, MOVE, here)] + extra, False
+    # 5. Sin ocasion: a veces deja que su asesino actue por su cuenta (no da pistas)...
+    if view.pair_distance(killer, target) <= 3 and rng.random() < 0.4:
+        return [], False
+    # ...y si no, la acecha a 2 casillas, andando
+    g = min(kwalk, key=lambda g: (abs(view.dist(g, target) - 2), view.danger(g), rng.random()))
+    return [order(view, idx, killer, MOVE, g)], False
 
 
 # ------------------------------------------------------------------ dificil: Sherlock
