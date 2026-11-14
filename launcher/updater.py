@@ -85,5 +85,14 @@ def apply(update, progress=lambda pct: None):
     os.replace(exe, old)        # Windows deja renombrar el .exe en uso
     os.replace(new, exe)
     flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-    subprocess.Popen([exe], close_fds=True, creationflags=flags)
+    subprocess.Popen([exe], close_fds=True, creationflags=flags, env=fresh_env())
     os._exit(0)
+
+
+def fresh_env():
+    """Entorno para abrir otro .exe de PyInstaller desde este. Sin esto, el nuevo hereda las variables
+    _PYI_* y usa la carpeta temporal del viejo, que se borra al cerrarse: le faltan sus librerias
+    (por ejemplo las de cifrado) y el servidor no entiende al juego."""
+    env = {k: v for k, v in os.environ.items() if not k.upper().startswith(("_PYI_", "_MEIPASS"))}
+    env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+    return env
