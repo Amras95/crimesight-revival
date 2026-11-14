@@ -604,40 +604,34 @@ class Room:
             self.bot_task = asyncio.ensure_future(self._bot_heartbeat())
 
     def assign_roles(self):
-        """Reparte los roles. Se respeta lo que se eligio en la sala; los "aleatorio" completan
-        lo que falte: Moriarty, Sherlock y las Irene/Watson que pida la configuracion."""
-        humans = [p for p in self.members if not self.members[p].get("bot")]
-        bots = self.bots()
-        random.shuffle(humans)
-        want = [ROLE_CRIMINAL, ROLE_DETECTIVE] + [ROLE_IRENE] * int(self.settings.get("irene_count", 0) or 0) \
-            + [ROLE_WATSON] * int(self.settings.get("watson_count", 0) or 0)
-
-        def missing():
-            have = [m["role"] for m in self.members.values()]
-            left = list(want)
-            for r in have:
-                if r in left:
-                    left.remove(r)
-            return left
-
-        for pid in humans:
-            if self.members[pid]["role"] == ROLE_RANDOM:
-                if len(humans) == 1:
-                    self.members[pid]["role"] = random.choice([ROLE_DETECTIVE, ROLE_CRIMINAL])
-                else:
-                    left = [r for r in missing() if r in (ROLE_CRIMINAL, ROLE_DETECTIVE)]
-                    self.members[pid]["role"] = left[0] if left else ROLE_DETECTIVE
-        for pid in bots:
-            if self.members[pid]["role"] == ROLE_RANDOM:
-                left = missing()
-                self.members[pid]["role"] = left[0] if left else ROLE_DETECTIVE
-        # Siempre tiene que haber un Moriarty y un Sherlock: si faltan, los pone una IA
-        for need in (ROLE_CRIMINAL, ROLE_DETECTIVE):
-            if need not in [m["role"] for m in self.members.values()]:
-                spare = [b for b in bots if self.members[b]["role"] in (ROLE_IRENE, ROLE_WATSON, ROLE_DETECTIVE)
-                         and (need != ROLE_DETECTIVE or self.members[b]["role"] != ROLE_DETECTIVE)]
-                if spare:
-                    self.members[spare[-1]]["role"] = need
+        """Reparte los roles con las plazas de la partida: 1 Moriarty, las Irene/Watson que pida la
+        sala y el resto Sherlock. Se respeta lo que eligio cada uno; si mas gente pide un papel del
+        que hay plazas, se sortea entre ellos (las personas antes que la IA) y a los que se quedan
+        fuera, como a los "aleatorio", les toca al azar una de las plazas que quedan."""
+        everyone = list(self.members)
+        irene = int(self.settings.get("irene_count", 0) or 0)
+        watson = int(self.settings.get("watson_count", 0) or 0)
+        slots = {ROLE_CRIMINAL: 1, ROLE_IRENE: irene, ROLE_WATSON: watson,
+                 ROLE_DETECTIVE: max(1, len(everyone) - 1 - irene - watson)}
+        wanted = {pid: self.members[pid]["role"] for pid in everyone}
+        for pid in everyone:
+            self.members[pid]["role"] = ROLE_RANDOM
+        for role in (ROLE_CRIMINAL, ROLE_IRENE, ROLE_WATSON, ROLE_DETECTIVE):
+            asking = [pid for pid in everyone if wanted[pid] == role]
+            random.shuffle(asking)
+            asking.sort(key=lambda pid: bool(self.members[pid].get("bot")))   # personas primero
+            for pid in asking[:slots[role]]:
+                self.members[pid]["role"] = role
+                slots[role] -= 1
+        rest = [pid for pid in everyone if self.members[pid]["role"] == ROLE_RANDOM]
+        random.shuffle(rest)
+        rest.sort(key=lambda pid: bool(self.members[pid].get("bot")))
+        for pid in rest:
+            pool = [r for r, n in slots.items() for _ in range(n)]
+            role = random.choice(pool) if pool else ROLE_DETECTIVE
+            self.members[pid]["role"] = role
+            if pool:
+                slots[role] -= 1
         if self.killer < 0 or self.target < 0 or self.killer == self.target:
             self.killer, self.target = random.sample(range(self.pawn_count), 2)
 
@@ -701,11 +695,12 @@ class Room:
         return sorted(o for o, i in self.object_items.items() if i in items and o not in self.searched)
 
     def role_data(self, pid):
-        """Lo que sabe cada papel al empezar: todas las armas (el cliente solo se las ensena a
-        Moriarty) y la comida: Moriarty toda, los demas solo unas pocas."""
+        """Lo que sabe cada papel al empezar: Moriarty, todas las armas y toda la comida; los demas,
+        ninguna arma y solo unos pocos sitios con comida (MatchSettings.foodOpenCount)."""
         foods = self.objects_with(self.food_items)
         if self.members.get(pid, {}).get("role") != ROLE_CRIMINAL:
             foods = sorted(random.sample(foods, min(FOOD_OPEN_COUNT, len(foods))))
+            return {"weaponList": [], "foodList": foods}
         return {"weaponList": self.objects_with(self.weapon_items), "foodList": foods}
 
     # ---- fases de turno
