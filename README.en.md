@@ -26,12 +26,13 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 
 ---
 
-> [!WARNING]
-> **Online features have not been tested yet.** Playing solo against the AI is tested and works.
-> Hosting, joining a friend, own servers, progress sync and automatic port opening (UPnP) are built
-> but have not been tested between two real PCs yet: they are waiting for a chance to play with
-> someone, or for two people to try them. If you test them, please tell me how it went in
-> [Issues](https://github.com/Amras95/crimesight-revival/issues).
+> [!NOTE]
+> **Tested and working:** solo matches against the AI and matches between two people (host and friend),
+> including over Radmin VPN.
+>
+> **Not tested with people yet:** matches with **Watson** or **Irene** (3 or 4 players) and own servers on
+> a VPS. They should work, but if you run into any problem, please report it in
+> [Issues](https://github.com/Amras95/crimesight-revival/issues) and I'll fix it.
 
 - Community project, unofficial and non-profit. Not affiliated with Konami.
 - **You need to own CRIMESIGHT in your Steam library.** No game files, keys or images are included
@@ -73,7 +74,7 @@ When you host, your router has to let port **18080 (TCP)** through. The launcher
 itself (UPnP); if your router doesn't allow it:
 
 - Open it manually in your router settings (forward port 18080 TCP to your PC's IP), **or**
-- Use a free private network such as **Tailscale**, **ZeroTier** or **Radmin VPN**, and give your friend
+- Use a free private network such as **Radmin VPN** (the simplest), **Tailscale** or **ZeroTier**, and give your friend
   the IP that network assigns you (for example `100.64.1.2:18080`).
 
 ### Your progress
@@ -95,7 +96,8 @@ Steam Cloud isn't used, because each game's cloud storage is controlled by its p
 ## What works
 
 - Sign-in, profile, tutorial, settings and level.
-- Rooms for 2 to 4 players mixing people and AI (with several people: **not tested yet**). AI for all
+- Rooms for 2 to 4 players mixing people and AI (tested with 2 people; with human Watson/Irene,
+  **not tested yet**). AI for all
   four roles (Sherlock, Moriarty, Watson and Irene), with three difficulty levels.
 - Full matches: items, wild dogs, gas leaks, Assault, final turn, murder, arrest and final deduction,
   with the right cutscene for each side.

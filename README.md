@@ -27,12 +27,13 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 
 ---
 
-> [!WARNING]
-> **Las funciones online todavía no se han probado.** Jugar solo contra la IA está probado y funciona.
-> Ser anfitrión, unirse a un amigo, el servidor propio, la sincronización del progreso y la apertura
-> automática del puerto (UPnP) están hechos, pero aún no se han probado entre dos PCs reales: falta poder
-> jugar con alguien o que dos personas lo prueben. Si lo probáis, contadme qué tal en
-> [Issues](https://github.com/Amras95/crimesight-revival/issues).
+> [!NOTE]
+> **Probado y funcionando:** partidas en solitario contra la IA y partidas entre dos personas (anfitrión y
+> amigo), también a través de Radmin VPN.
+>
+> **Aún sin probar con personas:** partidas con **Watson** o **Irene** (3 o 4 jugadores) y el servidor propio
+> en un VPS. Deberían funcionar, pero si encontráis cualquier problema, contádmelo en
+> [Issues](https://github.com/Amras95/crimesight-revival/issues) y lo arreglo.
 
 - Proyecto de la comunidad, no oficial y sin ánimo de lucro. No está relacionado con Konami.
 - **Necesitas tener CRIMESIGHT en tu biblioteca de Steam.** Aquí no se incluye ningún archivo, clave ni
@@ -74,7 +75,7 @@ Cuando eres anfitrión, tu router tiene que dejar pasar el puerto **18080 (TCP)*
 solo (UPnP); si tu router no lo permite:
 
 - Ábrelo a mano en la configuración del router (reenviar el puerto 18080 TCP a la IP de tu PC), **o**
-- Usad una red privada gratuita como **Tailscale**, **ZeroTier** o **Radmin VPN**, y pásale a tu amigo la
+- Usad una red privada gratuita como **Radmin VPN** (la más sencilla), **Tailscale** o **ZeroTier**, y pásale a tu amigo la
   IP que te dé esa red (por ejemplo `100.64.1.2:18080`).
 
 ### Tu progreso
@@ -95,7 +96,8 @@ Steam Cloud no se usa porque el espacio en la nube de cada juego lo controla su 
 ## Qué funciona
 
 - Inicio de sesión, perfil, tutorial, ajustes y nivel.
-- Salas de 2 a 4 jugadores mezclando personas e IA (con varias personas: **pendiente de probar**). IA para los cuatro papeles (Sherlock, Moriarty,
+- Salas de 2 a 4 jugadores mezclando personas e IA (probado con 2 personas; con Watson/Irene humanos,
+  **pendiente de probar**). IA para los cuatro papeles (Sherlock, Moriarty,
   Watson e Irene), con tres dificultades.
 - Partidas completas: objetos, perros salvajes, escapes de gas, Asalto, turno final, asesinato,
   detención y deducción final, con la cinemática correcta para cada bando.
