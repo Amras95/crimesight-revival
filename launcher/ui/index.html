@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CRIMESIGHT Revival</title>
+<style>
+:root{
+  --bg:#07081a; --panel:rgba(14,16,40,.78); --panel2:rgba(22,24,58,.9); --line:rgba(150,160,255,.18);
+  --text:#e9e8ff; --dim:#a3a6cf; --accent:#6f7bff;
+  --sherlock:#4fe3ff; --moriarty:#ff6a3d; --watson:#5d8dff; --irene:#e04dff;
+  --serif:"Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
+  --sans:"Segoe UI",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden;user-select:none}
+#bg{position:fixed;inset:0;background:var(--bg) center/cover no-repeat;filter:saturate(.9)}
+#bg::after{content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(1200px 600px at 75% 15%,rgba(80,70,255,.35),transparent 60%),
+    radial-gradient(900px 500px at 10% 100%,rgba(255,110,40,.18),transparent 60%),
+    linear-gradient(180deg,rgba(7,8,26,.55),rgba(7,8,26,.92) 70%);
+  mix-blend-mode:normal}
+#bg.tint{background-blend-mode:luminosity}
+.app{position:relative;height:100%;display:flex;flex-direction:column;padding:22px 30px 16px}
+
+/* cabecera */
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px}
+.brand{line-height:1}
+.brand .name{font-family:var(--serif);font-size:44px;letter-spacing:.18em;font-weight:700;
+  background:linear-gradient(180deg,#fff,#c9ccff);-webkit-background-clip:text;color:transparent;
+  text-shadow:0 0 30px rgba(120,130,255,.35)}
+.brand .rev{display:inline-block;margin-left:10px;font-family:var(--sans);font-size:15px;font-weight:700;letter-spacing:.55em;
+  color:#fff;padding:5px 4px 5px 12px;border:1px solid rgba(255,255,255,.35);border-radius:3px;vertical-align:middle;
+  background:linear-gradient(90deg,rgba(111,123,255,.45),rgba(224,77,255,.35))}
+.brand .tag{margin-top:8px;color:var(--dim);font-size:13px;letter-spacing:.06em}
+.me{display:flex;gap:10px;align-items:center}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;backdrop-filter:blur(8px)}
+.chip small{display:block;color:var(--dim);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.chip b{font-size:15px}
+.stats{display:flex;gap:14px}
+.stats div{text-align:center;min-width:44px}
+.stats b{display:block;font-size:20px}
+.stats .w b{color:#7dffb0}.stats .d b{color:#ffd36b}.stats .l b{color:#ff8a8a}.stats .p b{color:#c9b8ff}
+
+/* tarjetas */
+.cards{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin:22px 0 14px;min-height:0}
+.card{--c:var(--accent);position:relative;border-radius:18px;overflow:hidden;cursor:pointer;
+  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(0,0,0,.25)),var(--panel);
+  border:1px solid var(--line);transition:transform .25s ease,border-color .25s,box-shadow .25s;display:flex;flex-direction:column}
+.card:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--c) 60%,transparent);
+  box-shadow:0 18px 50px -18px color-mix(in srgb,var(--c) 70%,transparent)}
+.card.sel{border-color:var(--c);box-shadow:0 0 0 1px var(--c),0 20px 60px -20px var(--c)}
+.card .art{flex:1;min-height:120px;background:center 12%/cover no-repeat;position:relative;
+  -webkit-mask-image:linear-gradient(180deg,#000 55%,transparent 100%);mask-image:linear-gradient(180deg,#000 55%,transparent 100%);
+  transition:transform .6s ease}
+.card:hover .art{transform:scale(1.04)}
+.card .glow{position:absolute;inset:auto 0 0 0;height:60%;background:radial-gradient(80% 70% at 50% 100%,color-mix(in srgb,var(--c) 40%,transparent),transparent 70%);pointer-events:none}
+.card .body{position:relative;padding:0 18px 18px}
+.card .role{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--c);font-weight:700}
+.card h2{margin:4px 0 6px;font-family:var(--serif);font-size:24px;font-weight:700}
+.card p{margin:0;color:var(--dim);font-size:13px;line-height:1.45;min-height:57px}
+.c-sherlock{--c:var(--sherlock)} .c-moriarty{--c:var(--moriarty)} .c-watson{--c:var(--watson)} .c-irene{--c:var(--irene)}
+
+/* panel de accion */
+.panel{background:var(--panel2);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:flex;gap:16px;align-items:center;min-height:86px;backdrop-filter:blur(10px)}
+.panel .fields{flex:1;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+input,select{background:rgba(5,6,20,.7);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;outline:none;min-width:120px}
+input:focus,select:focus{border-color:var(--c,var(--accent))}
+.hint{color:var(--dim);font-size:13px;max-width:520px;line-height:1.45}
+.btn{border:0;border-radius:12px;padding:13px 26px;font:700 15px var(--sans);letter-spacing:.08em;color:#fff;cursor:pointer;
+  background:linear-gradient(135deg,var(--c,var(--accent)),color-mix(in srgb,var(--c,var(--accent)) 45%,#2a1d6e));
+  box-shadow:0 10px 30px -10px var(--c,var(--accent));transition:filter .2s,transform .1s}
+.btn:hover{filter:brightness(1.15)}.btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;border:1px solid var(--line);box-shadow:none;color:var(--dim);font-weight:600;padding:9px 14px;letter-spacing:.02em}
+.btn.ghost:hover{color:var(--text);border-color:rgba(255,255,255,.35)}
+.btn.small{padding:9px 14px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:default;filter:none}
+
+/* sesion en marcha */
+.session{display:none;gap:16px;align-items:stretch}
+.session.on{display:flex}
+.session .status{min-width:260px;display:flex;flex-direction:column;justify-content:center;gap:8px}
+.pulse{display:inline-block;width:10px;height:10px;border-radius:50%;background:#7dffb0;margin-right:8px;box-shadow:0 0 0 0 rgba(125,255,176,.7);animation:p 1.6s infinite}
+@keyframes p{70%{box-shadow:0 0 0 10px rgba(125,255,176,0)}100%{box-shadow:0 0 0 0 rgba(125,255,176,0)}}
+.addr{display:none;align-items:center;gap:8px;background:rgba(5,6,20,.7);border:1px dashed var(--line);border-radius:10px;padding:8px 10px}
+.addr.on{display:flex}.addr code{font-size:17px;color:#fff;letter-spacing:.04em}
+#log{flex:1;height:120px;overflow:auto;background:rgba(3,4,14,.75);border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+  font:12.5px/1.55 Consolas,"Cascadia Mono",monospace;color:#c8cbf0;user-select:text}
+#log .err{color:#ff9a9a}#log .ok{color:#9dffc4}
+
+footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px;color:var(--dim);font-size:12px;gap:12px}
+footer .path{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46%}
+footer a{color:#c9ccff;text-decoration:none}
+footer a.kofi{color:#ffb37a}footer a:hover{text-decoration:underline}
+footer .ver{margin-left:8px;opacity:.6}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;background:#1d1f4a;border:1px solid var(--line);
+  padding:10px 16px;border-radius:10px;transition:.25s;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:var(--bg);z-index:5;transition:opacity .4s}
+.loading.off{opacity:0;pointer-events:none}
+.spinner{width:42px;height:42px;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:var(--accent);animation:s 1s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div class="loading" id="loading"><div class="spinner"></div><div id="loadmsg" data-t="loading">Preparing the launcher…</div></div>
+
+<div class="app">
+  <header>
+    <div class="brand">
+      <span class="name">CRIMESIGHT</span><span class="rev">REVIVAL</span>
+      <div class="tag" data-t="tagline"></div>
+    </div>
+    <div class="me">
+      <div class="chip"><small data-t="steam_account"></small><b id="acc">—</b></div>
+      <div class="chip stats">
+        <div class="w"><b id="sw">0</b><small data-t="wins"></small></div>
+        <div class="d"><b id="sd">0</b><small data-t="draws"></small></div>
+        <div class="l"><b id="sl">0</b><small data-t="losses"></small></div>
+        <div class="p"><b id="sp">0</b><small data-t="points"></small></div>
+      </div>
+    </div>
+  </header>
+
+  <section class="cards" id="cards">
+    <div class="card c-sherlock" data-mode="solo">
+      <div class="art" data-art="sherlock"></div><div class="glow"></div>
+      <div class="body"><div class="role">Sherlock</div><h2 data-t="solo_title"></h2><p data-t="solo_desc"></p></div>
+    </div>
+    <div class="card c-moriarty" data-mode="host">
+      <div class="art" data-art="moriarty"></div><div class="glow"></div>
+      <div class="body"><div class="role">Moriarty</div><h2 data-t="host_title"></h2><p data-t="host_desc"></p></div>
+    </div>
+    <div class="card c-watson" data-mode="join">
+      <div class="art" data-art="watson"></div><div class="glow"></div>
+      <div class="body"><div class="role">Watson</div><h2 data-t="join_title"></h2><p data-t="join_desc"></p></div>
+    </div>
+    <div class="card c-irene" data-mode="server">
+      <div class="art" data-art="irene"></div><div class="glow"></div>
+      <div class="body"><div class="role">Irene</div><h2 data-t="server_title"></h2><p data-t="server_desc"></p></div>
+    </div>
+  </section>
+
+  <div class="panel" id="panel"></div>
+
+  <div class="panel session" id="session">
+    <div class="status">
+      <div><span class="pulse"></span><b id="sesstitle" data-t="session_running"></b></div>
+      <div class="addr" id="addr"><code id="addrtxt"></code><button class="btn ghost small" onclick="copyAddr()" data-t="copy"></button></div>
+      <button class="btn small" id="stopbtn" onclick="stopSession()" data-t="stop_session"></button>
+    </div>
+    <div id="log"></div>
+  </div>
+
+  <footer>
+    <span class="path" id="gamepath"></span>
+    <span>
+      <button class="btn ghost small" onclick="pickGame()" data-t="change_folder"></button>
+      <button class="btn ghost small" onclick="restoreGame()" data-t="restore_game"></button>
+    </span>
+    <span><span data-t="revival_by"></span> <a href="#" onclick="api('open_url','https://github.com/Amras95');return false">Amras95</a> ·
+      <a href="#" onclick="api('open_url','https://x.com/AmrasMithandir');return false">@AmrasMithandir</a> ·
+      <a href="#" class="kofi" onclick="api('open_url',STATE.kofi);return false">☕ <span data-t="kofi"></span></a>
+      <span class="ver" id="ver"></span></span>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+let STATE=null, MODE='solo', BUSY=false, TX={};
+function T(k,v){let s=TX[k]||k;if(v)for(const x in v)s=s.split('{'+x+'}').join(v[x]);return s}
+function applyT(){document.querySelectorAll('[data-t]').forEach(e=>{if(TX[e.dataset.t])e.textContent=TX[e.dataset.t]})}
+
+function api(name,...args){
+  if(window.pywebview&&window.pywebview.api) return window.pywebview.api[name](...args);
+  return (window.MOCK&&window.MOCK[name])?Promise.resolve(window.MOCK[name](...args)):Promise.resolve(null);
+}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),2200)}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+const PANELS={
+  solo:()=>`<div class="fields"><div class="hint">${esc(T('solo_hint'))}</div></div>
+    <button class="btn" onclick="start('solo')">${esc(T('play_btn'))}</button>`,
+  host:()=>`<div class="fields"><div class="field"><label>${esc(T('port'))}</label><input id="port" value="${esc(STATE.port||18080)}" style="width:110px"></div>
+    <div class="hint">${esc(T('host_hint'))}</div></div>
+    <button class="btn" onclick="start('host')">${esc(T('host_btn'))}</button>`,
+  join:()=>`<div class="fields"><div class="field" style="flex:1"><label>${esc(T('friend_addr'))}</label><input id="friend" placeholder="${esc(T('friend_ph'))}" value="${esc(STATE.last_friend||'')}"></div></div>
+    <button class="btn" onclick="start('join')">${esc(T('join_btn'))}</button>`,
+  server:()=>`<div class="fields">
+      <div class="field"><label>${esc(T('saved'))}</label><select id="saved" onchange="pickSaved()"><option value="">—</option>${(STATE.servers||[]).map(s=>`<option>${esc(s.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>${esc(T('name'))}</label><input id="sname" style="width:150px"></div>
+      <div class="field" style="flex:1"><label>${esc(T('address'))}</label><input id="saddr" placeholder="${esc(T('server_ph'))}"></div>
+      <div class="field"><label>${esc(T('password'))}</label><input id="spw" type="password" style="width:150px"></div>
+      <button class="btn ghost small" onclick="saveServer()">${esc(T('save'))}</button>
+      <button class="btn ghost small" onclick="deleteServer()">${esc(T('delete'))}</button></div>
+    <button class="btn" onclick="start('server')">${esc(T('connect_btn'))}</button>`,
+};
+
+function selectMode(m){
+  MODE=m;
+  document.querySelectorAll('.card').forEach(c=>c.classList.toggle('sel',c.dataset.mode===m));
+  const color=getComputedStyle(document.querySelector(`.card[data-mode="${m}"]`)).getPropertyValue('--c');
+  $('#panel').style.setProperty('--c',color);$('#session').style.setProperty('--c',color);
+  if(!BUSY) $('#panel').innerHTML=PANELS[m]();
+}
+document.querySelectorAll('.card').forEach(c=>c.addEventListener('click',()=>{ if(!BUSY) selectMode(c.dataset.mode)}));
+
+function render(s){
+  STATE=s;
+  if(s.i18n){TX=s.i18n;document.documentElement.lang=s.lang||'en';applyT()}
+  $('#acc').textContent=s.account||T('no_steam');
+  if(s.version)$('#ver').textContent=s.version==='dev'?'dev':'v'+s.version;
+  const r=s.record||{};$('#sw').textContent=r.w||0;$('#sd').textContent=r.d||0;$('#sl').textContent=r.l||0;
+  $('#sp').textContent=(r.p||0).toLocaleString(s.lang||'en');
+  $('#gamepath').textContent=s.game_dir?T('game_path',{path:s.game_dir}):T('no_game');
+  if(s.art){
+    if(s.art.city) $('#bg').style.backgroundImage=`url(${s.art.city})`;
+    document.querySelectorAll('[data-art]').forEach(e=>{const a=s.art[e.dataset.art]; if(a) e.style.backgroundImage=`url(${a})`});
+  }
+  if(!BUSY) selectMode(MODE);
+  if(s.notice) toast(s.notice);
+}
+
+async function start(mode){
+  const args={};
+  if(mode==='host') args.port=$('#port').value;
+  if(mode==='join') args.address=$('#friend').value;
+  if(mode==='server'){args.address=$('#saddr').value;args.password=$('#spw').value}
+  const r=await api('start',mode,args);
+  if(r&&r.error){toast(r.error);return}
+}
+function stopSession(){api('stop');$('#stopbtn').disabled=true}
+function copyAddr(){api('copy',$('#addrtxt').textContent);toast(T('copied'))}
+async function pickGame(){const s=await api('pick_game');if(s)render(s)}
+async function restoreGame(){const t=await api('restore');if(t)toast(t)}
+function pickSaved(){const n=$('#saved').value;const s=(STATE.servers||[]).find(x=>x.name===n);if(!s)return;
+  $('#sname').value=s.name;$('#saddr').value=s.address;$('#spw').value=s.password||''}
+async function saveServer(){const s=await api('save_server',$('#sname').value,$('#saddr').value,$('#spw').value);if(s){render(s);toast(T('server_saved'))}}
+async function deleteServer(){const s=await api('delete_server',$('#saved').value);if(s)render(s)}
+
+/* llamadas desde Python */
+window.ui={
+  log(t,kind){const d=document.createElement('div');if(kind)d.className=kind;d.textContent=t;const L=$('#log');L.appendChild(d);L.scrollTop=L.scrollHeight},
+  busy(on,title){BUSY=on;$('#panel').style.display=on?'none':'flex';$('#session').classList.toggle('on',on);
+    $('#stopbtn').disabled=false;$('#sesstitle').textContent=title||T('session_running');if(on)$('#log').innerHTML=''},
+  address(a){$('#addr').classList.toggle('on',!!a);$('#addrtxt').textContent=a||''},
+  state(s){render(s)},
+  loading(msg){if(msg){$('#loadmsg').textContent=msg;$('#loading').classList.remove('off')}else $('#loading').classList.add('off')},
+  error(t){toast(t)},
+};
+
+async function boot(){
+  const s=await api('init');
+  if(s) render(s);
+  ui.loading(null);
+}
+window.addEventListener('pywebviewready',boot);
+if(window.MOCK) setTimeout(()=>{ if(!STATE) boot() },50);
+</script>
+</body>
+</html>

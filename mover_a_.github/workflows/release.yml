@@ -1,0 +1,54 @@
+# Cada vez que se sube algo a main: compila el lanzador en Windows y publica una release nueva.
+# Los lanzadores ya instalados la detectan al abrirse y se actualizan solos.
+name: Compilar y publicar
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "assets/**", ".github/FUNDING.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dependencias
+        run: python -m pip install -r requirements.txt pyinstaller
+
+      - name: Version
+        id: ver
+        shell: bash
+        run: echo "version=1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Compilar
+        run: python tools/build_exe.py ${{ steps.ver.outputs.version }}
+
+      - name: Huella SHA-256
+        id: sha
+        shell: bash
+        run: echo "sha256=$(sha256sum dist/CrimeSightRevival.exe | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Publicar release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: CRIMESIGHT Revival ${{ steps.ver.outputs.version }}
+          files: dist/CrimeSightRevival.exe
+          body: |
+            Descarga **CrimeSightRevival.exe** y ábrelo. Necesitas tener CRIMESIGHT en tu biblioteca de Steam.
+            Download **CrimeSightRevival.exe** and run it. You need to own CRIMESIGHT on Steam.
+
+            Si ya lo tienes, se actualizará solo al abrirlo. · If you already have it, it updates itself on launch.
+
+            SHA-256: `${{ steps.sha.outputs.sha256 }}`
+
+            Cambios / Changes: ${{ github.event.head_commit.message }}
