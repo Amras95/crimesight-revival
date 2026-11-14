@@ -101,7 +101,11 @@ Steam Cloud isn't used, because each game's cloud storage is controlled by its p
   four roles (Sherlock, Moriarty, Watson and Irene), with three difficulty levels.
 - Full matches: items, wild dogs, gas leaks, Assault, final turn, murder, arrest and final deduction,
   with the right cutscene for each side.
-- Wins, draws, losses and points: 250 per completed match, +150 for a win, 0 if you quit.
+- Wins, draws, losses and points. A win gives 200 against easy AI, 400 on normal, 800 on hard and 1000
+  against other people; a draw or loss gives half; quitting gives 0. Action bonuses: repairing the fuse box
+  (+50), healing (+50), foiling the Assault (+100), tear gas on the villain (+100) and naming the villain
+  (+100); as Moriarty, killing with the Assault (+50), causing the blackout (+50), gassing someone (+50) and
+  knocking out the target (+100).
 - Point and level rewards as in the original. The Project Winter event stays open with its avatar
   unlocked. Deluxe content still depends on owning it on Steam.
 - Steam achievements can still be earned (the game itself handles them with Steam).

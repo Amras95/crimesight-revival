@@ -67,6 +67,8 @@ class View:
         self.pawns = {int(p["pawnId"]): p for p in ref.get("pawns", []) if isinstance(p, dict)}
         self.unavailable = set(unavailable_objects)
         self.weapon_objects = set()     # muebles con arma (solo lo sabe el bando de Moriarty)
+        self.food_objects = set()       # muebles con comida (Moriarty los conoce todos)
+        self.dark = bool(int(ref.get("isBlack", 0) or 0))
         self.threats = [t for t in ref.get("threatList") or [] if isinstance(t, dict) and not t.get("isDie")]
         self.gas_rooms = {g.get("roomId") for g in ref.get("gaspipeList") or [] if isinstance(g, dict)}
 
@@ -192,114 +194,156 @@ def plan_moriarty(view, idx, killer, target, n_orders, difficulty, rng, taken=()
     orders, used = [], set(taken) | {target}
     if killer not in view.pawns or target not in view.pawns:
         return orders, False
+    if difficulty == "hard":
+        return plan_moriarty_hard(view, idx, killer, target, n_orders, rng, taken)
+    if difficulty == "easy":
+        return plan_moriarty_easy(view, idx, killer, target, n_orders, rng, taken)
+    return plan_moriarty_normal(view, idx, killer, target, n_orders, rng, taken)
+
+
+def assault_order(view, idx, killer, target):
+    t = view.pawns[target]
+    return {**order(view, idx, killer, TARGET, {"gridId": t.get("gridId"), "pawnDistance": []}),
+            "targetId": int(t.get("uniqId", -1)), "isRun": 0}
+
+
+def plan_moriarty_normal(view, idx, killer, target, n_orders, rng, taken=()):
+    """Moriarty normal: toma tres cosas del dificil, sin ser implacable.
+    - Nunca hace correr a nadie (llamaria la atencion de Sherlock).
+    - Asalta solo si nadie puede llegar este turno a la habitacion de la victima (aunque no
+      comprueba si ella puede escaparse, asi que a veces falla).
+    - Con arma, se planta en la casilla de la victima si ahora mismo esta sola en su habitacion.
+    Su otra orden aparta, andando, a quien acompana a la victima."""
+    orders, used = [], set(taken) | {target}
     k, t = view.pawns[killer], view.pawns[target]
-    kgrids = view.grids(killer)
     armed = bool(k.get("isHaveWeapon"))
-    witnesses = [q for q in view.room_mates(target) if q != killer]
-    reach = any(view.dist(g, target) == 0 for g in kgrids) and not view.threat_witness(t.get("roomId"))
-    close = view.pair_distance(killer, target)
+    kwalk = walk(view, killer) if view.grids(killer) else []
+    troom = t.get("roomId")
+    witnesses = [q for q in view.room_mates(target) if q != killer and awake(view, q)]
+    others = [q for q in view.ids() if q not in (killer, target) and awake(view, q)]
+    nobody_can_come = not any(g.get("roomId") == troom for q in others for g in view.grids(q))
+    reach = any(view.dist(g, target) == 0 for g in view.grids(killer)) and not view.threat_witness(troom)
 
-    assault = False
-    if armed and killer not in used:
-        if difficulty == "easy":
-            assault = reach and not witnesses and rng.random() < 0.5
-        elif difficulty == "normal":
-            assault = reach and not witnesses
-        else:  # hard: tambien si hay un unico testigo que podemos apartar este turno
-            assault = reach and len(witnesses) <= (1 if n_orders >= 2 else 0)
-    if assault:
-        orders.append({**order(view, idx, killer, TARGET, {"gridId": t.get("gridId"), "pawnDistance": []}),
-                       "targetId": int(t.get("uniqId", -1)), "isRun": 0})
-        used.add(killer)
-        if witnesses and len(orders) < n_orders:          # apartar al testigo
-            w = witnesses[0]
-            wg = view.grids(w)
-            if wg:
-                orders.append(order(view, idx, w, MOVE, away_from(view, w, target)))
-                used.add(w)
-        return orders, True
+    if armed and killer not in used and reach and nobody_can_come:
+        return [assault_order(view, idx, killer, target)], True
 
-    # Mover al asesino: sin arma, a registrar muebles cerca de la victima; con arma, acercarse sin pegarse
-    if killer not in used and kgrids:
-        if difficulty == "easy":
-            o = search_or_move(view, idx, killer, kgrids, rng)
-        elif not armed:
-            o = seek_weapon(view, idx, killer, kgrids, rng, prefer=target) or \
-                search_or_move(view, idx, killer, kgrids, rng, prefer=target)
+    if killer not in used and kwalk:
+        if not armed:
+            o = seek_weapon(view, idx, killer, kwalk, rng, prefer=target) or \
+                search_or_move(view, idx, killer, kwalk, rng, prefer=target)
         else:
-            want = 2 if difficulty == "hard" else 1
-            g = min(kgrids, key=lambda g: (abs(view.dist(g, target) - want), view.danger(g), rng.random()))
-            o = order(view, idx, killer, MOVE, g)
+            here = next((g for g in kwalk if view.dist(g, target) == 0), None)
+            if here is not None and not witnesses:
+                o = order(view, idx, killer, MOVE, here)
+            else:
+                g = min(kwalk, key=lambda g: (abs(view.dist(g, target) - 1), view.danger(g), rng.random()))
+                o = order(view, idx, killer, MOVE, g)
         if o:
             orders.append(o)
             used.add(killer)
 
-    # Segundo personaje: despejar a la victima (normal/dificil) o despistar (facil)
     while len(orders) < n_orders:
         candidates = [q for q in view.ids() if q not in used and view.grids(q)]
         if not candidates:
             break
-        if difficulty != "easy" and witnesses:
-            w = next((q for q in witnesses if q in candidates), None)
-        else:
-            w = None
+        w = next((q for q in witnesses if q in candidates), None)
         if w is not None:
-            orders.append(order(view, idx, w, MOVE, away_from(view, w, target)))
+            g = max(walk(view, w), key=lambda g: (view.dist(g, target) - 2 * view.danger(g), rng.random()))
+            orders.append(order(view, idx, w, MOVE, g))
             used.add(w)
             witnesses.remove(w)
             continue
         q = rng.choice(candidates)
-        o = search_or_move(view, idx, q, view.grids(q), rng)   # comportarse como un sospechoso mas
+        o = search_or_move(view, idx, q, walk(view, q), rng)   # comportarse como un sospechoso mas
         if o:
             orders.append(o)
         used.add(q)
     return orders, False
 
 
+def plan_moriarty_easy(view, idx, killer, target, n_orders, rng, taken=()):
+    """Moriarty facil: comete errores que un Sherlock atento puede pillar.
+    - Hace correr a su asesino a menudo y lo pega a la victima turno tras turno.
+    - A veces asalta aunque haya testigos (y entonces suele fallar y quedar al descubierto).
+    - Su otra orden es casi siempre un movimiento al azar."""
+    orders, used = [], set(taken) | {target}
+    k, t = view.pawns[killer], view.pawns[target]
+    armed = bool(k.get("isHaveWeapon"))
+    kgrids = view.grids(killer)
+    witnesses = [q for q in view.room_mates(target) if q != killer and awake(view, q)]
+    reach = any(view.dist(g, target) == 0 for g in kgrids)
+
+    if armed and killer not in used and reach and rng.random() < (0.6 if not witnesses else 0.35):
+        return [assault_order(view, idx, killer, target)], True
+
+    if killer not in used and kgrids:
+        if armed or rng.random() < 0.5:
+            # pegarse a la victima, corriendo si hace falta: muy evidente
+            g = min(kgrids, key=lambda g: (view.dist(g, target), -view.self_dist(killer, g), rng.random()))
+            o = order(view, idx, killer, MOVE, g)
+        else:
+            o = search_or_move(view, idx, killer, kgrids, rng)
+        if o:
+            orders.append(o)
+            used.add(killer)
+
+    while len(orders) < n_orders:
+        candidates = [q for q in view.ids() if q not in used and view.grids(q)]
+        if not candidates:
+            break
+        q = rng.choice(candidates)
+        orders.append(order(view, idx, q, MOVE, rng.choice(view.grids(q))))
+        used.add(q)
+    return orders, False
+
+
 # ------------------------------------------------------------------ Sherlock
-def plan_sherlock(view, idx, n_orders, difficulty, rng, taken=()):
+def plan_sherlock(view, idx, n_orders, difficulty, rng, taken=(), memory=None):
     """Ordenes para el bando de Sherlock: buscar objetos y no dejar a nadie solo."""
+    if difficulty == "hard":
+        return plan_sherlock_hard(view, idx, n_orders, rng, taken, memory or new_memory())
     orders, used = [], set(taken)
+    pool = [q for q in view.ids() if q not in used and view.grids(q)]
+    if difficulty == "easy":
+        return plan_sherlock_easy(view, idx, n_orders, rng, pool)
+    return plan_sherlock_normal(view, idx, n_orders, rng, pool, memory or new_memory())
+
+
+def plan_sherlock_normal(view, idx, n_orders, rng, pool, memory):
+    """Sherlock normal: toma tres cosas del dificil.
+    - No gasta ordenes en personajes que Moriarty ya controla (orden pisada) si hay otros.
+    - Mantiene a la gente junta, a 3 casillas o menos, empezando por las posibles victimas aisladas.
+    - Al final acusa casi siempre al mas sospechoso de lo que ha visto (ver accuse)."""
+    orders = []
 
     def lonely(q):
         return len(view.room_mates(q))
 
-    pool = [q for q in view.ids() if q not in used and view.grids(q)]
-    if difficulty == "easy":
-        rng.shuffle(pool)
-    else:
-        # prioriza a los posibles victimas aisladas
-        pool.sort(key=lambda q: (not view.pawns[q].get("isTargetCandidate", 1), lonely(q), rng.random()))
+    pool = [q for q in pool if q not in memory["moriarty"]] or pool
+    pool.sort(key=lambda q: (not view.pawns[q].get("isTargetCandidate", 1), lonely(q), rng.random()))
     for q in pool:
         if len(orders) >= n_orders:
             break
         grids = view.grids(q)
-        if difficulty == "easy":
-            o = search_or_move(view, idx, q, grids, rng)
-        else:
-            others = [x for x in view.ids() if x != q]
+        others = [x for x in view.ids() if x != q]
 
-            def company(g):
-                return sum(1 for x in others if view.dist(g, x) <= (1 if difficulty == "hard" else 2)) \
-                    - view.danger(g)
+        def company(g):
+            return sum(1 for x in others if view.dist(g, x) <= 3) - view.danger(g)
 
-            best = max(company(g) for g in grids)
-            good = [g for g in grids if company(g) == best]
-            if lonely(q) == 0 or difficulty == "hard":
-                # registrar con compania aceptable antes que amontonarse sin hacer nada
-                near_best = [g for g in grids if company(g) >= max(1, best - 1)]
-                with_obj = [g for g in good if view.searchable(g)] or \
-                           [g for g in near_best if view.searchable(g)]
-                if with_obj:
-                    g = rng.choice(with_obj)
-                    o = order(view, idx, q, SEARCH, g, rng.choice(view.searchable(g)))
-                else:
-                    o = order(view, idx, q, MOVE, rng.choice(good))
+        best = max(company(g) for g in grids)
+        good = [g for g in grids if company(g) == best]
+        if lonely(q) == 0:
+            near_best = [g for g in grids if company(g) >= max(1, best - 1)]
+            with_obj = [g for g in good if view.searchable(g)] or [g for g in near_best if view.searchable(g)]
+            if with_obj:
+                g = rng.choice(with_obj)
+                o = order(view, idx, q, SEARCH, g, rng.choice(view.searchable(g)))
             else:
-                o = search_or_move(view, idx, q, grids, rng)
+                o = order(view, idx, q, MOVE, rng.choice(good))
+        else:
+            o = search_or_move(view, idx, q, grids, rng)
         if o:
             orders.append(o)
-            used.add(q)
     return orders
 
 
@@ -328,12 +372,28 @@ def plan_irene(view, idx, killer, target, difficulty, rng, taken=()):
     return [o] if o else []
 
 
-def plan_watson(view, idx, difficulty, rng, taken=()):
+def plan_sherlock_easy(view, idx, n_orders, rng, pool):
+    """Sherlock facil: ordenes casi al azar, sin mirar peligros ni quien va armado; a veces deja
+    sola a una posible victima o la acerca a un sospechoso."""
+    orders = []
+    rng.shuffle(pool)
+    for q in pool[:n_orders]:
+        grids = view.grids(q)
+        objs = [(g, o) for g in grids for o in view.searchable(g)]
+        if objs and rng.random() < 0.5:
+            g, o = rng.choice(objs)
+            orders.append(order(view, idx, q, SEARCH, g, o))
+        else:
+            orders.append(order(view, idx, q, MOVE, rng.choice(grids)))
+    return orders
+
+
+def plan_watson(view, idx, difficulty, rng, taken=(), memory=None):
     """Watson (bando Sherlock): 1 orden con el mismo criterio que Sherlock."""
-    return plan_sherlock(view, idx, 1, difficulty, rng, taken)
+    return plan_sherlock(view, idx, 1, difficulty, rng, taken, memory)
 
 
-def accuse(view, killer, difficulty, rng, n_pawns):
+def accuse(view, killer, difficulty, rng, n_pawns, memory=None):
     """Acusacion final de un Sherlock IA."""
     everyone = list(range(n_pawns))
     if view is None:
@@ -341,6 +401,304 @@ def accuse(view, killer, difficulty, rng, n_pawns):
     cands = [q for q, p in view.pawns.items() if p.get("isKillerCandidate")] or everyone
     if difficulty == "easy":
         return rng.choice(everyone)
-    if difficulty == "hard" and killer in cands and (len(cands) <= 3 or rng.random() < 0.5):
-        return killer
+    if difficulty == "hard":
+        # Solo con lo que ha visto: el mas sospechoso de los que aun pueden ser el asesino
+        mem = memory or new_memory()
+        best = max(suspicion(view, mem, q) for q in cands)
+        return rng.choice([q for q in cands if suspicion(view, mem, q) == best])
+    # normal: suele acusar al mas sospechoso de lo que ha visto, pero no siempre
+    mem = memory or new_memory()
+    if rng.random() < 0.6:
+        best = max(suspicion(view, mem, q) for q in cands)
+        return rng.choice([q for q in cands if suspicion(view, mem, q) == best])
     return rng.choice(cands)
+
+
+# ------------------------------------------------------------------ dificil: utilidades
+def new_memory():
+    """Lo que el bando de Sherlock ha ido viendo durante la partida (sin trampas):
+    moved: veces que un personaje actuo sin que lo ordenara su equipo;
+    moriarty: personajes en los que se detecto la mano de Moriarty (orden pisada)."""
+    return {"moved": {}, "moriarty": set()}
+
+
+def suspicion(view, memory, q):
+    p = view.pawns.get(q, {})
+    if not p.get("isKillerCandidate", 1):
+        return -99
+    score = memory["moved"].get(q, 0) + (4 if q in memory["moriarty"] else 0)
+    if p.get("isHaveWeapon"):
+        score += 2
+    return score
+
+
+def reach(view, pid):
+    return max((view.dist(g, pid) for g in view.grids(pid)), default=0)
+
+
+def awake(view, q):
+    return not view.pawns.get(q, {}).get("isBlind")
+
+
+def watched(view, grid, dark, watchers, room_of_target=None):
+    """Podria alguien ver lo que pasa en esa casilla al final del turno?
+    watchers: {personaje: lista de casillas donde puede acabar}. Con apagon solo cuenta quien
+    acabe en la misma casilla; con luz, cualquiera en la habitacion. Los perros testigo tambien."""
+    room, gid = grid.get("roomId"), grid.get("gridId")
+    for ends in watchers.values():
+        for g in ends:
+            if (g.get("gridId") == gid) if dark else (g.get("roomId") == room):
+                return True
+    return view.threat_witness(room)
+
+
+def assault_is_certain(view, killer, target, watchers):
+    """Asalto solo si es seguro: vaya donde vaya la victima, el asesino llega y nadie lo ve."""
+    kr = reach(view, killer)
+    tg = view.grids(target)
+    if not tg or kr <= 0:
+        return False
+    dark = view.dark and not view.pawns[target].get("isNoBlack")
+    for g in tg:
+        if view.dist(g, killer) > kr or watched(view, g, dark, watchers):
+            return False
+    return True
+
+
+def walk(view, pid):
+    """Casillas a las que se llega andando: hacer correr a alguien llama la atencion de Sherlock."""
+    return [g for g in view.grids(pid) if view.self_dist(pid, g) <= WALK_RANGE] or view.grids(pid)
+
+
+def lure(view, idx, w, target, rng):
+    """Alejar a un testigo de la victima, mejor hacia un peligro (gas, perros), siempre andando
+    (si corre, Sherlock sospecha)."""
+    troom = view.pawns[target].get("roomId")
+
+    def value(g):
+        return (3 * view.danger(g) + view.dist(g, target) - (5 if g.get("roomId") == troom else 0), rng.random())
+    g = max(walk(view, w), key=value)
+    return order(view, idx, w, MOVE, g), g
+
+
+def has_food(view, pid):
+    return any(int(i.get("itemType", -1)) == 1 for i in view.pawns.get(pid, {}).get("itemList") or [])
+
+
+def search_no_food(view, idx, pid, grids, rng, prefer=None):
+    """Registrar o moverse sin coger comida: a los demas les conviene seguir hambrientos."""
+    saved = set(view.unavailable)
+    view.unavailable |= view.food_objects
+    try:
+        o = search_or_move(view, idx, pid, grids, rng, prefer)
+    finally:
+        added = view.unavailable - saved - view.food_objects
+        view.unavailable = saved | added
+    return o
+
+
+# ------------------------------------------------------------------ dificil: Moriarty
+def plan_moriarty_hard(view, idx, killer, target, n_orders, rng, taken=()):
+    """Moriarty dificil:
+    - Asalto solo cuando es seguro: la victima no puede escapar del alcance del asesino y ningun
+      testigo puede acabar en su habitacion (calculando hasta donde puede andar cada uno). Con
+      apagon solo cuenta quien acabe en la misma casilla, asi que aprovecha la oscuridad.
+    - Si no, con arma prefiere plantarse en la casilla de la victima cuando nadie puede verlo:
+      si la victima no se mueve, cae al final del turno sin revelarse.
+    - Usa su otra orden para quitar testigos de en medio, llevandolos a peligros.
+    - Nunca hace correr a nadie (Sherlock sospecha de quien corre) y no deja que los demas cojan
+      comida, salvo su asesino si tiene hambre."""
+    used = set(taken) | {target}
+    orders = []
+    k = view.pawns[killer]
+    armed = bool(k.get("isHaveWeapon"))
+    others = [q for q in view.ids() if q not in (killer, target) and awake(view, q)]
+    watchers = {q: view.grids(q) or [view.here(q)] for q in others}
+    tgrids = view.grids(target)
+    troom = view.pawns[target].get("roomId")
+
+    def threatens(q):     # puede acabar en alguna habitacion a la que pueda ir la victima
+        rooms = {g.get("roomId") for g in tgrids} | {troom}
+        return any(g.get("roomId") in rooms for g in watchers[q])
+
+    blockers = sorted([q for q in others if q not in used and view.grids(q) and threatens(q)],
+                      key=lambda q: (view.pawns[q].get("roomId") != troom, view.pair_distance(q, target)))
+    can_order_killer = killer not in used and view.grids(killer)
+    kwalk = walk(view, killer) if can_order_killer else []
+
+
+    def feed_killer():
+        """Su asesino si come: con hambre y sin comida, a por la comida que conoce (andando)."""
+        if not (k.get("isHungry") and not has_food(view, killer)):
+            return None
+        food = [(g, o) for g in kwalk for o in view.searchable(g) if o in view.food_objects]
+        if not food:
+            return None
+        g, o = min(food, key=lambda go: (view.danger(go[0]), view.dist(go[0], target), rng.random()))
+        return order(view, idx, killer, SEARCH, g, o)
+
+    if armed and can_order_killer:
+        # 1. Asalto seguro (si hace falta, apartando antes a un testigo con la otra orden)
+        plans = [None] + (blockers[:3] if n_orders >= 2 else [])
+        for w in plans:
+            ws = dict(watchers)
+            extra = None
+            if w is not None:
+                extra, g = lure(view, idx, w, target, rng)
+                ws[w] = [g]
+            if assault_is_certain(view, killer, target, ws):
+                t = view.pawns[target]
+                orders.append({**order(view, idx, killer, TARGET, {"gridId": t.get("gridId"), "pawnDistance": []}),
+                               "targetId": int(t.get("uniqId", -1)), "isRun": 0})
+                if extra:
+                    orders.append(extra)
+                return orders, True
+        # 2. Si tiene hambre, comer antes de seguir (con hambre llega menos lejos)
+        o = feed_killer()
+        if o:
+            orders.append(o)
+            return fill_moriarty(view, idx, killer, target, n_orders, rng, used | {killer}, orders, blockers), False
+        # 3. Plantarse en la casilla de la victima si nadie puede verlo (sin revelarse)
+        here = next((g for g in kwalk if view.dist(g, target) == 0), None)    # andando: sin llamar la atencion
+        if here is not None:
+            dark = view.dark and not view.pawns[target].get("isNoBlack")
+            for w in [None] + (blockers[:3] if n_orders >= 2 else []):
+                ws = dict(watchers)
+                extra = None
+                if w is not None:
+                    extra, g = lure(view, idx, w, target, rng)
+                    ws[w] = [g]
+                if not watched(view, here, dark, ws):
+                    orders.append(order(view, idx, killer, MOVE, here))
+                    if extra:
+                        orders.append(extra)
+                    return fill_moriarty(view, idx, killer, target, n_orders, rng, used | {killer} |
+                                         {o["pawnId"] for o in orders}, orders, blockers), False
+        # 4. Acecharla a 2 casillas, sin peligro, a la espera de una ocasion
+        g = min(kwalk, key=lambda g: (abs(view.dist(g, target) - 2), view.danger(g), rng.random()))
+        orders.append(order(view, idx, killer, MOVE, g))
+    elif can_order_killer:
+        o = feed_killer() or seek_weapon(view, idx, killer, kwalk, rng, prefer=target) or \
+            search_or_move(view, idx, killer, kwalk, rng, prefer=target)
+        if o:
+            orders.append(o)
+    used |= {killer} | {o["pawnId"] for o in orders}
+    return fill_moriarty(view, idx, killer, target, n_orders, rng, used, orders, blockers), False
+
+
+def fill_moriarty(view, idx, killer, target, n_orders, rng, used, orders, blockers):
+    """Ordenes que sobran: debilitar y apartar a los acompanantes de la victima."""
+    for w in blockers:
+        if len(orders) >= n_orders:
+            break
+        if w in used or not view.grids(w):
+            continue
+        o, _ = lure(view, idx, w, target, rng)
+        orders.append(o)
+        used.add(w)
+    while len(orders) < n_orders:
+        pool = [q for q in view.ids() if q not in used and q != target and view.grids(q)]
+        if not pool:
+            break
+        # Registrar muebles (asi tambien puede dar con el plano del cuadro electrico y provocar el
+        # apagon), sin coger comida y andando, como haria cualquiera por su cuenta
+        q = rng.choice(pool)
+        o = search_no_food(view, idx, q, walk(view, q), rng)
+        if o:
+            orders.append(o)
+        used.add(q)
+    return orders
+
+
+# ------------------------------------------------------------------ dificil: Sherlock
+def plan_sherlock_hard(view, idx, n_orders, rng, taken, memory):
+    """Sherlock dificil (solo con lo que ve un jugador):
+    - Protege primero a la posible victima mas expuesta, acercandola a gente de confianza y lejos de
+      sospechosos armados.
+    - Usa como escolta a quien ya esta descartado como asesino; si ademas esta descartado como
+      victima, puede compartir casilla con ella.
+    - No malgasta ordenes en personajes que Moriarty ya controla y aparta al mas sospechoso.
+    - El resto, juntos a 3 casillas o menos para que nadie se quede a solas."""
+    orders, used = [], set(taken)
+    ids = view.ids()
+    pw = view.pawns
+    sus = {q: suspicion(view, memory, q) for q in ids}
+    cleared = [q for q in ids if not pw[q].get("isKillerCandidate", 1)]
+    cleared_both = [q for q in cleared if not pw[q].get("isTargetCandidate", 1)]
+    victims = [q for q in ids if pw[q].get("isTargetCandidate", 1)]
+    armed_sus = [q for q in ids if pw[q].get("isHaveWeapon") and sus[q] > -99]
+    planned = {}          # personaje -> casilla a la que lo mandamos
+
+    def orderable(q):
+        return q not in used and view.grids(q) and q not in memory["moriarty"]
+
+    def risk(g, who):
+        """Riesgo de acabar en esa casilla para una posible victima: sospechosos armados que llegan."""
+        return sum(1 for a in armed_sus if a != who and any(x.get("gridId") == g.get("gridId") for x in view.grids(a)))
+
+    def add(q, kind, g, target_id=-1):
+        orders.append(order(view, idx, q, kind, g, target_id))
+        used.add(q)
+        planned[q] = g
+
+    def exposure(v):
+        room = pw[v].get("roomId")
+        guards = [q for q in cleared if q != v and pw[q].get("roomId") == room]
+        near_armed = sum(1 for a in armed_sus if a != v and view.pair_distance(a, v) <= 3)
+        return (len(guards) == 0) * 2 + near_armed + (len(view.room_mates(v)) == 0)
+
+    # 1. Posible victima mas expuesta: con escolta y lejos de armados
+    for v in sorted(victims, key=lambda v: (-exposure(v), rng.random())):
+        if len(orders) >= n_orders:
+            break
+        if exposure(v) == 0:
+            break
+        if orderable(v):
+            friends = [q for q in cleared if q != v] or [q for q in ids if q != v and sus[q] <= 0]
+
+            def safety(g, v=v, friends=friends):
+                return (-3 * risk(g, v) + sum(1 for f in friends if view.dist(g, f) <= 1)
+                        - view.danger(g), rng.random())
+            add(v, MOVE, max(view.grids(v), key=safety))
+        # escolta descartado
+        dest = planned.get(v) or view.here(v)
+        guard = next((q for q in sorted(cleared, key=lambda q: view.pair_distance(q, v))
+                      if q != v and orderable(q)), None)
+        if guard is not None and len(orders) < n_orders:
+            same_ok = guard in cleared_both
+            opts = view.grids(guard)
+
+            def closeness(g, guard=guard, same_ok=same_ok, dest=dest):
+                d = 0 if g.get("gridId") == dest.get("gridId") else (1 if g.get("roomId") == dest.get("roomId") else 3)
+                if d == 0 and not same_ok and risk(g, guard):
+                    d = 2            # no compartir casilla si un armado puede llegar
+                return (-d, -view.danger(g), rng.random())
+            add(guard, MOVE, max(opts, key=closeness))
+
+    # 2. Apartar al mas sospechoso de las posibles victimas
+    for q in sorted(ids, key=lambda q: -sus[q]):
+        if len(orders) >= n_orders or sus[q] <= 0:
+            break
+        if orderable(q):
+            far = max(view.grids(q), key=lambda g: (min((view.dist(g, v) for v in victims if v != q), default=0),
+                                                      -view.danger(g), rng.random()))
+            add(q, MOVE, far)
+            break
+
+    # 3. Resto: todos juntos (a 3 casillas o menos) y registrando si se puede
+    for q in sorted([q for q in ids if orderable(q)], key=lambda q: (len(view.room_mates(q)), rng.random())):
+        if len(orders) >= n_orders:
+            break
+        others = [x for x in ids if x != q]
+
+        def company(g):
+            return sum(1 for x in others if view.dist(g, x) <= 3) - 2 * view.danger(g)
+        best = max(company(g) for g in view.grids(q))
+        good = [g for g in view.grids(q) if company(g) >= best - 1]
+        with_obj = [g for g in good if view.searchable(g)]
+        if with_obj:
+            g = rng.choice(with_obj)
+            add(q, SEARCH, g, rng.choice(view.searchable(g)))
+        else:
+            add(q, MOVE, rng.choice([g for g in good if company(g) == best]))
+    return orders

@@ -43,6 +43,18 @@ INSTRUCT_TARGET = 5          # Pawn.InstructData.InstructType.TARGET -> "Asalto"
 INSTRUCT_SEARCH = 3          # buscar en un mueble: el servidor decide que objeto aparece
 INSTRUCT_PICK = 7            # recoger un objeto del suelo
 FOOD_OPEN_COUNT = 2          # MatchSettings.foodOpenCount: comida que ven los que no son Moriarty
+# Pawn.InstructData.InstructType
+INSTRUCT_ATTACK, INSTRUCT_POTION, INSTRUCT_SPRAY, INSTRUCT_REPAIR = 4, 6, 9, 11
+# Acciones con puntos (textos del propio juego, ver stats.ACTIONS)
+ACT_REPAIR = "ctg_name_result_repair_switchboard"
+ACT_TREAT = "ctg_name_result_action_treated_pawnForInjuries"
+ACT_FOILED = "ctg_name_result_arrest_succeed"
+ACT_SPRAY_KILLER = "ctg_name_result_apply_tearSpray_to_killer"
+ACT_DEDUCED = "ctg_name_result_identified_killer_by_deduction"
+ACT_ASSAIL_KILL = "ctg_name_result_action_targetKilledByAssail"
+ACT_BLACKOUT = "ctg_name_result_blackOut_by_switchboard"
+ACT_SPRAY_OTHER = "ctg_name_result_action_blockedSherlockWithSpray"
+ACT_KNOCKOUT = "ctg_name_result_action_beCriticalNoKiller"
 DEFAULT_PAWNS = 6            # personajes por partida (la mansion tiene 6 sospechosos)
 COUNTDOWN_SECONDS = 3
 DEFAULT_AI_DIFFICULTY = "normal"   # se puede cambiar con --ai-difficulty
@@ -321,11 +333,13 @@ class Room:
         self.created = time.time()
         self.bot_seq = 0
         self.object_items = {}     # mueble (cottage id) -> objeto que contiene (se reparte al empezar)
-        self.food_items, self.weapon_items = set(), set()
+        self.food_items, self.weapon_items, self.switch_items = set(), set(), set()
+        self.events = {}           # jugador -> acciones con puntos conseguidas en la partida
         self.searched = {}         # mueble (cottage id) -> objeto que salio
         self.drops = {}            # objeto en el suelo (cottage id) -> indice de objeto
         self.disabled_objects = set()
         self.bot_orders = {}
+        self.ai_mem = ai.new_memory()   # lo que ha visto el bando de Sherlock (IA dificil)
         self.last_view = None
         self.turn_ref = {}         # reference_data del inicio del turno (para IA y peligros)
         self.hazard_prob = {}      # "threat"/"gaspipe" -> probabilidad actual (se dobla en cada fallo)
@@ -686,8 +700,13 @@ class Room:
         items = list(range(n))
         random.shuffle(items)
         self.object_items = dict(enumerate(items))
+        self.ai_mem = ai.new_memory()
         self.food_items = set(range(food))
         self.weapon_items = set(range(food, food + weapons))
+        # Planos del cuadro electrico: los ultimos de la lista (ItemManager.CreateMatchItemList)
+        sw = int(self.settings.get("switchboard_count", 0) or 0)
+        self.switch_items = set(range(max(0, n - sw), n))
+        self.events = {}
         log.info("Sala %s: %s objetos repartidos (%s comida, %s armas)", self.id, n, food, weapons)
 
     def objects_with(self, items):
@@ -773,7 +792,7 @@ class Room:
             "isKill": True, "killer": self.killer, "target": self.target,
             "detective_player": det[0], "detective_name": det[1], "criminal_player": cri[0], "criminal_name": cri[1],
             "irene_player": ire[0], "irene_name": ire[1], "watson_player": wat[0], "watson_name": wat[1]}})
-        self.conclude("moriarty", {ROLE_CRIMINAL: ["ctg_name_result_action_targetKilledByAssail"] if self.assault else []})
+        self.conclude("moriarty", {ROLE_CRIMINAL: [ACT_ASSAIL_KILL] if self.assault else []})
 
     def settle_kill(self):
         """Compatibilidad: el asesinato ya se anota en el momento."""
@@ -816,13 +835,17 @@ class Room:
                 # En linea el servidor decide el asesinato (el cliente no lo comprueba por su cuenta)
                 await self.end_by_kill()
             else:
+                if self.assault:     # hubo Asalto y la victima sigue viva: el bando de Sherlock lo frustro
+                    for pid in self.members:
+                        if self.side(pid) == "sherlock":
+                            self.note(pid, ACT_FOILED)
                 await self.control("StartTransitionPhase", {"Turn": self.turn, "Data": {"isDanger": self.is_danger()}})
                 if int(ref.get("isLastTurn", 0) or 0):
                     # Era el turno final tras descubrirse al asesino (Asalto fallido o deduccion) y la
                     # victima sigue viva: el cliente muestra la detencion, gana el bando de Sherlock.
                     log.info("Sala %s turno %s: fin del turno final sin asesinato, detenido el asesino", self.id, self.turn)
                     self.phase = "ended"
-                    self.conclude("sherlock", {ROLE_DETECTIVE: ["ctg_name_result_pattern_arrest_success"]})
+                    self.conclude("sherlock", {ROLE_DETECTIVE: [ACT_DEDUCED]})
         if "answer" in self.pending and self._complete("answer"):
             await self.finish_answers()
 
@@ -835,6 +858,7 @@ class Room:
         gone = set(self.searched) | self.disabled_objects
         views = {"moriarty": ai.View(ref, gone), "sherlock": ai.View(ref, gone)}   # cada bando, lo suyo
         views["moriarty"].weapon_objects = set(self.objects_with(self.weapon_items))
+        views["moriarty"].food_objects = set(self.objects_with(self.food_items))
         self.last_view = view = views["sherlock"]
         rng = random.Random()
         det_players = self.players_by_role([ROLE_DETECTIVE])
@@ -854,9 +878,9 @@ class Room:
                 orders = ai.plan_irene(views[team], idx, self.killer, self.target, diff, rng, taken[team])
             elif role == ROLE_DETECTIVE:
                 n = max(1, 3 // max(1, len(det_players)))
-                orders = ai.plan_sherlock(views[team], idx, n, diff, rng, taken[team])
+                orders = ai.plan_sherlock(views[team], idx, n, diff, rng, taken[team], self.ai_mem)
             elif role == ROLE_WATSON:
-                orders = ai.plan_watson(views[team], idx, diff, rng, taken[team])
+                orders = ai.plan_watson(views[team], idx, diff, rng, taken[team], self.ai_mem)
             else:
                 orders = []
             taken[team] |= {o["pawnId"] for o in orders}
@@ -869,7 +893,7 @@ class Room:
         Irene a Sherlock/Watson y entre los demas se sortea. Si Moriarty pisa una orden distinta de
         Sherlock/Watson, la orden va marcada (isBatting) y el bando de Sherlock lo detecta.
         Los personajes que nadie ha ordenado actuan por su cuenta (en linea lo decide el servidor)."""
-        by_pawn, from_criminal, from_detective, kill = {}, set(), {}, False
+        by_pawn, from_criminal, from_detective, kill, owner = {}, set(), {}, False, {}
         criminals = set(self.players_by_role([ROLE_CRIMINAL]))
         payloads = dict(payloads)
         for bot, orders in (getattr(self, "bot_orders", None) or {}).items():
@@ -892,6 +916,7 @@ class Room:
                     continue
                 pawn = int(item["pawnId"])
                 by_pawn[pawn] = item
+                owner[pawn] = pid
                 if role in (ROLE_DETECTIVE, ROLE_WATSON):
                     from_detective.setdefault(pawn, item)
                 if pid in criminals:
@@ -906,7 +931,9 @@ class Room:
             if c["isBatting"]:
                 log.info("Sala %s turno %s: Moriarty pisa la orden de Sherlock sobre %s", self.id, self.turn, k)
             commands.append(c)
+        self.score_actions(commands, owner)
         commands += self.npc_orders(by_pawn)
+        self.remember(commands, set(from_detective))
         threat_i, gas_i = self.roll_hazard("threat"), self.roll_hazard("gaspipe")
         self.assault = kill
         data = {}
@@ -922,6 +949,81 @@ class Room:
                 d.update({"killer": self.killer, "target": self.target})
             data[key] = d
         return data
+
+    def side(self, pid):
+        role = self.members.get(pid, {}).get("role")
+        return "sherlock" if role in (ROLE_DETECTIVE, ROLE_WATSON) else "moriarty"
+
+    def note(self, pid, action):
+        if pid in self.members and not self.members[pid].get("bot"):
+            self.events.setdefault(pid, set()).add(action)
+
+    def score_actions(self, commands, owner):
+        """Acciones con puntos que se ven en las ordenes de este turno (de quien la dio)."""
+        ref = self.turn_ref or {}
+        pawns = {int(x["pawnId"]): x for x in ref.get("pawns", []) if isinstance(x, dict) and "pawnId" in x}
+        room_of_grid = {}
+        for r in ref.get("roomList") or []:
+            for g in r.get("gridList") or []:
+                room_of_grid[g.get("gridId")] = r.get("roomId")
+        target_uid = int(pawns.get(self.target, {}).get("uniqId", -2))
+        for c in commands:
+            pid = owner.get(int(c["pawnId"]))
+            if pid is None:
+                continue
+            kind, side = int(c.get("type", 0)), self.side(pid)
+            if side == "sherlock":
+                if kind == INSTRUCT_REPAIR:
+                    self.note(pid, ACT_REPAIR)
+                elif kind == INSTRUCT_POTION:
+                    self.note(pid, ACT_TREAT)
+            if kind == INSTRUCT_SPRAY:
+                room = room_of_grid.get(c.get("grid"))
+                inside = [q for q, x in pawns.items() if room is not None and x.get("roomId") == room]
+                if side == "sherlock" and self.killer in inside:
+                    self.note(pid, ACT_SPRAY_KILLER)
+                elif side == "moriarty" and any(q != self.killer for q in inside):
+                    self.note(pid, ACT_SPRAY_OTHER)
+            if side == "moriarty":
+                if kind == INSTRUCT_ATTACK and int(c.get("targetId", -1)) == target_uid:
+                    self.note(pid, ACT_KNOCKOUT)
+                elif kind == INSTRUCT_SEARCH and c.get("itemId", -1) in self.switch_items:
+                    self.note(pid, ACT_BLACKOUT)
+
+    def level(self):
+        """Nivel de la partida para los puntos: contra personas "online"; si no, el de la IA."""
+        if len([p for p, m in self.members.items() if not m.get("bot")]) >= 2:
+            return "online"
+        order = {"easy": 0, "normal": 1, "hard": 2}
+        diffs = [m.get("difficulty", "normal") for m in self.members.values() if m.get("bot")]
+        return max(diffs, key=lambda d: order.get(d, 1)) if diffs else "normal"
+
+    def remember(self, commands, ordered_by_sherlock):
+        """Lo que ve el bando de Sherlock este turno: quien actuo sin que lo ordenaran ellos y en
+        quien se noto la mano de Moriarty (orden pisada)."""
+        mem = self.ai_mem
+        ref = self.turn_ref or {}
+        pawns = {int(x["pawnId"]): x for x in ref.get("pawns", []) if isinstance(x, dict) and "pawnId" in x}
+        victims = [q for q, x in pawns.items() if x.get("isTargetCandidate", 1)]
+        for c in commands:
+            p = int(c["pawnId"])
+            if c.get("isBatting"):
+                mem["moriarty"].add(p)
+            if p in ordered_by_sherlock or int(c.get("type", 0)) not in (2, 3, 4, 5):
+                continue
+            # Lo que llama la atencion: correr (nadie corre por su cuenta) o acercarse a una posible victima
+            score = 1 if int(c.get("isRun", 0) or 0) or int(c.get("type", 0)) in (4, 5) else 0
+            me = pawns.get(p, {})
+            dest = next((g for g in me.get("gridList") or [] if g.get("gridId") == c.get("grid")), None)
+            if dest is not None:
+                before = {int(o.get("pawnId", -1)): int(o.get("distance", 99)) for o in me.get("pawnList") or []}
+                after = dest.get("pawnDistance") or []
+                for v in victims:
+                    if v != p and v < len(after) and after[v] < before.get(v, 99) and after[v] <= 2:
+                        score += 1
+                        break
+            if score:
+                mem["moved"][p] = mem["moved"].get(p, 0) + score
 
     def npc_orders(self, by_pawn):
         """Pawn.RunNpcAction: quien no recibe ordenes registra algo cercano o da un paseo."""
@@ -1046,7 +1148,8 @@ class Room:
         for bot in self.bots():
             m = self.members[bot]
             if m["role"] in (ROLE_DETECTIVE, ROLE_WATSON):
-                guess = ai.accuse(self.last_view, self.killer, m["difficulty"], random.Random(), self.pawn_count)
+                guess = ai.accuse(self.last_view, self.killer, m["difficulty"], random.Random(), self.pawn_count,
+                                  self.ai_mem)
                 selections.append({"player_id": bot, "killer": guess})
 
         def ids(roles):
@@ -1069,7 +1172,7 @@ class Room:
         """Fin por deduccion: si Sherlock acierta gana su bando; si no, empate (no hubo asesinato)."""
         right = [s["player_id"] for s in selections if s["killer"] == self.killer
                  and self.members.get(s["player_id"], {}).get("role") == ROLE_DETECTIVE]
-        extra = {pid: ["ctg_name_result_pattern_arrest_success"] for pid in right}
+        extra = {pid: [ACT_DEDUCED] for pid in right}
         self.conclude("sherlock" if right else "draw", extra)
 
     def conclude(self, winner, extra=None, quitter=None):
@@ -1086,10 +1189,10 @@ class Room:
             outcome = "draw" if winner == "draw" else ("win" if side == winner else "lose")
             if pid == quitter:
                 outcome = "abandon"
-            acts = list(extra.get(role, [])) + list(extra.get(pid, []))
+            acts = list(extra.get(role, [])) + list(extra.get(pid, [])) + sorted(self.events.get(pid, ()))
             u = self.hub.api.s.user(pid)
             pts = stats.record_match(u, role, outcome, acts, self.settings.get("stage", ""),
-                                     match_id=getattr(self, "match_id", None))
+                                     match_id=getattr(self, "match_id", None), level=self.level())
             log.info("Sala %s: %s (%s) %s, +%s puntos -> %s", self.id, m["name"], ROLE_KEY.get(role, role),
                      {"win": "GANA", "lose": "PIERDE", "draw": "EMPATA", "abandon": "ABANDONA"}[outcome],
                      pts, stats.summary(u))

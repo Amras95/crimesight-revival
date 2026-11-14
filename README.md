@@ -101,7 +101,11 @@ Steam Cloud no se usa porque el espacio en la nube de cada juego lo controla su 
   Watson e Irene), con tres dificultades.
 - Partidas completas: objetos, perros salvajes, escapes de gas, Asalto, turno final, asesinato,
   detención y deducción final, con la cinemática correcta para cada bando.
-- Victorias, empates, derrotas y puntos: 250 por partida completada, +150 por ganar, 0 si abandonas.
+- Victorias, empates, derrotas y puntos. Ganar da 200 contra la IA fácil, 400 en normal, 800 en difícil y
+  1000 contra otras personas; empatar o perder, la mitad; abandonar, 0. Extras por acciones: arreglar el
+  cuadro eléctrico (+50), curar (+50), frustrar el Asalto (+100), gas lacrimógeno al asesino (+100) y acertar
+  al asesino (+100); como Moriarty, matar con el Asalto (+50), provocar el apagón (+50), gasear a alguien
+  (+50) y dejar K.O. a la víctima (+100).
 - Recompensas por puntos y nivel como en el original. El evento Project Winter queda abierto con su
   avatar desbloqueado. El contenido Deluxe sigue dependiendo de tenerlo en Steam.
 - Los logros de Steam se siguen consiguiendo (los gestiona el propio juego con Steam).

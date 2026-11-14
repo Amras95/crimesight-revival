@@ -23,16 +23,39 @@ COUNT_IDS = {
 POINT_IDS = {DETECTIVE: 10, CRIMINAL: 20, IRENE: 30, WATSON: 40}
 
 # Puntos por partida (sistema generoso: el juego ya no tiene comunidad, que desbloquear no sea un trabajo)
-#   partida completada 250, victoria +150 -> 400; abandonar la partida 0
-RESULT_POINTS = {"win": 400, "draw": 250, "lose": 250, "abandon": 0}
+# Victoria segun el nivel: IA facil 200, normal 400, dificil 800; contra otras personas 1000 (ahora
+# cuesta mucho encontrar partida). Empate o derrota: la mitad. Abandonar: 0.
+WIN_POINTS = {"easy": 200, "normal": 400, "hard": 800, "online": 1000}
+LEVELS = tuple(WIN_POINTS)
+RESULT_POINTS = {"win": 400, "draw": 250, "lose": 250, "abandon": 0}   # tabla antigua (partidas viejas)
 RECORD_VERSION = 2
 RESULT_TEXT = "ctg_name_result_match_result_point"            # "Puntos por resultado de la partida"
 
-# Acciones que el servidor puede detectar -> (id, puntos por vez)
+
+def result_points(outcome, level=None):
+    """Puntos por el resultado. Sin nivel (partidas antiguas), la tabla de antes."""
+    if level not in WIN_POINTS:
+        return RESULT_POINTS.get(outcome, 0)
+    win = WIN_POINTS[level]
+    return {"win": win, "draw": win // 2, "lose": win // 2}.get(outcome, 0)
+
+
+# Acciones que el servidor detecta -> (id, puntos). Los textos son los del propio juego.
 ACTIONS = {
-    "ctg_name_result_action_targetKilledByAssail": (101, 50),          # matar con el Asalto
+    # Bando de Sherlock
+    "ctg_name_result_repair_switchboard": (104, 50),                    # arreglar el cuadro electrico
+    "ctg_name_result_action_treated_pawnForInjuries": (105, 50),        # curar a alguien
+    "ctg_name_result_arrest_succeed": (106, 100),                       # frustrar el ataque principal
+    "ctg_name_result_apply_tearSpray_to_killer": (107, 100),            # gas lacrimogeno al asesino
+    "ctg_name_result_identified_killer_by_deduction": (108, 100),       # acusar al asesino correcto
+    # Bando de Moriarty
+    "ctg_name_result_action_targetKilledByAssail": (101, 50),           # ganar matando con el Asalto
+    "ctg_name_result_blackOut_by_switchboard": (109, 50),               # romper el cuadro (apagon)
+    "ctg_name_result_action_blockedSherlockWithSpray": (110, 50),       # gasear a alguien
+    "ctg_name_result_action_beCriticalNoKiller": (111, 100),            # atacar a la victima y dejarla K.O.
+    # Antiguas (solo para recalcular partidas viejas)
     "ctg_name_result_action_kill_succeed_not_identified_killer": (102, 30),
-    "ctg_name_result_pattern_arrest_success": (103, 50),                # Sherlock identifica al asesino
+    "ctg_name_result_pattern_arrest_success": (103, 50),
 }
 
 
@@ -48,17 +71,24 @@ def _record(user):
             outcome = h.get("outcome") or ("win" if h.get("win") else "lose")
             if outcome not in RESULT_POINTS:
                 continue
-            h["points"] = _add(rec, role, outcome, h.get("actions") or [])
+            if "base" in h:      # partidas nuevas: cada una guarda sus propios puntos
+                h["points"] = _add(rec, role, outcome, h.get("actions") or [], h.get("base"), h.get("acts"))
+            else:
+                h["points"] = _add(rec, role, outcome, h.get("actions") or [])
         user["record"] = rec
     return rec
 
 
-def _add(rec, role, outcome, actions):
+def _add(rec, role, outcome, actions, base=None, acts=None):
     if outcome == "abandon":                     # cuenta como derrota, sin puntos ni extras
-        actions = []
+        actions, base, acts = [], 0, {}
     cid = str(COUNT_IDS[role]["lose" if outcome == "abandon" else outcome])
     rec["counts"][cid] = rec["counts"].get(cid, 0) + 1
-    pts = RESULT_POINTS[outcome] + sum(ACTIONS[a][1] for a in actions if a in ACTIONS)
+    if base is None:
+        base = RESULT_POINTS[outcome]
+    if acts is None:
+        acts = {a: ACTIONS[a][1] for a in actions if a in ACTIONS}
+    pts = int(base) + sum(int(acts.get(a, 0)) for a in actions)
     pid = str(POINT_IDS[role])
     rec["points"][pid] = rec["points"].get(pid, 0) + pts
     for a in actions:
@@ -71,31 +101,32 @@ def _add(rec, role, outcome, actions):
 HISTORY_MAX = 20000          # unas cuantas vidas de partidas; el registro se recalcula desde aqui
 
 
-def record_match(user, role, outcome, actions=(), stage="", match_id=None):
+def record_match(user, role, outcome, actions=(), stage="", match_id=None, level=None):
     """Anota una partida terminada. Devuelve los puntos ganados.
-    match_id identifica la partida en cualquier servidor: al juntar perfiles no se duplica."""
+    match_id identifica la partida en cualquier servidor: al juntar perfiles no se duplica.
+    level: "easy"/"normal"/"hard" (contra la IA) u "online" (contra personas)."""
     if role not in COUNT_IDS or outcome not in RESULT_POINTS:
         return 0
-    rec = _record(user)
-    actions = [a for a in actions if a in ACTIONS]
-    pts = _add(rec, role, outcome, actions)
     hist = user.setdefault("history", [])
-    if outcome == "abandon":
-        actions = []
     now = int(time.time())
     mid = match_id or f"{now}-{role}-{len(hist)}"
     if any(h.get("mid") == mid for h in hist):
         return 0
+    rec = _record(user)
+    actions = [] if outcome == "abandon" else list(dict.fromkeys(a for a in actions if a in ACTIONS))
+    base = result_points(outcome, level)
+    acts = {a: ACTIONS[a][1] for a in actions}
+    pts = _add(rec, role, outcome, actions, base, acts)
     hist.append({"mid": mid, "time": now, "role": role, "outcome": outcome, "win": outcome == "win",
-                 "points": pts, "actions": actions, "stage": stage})
+                 "points": pts, "actions": actions, "stage": stage, "level": level, "base": base, "acts": acts})
     del hist[:-HISTORY_MAX]
     user["match_count"] = int(user.get("match_count", 0)) + 1
     # Lo que se ve en la pantalla de resultados
     items = [{"id": 100, "role": role, "category": "result", "text_id": RESULT_TEXT,
-              "count": 1, "point": RESULT_POINTS[outcome]}]
+              "count": 1, "point": base}]
     for a in actions:
         aid, p = ACTIONS[a]
-        items.append({"id": aid, "role": role, "category": "action", "text_id": a, "count": 1, "point": p})
+        items.append({"id": aid, "role": role, "category": "action", "text_id": a, "count": 1, "point": acts[a]})
     user["last_result"] = items
     return pts
 
