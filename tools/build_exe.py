@@ -26,7 +26,40 @@ args = ["--noconfirm", "--clean", "--onefile", "--windowed", "--name", "CrimeSig
         "--collect-all", "UnityPy", "--collect-all", "webview"]
 for h in hidden:
     args += ["--hidden-import", h]
+
+
+def crypto_binaries():
+    """Librerias nativas de pycryptodome. Se meten a mano: el hook de PyInstaller a veces no las
+    recoge y entonces el servidor no puede descifrar nada (error 100010 al iniciar sesion)."""
+    import glob
+    import Crypto
+    base = os.path.dirname(Crypto.__file__)
+    ext = "*.pyd" if os.name == "nt" else "*.so"
+    out = []
+    for f in glob.glob(os.path.join(base, "**", "_" + ext), recursive=True):
+        if "SelfTest" not in f:
+            out.append((f, os.path.relpath(os.path.dirname(f), os.path.dirname(base))))
+    if not out:
+        sys.exit("No encuentro las librerias nativas de pycryptodome (pip install pycryptodome)")
+    return out
+
+
+for src_file, dest in crypto_binaries():
+    args += ["--add-binary", f"{src_file}{sep}{dest}"]
 args.append(os.path.join("launcher", "webapp.py"))
+
+# Lo que tiene que llevar el .exe si o si (sin esto el servidor no entiende al juego)
+REQUIRED = ["Crypto/Cipher/_raw_cbc", "Crypto/Cipher/_raw_aes", "Crypto/Util/_cpuid_c"]
+
+
+def check_exe(path):
+    from PyInstaller.archive.readers import CArchiveReader
+    names = {n.replace("\\", "/") for n in CArchiveReader(path).toc}
+    missing = [r for r in REQUIRED if not any(n.startswith(r + ".") for n in names)]
+    if missing:
+        sys.exit(f"ERROR: al ejecutable le faltan {missing}. No se publica.")
+    print("Comprobado: el ejecutable lleva las librerias de cifrado.")
+
 
 import PyInstaller.__main__  # noqa: E402
 try:
@@ -34,4 +67,6 @@ try:
 finally:
     if version != "dev":
         open(vfile, "w", encoding="utf-8").write(src)   # no dejar la version escrita en el codigo
-print(f"\nListo: dist{os.sep}CrimeSightRevival.exe (version {version})")
+exe = os.path.join("dist", "CrimeSightRevival.exe" if os.name == "nt" else "CrimeSightRevival")
+check_exe(exe)
+print(f"\nListo: {exe} (version {version})")
