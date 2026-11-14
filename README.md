@@ -2,17 +2,26 @@
 
 <h1 align="center">CRIMESIGHT Revival</h1>
 
+<p align="center"><b>Español</b> · <a href="README.en.md">English</a></p>
+
 <p align="center">
 Vuelve a jugar a CRIMESIGHT (Konami, 2022) después del cierre de sus servidores oficiales.<br>
 Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 </p>
 
 <p align="center">
-<a href="../../releases/latest"><b>⬇ Descargar / Download</b></a> ·
+<a href="https://github.com/Amras95/crimesight-revival/releases/latest"><b>⬇ Descargar / Download</b></a> ·
 <a href="https://ko-fi.com/amrasmithandir95">☕ Ko-fi</a>
 </p>
 
 ---
+
+> [!WARNING]
+> **Las funciones online todavía no se han probado.** Jugar solo contra la IA está probado y funciona.
+> Ser anfitrión, unirse a un amigo, el servidor propio, la sincronización del progreso y la apertura
+> automática del puerto (UPnP) están hechos, pero aún no se han probado entre dos PCs reales: falta poder
+> jugar con alguien o que dos personas lo prueben. Si lo probáis, contadme qué tal en
+> [Issues](https://github.com/Amras95/crimesight-revival/issues).
 
 - Proyecto de la comunidad, no oficial y sin ánimo de lucro. No está relacionado con Konami.
 - **Necesitas tener CRIMESIGHT en tu biblioteca de Steam.** Aquí no se incluye ningún archivo, clave ni
@@ -24,7 +33,7 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 ## Cómo jugar (paso a paso)
 
 1. Ten **CRIMESIGHT instalado** desde Steam y **Steam abierto** con tu cuenta.
-2. Descarga **`CrimeSightRevival.exe`** desde [la última versión](../../releases/latest).
+2. Descarga **`CrimeSightRevival.exe`** desde [la última versión](https://github.com/Amras95/crimesight-revival/releases/latest).
 3. Ábrelo. La primera vez tarda unos segundos en preparar las claves y las ilustraciones a partir de tu
    copia del juego. Si Windows SmartScreen avisa ("Windows protegió su PC"), pulsa *Más información* →
    *Ejecutar de todas formas*: pasa con cualquier programa nuevo sin firma de pago.
@@ -66,7 +75,7 @@ duplica ni se pierde nada.
 ## Qué funciona
 
 - Inicio de sesión, perfil, tutorial, ajustes y nivel.
-- Salas de 2 a 4 jugadores mezclando personas e IA. IA para los cuatro papeles (Sherlock, Moriarty,
+- Salas de 2 a 4 jugadores mezclando personas e IA (con varias personas: **pendiente de probar**). IA para los cuatro papeles (Sherlock, Moriarty,
   Watson e Irene), con tres dificultades.
 - Partidas completas: objetos, perros salvajes, escapes de gas, Asalto, turno final, asesinato,
   detención y deducción final, con la cinemática correcta para cada bando.
