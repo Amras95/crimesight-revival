@@ -299,6 +299,11 @@ def main():
         import app
         return app.main()
     logging.getLogger("crimesight").addHandler(_GuiLog())
+    try:
+        core.setup_launcher_log()
+    except OSError:
+        pass
+    logging.getLogger("crimesight").warning("Lanzador %s iniciado", VERSION)
     api = Api()
     _window = webview.create_window("CRIMESIGHT Revival", os.path.join(UI_DIR, "index.html"), js_api=api,
                                     width=1280, height=780, min_size=(1100, 700), background_color="#07081a")

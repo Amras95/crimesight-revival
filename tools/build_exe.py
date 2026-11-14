@@ -23,7 +23,9 @@ args = ["--noconfirm", "--clean", "--onefile", "--windowed", "--name", "CrimeSig
         "--paths", "server", "--paths", "tools", "--paths", "launcher",
         "--add-data", f"launcher{os.sep}ui{sep}ui", "--add-data", f"launcher{os.sep}icon.ico{sep}.",
         "--icon", os.path.join("launcher", "icon.ico"),
-        "--collect-all", "UnityPy", "--collect-all", "webview"]
+        "--collect-all", "UnityPy", "--collect-all", "webview",
+        # UnityPy carga su modulo de audio al sacar imagenes: sin la libreria de fmod no hay ilustraciones
+        "--collect-all", "fmod_toolkit", "--collect-all", "archspec"]
 for h in hidden:
     args += ["--hidden-import", h]
 
@@ -48,17 +50,18 @@ for src_file, dest in crypto_binaries():
     args += ["--add-binary", f"{src_file}{sep}{dest}"]
 args.append(os.path.join("launcher", "webapp.py"))
 
-# Lo que tiene que llevar el .exe si o si (sin esto el servidor no entiende al juego)
-REQUIRED = ["Crypto/Cipher/_raw_cbc", "Crypto/Cipher/_raw_aes", "Crypto/Util/_cpuid_c"]
+# Lo que tiene que llevar el .exe si o si: cifrado (sin esto el servidor no entiende al juego)
+# y la libreria de audio de UnityPy (sin ella no se sacan las ilustraciones del juego)
+REQUIRED = ["Crypto/Cipher/_raw_cbc.", "Crypto/Cipher/_raw_aes.", "Crypto/Util/_cpuid_c.", "fmod_toolkit/libfmod/"]
 
 
 def check_exe(path):
     from PyInstaller.archive.readers import CArchiveReader
     names = {n.replace("\\", "/") for n in CArchiveReader(path).toc}
-    missing = [r for r in REQUIRED if not any(n.startswith(r + ".") for n in names)]
+    missing = [r for r in REQUIRED if not any(n.startswith(r) for n in names)]
     if missing:
         sys.exit(f"ERROR: al ejecutable le faltan {missing}. No se publica.")
-    print("Comprobado: el ejecutable lleva las librerias de cifrado.")
+    print("Comprobado: el ejecutable lleva las librerias de cifrado y de las ilustraciones.")
 
 
 import PyInstaller.__main__  # noqa: E402

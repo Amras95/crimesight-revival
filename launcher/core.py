@@ -35,6 +35,22 @@ def app_dir():
     return d
 
 
+def setup_launcher_log():
+    """Avisos y errores del lanzador en %APPDATA%\\CrimeSightRevival\\launcher.log (para diagnosticar)."""
+    from logging.handlers import RotatingFileHandler
+    lg = logging.getLogger("crimesight")
+    if any(getattr(h, "_csr_launcher", False) for h in lg.handlers):
+        return
+    h = RotatingFileHandler(os.path.join(app_dir(), "launcher.log"), maxBytes=512 * 1024, backupCount=1,
+                            encoding="utf-8")
+    h.setLevel(logging.WARNING)
+    h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    h._csr_launcher = True
+    lg.addHandler(h)
+    if lg.level == logging.NOTSET or lg.level > logging.INFO:
+        lg.setLevel(logging.INFO)
+
+
 def data_dir():
     d = os.path.join(app_dir(), "data")
     os.makedirs(d, exist_ok=True)

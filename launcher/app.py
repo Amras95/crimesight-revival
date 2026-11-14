@@ -351,6 +351,10 @@ def main():
     app = App(root)
     import logging
     logging.getLogger("crimesight").addHandler(GuiLogHandler(app))
+    try:
+        core.setup_launcher_log()
+    except OSError:
+        pass
     root.mainloop()
 
 
