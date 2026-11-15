@@ -145,6 +145,7 @@ namespace CrimeSightRevival.Mods
                 }
             }
             Ensure();
+            try { StageLab.EnsureTexts(); } catch (Exception e) { Plugin.L.LogWarning("[Escenario] textos: " + e.Message); }
         }
 
         static bool InGame()

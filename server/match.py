@@ -59,6 +59,8 @@ DEFAULT_PAWNS = 6            # personajes por partida (la mansion tiene 6 sospec
 COUNTDOWN_SECONDS = 3
 DEFAULT_AI_DIFFICULTY = "normal"   # se puede cambiar con --ai-difficulty
 STAGES = ["Stage_Yokn", "Stage_Yokn_v1030", "Stage_Yokn_v1040", "Stage_Yokn_v1050", "Stage_Yokn_v1060"]
+# Escenarios que anade el plugin de BepInEx (no salen en "Random"). El plugin carga el escenario real.
+EXTRA_STAGES = ["Stage_Yokn_CSRTest"]
 # El juego deja elegir "Random" como escenario y manda ese nombre tal cual: el servidor oficial lo
 # cambiaba por uno real al empezar. Si le llega "Random", el juego intenta cargar una escena que no
 # existe y se queda en negro.
@@ -608,7 +610,7 @@ class Room:
     def pick_stage(self):
         """Escenario real de esta partida: el elegido, o uno al azar si es "Random" (o desconocido)."""
         stage = self.settings.get("stage") or ""
-        return stage if stage in STAGES else random.choice(STAGES)
+        return stage if stage in STAGES or stage in EXTRA_STAGES else random.choice(STAGES)
 
     async def p_CancelCountDown(self, sess, p):
         self.current_stage = None

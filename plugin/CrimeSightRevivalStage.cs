@@ -1,14 +1,15 @@
 // CRIMESIGHT Revival - laboratorio de escenarios (prueba de concepto del creador de escenarios).
 //
-// Solo se activa si existe BepInEx\csr_live\layout_test.json. Sin ese archivo no se engancha a nada
-// y el juego funciona exactamente igual.
+// Anade a la lista de escenarios uno de pruebas ("Escenario de pruebas (CSR)", Stage_Yokn_CSRTest),
+// que es una copia del 01 (Lauriston Gardens). Los escenarios del juego no se tocan nunca: los cambios
+// solo se aplican cuando se juega el de pruebas. Necesita el plugin en todos los jugadores de la sala.
 //
-// Que hace: cuando se carga el escenario indicado, mueve el escenario entero unas casillas (antes de
-// que el juego calcule sus casillas), convierte las casillas de salida de los personajes y recalcula
-// la navegacion (NavMesh) en tiempo de ejecucion con las mallas NAV_* del propio juego. Es lo mismo
-// que hara falta para recolocar habitaciones sueltas en el editor.
+// Que hace en el de pruebas: carga el escenario 01 y, segun BepInEx\csr_live\layout_test.json, mueve
+// sus piezas unas casillas (antes de que el juego calcule sus casillas), convierte las casillas de
+// salida de los personajes y recalcula la navegacion (NavMesh) con las mallas NAV_* del propio juego.
+// Sin ese archivo es una copia exacta del 01.
 //
-// layout_test.json: {"scene":"Stage_Yokn","dx":0,"dz":2,"navmesh":"rebuild"}
+// layout_test.json: {"dx":0,"dz":2,"navmesh":"rebuild"}
 //   navmesh: "rebuild" (la construye de cero), "offset" (mueve la original) o "keep" (no la toca)
 // navsrc.json (lo genera el lanzador desde la copia del juego del usuario): las mallas NAV_* en
 // version legible, porque las del juego no se pueden leer desde codigo.
@@ -29,10 +30,9 @@ namespace CrimeSightRevival.Mods
 {
     public class LayoutTest
     {
-        public string scene { get; set; } = "Stage_Yokn";
         public int dx { get; set; }
         public int dz { get; set; }
-        public string navmesh { get; set; } = "rebuild";
+        public string navmesh { get; set; } = "keep";
     }
 
     public class NavSrcMesh { public float[] v { get; set; } public int[] t { get; set; } }
@@ -52,31 +52,116 @@ namespace CrimeSightRevival.Mods
         static readonly Dictionary<string, Mesh> _readable = new();
         static readonly List<(Transform t, Vector3 local)> _watch = new();
         static float _watchUntil;
+        static int _agentReports;
 
         static string TestFile => Path.Combine(LiveMods.LiveDir, "layout_test.json");
         static string NavFile => Path.Combine(LiveMods.LiveDir, "navsrc.json");
         static void Log(string s) => Plugin.L.LogInfo("[Escenario] " + s);
         static void Warn(string s) => Plugin.L.LogWarning("[Escenario] " + s);
 
+        public const string TEST_STAGE = "Stage_Yokn_CSRTest";
+        const string BASE_STAGE = "Stage_Yokn";
+        static bool _armed;
+
         public static void Init(Harmony h)
         {
-            if (!File.Exists(TestFile)) return;
-            try { _cfg = JsonSerializer.Deserialize<LayoutTest>(File.ReadAllText(TestFile)); }
-            catch (Exception e) { Warn("layout_test.json no valido: " + e.Message); return; }
-            _off = new Vector3(_cfg.dx * GRID, 0, _cfg.dz * GRID);
-            Log($"PRUEBA ACTIVA: escena={_cfg.scene} dx={_cfg.dx} dz={_cfg.dz} navmesh={_cfg.navmesh}");
-            var pre = new HarmonyMethod(typeof(StageLab).GetMethod(nameof(BeforeAwake), BindingFlags.Static | BindingFlags.NonPublic));
-            foreach (var t in new[] { typeof(Stage), typeof(Area), typeof(Room), typeof(Door), typeof(Shelf), typeof(WindowShelf) })
+            var me = typeof(StageLab);
+            HarmonyMethod M(string n) => new HarmonyMethod(me.GetMethod(n, BindingFlags.Static | BindingFlags.NonPublic));
+            void Patch(Type t, string method, string prefix)
             {
                 try
                 {
-                    var m = AccessTools.DeclaredMethod(t, "Awake");
-                    if (m == null) { Log($"{t.Name}: sin Awake propio"); continue; }
-                    h.Patch(m, prefix: pre);
-                    Log($"{t.Name}.Awake enganchado");
+                    var m = AccessTools.DeclaredMethod(t, method);
+                    if (m == null) { Log($"{t.Name}.{method}: no existe"); return; }
+                    h.Patch(m, prefix: M(prefix));
                 }
-                catch (Exception e) { Warn($"{t.Name}.Awake: {e.Message}"); }
+                catch (Exception e) { Warn($"{t.Name}.{method}: {e.Message}"); }
             }
+            Patch(typeof(OutGameRoomPopupRoomSetting), "CreateStageList", nameof(BeforeStageList));
+            Patch(typeof(MatchSettings), "LoadStageData", nameof(MapStage));
+            Patch(typeof(OutGameManager), "StartInGame", nameof(MapStage));
+            Patch(typeof(GameManager), "LoadStage", nameof(BeforeLoadStage));
+            foreach (var t in new[] { typeof(Stage), typeof(Area), typeof(Room), typeof(Door), typeof(Shelf), typeof(WindowShelf) })
+                Patch(t, "Awake", nameof(BeforeAwake));
+            Log("escenario de pruebas disponible: " + TEST_STAGE);
+        }
+
+        // ---------------------------------------------------------------- escenario de pruebas
+        static readonly string[] TestName =
+        {   // ja, en, fr, it, de, es, pt, ru, ko, zh-CN, zh-TW (orden de TextManager)
+            "テスト用ステージ (CSR)", "Test stage (CSR)", "Scénario de test (CSR)", "Scenario di prova (CSR)",
+            "Testszenario (CSR)", "Escenario de pruebas (CSR)", "Cenário de testes (CSR)", "Тестовый сценарий (CSR)",
+            "테스트 스테이지 (CSR)", "测试场景 (CSR)", "測試場景 (CSR)",
+        };
+
+        public static void EnsureTexts()
+        {
+            var tm = TextManager.Instance;
+            if (tm == null || tm.LangText == null) return;
+            int lang = (int)tm.GetLangType();
+            string text = lang >= 0 && lang < TestName.Length ? TestName[lang] : TestName[1];
+            string key = "ctg_name_stageName_" + TEST_STAGE;
+            if (!tm.LangText.ContainsKey(key) || tm.LangText[key] != text) tm.LangText[key] = text;
+        }
+
+        // la lista de la ventana de ajustes de la sala: se anade el de pruebas antes de "Aleatorio"
+        static void BeforeStageList(OutGameRoomPopupRoomSetting __instance)
+        {
+            try
+            {
+                EnsureTexts();
+                var list = __instance.UseStageList;
+                if (list == null) return;
+                int random = -1;
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var n = list[i]?.StageName;
+                    if (n == TEST_STAGE) return;
+                    if (n == "Random") random = i;
+                }
+                var d = new OutGameRoomPopupRoomSetting.StageData { StageName = TEST_STAGE };
+                if (random >= 0) list.Insert(random, d); else list.Add(d);
+            }
+            catch (Exception e) { Plugin.L.LogError(e); }
+        }
+
+        // el juego pide cargar el de pruebas: se carga el 01 y se activa la prueba
+        static void MapStage(ref string stageName)
+        {
+            if (stageName == TEST_STAGE)
+            {
+                if (!_armed) Arm();
+                stageName = BASE_STAGE;
+            }
+            else if (!string.IsNullOrEmpty(stageName) && stageName.StartsWith("Stage_"))
+            {
+                if (_armed) Log("escenario normal: prueba desactivada");
+                _armed = false;
+            }
+        }
+
+        static void BeforeLoadStage(GameManager __instance)
+        {
+            try
+            {
+                if (__instance.currentStageName == TEST_STAGE)
+                {
+                    if (!_armed) Arm();
+                    __instance.currentStageName = BASE_STAGE;
+                }
+            }
+            catch (Exception e) { Plugin.L.LogError(e); }
+        }
+
+        static void Arm()
+        {
+            _armed = true;
+            _cfg = new LayoutTest();
+            if (File.Exists(TestFile))
+                try { _cfg = JsonSerializer.Deserialize<LayoutTest>(File.ReadAllText(TestFile)) ?? new LayoutTest(); }
+                catch (Exception e) { Warn("layout_test.json no valido: " + e.Message); }
+            _off = new Vector3(_cfg.dx * GRID, 0, _cfg.dz * GRID);
+            Log($"PRUEBA ACTIVA: dx={_cfg.dx} dz={_cfg.dz} navmesh={_cfg.navmesh}");
         }
 
         // ---------------------------------------------------------------- mover antes de Awake
@@ -84,11 +169,12 @@ namespace CrimeSightRevival.Mods
         {
             try
             {
+                if (!_armed) return;
                 var sc = __instance.gameObject.scene;
                 int handle = sc.handle;
                 if (_seenScenes.Add(handle)) Log($"escena cargando: '{sc.name}' (primer Awake: {__instance.GetIl2CppType().Name} {__instance.gameObject.name})");
-                if (handle == _movedHandle) return;
-                if (_cfg.scene != "*" && sc.name != _cfg.scene) return;
+                if (!_armed || handle == _movedHandle) return;
+                if (sc.name != BASE_STAGE) return;
                 _movedHandle = handle;
                 Move(__instance.transform.root, sc);
             }
@@ -109,6 +195,7 @@ namespace CrimeSightRevival.Mods
                 _watch.Add((c, c.localPosition));
             }
             _watchUntil = Time.unscaledTime + 30f;
+            _agentReports = 0;
             Physics.SyncTransforms();
 
             var stage = root.GetComponentInChildren<Stage>(true);
@@ -179,7 +266,15 @@ namespace CrimeSightRevival.Mods
                     Physics.SyncTransforms();
                 }
             }
-            if (_root != null && Time.frameCount % 300 == 0) Log($"raiz en {_root.position}");
+            if (_root != null && Time.frameCount % 300 == 0 && _agentReports < 4)
+            {
+                _agentReports++;
+                var off = new List<string>();
+                foreach (var a in UnityEngine.Object.FindObjectsOfType<NavMeshAgent>(true))
+                    if (!a.isOnNavMesh && off.Count < 12)
+                        off.Add($"{a.gameObject.name}{(a.enabled ? "" : "(apagado)")} en {a.transform.position}");
+                Log(off.Count == 0 ? "todos los agentes estan en la navmesh" : "agentes fuera de la navmesh: " + string.Join("; ", off));
+            }
         }
 
         static void Report()
