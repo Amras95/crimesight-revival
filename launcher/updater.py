@@ -9,6 +9,8 @@ nada. Si algo falla (sin internet, GitHub caido...), se sigue usando la version 
 import hashlib, json, os, subprocess, sys, time, urllib.request
 
 from version import ASSET, REPO, VERSION
+import netssl
+netssl.install()
 
 API = f"https://api.github.com/repos/{REPO}/releases/latest"
 UA = {"User-Agent": "CrimeSightRevival-Launcher", "Accept": "application/vnd.github+json"}

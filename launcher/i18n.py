@@ -907,6 +907,22 @@ _TXT = {
 for _l, (_b, _ti, _d, _s) in _TXT.items():
     S[_l].update(mods_texts_btn=_b, mods_texts_title=_ti, mods_texts_desc=_d, mods_text_saved=_s)
 
+_MANUAL = {
+    "en": "You can download it yourself from {url} and put the file in {folder}; then press “Turn on” again.",
+    "es": "Puedes descargarlo tú desde {url} y poner el archivo en {folder}; después pulsa «Activar» otra vez.",
+    "fr": "Vous pouvez le télécharger vous-même depuis {url} et placer le fichier dans {folder}, puis appuyer de nouveau sur « Activer ».",
+    "it": "Puoi scaricarlo tu da {url} e mettere il file in {folder}; poi premi di nuovo “Attiva”.",
+    "de": "Du kannst es selbst von {url} herunterladen und die Datei in {folder} legen; dann erneut auf „Aktivieren“ klicken.",
+    "pt": "Você pode baixá-lo de {url} e colocar o arquivo em {folder}; depois clique em “Ativar” de novo.",
+    "ru": "Можно скачать его самостоятельно с {url} и положить файл в {folder}, а затем снова нажать «Включить».",
+    "ja": "{url} から自分でダウンロードし、ファイルを {folder} に置いてから、もう一度「オンにする」を押してください。",
+    "ko": "{url}에서 직접 내려받아 파일을 {folder}에 넣은 뒤 “켜기”를 다시 누르세요.",
+    "zh-CN": "你可以自行从 {url} 下载，把文件放到 {folder}，然后再次点击“开启”。",
+    "zh-TW": "你可以自行從 {url} 下載，把檔案放到 {folder}，然後再次點選「開啟」。",
+}
+for _l, _v in _MANUAL.items():
+    S[_l]["bep_manual"] = _v
+
 _lang = "en"
 
 

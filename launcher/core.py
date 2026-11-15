@@ -14,6 +14,8 @@ dos copias se juntan sumando partidas (cada una tiene un id unico, nunca se dupl
 import json, logging, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
 
 from i18n import t
+import netssl
+netssl.install()
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = getattr(sys, "_MEIPASS", os.path.dirname(HERE))
@@ -376,6 +378,8 @@ def install_mods(game_dir, rs, log=None):
 # ------------------------------------------------------------------ recarga en caliente (BepInEx, opcional)
 BEPINEX_URL = ("https://github.com/BepInEx/BepInEx/releases/download/v6.0.0-pre.2/"
                "BepInEx-Unity.IL2CPP-win-x64-6.0.0-pre.2.zip")
+BEPINEX_SHA256 = "616ec7eb06cf11b2a0000e8fcef04d1b12bb58e84a2e0bdac9523234fc193ceb"
+BEPINEX_SIZE = 34146254
 BEPINEX_FILES = ("winhttp.dll", "doorstop_config.ini", ".doorstop_version", "changelog.txt", "BepInEx", "dotnet")
 PLUGIN_NAME = "CrimeSightRevival.Mods.dll"
 
@@ -417,23 +421,8 @@ def install_bepinex(game_dir, progress=None):
     cache = os.path.join(app_dir(), "bepinex")
     os.makedirs(cache, exist_ok=True)
     zpath = os.path.join(cache, os.path.basename(BEPINEX_URL))
-    if not os.path.isfile(zpath):
-        tmp = zpath + ".part"
-        try:
-            with urllib.request.urlopen(BEPINEX_URL, timeout=60) as r, open(tmp, "wb") as f:
-                total = int(r.headers.get("Content-Length") or 0)
-                done = 0
-                while True:
-                    chunk = r.read(256 * 1024)
-                    if not chunk:
-                        break
-                    f.write(chunk)
-                    done += len(chunk)
-                    if progress and total:
-                        progress(int(done * 100 / total))
-        except (urllib.error.URLError, OSError) as e:
-            raise ValueError(t("bep_download_failed", err=getattr(e, "reason", e)))
-        os.replace(tmp, zpath)
+    if not _sha_ok(zpath):
+        _download_bepinex(zpath, progress, cache)
     try:
         with zipfile.ZipFile(zpath) as z:
             for name in z.namelist():
@@ -451,6 +440,58 @@ def install_bepinex(game_dir, progress=None):
     import modinject
     modinject.restore(game_dir, fix=False)   # con el plugin, los archivos del juego vuelven a ser los originales
     return True
+
+
+def _sha_ok(path):
+    """El zip es exactamente el oficial (misma huella SHA-256)."""
+    if not os.path.isfile(path) or os.path.getsize(path) != BEPINEX_SIZE:
+        return False
+    import hashlib
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest() == BEPINEX_SHA256
+
+
+def _download_bepinex(zpath, progress, cache):
+    tmp = zpath + ".part"
+    err = None
+    try:
+        with urllib.request.urlopen(BEPINEX_URL, timeout=60) as r, open(tmp, "wb") as f:
+            total = int(r.headers.get("Content-Length") or 0)
+            done = 0
+            while True:
+                chunk = r.read(256 * 1024)
+                if not chunk:
+                    break
+                f.write(chunk)
+                done += len(chunk)
+                if progress and total:
+                    progress(int(done * 100 / total))
+    except (urllib.error.URLError, OSError) as e:
+        err = getattr(e, "reason", e)
+    if (err is not None or not _sha_ok(tmp)) and IS_WINDOWS:
+        # plan B: el descargador de Windows (consigue solo los certificados que falten)
+        if progress:
+            progress(0)
+        ps = ("$ProgressPreference='SilentlyContinue';"
+              "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;"
+              f"Invoke-WebRequest -UseBasicParsing -Uri '{BEPINEX_URL}' -OutFile '{tmp}'")
+        try:
+            subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps],
+                           capture_output=True, timeout=600,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except (OSError, subprocess.TimeoutExpired) as e:
+            err = err or e
+    if not _sha_ok(tmp):
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise ValueError(t("bep_download_failed", err=err or "SHA-256") + " " +
+                         t("bep_manual", url=BEPINEX_URL, folder=cache))
+    os.replace(tmp, zpath)
 
 
 def _quiet_bepinex(game_dir):
