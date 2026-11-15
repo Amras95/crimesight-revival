@@ -59,6 +59,9 @@ DEFAULT_PAWNS = 6            # personajes por partida (la mansion tiene 6 sospec
 COUNTDOWN_SECONDS = 3
 DEFAULT_AI_DIFFICULTY = "normal"   # se puede cambiar con --ai-difficulty
 STAGES = ["Stage_Yokn", "Stage_Yokn_v1030", "Stage_Yokn_v1040", "Stage_Yokn_v1050", "Stage_Yokn_v1060"]
+# El juego deja elegir "Random" como escenario y manda ese nombre tal cual: el servidor oficial lo
+# cambiaba por uno real al empezar. Si le llega "Random", el juego intenta cargar una escena que no
+# existe y se queda en negro.
 SELECTION_SECONDS = 60
 
 SETTING_KEYS = {  # parametro de CreateRoom -> (variable de sala, tipo)
@@ -321,6 +324,7 @@ class Room:
         self.members = {}          # player_id -> {"name", "role"}
         self.sessions = {}         # player_id -> Session
         self.settings = {"capacity": 1, "private": True, "stage": "", "time_limit": 180, "max_turn": 10}
+        self.current_stage = None     # escenario real de la partida en curso (si se eligio "Random")
         self.vars = {"random_seed": random.randint(1, 2**31 - 1)}
         self.phase = "lobby"
         self.turn = 0
@@ -471,6 +475,8 @@ class Room:
         for key, (var, typ) in SETTING_KEYS.items():
             if key in self.settings:
                 v[var] = typ(self.settings[key])
+        if self.current_stage:
+            v["setting_stage"] = self.current_stage
         v["setting_capacity"] = self.shown_capacity()
         v["owner"] = self.owner
         v["attendance"] = len(self.members)
@@ -512,6 +518,8 @@ class Room:
                 "irene_count", "watson_count", "auto_start", "secret_passage", "switchboard_count",
                 "wild_dog_count", "gaspipe_count", "fast_action", "attendance"]
         res = {k: self.settings[k] for k in keys if k in self.settings}
+        if self.current_stage:
+            res["stage"] = self.current_stage
         res["attendance"] = len(self.members)
         res["capacity"] = self.shown_capacity()
         res["id"] = self.id
@@ -591,12 +599,20 @@ class Room:
                 self.members[pid]["role"] = int(role)
         self.static_data = p.get("static_data")
         self.assign_roles()
+        self.current_stage = self.pick_stage()
         self.refresh_vars()
         await self.control("StartCountDown", {"CountDownTimer": COUNTDOWN_SECONDS})
         self.countdown_task = asyncio.ensure_future(self._countdown())
         return rc({})
 
+    def pick_stage(self):
+        """Escenario real de esta partida: el elegido, o uno al azar si es "Random" (o desconocido)."""
+        stage = self.settings.get("stage") or ""
+        return stage if stage in STAGES else random.choice(STAGES)
+
     async def p_CancelCountDown(self, sess, p):
+        self.current_stage = None
+        self.refresh_vars()
         if self.countdown_task:
             self.countdown_task.cancel()
         await self.control("CancelCountDown", None)
@@ -1198,7 +1214,7 @@ class Room:
                 outcome = "abandon"
             acts = list(extra.get(role, [])) + list(extra.get(pid, [])) + sorted(self.events.get(pid, ()))
             u = self.hub.api.s.user(pid)
-            pts = stats.record_match(u, role, outcome, acts, self.settings.get("stage", ""),
+            pts = stats.record_match(u, role, outcome, acts, self.current_stage or self.settings.get("stage", ""),
                                      match_id=getattr(self, "match_id", None), level=self.level())
             log.info("Sala %s: %s (%s) %s, +%s puntos -> %s", self.id, m["name"], ROLE_KEY.get(role, role),
                      {"win": "GANA", "lose": "PIERDE", "draw": "EMPATA", "abandon": "ABANDONA"}[outcome],
@@ -1223,6 +1239,8 @@ class Room:
 
     async def p_Rematch(self, sess, p):
         self.phase = "lobby"
+        self.current_stage = None          # con "Random", la siguiente partida sortea otro escenario
+        self.refresh_vars()
         self.killer = self.target = -1
         self.object_items, self.searched, self.drops = {}, {}, {}
         self.disabled_objects = set()
