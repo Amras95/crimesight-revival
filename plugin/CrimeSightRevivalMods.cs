@@ -112,7 +112,6 @@ namespace CrimeSightRevival.Mods
         // objetos creados por nosotros (se destruyen al cambiar de conjunto)
         readonly List<StampData> _stamps = new();
         readonly List<CursorAvatarData> _avatars = new();
-        readonly List<UnityEngine.Object> _assets = new();
         readonly Dictionary<string, string[]> _texts = new();
         readonly HashSet<int> _types = new();
         readonly HashSet<string> _avatarIds = new();
@@ -169,56 +168,90 @@ namespace CrimeSightRevival.Mods
         }
 
         // ------------------------------------------------------------ crear / destruir
+        // objetos ya creados, por clave (tipo/id + huella de sus imagenes). Al cambiar el conjunto
+        // (p. ej. entran los mods de otro jugador) los que no cambian se REUTILIZAN: si se destruyeran
+        // y recrearan, el juego perderia la referencia al avatar elegido y volveria al de por defecto.
+        class Entry { public UnityEngine.Object Main; public readonly List<UnityEngine.Object> Assets = new(); }
+        readonly Dictionary<string, Entry> _cache = new();
+
+        [HideFromIl2Cpp]
+        static string Sig(string file)
+        {
+            if (string.IsNullOrEmpty(file)) return "-";
+            var fi = new FileInfo(Path.Combine(LiveDir, Path.GetFileName(file)));
+            return fi.Exists ? fi.Length + ":" + fi.LastWriteTimeUtc.Ticks : "x";
+        }
+
         [HideFromIl2Cpp]
         void Rebuild(LiveState st)
         {
-            Unregister();
-            foreach (var o in _assets) if (o != null) UnityEngine.Object.Destroy(o);
-            _assets.Clear(); _stamps.Clear(); _avatars.Clear(); _texts.Clear(); _types.Clear(); _avatarIds.Clear();
+            var next = new Dictionary<string, Entry>();
+            _stamps.Clear(); _avatars.Clear(); _texts.Clear(); _types.Clear(); _avatarIds.Clear();
 
             foreach (var s in st.stickers)
             {
-                var fg = MakeSprite(s.png);
-                if (fg == null) continue;
-                var bg = MakeSprite(s.bg);
-                var d = ScriptableObject.CreateInstance(Il2CppType.Of<StampData>()).Cast<StampData>();
-                d.hideFlags = HideFlags.DontUnloadUnusedAsset;
-                d.FaceType = (Stamp.FaceType)0;
-                d.Type = (Stamp.Type)s.type;
-                d.spriteImage = fg;
-                d.spriteImageBg = bg;
-                d.spriteImageThumbnail = null;
-                d.LogMsgId = "ctg_name_log_stamp_csr_" + s.type;
-                d.DocMsgId = "ctg_name_stamp_csr_" + s.type;
-                d.LockMsgId = "";
-                d.DLCId = "";
-                d.CreateTypeInt();
-                _stamps.Add(d); _assets.Add(d);
+                string key = $"s{s.type}|{Sig(s.png)}|{Sig(s.bg)}";
+                if (!_cache.TryGetValue(key, out var e))
+                {
+                    e = new Entry();
+                    var fg = MakeSprite(s.png, e.Assets);
+                    if (fg == null) continue;
+                    var bg = MakeSprite(s.bg, e.Assets);
+                    var d = ScriptableObject.CreateInstance(Il2CppType.Of<StampData>()).Cast<StampData>();
+                    d.hideFlags = HideFlags.DontUnloadUnusedAsset;
+                    d.FaceType = (Stamp.FaceType)0;
+                    d.Type = (Stamp.Type)s.type;
+                    d.spriteImage = fg;
+                    d.spriteImageBg = bg;
+                    d.spriteImageThumbnail = null;
+                    d.LogMsgId = "ctg_name_log_stamp_csr_" + s.type;
+                    d.DocMsgId = "ctg_name_stamp_csr_" + s.type;
+                    d.LockMsgId = "";
+                    d.DLCId = "";
+                    d.CreateTypeInt();
+                    e.Main = d; e.Assets.Add(d);
+                }
+                next[key] = e;
+                var sd = e.Main.Cast<StampData>();
+                _stamps.Add(sd);
                 _types.Add(s.type);
-                if (s.log != null) _texts[d.LogMsgId] = s.log;
-                if (s.doc != null) _texts[d.DocMsgId] = s.doc;
+                if (s.log != null) _texts[sd.LogMsgId] = s.log;
+                if (s.doc != null) _texts[sd.DocMsgId] = s.doc;
             }
             foreach (var a in st.avatars)
             {
-                var sp = MakeSprite(a.png);
-                if (sp == null) continue;
-                var d = ScriptableObject.CreateInstance(Il2CppType.Of<CursorAvatarData>()).Cast<CursorAvatarData>();
-                d.hideFlags = HideFlags.DontUnloadUnusedAsset;
-                d.parts = CursorAvatarManager.Parts.ICON;
-                d.partsImage = sp;
-                d.nameMsgId = a.id;
-                d.docMsgId = "";
-                d.pairId = "";
-                d.LockMsgId = "";
-                d.DLCId = "";
-                _avatars.Add(d); _assets.Add(d);
+                string key = $"a{a.id}|{Sig(a.png)}";
+                if (!_cache.TryGetValue(key, out var e))
+                {
+                    e = new Entry();
+                    var sp = MakeSprite(a.png, e.Assets);
+                    if (sp == null) continue;
+                    var d = ScriptableObject.CreateInstance(Il2CppType.Of<CursorAvatarData>()).Cast<CursorAvatarData>();
+                    d.hideFlags = HideFlags.DontUnloadUnusedAsset;
+                    d.parts = CursorAvatarManager.Parts.ICON;
+                    d.partsImage = sp;
+                    d.nameMsgId = a.id;
+                    d.docMsgId = "";
+                    d.pairId = "";
+                    d.LockMsgId = "";
+                    d.DLCId = "";
+                    e.Main = d; e.Assets.Add(d);
+                }
+                next[key] = e;
+                _avatars.Add(e.Main.Cast<CursorAvatarData>());
                 _avatarIds.Add(a.id);
             }
+            Ensure();                                  // saca de las listas lo que ya no va (antes de destruirlo)
+            foreach (var kv in _cache)
+                if (!next.ContainsKey(kv.Key))
+                    foreach (var o in kv.Value.Assets) if (o != null) UnityEngine.Object.Destroy(o);
+            _cache.Clear();
+            foreach (var kv in next) _cache[kv.Key] = kv.Value;
             Plugin.L.LogInfo($"Mods aplicados: {_stamps.Count} stickers y {_avatars.Count} avatares.");
         }
 
         [HideFromIl2Cpp]
-        Sprite MakeSprite(string file)
+        static Sprite MakeSprite(string file, List<UnityEngine.Object> assets)
         {
             if (string.IsNullOrEmpty(file)) return null;
             string path = Path.Combine(LiveDir, Path.GetFileName(file));
@@ -233,7 +266,7 @@ namespace CrimeSightRevival.Mods
             tex.hideFlags = HideFlags.DontUnloadUnusedAsset;
             var sp = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
             sp.hideFlags = HideFlags.DontUnloadUnusedAsset;
-            _assets.Add(tex); _assets.Add(sp);
+            assets.Add(tex); assets.Add(sp);
             return sp;
         }
 
@@ -242,29 +275,30 @@ namespace CrimeSightRevival.Mods
         static bool Ours(StampData d) =>
             d != null && (int)d.FaceType == 0 && (int)d.Type >= FIRST_TYPE;
 
-        void Unregister()
+
+        // La rueda de stickers guarda "posicion en la lista" (no el sticker). Al cambiar la lista
+        // (entran los mods de otro jugador, que se intercalan al ordenar por tipo), las posiciones de
+        // los tuyos cambian: hay que volver a calcular la rueda desde tus ajustes, o saldrian otros.
+        [HideFromIl2Cpp]
+        static void RefreshMenus()
         {
-            var sm = StampManager.Instance;
-            if (sm != null && sm.registStampSet != null)
-                foreach (var set in sm.registStampSet)
+            var found = UnityEngine.Object.FindObjectsOfType(Il2CppType.Of<PingStampMenuBase>());
+            if (found == null) return;
+            foreach (var o in found)
+            {
+                var menu = o?.TryCast<PingStampMenuBase>();
+                if (menu == null) continue;
+                try
                 {
-                    if (set == null || set.registStampData == null) continue;
-                    var list = set.registStampData;
-                    for (int i = list.Count - 1; i >= 0; i--)
-                        if (Ours(list[i])) list.RemoveAt(i);
-                }
-            var cm = CursorAvatarManager.Instance;
-            if (cm != null && cm.registCursorAvatarSet != null)
-                foreach (var set in cm.registCursorAvatarSet)
-                {
-                    if (set == null || set.registCursorAvatarData == null) continue;
-                    var list = set.registCursorAvatarData;
-                    for (int i = list.Count - 1; i >= 0; i--)
+                    for (int p = 0; p < 4; p++)
                     {
-                        var d = list[i];
-                        if (d != null && d.nameMsgId != null && d.nameMsgId.StartsWith("Icon_CSR_")) list.RemoveAt(i);
+                        var preset = (StampManager.PresetType)p;
+                        menu.RefreshMenuStampReferenceSaveData(ref preset);
                     }
+                    menu.RefreshMenuStampReferenceCustom();
                 }
+                catch (Exception e) { Plugin.L.LogWarning("No pude refrescar la rueda: " + e.Message); }
+            }
         }
 
         // cada segundo: las listas del juego tienen justo nuestros stickers/avatares (al cambiar de
@@ -288,7 +322,7 @@ namespace CrimeSightRevival.Mods
                     }
                     foreach (var d in _stamps)
                         if (!present.Contains(d.Pointer)) { list.Add(d); changed = true; }
-                    if (changed) set.Sort();
+                    if (changed) { set.Sort(); RefreshMenus(); }
                 }
 
             var cm = CursorAvatarManager.Instance;

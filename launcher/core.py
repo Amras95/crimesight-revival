@@ -563,14 +563,25 @@ def write_live(rs):
         pass
     order = list(modpack.LANGS)
     files, stickers, avatars = set(), [], []
+
+    def put(name, data):
+        # solo si cambia: el plugin reutiliza lo que no cambia (si no, se perderia el avatar elegido)
+        path = os.path.join(d, name)
+        try:
+            with open(path, "rb") as f:
+                if f.read() == data:
+                    return
+        except OSError:
+            pass
+        with open(path, "wb") as f:
+            f.write(data)
+
     for s in rs["stickers"]:
         fg, bg = f"s_{s['type']}.png", f"s_{s['type']}_bg.png"
-        with open(os.path.join(d, fg), "wb") as f:
-            f.write(s["png"])
+        put(fg, s["png"])
         buf = io.BytesIO()
         modpack.sticker_background(s["png"]).save(buf, "PNG")
-        with open(os.path.join(d, bg), "wb") as f:
-            f.write(buf.getvalue())
+        put(bg, buf.getvalue())
         entry = {"type": s["type"], "png": fg, "bg": bg}
         if s.get("text"):
             g = modpack.text_for_game(s["text"])
@@ -581,8 +592,7 @@ def write_live(rs):
         files |= {fg, bg}
     for a in rs["avatars"]:
         fn = f"a_{a['data_id']}.png"
-        with open(os.path.join(d, fn), "wb") as f:
-            f.write(a["png"])
+        put(fn, a["png"])
         avatars.append({"id": a["data_id"], "png": fn})
         files.add(fn)
     _write_json(state_path, {"hash": rs["hash"], "stickers": stickers, "avatars": avatars})
