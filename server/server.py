@@ -15,6 +15,7 @@ from aiohttp import web, WSMsgType
 import cscrypto
 import match
 import modpack
+import modroom
 import stats
 
 API_PATH = "/cott/api/index.php"
@@ -343,44 +344,49 @@ async def handle_sync(request):
 
 async def handle_info(request):
     info = {"server": "crimesight-revival", "version": 1, "password": bool(request.app.get("password"))}
-    rs = request.app.get("mods")
-    if rs and rs["hash"]:
+    rs = request.app["room"].rs
+    if rs["hash"]:
         info["mods"] = modpack.summary(rs)
     return web.json_response(info)
 
 
-async def handle_mods(request):
-    """Paquete con los mods de apariencia de este servidor (los descarga el lanzador al unirse)."""
+def _password_ok(request):
     pw = request.app.get("password") or ""
-    if pw and not hmac.compare_digest(request.headers.get("X-CSR-Password", ""), pw):
+    return not pw or hmac.compare_digest(request.headers.get("X-CSR-Password", ""), pw)
+
+
+async def handle_mods(request):
+    """Paquete con los mods de la sala (los descarga el lanzador al unirse y cuando cambian)."""
+    if not _password_ok(request):
         return web.json_response({"error": "password"}, status=403)
-    rs = request.app.get("mods")
-    if not rs or not rs["hash"]:
+    room = request.app["room"]
+    data = room.pack()
+    if not data:
         return web.json_response({"error": "no_mods"}, status=404)
-    if "pack" not in request.app:
-        request.app["pack"] = modpack.pack(rs)
-    return web.Response(body=request.app["pack"], content_type="application/zip",
-                        headers={"X-CSR-Mods": rs["hash"]})
+    return web.Response(body=data, content_type="application/zip", headers={"X-CSR-Mods": room.rs["hash"]})
 
 
-def load_mods(mods=None, mods_dir=None):
-    """Conjunto de mods del servidor: carpetas sueltas (las del anfitrion) o una carpeta de mods."""
-    folders = list(mods or []) + modpack.list_folders(mods_dir)
-    loaded = []
-    for f in folders:
-        m = modpack.load_mod(f)
-        for err in m["errors"]:
-            log.warning("Mod %s: %s", m["name"], err)
-        loaded.append(m)
-    rs = modpack.room_set(loaded)
-    if rs["hash"]:
-        log.info("Mods de apariencia: %d stickers y %d avatares (%s)", len(rs["stickers"]), len(rs["avatars"]),
-                 ", ".join(m["name"] for m in rs["mods"]))
-    return rs
+async def handle_mods_offer(request):
+    """Un jugador ofrece sus mods a la sala; el anfitrion decide si los usa."""
+    if not _password_ok(request):
+        return web.json_response({"error": "password"}, status=403)
+    if (request.content_length or 0) > modpack.MAX_PACK_BYTES:
+        return web.json_response({"error": "too_big"}, status=413)
+    data = await request.read()
+    from urllib.parse import unquote
+    player = unquote(request.headers.get("X-CSR-Player", ""))[:40]
+    import asyncio
+    try:
+        status = await asyncio.get_running_loop().run_in_executor(None, request.app["room"].offer, data, player)
+    except modpack.ModError as e:
+        return web.json_response({"error": str(e)}, status=400)
+    return web.json_response({"status": status})
 
 
 def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", data_dir=None, mods=None,
-              mods_dir=None):
+              mods_dir=None, owner="", player_mods="ask", mod_names=None):
+    """player_mods: "ask" (el anfitrion decide desde el lanzador), "accept" (se aceptan solos) o
+    "ignore" (servidor dedicado sin nadie que conteste)."""
     data_dir = data_dir or DATA_DIR
     os.makedirs(data_dir, exist_ok=True)
     cscrypto._keys()  # falla pronto si no hay claves
@@ -394,8 +400,11 @@ def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", 
     app.router.add_post("/revival/sync", handle_sync)
     app.router.add_get("/revival/info", handle_info)
     app.router.add_get("/revival/mods", handle_mods)
+    app.router.add_post("/revival/mods/offer", handle_mods_offer)
     app["password"] = password or ""
-    app["mods"] = load_mods(mods, mods_dir)
+    app["room"] = modroom.ModRoom(mods, mods_dir, owner=owner,
+                                  offers_dir=None if player_mods == "ignore" else os.path.join(data_dir, "mods_offers"),
+                                  auto_accept=player_mods == "accept", names=mod_names)
     return app
 
 
@@ -445,16 +454,10 @@ class BackgroundServer:
             raise self.error
         return self
 
-    def set_mods(self, folders):
-        """Cambia los mods que ofrece el servidor sin pararlo (recarga en caliente del anfitrion)."""
-        rs = load_mods(folders)
-
-        def swap():
-            self.app["mods"] = rs
-            self.app.pop("pack", None)
-        if getattr(self, "app", None) is not None:
-            self.loop.call_soon_threadsafe(swap)
-        return rs
+    @property
+    def room(self):
+        """Los mods de la sala (el lanzador del anfitrion los cambia y contesta a las ofertas)."""
+        return self.app["room"]
 
     def stop(self):
         if self.thread and self.thread.is_alive():
@@ -476,10 +479,13 @@ def main():
     ap.add_argument("--data-dir", default=None, help="carpeta de datos (por defecto server/data)")
     ap.add_argument("--mods-dir", default=None,
                     help="carpeta con mods de apariencia (stickers/avatares) que se ofrecen a los jugadores")
+    ap.add_argument("--accept-player-mods", action="store_true",
+                    help="usar en las salas los mods que traigan los jugadores (sin esto se ignoran)")
     a = ap.parse_args()
     data_dir = a.data_dir or DATA_DIR
     setup_logging(data_dir, a.debug)
-    app = build_app(a.port, a.password, a.public_url, a.ai_difficulty, data_dir, mods_dir=a.mods_dir)
+    app = build_app(a.port, a.password, a.public_url, a.ai_difficulty, data_dir, mods_dir=a.mods_dir,
+                    player_mods="accept" if a.accept_player_mods else "ignore")
     log.info("CRIMESIGHT Revival escuchando en http://%s:%d", a.host, a.port)
     web.run_app(app, host=a.host, port=a.port, print=None, access_log=None)
 

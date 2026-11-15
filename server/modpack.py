@@ -227,8 +227,10 @@ def _cached(path, kind, data):
     return _CACHE[key]
 
 
-def load_mod(folder):
-    """Lee una carpeta de mod. Devuelve el mod con sus imagenes ya ajustadas (en memoria)."""
+def load_mod(folder, owner=""):
+    """Lee una carpeta de mod. Devuelve el mod con sus imagenes ya ajustadas (en memoria).
+    owner (la cuenta de Steam del dueno) forma parte del id: asi la "Carpeta principal" de dos
+    jugadores distintos no choca cuando sus mods se juntan en una sala."""
     meta = _read_meta(folder)
     texts = meta.get("texts") if isinstance(meta.get("texts"), dict) else {}
     name = str(meta.get("name") or os.path.basename(folder.rstrip("/\\")))[:60]
@@ -272,7 +274,7 @@ def load_mod(folder):
         # El id depende SOLO de la carpeta, no del contenido: asi, anadir imagenes, cambiar un
         # mensaje o actualizar el lanzador no cambia los ids de los stickers/avatares que ya
         # tenias puestos (si cambiaran, el juego los quitaria de la rueda y del avatar elegido).
-        uid = f"{_slug(base)}-{hashlib.sha1(base.lower().encode()).hexdigest()[:6]}"
+        uid = f"{_slug(base)}-{hashlib.sha1((str(owner) + '/' + base.lower()).encode()).hexdigest()[:6]}"
     return {"uid": uid, "name": name, "author": author, "folder": folder, "temp": temp,
             "stickers": items["stickers"], "avatars": items["avatars"], "errors": errors}
 
@@ -310,11 +312,11 @@ def list_folders(mods_dir):
     return out
 
 
-def load_all(mods_dir, disabled=(), root_name=None):
+def load_all(mods_dir, disabled=(), root_name=None, owner=""):
     """Todos los mods de una carpeta (los desactivados se devuelven marcados)."""
     out = []
     for folder in list_folders(mods_dir):
-        m = load_mod(folder)
+        m = load_mod(folder, owner)
         if os.path.normpath(folder) == os.path.normpath(mods_dir) and root_name:
             m["name"] = root_name
         m["enabled"] = os.path.basename(folder) not in set(disabled)

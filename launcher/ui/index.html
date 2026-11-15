@@ -249,6 +249,17 @@ footer .ver{margin-left:8px;opacity:.6}
     <div class="actions"><button class="btn ghost small" onclick="closeTexts()" data-t="close"></button></div>
   </div>
 </div>
+<div class="modal" id="modoffer">
+  <div class="box">
+    <h3 id="modoffert"></h3>
+    <p id="modofferp"></p>
+    <div class="modlist" id="modofferl"></div>
+    <div class="actions">
+      <button class="btn ghost small" onclick="answerOffer(false)" data-t="mods_offer_no"></button>
+      <button class="btn small" onclick="answerOffer(true)" data-t="mods_offer_yes"></button>
+    </div>
+  </div>
+</div>
 <div class="modal" id="modask">
   <div class="box">
     <h3 data-t="mods_confirm_title"></h3>
@@ -389,6 +400,7 @@ async function saveText(el){
 function closeTexts(){$('#modtexts').classList.remove('on')}
 function openMods(){$('#mods').classList.add('on');loadMods();loadBep()}
 function closeMods(){$('#mods').classList.remove('on')}
+function answerOffer(ok){$('#modoffer').classList.remove('on');api('answer_mods',ok)}
 function answerMods(ok){$('#modask').classList.remove('on');api('answer_mods',ok)}
 
 /* llamadas desde Python */
@@ -402,6 +414,11 @@ window.ui={
   error(t){toast(t)},
   bepProgress(t){$('#bepstatus').textContent=t},
   bepDone(t,err){toast(t);loadBep()},
+  confirmOffer(info){
+    $('#modoffert').textContent=T('mods_offer_title',{player:info.player});
+    $('#modofferp').textContent=T('mods_offer_text',{player:info.player});
+    $('#modofferl').innerHTML=(info.mods||[]).map(m=>`<div><b>${esc(m.name)}</b> — ${esc(modCount(m))}</div>`).join('');
+    $('#modoffer').classList.add('on')},
   confirmMods(info){
     $('#modaskl').innerHTML=(info.mods||[]).map(m=>`<div><b>${esc(m.name)}</b> — ${esc(modCount(m))}${m.author?' · '+esc(T('mods_by',{author:m.author})):''}</div>`).join('');
     $('#modask').classList.add('on')},

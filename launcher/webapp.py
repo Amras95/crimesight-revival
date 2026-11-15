@@ -362,15 +362,21 @@ class Api:
         self._mods_answer = bool(ok)
         self._mods_event.set()
 
-    # contexto de sessions.py: unirse a una sala con mods
-    def confirm_mods(self, info):
+    # contexto de sessions.py: unirse a una sala con mods / un jugador trae mods a tu sala
+    def _ask(self, fn, info):
         self._mods_answer = None
         self._mods_event.clear()
-        js("confirmMods", info)
+        js(fn, info)
         while not self._mods_event.wait(0.3):
             if self._cancel:
                 return False
         return bool(self._mods_answer)
+
+    def confirm_mods(self, info):
+        return self._ask("confirmMods", info)
+
+    def confirm_offer(self, info):
+        return self._ask("confirmOffer", info)
 
     def save_server(self, name, address, password):
         name = (name or address or "").strip()

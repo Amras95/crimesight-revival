@@ -174,6 +174,13 @@ class App:
                     self.refresh_header()
                 elif kind == "error":
                     messagebox.showerror(TITLE, val)
+                elif kind == "offer":
+                    info, box, ev = val
+                    names = "\n".join(f"· {m['name']} — " + t("mods_count", stickers=m["stickers"], avatars=m["avatars"])
+                                      for m in info.get("mods", []))
+                    box.append(messagebox.askyesno(t("mods_offer_title", player=info["player"]),
+                                                   t("mods_offer_text", player=info["player"]) + "\n\n" + names))
+                    ev.set()
                 elif kind == "confirm":
                     info, box, ev = val
                     names = "\n".join(f"· {m['name']} — " + t("mods_count", stickers=m["stickers"], avatars=m["avatars"])
@@ -330,6 +337,14 @@ class App:
 
     def cancelled(self):
         return self.cancel
+
+    def confirm_offer(self, info):
+        box, ev = [], threading.Event()
+        self.q.put(("offer", (info, box, ev)))
+        while not ev.wait(0.3):
+            if self.cancel:
+                return False
+        return bool(box and box[0])
 
     def confirm_mods(self, info):
         box, ev = [], threading.Event()

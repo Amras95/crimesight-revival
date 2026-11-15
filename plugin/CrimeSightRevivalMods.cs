@@ -15,7 +15,9 @@ using System.Text.Json;
 using BepInEx;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
+using HarmonyLib;
 using Il2CppInterop.Runtime;
+using Il2CppInterop.Runtime.Attributes;
 using Il2CppInterop.Runtime.Injection;
 using UnityEngine;
 
@@ -31,8 +33,30 @@ namespace CrimeSightRevival.Mods
             L = Log;
             ClassInjector.RegisterTypeInIl2Cpp<LiveMods>();
             AddComponent<LiveMods>();
+            Harmony.CreateAndPatchAll(typeof(Hooks));
             L.LogInfo("Mods en caliente activos. Carpeta: " + LiveMods.LiveDir);
         }
+    }
+
+    // ---------------------------------------------------------------- enganches
+    // El juego monta la rueda de stickers y busca el avatar elegido justo al cargar cada escena. Si
+    // nuestros stickers/avatares no estan en ese momento, pone otros en su lugar (y parece que se han
+    // "quitado"). Por eso, ademas de comprobarlo cada segundo, se meten justo cuando el juego registra
+    // sus listas o va a leerlas.
+    [HarmonyPatch]
+    static class Hooks
+    {
+        [HarmonyPostfix, HarmonyPatch(typeof(StampManager), nameof(StampManager.RegistStampSet))]
+        static void AfterStampSet() => LiveMods.Instance?.Sync();
+
+        [HarmonyPrefix, HarmonyPatch(typeof(PingStampMenuBase), nameof(PingStampMenuBase.RefreshMenuStampReferenceSaveData))]
+        static void BeforeStampMenu() => LiveMods.Instance?.Sync();
+
+        [HarmonyPostfix, HarmonyPatch(typeof(CursorAvatarManager), nameof(CursorAvatarManager.RegistCursorAvatarSet))]
+        static void AfterAvatarSet() => LiveMods.Instance?.Sync();
+
+        [HarmonyPrefix, HarmonyPatch(typeof(CursorAvatarManager), nameof(CursorAvatarManager.GetMyCursorAvatarData))]
+        static void BeforeMyAvatar() => LiveMods.Instance?.Sync();
     }
 
     // ---------------------------------------------------------------- formato de live.json
@@ -61,12 +85,23 @@ namespace CrimeSightRevival.Mods
     // ---------------------------------------------------------------- componente que lo aplica
     public class LiveMods : MonoBehaviour
     {
-        public LiveMods(IntPtr ptr) : base(ptr) { }
+        public LiveMods(IntPtr ptr) : base(ptr) { Instance = this; }
+
+        public static LiveMods Instance;
+        int _syncFrame = -1;
+
+        // llamado desde los enganches (como mucho una vez por fotograma)
+        public void Sync()
+        {
+            if (Time.frameCount == _syncFrame) return;
+            _syncFrame = Time.frameCount;
+            try { Tick(); }
+            catch (Exception e) { Plugin.L.LogError(e); }
+        }
 
         public static readonly string LiveDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrimeSightRevival", "mods_live");
         const int FIRST_TYPE = 1000;
-        const int DEFAULT_STAMP = 28;          // "hola": sustituye a un sticker que ya no esta
 
         float _next;
         DateTime _seen = DateTime.MinValue;
@@ -134,6 +169,7 @@ namespace CrimeSightRevival.Mods
         }
 
         // ------------------------------------------------------------ crear / destruir
+        [HideFromIl2Cpp]
         void Rebuild(LiveState st)
         {
             Unregister();
@@ -178,10 +214,10 @@ namespace CrimeSightRevival.Mods
                 _avatars.Add(d); _assets.Add(d);
                 _avatarIds.Add(a.id);
             }
-            FixConfig();
             Plugin.L.LogInfo($"Mods aplicados: {_stamps.Count} stickers y {_avatars.Count} avatares.");
         }
 
+        [HideFromIl2Cpp]
         Sprite MakeSprite(string file)
         {
             if (string.IsNullOrEmpty(file)) return null;
@@ -202,6 +238,7 @@ namespace CrimeSightRevival.Mods
         }
 
         // ------------------------------------------------------------ meterlos en las listas del juego
+        [HideFromIl2Cpp]
         static bool Ours(StampData d) =>
             d != null && (int)d.FaceType == 0 && (int)d.Type >= FIRST_TYPE;
 
@@ -290,26 +327,6 @@ namespace CrimeSightRevival.Mods
                         tm.LangText[kv.Key] = text;
                 }
             }
-        }
-
-        // si la rueda de stickers o el avatar elegido apuntan a un mod que ya no esta, se cambian
-        // por uno del juego (en memoria; el lanzador corrige tambien lo guardado)
-        void FixConfig()
-        {
-            var menus = new[] { ConfigSystem.stampTypeMenu, ConfigSystem.stampTypeMenuPreset2,
-                                ConfigSystem.stampTypeMenuPreset3, ConfigSystem.stampTypeMenuPreset4 };
-            foreach (var arr in menus)
-            {
-                if (arr == null) continue;
-                for (int i = 0; i < arr.Length; i++)
-                {
-                    int v = arr[i];
-                    if ((v >> 12) == 0 && (v & 4095) >= FIRST_TYPE && !_types.Contains(v)) arr[i] = DEFAULT_STAMP;
-                }
-            }
-            var icon = ConfigSystem.cursorAvatarIconName;
-            if (icon != null && icon.StartsWith("Icon_CSR_") && !_avatarIds.Contains(icon))
-                CursorAvatarManager.SetMyCursorAvatarDefaultData();
         }
     }
 }

@@ -275,22 +275,24 @@ def wait_game(log, start_timeout=180, stop_flag=lambda: False):
 
 # ------------------------------------------------------------------ servidor local
 class LocalServer:
-    def __init__(self, public=False, port=DEFAULT_PORT, password="", mods=None):
+    def __init__(self, public=False, port=DEFAULT_PORT, password="", mods=None, player_mods="ignore", names=None):
         os.environ["CSR_DATA_DIR"] = data_dir()
         import server
         if not getattr(LocalServer, "_logging", False):
             server.setup_logging(data_dir())
             LocalServer._logging = True
         self.bg = server.BackgroundServer(host="0.0.0.0" if public else "127.0.0.1", port=port,
-                                          password=password, data_dir=data_dir(), mods=mods or [])
+                                          password=password, data_dir=data_dir(), mods=mods or [],
+                                          owner=mod_owner(), player_mods=player_mods, mod_names=names)
         self.port = port
 
     def start(self):
         self.bg.start()
         return self
 
-    def set_mods(self, folders):
-        return self.bg.set_mods(folders)
+    @property
+    def room(self):
+        return self.bg.room
 
     def stop(self):
         self.bg.stop()
@@ -341,9 +343,22 @@ def temp_mods_dir():
     return os.path.join(app_dir(), "mods_temp")
 
 
+_OWNER = []
+
+
+def mod_owner():
+    """Tu cuenta de Steam: forma parte del id de tus mods (para que no choquen con los de otro)."""
+    if not _OWNER:
+        try:
+            _OWNER.append(steam_account()[0] or "")
+        except Exception:  # noqa: BLE001
+            _OWNER.append("")
+    return _OWNER[0]
+
+
 def my_mods(cfg):
     import modpack
-    return modpack.load_all(mods_dir(), cfg.get("mods_disabled", []), root_name=t("mods_root"))
+    return modpack.load_all(mods_dir(), cfg.get("mods_disabled", []), root_name=t("mods_root"), owner=mod_owner())
 
 
 def mod_folder(name):
@@ -369,7 +384,6 @@ def install_mods(game_dir, rs, log=None):
     import modinject
     if live_mode(game_dir):
         changed = modinject.restore(game_dir, fix=False)
-        modinject.fix_prefs(game_dir, {s["type"] for s in rs["stickers"]}, {a["data_id"] for a in rs["avatars"]})
         return write_live(rs) or changed
     clear_live()
     return modinject.apply(game_dir, rs, log=log)
@@ -607,6 +621,26 @@ def download_mods(url, password, expected_hash, timeout=60):
     if expected_hash and rs["hash"] != expected_hash:
         raise ValueError(t("mods_download_failed", err="hash"))
     return rs
+
+
+def offer_mods(url, password, rs, player, timeout=60):
+    """Ofrece tus mods al anfitrion de la sala. Devuelve 'pending', 'accepted', 'known' o 'ignored'."""
+    import modpack
+    from urllib.parse import quote
+    if not rs["hash"]:
+        return "none"
+    req = urllib.request.Request(url + "/revival/mods/offer", data=modpack.pack(rs), method="POST",
+                                 headers={"X-CSR-Password": password or "", "X-CSR-Player": quote(player or "?"),
+                                          "Content-Type": "application/zip"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read()).get("status", "ignored")
+    except urllib.error.HTTPError as e:
+        if e.code == 404:          # servidor de una version anterior
+            return "ignored"
+        raise ValueError(t("mods_download_failed", err=e.code))
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        raise ValueError(t("mods_download_failed", err=getattr(e, "reason", e)))
 
 
 def clear_temp_mods():

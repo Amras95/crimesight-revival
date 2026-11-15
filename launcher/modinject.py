@@ -10,7 +10,7 @@ listas (los del juego no se tocan). Cambiar de mods necesita volver a abrir el j
   level3 / level4       listas de iconos del menu y de la partida
 
 Se guarda una copia de cada original (<archivo>.original) y "Dejar el juego original" lo
-deshace todo. Los ajustes del juego que apunten a un mod que ya no esta se corrigen solos.
+deshace todo. Los ajustes guardados (rueda de stickers, avatar) no se tocan nunca.
 """
 import copy, json, os, shutil, struct, sys
 
@@ -285,7 +285,6 @@ def apply(game_dir, rs, log=None):
     _save_state(dd, {"hash": want, "sizes": {f: os.path.getsize(os.path.join(dd, f)) for f in FILES},
                      "stickers": [s["type"] for s in rs["stickers"]],
                      "avatars": [a["data_id"] for a in rs["avatars"]]})
-    fix_prefs(game_dir, {s["type"] for s in rs["stickers"]}, {a["data_id"] for a in rs["avatars"]})
     return True
 
 
@@ -302,8 +301,6 @@ def restore(game_dir, fix=True):
             changed = True
     if _state(dd).get("hash") or changed:
         _save_state(dd, {})
-        if fix:                       # con la recarga en caliente los mods siguen ahi: no se tocan
-            fix_prefs(game_dir, set(), set())
     return changed
 
 
@@ -319,8 +316,10 @@ def _prefs_key(game_dir):
 
 
 def fix_prefs(game_dir, stickers, avatars):
-    """Si la rueda de stickers o el avatar elegido apuntan a un mod que ya no esta, los cambia
-    por uno del juego para que no falle al abrirse."""
+    """(Ya no se usa.) Cambiaba en los ajustes guardados los stickers/avatar de mods que no estaban.
+    No hace falta: si falta uno, el juego simplemente ensena otro en su hueco y, al volver el mod
+    (p. ej. al salir de la sala de otro jugador), vuelve a salir el tuyo. Reescribirlo hacia que se
+    perdiera para siempre."""
     if sys.platform != "win32":
         return 0
     key = _prefs_key(game_dir)
