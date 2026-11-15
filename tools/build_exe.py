@@ -18,10 +18,12 @@ open(vfile, "w", encoding="utf-8").write("\n".join(lines) + "\n")
 
 sep = ";" if os.name == "nt" else ":"
 hidden = ["server", "match", "ai", "stats", "cscrypto", "extract_keys", "patch_client", "credits_patch",
-          "upnp", "art", "sessions", "app", "core", "i18n", "updater", "version"]
+          "upnp", "art", "modpack", "modimage", "modinject", "sessions", "app", "core", "i18n", "updater", "version"]
 args = ["--noconfirm", "--clean", "--onefile", "--windowed", "--name", "CrimeSightRevival",
         "--paths", "server", "--paths", "tools", "--paths", "launcher",
         "--add-data", f"launcher{os.sep}ui{sep}ui", "--add-data", f"launcher{os.sep}icon.ico{sep}.",
+        # plugin opcional de BepInEx (recarga en caliente de mods); BepInEx NO va incluido
+        "--add-data", f"plugin{os.sep}CrimeSightRevival.Mods.dll{sep}plugin",
         "--icon", os.path.join("launcher", "icon.ico"),
         "--collect-all", "UnityPy", "--collect-all", "webview",
         # UnityPy carga su modulo de audio al sacar imagenes: sin la libreria de fmod no hay ilustraciones

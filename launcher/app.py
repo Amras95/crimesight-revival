@@ -65,6 +65,8 @@ class App:
         self.btn_stop = ttk.Button(bottom, text="Terminar sesión", command=self.stop, state="disabled")
         self.btn_stop.pack(side="left")
         ttk.Button(bottom, text="Dejar el juego original", command=self.restore).pack(side="right")
+        ttk.Button(bottom, text=t("mods_open"), command=lambda: core.open_folder(core.mods_dir())).pack(side="right",
+                                                                                                  padx=4)
         ttk.Button(bottom, text=t("import_btn") + "…", command=self.import_progress).pack(side="right", padx=4)
         ttk.Button(bottom, text=t("export_btn") + "…", command=self.export_progress).pack(side="right")
 
@@ -75,6 +77,10 @@ class App:
             self.cfg["game_dir"] = core.find_game()
             core.save_config(self.cfg)
         self.auto_backup()
+        try:
+            core.mods_dir()
+        except OSError:
+            pass
         self.refresh_header()
         if imported:
             self.log(f"He traído tus partidas de la versión anterior ({imported}).")
@@ -168,6 +174,14 @@ class App:
                     self.refresh_header()
                 elif kind == "error":
                     messagebox.showerror(TITLE, val)
+                elif kind == "confirm":
+                    info, box, ev = val
+                    names = "\n".join(f"· {m['name']} — " + t("mods_count", stickers=m["stickers"], avatars=m["avatars"])
+                                      for m in info.get("mods", []))
+                    box.append(messagebox.askyesno(t("mods_confirm_title"),
+                                                   t("mods_confirm_text") + "\n\n" + names + "\n\n" +
+                                                   t("mods_confirm_yes") + "?"))
+                    ev.set()
         except queue.Empty:
             pass
         self.root.after(200, self.pump)
@@ -316,6 +330,14 @@ class App:
 
     def cancelled(self):
         return self.cancel
+
+    def confirm_mods(self, info):
+        box, ev = [], threading.Event()
+        self.q.put(("confirm", (info, box, ev)))
+        while not ev.wait(0.3):
+            if self.cancel:
+                return False
+        return bool(box and box[0])
 
     def do_solo(self, gd):
         sessions.solo(self, self.cfg)

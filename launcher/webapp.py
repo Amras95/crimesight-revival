@@ -42,6 +42,8 @@ class Api:
         self._steam = (None, "")
         self._busy = False
         self._cancel = False
+        self._mods_answer = None
+        self._mods_event = threading.Event()
 
     # ---------------------------------------------------------------- estado
     def init(self):
@@ -53,6 +55,10 @@ class Api:
         gd = self._cfg.get("game_dir")
         self._update_lang()
         self._self_update()
+        try:
+            core.mods_dir()               # la carpeta de mods ya preparada desde el principio
+        except OSError:
+            pass
         if gd and not art.ready(core.app_dir()):
             js("loading", t("loading_art"))
             try:
@@ -264,6 +270,107 @@ class Api:
         self._cfg.pop("backup_dir", None)
         core.save_config(self._cfg)
         return {"msg": t("backup_removed"), "state": self._state(with_art=False)}
+
+    # ---------------------------------------------------------------- mods de apariencia
+    def mods_list(self):
+        import base64
+        out = []
+        for m in core.my_mods(self._cfg):
+            imgs = [it["png"] for it in (m["stickers"] + m["avatars"])[:5]]
+            out.append({"folder": os.path.basename(m["folder"]), "name": m["name"], "author": m["author"],
+                        "stickers": len(m["stickers"]), "avatars": len(m["avatars"]), "enabled": m["enabled"],
+                        "errors": len(m["errors"]),
+                        "thumbs": ["data:image/png;base64," + base64.b64encode(p).decode() for p in imgs]})
+        return {"dir": core.mods_dir(), "mods": out}
+
+    def mods_stickers(self, folder):
+        """Stickers de un mod con su mensaje, para editarlos desde el lanzador."""
+        import base64, modpack
+        m = modpack.load_mod(core.mod_folder(folder))
+        out = []
+        for it in m["stickers"]:
+            cur = it.get("text") or ""
+            if isinstance(cur, dict):            # textos por idioma puestos a mano en mod.json
+                cur = cur.get(i18n.get_lang()) or next(iter(cur.values()), "")
+            out.append({"key": it["key"], "default": it.get("default") or "",
+                        "text": "" if cur == it.get("default") else cur,
+                        "thumb": "data:image/png;base64," + base64.b64encode(it["png"]).decode()})
+        return {"name": m["name"], "stickers": out}
+
+    def mods_set_text(self, folder, key, text):
+        import modpack
+        try:
+            return {"ok": True, "text": modpack.set_text(core.mod_folder(folder), key, text)}
+        except (OSError, ValueError) as e:
+            return {"error": str(e)}
+
+    def mods_toggle(self, folder, on):
+        off = [f for f in self._cfg.get("mods_disabled", []) if f != folder]
+        if not on:
+            off.append(folder)
+        self._cfg["mods_disabled"] = off
+        core.save_config(self._cfg)
+        return True
+
+    def mods_open(self):
+        core.open_folder(core.mods_dir())
+
+    # recarga en caliente (BepInEx, opcional)
+    def bep_state(self):
+        st = core.bepinex_state(self._cfg.get("game_dir"))
+        st["busy"] = self._busy
+        return st
+
+    def bep_install(self):
+        gd = self._cfg.get("game_dir")
+        if not gd:
+            return {"error": t("err_no_game")}
+        if self._busy or core.game_running():
+            return {"error": t("bep_busy")}
+        self._busy = True
+
+        def work():
+            try:
+                core.install_bepinex(gd, progress=lambda pct: js("bepProgress", t("bep_installing", pct=pct)))
+                js("bepDone", t("bep_installed"))
+            except ValueError as e:
+                js("bepDone", str(e), True)
+            except Exception as e:  # noqa: BLE001
+                logging.getLogger("crimesight").exception("No pude instalar BepInEx")
+                js("bepDone", t("err_unexpected", err=e), True)
+            finally:
+                self._busy = False
+        threading.Thread(target=work, daemon=True).start()
+        return {"ok": True}
+
+    def bep_uninstall(self):
+        gd = self._cfg.get("game_dir")
+        if self._busy or core.game_running():
+            return {"error": t("bep_busy")}
+        try:
+            core.uninstall_bepinex(gd)
+        except OSError as e:
+            return {"error": t("err_unexpected", err=e)}
+        return {"ok": True, "msg": t("bep_removed")}
+
+    def mods_new(self):
+        folder = core.new_mod()
+        core.open_folder(folder)
+        return os.path.basename(folder)
+
+    def answer_mods(self, ok):
+        self._mods_answer = bool(ok)
+        self._mods_event.set()
+
+    # contexto de sessions.py: unirse a una sala con mods
+    def confirm_mods(self, info):
+        self._mods_answer = None
+        self._mods_event.clear()
+        js("confirmMods", info)
+        while not self._mods_event.wait(0.3):
+            if self._cancel:
+                return False
+        return bool(self._mods_answer)
 
     def save_server(self, name, address, password):
         name = (name or address or "").strip()

@@ -31,6 +31,9 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 > **Probado y funcionando:** partidas en solitario contra la IA y partidas entre dos personas (anfitrión y
 > amigo), también a través de Radmin VPN.
 >
+> **Mods de stickers y avatares:** probados en solitario, con y sin recarga en caliente. La descarga de los
+> mods del anfitrión al unirse a su sala está probada en local, aún no entre dos personas.
+>
 > **Aún sin probar con personas:** partidas con **Watson** o **Irene** (3 o 4 jugadores) y el servidor propio
 > en un VPS. Deberían funcionar, pero si encontráis cualquier problema, contádmelo en
 > [Issues](https://github.com/Amras95/crimesight-revival/issues) y lo arreglo.
@@ -93,6 +96,54 @@ Con el botón **«Tu progreso»** del lanzador puedes:
 
 Steam Cloud no se usa porque el espacio en la nube de cada juego lo controla su editora.
 
+## Mods: tus propios stickers y avatares
+
+Añade stickers y avatares tuyos. **Son huecos nuevos**: los del juego (también los de pago, que siguen
+dependiendo de tenerlos en Steam) no se tocan nunca.
+
+1. En el lanzador, pulsa **Mods → Abrir carpeta de mods** (`%APPDATA%\CrimeSightRevival\mods`). Viene
+   preparada con un mod de ejemplo y un `README.txt`.
+2. Mete tus imágenes (PNG, JPG, WEBP…) en `stickers\` y/o `avatars\`. Puedes ponerlas directamente en la
+   carpeta de mods o hacer una carpeta por mod (botón **Nuevo mod**) para tener varios packs.
+3. Juega. El lanzador las mete en el juego antes de abrirlo.
+
+```
+mods\
+  stickers\        01_saludo.png, ¡Buenas noches!.png…
+  avatars\         yo.png
+  Gatos\           otro mod: su propia carpeta stickers\ y avatars\ (+ mod.json opcional)
+```
+
+- **Cualquier imagen sirve.** Se ajustan solas al tamaño del juego (stickers de 128×128 con su borde blanco;
+  avatares de 256×256 colocados como los originales). Una **lámina con muchos stickers** en cuadrícula se
+  separa sola, y si la imagen no tiene transparencia se le quita el fondo. Los avatares que llegan hasta los
+  bordes (un busto cortado, una foto) van en un círculo para que encajen en todos los marcos.
+- **El mensaje del sticker** (lo que sale en el registro: «Amras: ¡Buenas noches!») es el nombre del archivo;
+  un número delante (`01_`) solo sirve para ordenar. Para usar signos que Windows no deja en los nombres
+  (`? : " *`), escríbelo en **Mods → Mensajes**. Se guarda en el `mod.json` del mod.
+- **Activa o desactiva** cada mod desde la ventana de Mods.
+- **En la sala de otro jugador**, antes de entrar sale un aviso con sus mods: **Descargar y unirme** o
+  **No unirme**. Se descargan como temporales (`<id>+temp`), tus mods quedan en pausa durante la partida y
+  al salir se borran los temporales y vuelven los tuyos. Si la sala no tiene mods, se entra sin ninguno:
+  todos los jugadores tienen que tener exactamente la misma lista.
+- Lo que tengas puesto en la rueda de stickers y el avatar elegido **se conservan** aunque añadas imágenes,
+  cambies mensajes o se actualice el lanzador. Solo se quita un sticker si borras o renombras su imagen (el
+  juego pone «Hola» en su hueco).
+
+### Recarga en caliente (opcional, con BepInEx)
+
+Sin nada más, cambiar de mods necesita volver a abrir el juego. Si quieres que los cambios aparezcan **con el
+juego abierto**, pulsa **Mods → Recarga en caliente → Activar**:
+
+- El lanzador descarga [BepInEx](https://github.com/BepInEx/BepInEx) (el cargador de mods oficial de los
+  juegos de Unity, 34 MB) **de su GitHub y solo si lo activas**: no viene incluido. Lo instala en la carpeta
+  del juego junto al plugin del proyecto. El primer arranque tarda un minuto mientras BepInEx se prepara.
+- Mientras juegas, el lanzador vigila tu carpeta de mods: si añades una imagen, cambias un mensaje o
+  activas/desactivas un mod, aparece en el juego en unos segundos. Si eres anfitrión, también le llega a tu
+  sala; si estás en la sala de otro, recibes sus cambios.
+- Los cambios nunca se aplican a mitad de partida (se esperan al menú), para que todos tengan la misma lista.
+- **Quitar BepInEx** (o «Dejar el juego original») lo borra todo y el juego vuelve a estar como siempre.
+
 ## Qué funciona
 
 - Inicio de sesión, perfil, tutorial, ajustes y nivel.
@@ -109,6 +160,7 @@ Steam Cloud no se usa porque el espacio en la nube de cada juego lo controla su 
 - Recompensas por puntos y nivel como en el original. El evento Project Winter queda abierto con su
   avatar desbloqueado. El contenido Deluxe sigue dependiendo de tenerlo en Steam.
 - Los logros de Steam se siguen consiguiendo (los gestiona el propio juego con Steam).
+- Mods de stickers y avatares nuevos, compartidos con la sala, con recarga en caliente opcional.
 
 ## Plataformas
 
@@ -123,6 +175,8 @@ probados ahí. En Mac no hay versión del juego.
 2. En el servidor (Python 3.10+): `pip install aiohttp pycryptodome` y
    `python server.py --password UNA_CONTRASEÑA` (puerto 18080; ábrelo en el cortafuegos).
 3. Los jugadores usan «Servidor propio» con `IP_O_DOMINIO:18080` y la contraseña.
+4. Opcional: `--mods-dir CARPETA` ofrece a los jugadores los mods de esa carpeta (misma estructura que la
+   carpeta de mods del lanzador; necesita `pip install pillow`).
 
 La contraseña protege la sincronización de perfiles: el juego solo se identifica con su ID de Steam,
 así que un servidor sin contraseña permitiría a cualquiera hacerse pasar por otro jugador.
@@ -131,6 +185,9 @@ así que un servidor sin contraseña permitiría a cualquiera hacerse pasar por 
 
 - `4_lanzador.bat`: abre el lanzador con Python, sin compilar.
 - `crear_exe.bat`: crea `dist\CrimeSightRevival.exe` (versión de desarrollo, no se actualiza sola).
+- `plugin/`: código del plugin opcional de BepInEx y su `.dll` ya compilado. Se compila contra los ensamblados
+  que genera BepInEx 6 (IL2CPP) en `BepInEx\interop` al arrancar el juego por primera vez; no se incluye
+  ningún archivo del juego.
 - Cada vez que se sube algo a `main`, GitHub Actions compila el `.exe` en Windows y publica una release
   (`.github/workflows/release.yml`). Los lanzadores instalados la descargan, comprueban su huella
   SHA-256 y se sustituyen solos.
@@ -143,7 +200,30 @@ Unity 2020.3 con IL2CPP. La dirección del servidor (`https://cott-game.cs.konam
 `global-metadata.dat`. El tráfico va cifrado con AES-256-CBC; las claves están en `resources.assets` del
 propio juego. La API es `POST /cott/api/index.php` y las partidas van por WebSocket con WAMP v2: el
 servidor marca las fases del turno, reparte objetos y decide peligros y asesinatos; la simulación visual
-va en el cliente. Extras del servidor comunitario: `POST /revival/sync` (perfiles) y `GET /revival/info`.
+va en el cliente. Extras del servidor comunitario: `POST /revival/sync` (perfiles), `GET /revival/info` y
+`GET /revival/mods` (paquete de mods de la sala).
+
+**Mods (`server/modpack.py`, `server/modimage.py`, `launcher/modinject.py`):**
+
+- Los stickers son `StampData` en `resources.assets`; los gratuitos están en el `StampSet` 0. El juego los
+  identifica por `tipo | cara` y en red manda la **posición** en la lista (`setIndex`, `dataIndex`), así que
+  todos los jugadores de la sala necesitan la misma lista en el mismo orden. Cada sticker nuevo recibe un tipo
+  de 1000 a 4095 (el juego usa 0-38) calculado a partir de la carpeta del mod y el nombre del archivo, de modo
+  que es estable y el orden (el juego ordena por tipo) sale igual en todos los PCs.
+- Los avatares son `CursorAvatarData` en `sharedassets3.assets`, listados por los `CursorAvatarSet` de las
+  escenas `level3` (menú) y `level4` (partida); en red viajan por su nombre (`Icon_CSR_<hash>`).
+- **Sin BepInEx**, `modinject.py` reconstruye esos archivos con UnityPy partiendo siempre de los originales
+  (`*.original`): clona un `StampData`/`CursorAvatarData` de plantilla, añade textura RGBA32 incrustada y
+  sprite de 4 vértices, y los añade al final de las listas. Los mensajes se añaden al texto del juego
+  (`ctg_name`, en los 11 idiomas). Si la rueda o el avatar guardados (PlayerPrefs) apuntan a un mod que ya no
+  está, se cambian por uno del juego.
+- **Con BepInEx**, los archivos del juego se quedan originales: el lanzador escribe el conjunto de la sala en
+  `%APPDATA%\CrimeSightRevival\mods_live\live.json` y el plugin (`plugin/CrimeSightRevivalMods.cs`) crea los
+  objetos en memoria (`Texture2D` + `Sprite.Create` + `ScriptableObject.CreateInstance`), los mete en las
+  listas del juego y añade los textos a `TextManager.LangText`. Comprueba cada segundo y lo reaplica tras cada
+  cambio de escena.
+- Por la red viaja un zip interno con las imágenes ya ajustadas y validadas (tamaño, nombres, formato): el
+  jugador nunca comprime nada.
 
 ## Licencia
 

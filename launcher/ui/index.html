@@ -116,6 +116,25 @@ footer .ver{margin-left:8px;opacity:.6}
   margin-bottom:10px;word-break:break-all;user-select:text}
 .modal .dir.off{color:var(--dim);font-style:italic}
 .modal .close{display:flex;justify-content:flex-end;margin-top:6px}
+/* mods */
+.modal .box.wide{width:640px}
+.mods{max-height:46vh;overflow:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:8px}
+.mod{display:flex;align-items:center;gap:12px;background:rgba(5,6,20,.6);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.mod.off{opacity:.55}
+.mod .thumbs{display:flex;gap:4px;flex-shrink:0}
+.mod .thumbs img{width:40px;height:40px;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.05)}
+.mod .info{flex:1;min-width:0}
+.mod .info b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mod .info small{color:var(--dim);font-size:12px}
+.mod .info .warn{color:#ffb37a}
+.modal .empty{color:var(--dim);font-style:italic;padding:12px 0}
+.modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
+.bep{display:flex;align-items:center;gap:12px;background:rgba(5,6,20,.6);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:12px}
+.bep .info{flex:1;min-width:0}.bep .info b{display:block;margin-bottom:2px}.bep .info small{color:var(--dim);font-size:12px;line-height:1.45}
+.stxt{display:flex;align-items:center;gap:12px;background:rgba(5,6,20,.6);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.stxt img{width:48px;height:48px;object-fit:contain;flex-shrink:0}
+.stxt input{flex:1;min-width:0}
+.modlist{background:rgba(5,6,20,.6);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:14px;font-size:13px;line-height:1.7}
 </style>
 </head>
 <body>
@@ -175,6 +194,7 @@ footer .ver{margin-left:8px;opacity:.6}
       <button class="btn ghost small" onclick="pickGame()" data-t="change_folder"></button>
       <button class="btn ghost small" onclick="restoreGame()" data-t="restore_game"></button>
       <button class="btn ghost small" onclick="openProgress()" data-t="progress_btn"></button>
+      <button class="btn ghost small" onclick="openMods()" data-t="mods_btn"></button>
     </span>
     <span><span data-t="revival_by"></span> <a href="#" onclick="api('open_url','https://github.com/Amras95');return false">Amras95</a> ·
       <a href="#" onclick="api('open_url','https://x.com/AmrasMithandir');return false">@AmrasMithandir</a> ·
@@ -198,6 +218,46 @@ footer .ver{margin-left:8px;opacity:.6}
     </div>
     <p data-t="backup_hint"></p>
     <div class="close"><button class="btn ghost small" onclick="closeProgress()" data-t="close"></button></div>
+  </div>
+</div>
+<div class="modal" id="mods" onclick="if(event.target===this)closeMods()">
+  <div class="box wide">
+    <h3 data-t="mods_title"></h3>
+    <p data-t="mods_desc"></p>
+    <div class="mods" id="modlist"></div>
+    <p data-t="mods_how"></p>
+    <p data-t="mods_text_hint"></p>
+    <p id="modsrestart" data-t="mods_restart"></p>
+    <div class="sub" data-t="bep_title"></div>
+    <div class="bep">
+      <div class="info"><b id="bepstatus"></b><small data-t="bep_desc"></small></div>
+      <button class="btn ghost small" id="bepbtn" onclick="toggleBep()"></button>
+    </div>
+    <div class="actions">
+      <button class="btn small" onclick="newMod()" data-t="mods_new"></button>
+      <button class="btn ghost small" onclick="api('mods_open')" data-t="mods_open"></button>
+      <button class="btn ghost small" onclick="loadMods()" data-t="mods_reload"></button>
+      <button class="btn ghost small" onclick="closeMods()" data-t="close"></button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="modtexts" onclick="if(event.target===this)closeTexts()">
+  <div class="box wide">
+    <h3 data-t="mods_texts_title"></h3>
+    <p><b id="modtextsname"></b> · <span data-t="mods_texts_desc"></span></p>
+    <div class="mods" id="modtextsl"></div>
+    <div class="actions"><button class="btn ghost small" onclick="closeTexts()" data-t="close"></button></div>
+  </div>
+</div>
+<div class="modal" id="modask">
+  <div class="box">
+    <h3 data-t="mods_confirm_title"></h3>
+    <p data-t="mods_confirm_text"></p>
+    <div class="modlist" id="modaskl"></div>
+    <div class="actions">
+      <button class="btn ghost small" onclick="answerMods(false)" data-t="mods_confirm_no"></button>
+      <button class="btn small" onclick="answerMods(true)" data-t="mods_confirm_yes"></button>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -285,6 +345,52 @@ async function importProgress(){done(await api('import_progress'))}
 async function pickBackup(){done(await api('pick_backup'))}
 async function clearBackup(){done(await api('clear_backup'))}
 
+/* mods de apariencia */
+function modCount(m){return T('mods_count',{stickers:m.stickers,avatars:m.avatars})}
+async function loadMods(){
+  const r=await api('mods_list');const L=$('#modlist');if(!r){L.innerHTML='';return}
+  if(!r.mods.length){L.innerHTML=`<div class="empty">${esc(T('mods_empty'))}</div>`;return}
+  L.innerHTML=r.mods.map(m=>`<div class="mod${m.enabled?'':' off'}">
+    <div class="thumbs">${m.thumbs.map(u=>`<img src="${u}">`).join('')}</div>
+    <div class="info"><b>${esc(m.name)}</b><small>${esc(modCount(m))}${m.author?' · '+esc(T('mods_by',{author:m.author})):''}</small>
+      ${m.errors?`<small class="warn"> · ${esc(T('mods_bad_images',{n:m.errors}))}</small>`:''}</div>
+    ${m.stickers?`<button class="btn ghost small" onclick="openTexts(${esc(JSON.stringify(m.folder))})">${esc(T('mods_texts_btn'))}</button>`:''}
+    <button class="btn ghost small" onclick="toggleMod(${esc(JSON.stringify(m.folder))},${!m.enabled})">${esc(T(m.enabled?'mods_on':'mods_off'))}</button>
+  </div>`).join('');
+}
+async function newMod(){await api('mods_new');loadMods()}
+async function toggleMod(folder,on){await api('mods_toggle',folder,on);loadMods()}
+let BEP=null;
+async function loadBep(){
+  BEP=await api('bep_state');if(!BEP)return;
+  $('#bepstatus').textContent=T(BEP.plugin?(BEP.ready?'bep_status_on':'bep_status_first'):'bep_status_off');
+  $('#bepbtn').textContent=T(BEP.plugin?'bep_disable':'bep_enable');$('#bepbtn').disabled=false;
+  $('#modsrestart').textContent=T(BEP.plugin?'mods_live_restart':'mods_restart');
+}
+async function toggleBep(){
+  const r=await api(BEP&&BEP.plugin?'bep_uninstall':'bep_install');
+  if(!r)return; if(r.error){toast(r.error);return}
+  if(r.msg){toast(r.msg);loadBep()} else $('#bepbtn').disabled=true;
+}
+let TXT_FOLDER=null;
+async function openTexts(folder){
+  const r=await api('mods_stickers',folder);if(!r)return;TXT_FOLDER=folder;
+  $('#modtextsname').textContent=r.name;
+  $('#modtextsl').innerHTML=r.stickers.map(s=>`<div class="stxt"><img src="${s.thumb}">
+    <input maxlength="40" value="${esc(s.text)}" placeholder="${esc(s.default)}" data-key="${esc(s.key)}"
+      onchange="saveText(this)" onkeydown="if(event.key==='Enter')this.blur()"></div>`).join('');
+  $('#modtexts').classList.add('on');
+}
+async function saveText(el){
+  const r=await api('mods_set_text',TXT_FOLDER,el.dataset.key,el.value);
+  if(r&&r.error){toast(r.error);return}
+  if(r){el.value=r.text;toast(T('mods_text_saved'))}
+}
+function closeTexts(){$('#modtexts').classList.remove('on')}
+function openMods(){$('#mods').classList.add('on');loadMods();loadBep()}
+function closeMods(){$('#mods').classList.remove('on')}
+function answerMods(ok){$('#modask').classList.remove('on');api('answer_mods',ok)}
+
 /* llamadas desde Python */
 window.ui={
   log(t,kind){const d=document.createElement('div');if(kind)d.className=kind;d.textContent=t;const L=$('#log');L.appendChild(d);L.scrollTop=L.scrollHeight},
@@ -294,6 +400,11 @@ window.ui={
   state(s){render(s)},
   loading(msg){if(msg){$('#loadmsg').textContent=msg;$('#loading').classList.remove('off')}else $('#loading').classList.add('off')},
   error(t){toast(t)},
+  bepProgress(t){$('#bepstatus').textContent=t},
+  bepDone(t,err){toast(t);loadBep()},
+  confirmMods(info){
+    $('#modaskl').innerHTML=(info.mods||[]).map(m=>`<div><b>${esc(m.name)}</b> — ${esc(modCount(m))}${m.author?' · '+esc(T('mods_by',{author:m.author})):''}</div>`).join('');
+    $('#modask').classList.add('on')},
 };
 
 async function boot(){

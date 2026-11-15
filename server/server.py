@@ -14,6 +14,7 @@ from aiohttp import web, WSMsgType
 
 import cscrypto
 import match
+import modpack
 import stats
 
 API_PATH = "/cott/api/index.php"
@@ -341,11 +342,45 @@ async def handle_sync(request):
 
 
 async def handle_info(request):
-    return web.json_response({"server": "crimesight-revival", "version": 1,
-                              "password": bool(request.app.get("password"))})
+    info = {"server": "crimesight-revival", "version": 1, "password": bool(request.app.get("password"))}
+    rs = request.app.get("mods")
+    if rs and rs["hash"]:
+        info["mods"] = modpack.summary(rs)
+    return web.json_response(info)
 
 
-def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", data_dir=None):
+async def handle_mods(request):
+    """Paquete con los mods de apariencia de este servidor (los descarga el lanzador al unirse)."""
+    pw = request.app.get("password") or ""
+    if pw and not hmac.compare_digest(request.headers.get("X-CSR-Password", ""), pw):
+        return web.json_response({"error": "password"}, status=403)
+    rs = request.app.get("mods")
+    if not rs or not rs["hash"]:
+        return web.json_response({"error": "no_mods"}, status=404)
+    if "pack" not in request.app:
+        request.app["pack"] = modpack.pack(rs)
+    return web.Response(body=request.app["pack"], content_type="application/zip",
+                        headers={"X-CSR-Mods": rs["hash"]})
+
+
+def load_mods(mods=None, mods_dir=None):
+    """Conjunto de mods del servidor: carpetas sueltas (las del anfitrion) o una carpeta de mods."""
+    folders = list(mods or []) + modpack.list_folders(mods_dir)
+    loaded = []
+    for f in folders:
+        m = modpack.load_mod(f)
+        for err in m["errors"]:
+            log.warning("Mod %s: %s", m["name"], err)
+        loaded.append(m)
+    rs = modpack.room_set(loaded)
+    if rs["hash"]:
+        log.info("Mods de apariencia: %d stickers y %d avatares (%s)", len(rs["stickers"]), len(rs["avatars"]),
+                 ", ".join(m["name"] for m in rs["mods"]))
+    return rs
+
+
+def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", data_dir=None, mods=None,
+              mods_dir=None):
     data_dir = data_dir or DATA_DIR
     os.makedirs(data_dir, exist_ok=True)
     cscrypto._keys()  # falla pronto si no hay claves
@@ -358,7 +393,9 @@ def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", 
     app.router.add_get(WS_PATH, handle_ws)
     app.router.add_post("/revival/sync", handle_sync)
     app.router.add_get("/revival/info", handle_info)
+    app.router.add_get("/revival/mods", handle_mods)
     app["password"] = password or ""
+    app["mods"] = load_mods(mods, mods_dir)
     return app
 
 
@@ -387,6 +424,7 @@ class BackgroundServer:
         asyncio.set_event_loop(self.loop)
         try:
             app = build_app(port=self.port, **self.kw)
+            self.app = app
             self.runner = web.AppRunner(app, access_log=None)
             self.loop.run_until_complete(self.runner.setup())
             self.loop.run_until_complete(web.TCPSite(self.runner, self.host, self.port).start())
@@ -407,6 +445,17 @@ class BackgroundServer:
             raise self.error
         return self
 
+    def set_mods(self, folders):
+        """Cambia los mods que ofrece el servidor sin pararlo (recarga en caliente del anfitrion)."""
+        rs = load_mods(folders)
+
+        def swap():
+            self.app["mods"] = rs
+            self.app.pop("pack", None)
+        if getattr(self, "app", None) is not None:
+            self.loop.call_soon_threadsafe(swap)
+        return rs
+
     def stop(self):
         if self.thread and self.thread.is_alive():
             self.loop.call_soon_threadsafe(self.loop.stop)
@@ -425,10 +474,12 @@ def main():
     ap.add_argument("--password", default=os.environ.get("CSR_PASSWORD", ""),
                     help="contrasena para sincronizar perfiles (servidores abiertos a internet)")
     ap.add_argument("--data-dir", default=None, help="carpeta de datos (por defecto server/data)")
+    ap.add_argument("--mods-dir", default=None,
+                    help="carpeta con mods de apariencia (stickers/avatares) que se ofrecen a los jugadores")
     a = ap.parse_args()
     data_dir = a.data_dir or DATA_DIR
     setup_logging(data_dir, a.debug)
-    app = build_app(a.port, a.password, a.public_url, a.ai_difficulty, data_dir)
+    app = build_app(a.port, a.password, a.public_url, a.ai_difficulty, data_dir, mods_dir=a.mods_dir)
     log.info("CRIMESIGHT Revival escuchando en http://%s:%d", a.host, a.port)
     web.run_app(app, host=a.host, port=a.port, print=None, access_log=None)
 

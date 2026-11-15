@@ -223,10 +223,14 @@ def point_game_to(game_dir, url):
 
 
 def restore_game(game_dir):
-    import patch_client, credits_patch
+    import patch_client, credits_patch, modinject
+    m = modinject.restore(game_dir)
+    if live_mode(game_dir):                 # el juego original no lleva BepInEx
+        uninstall_bepinex(game_dir)
+        m = True
     a = patch_client.restore(game_dir)
     b = credits_patch.restore(game_dir)
-    return a or b
+    return a or b or m
 
 
 def game_url(game_dir):
@@ -269,22 +273,311 @@ def wait_game(log, start_timeout=180, stop_flag=lambda: False):
 
 # ------------------------------------------------------------------ servidor local
 class LocalServer:
-    def __init__(self, public=False, port=DEFAULT_PORT, password=""):
+    def __init__(self, public=False, port=DEFAULT_PORT, password="", mods=None):
         os.environ["CSR_DATA_DIR"] = data_dir()
         import server
         if not getattr(LocalServer, "_logging", False):
             server.setup_logging(data_dir())
             LocalServer._logging = True
         self.bg = server.BackgroundServer(host="0.0.0.0" if public else "127.0.0.1", port=port,
-                                          password=password, data_dir=data_dir())
+                                          password=password, data_dir=data_dir(), mods=mods or [])
         self.port = port
 
     def start(self):
         self.bg.start()
         return self
 
+    def set_mods(self, folders):
+        return self.bg.set_mods(folders)
+
     def stop(self):
         self.bg.stop()
+
+
+# ------------------------------------------------------------------ mods de apariencia
+def mods_dir():
+    """Tus mods: una carpeta por mod, con subcarpetas stickers/ y avatars/ llenas de imagenes.
+    La primera vez se crea ya preparada: un mod de ejemplo vacio y unas instrucciones."""
+    d = os.path.join(app_dir(), "mods")
+    first = not os.path.isdir(d)
+    os.makedirs(d, exist_ok=True)
+    if first:
+        new_mod(d)
+    readme = os.path.join(d, "README.txt")
+    text = t("mods_readme") + "\n" + t("mods_text_hint") + "\n"
+    try:
+        with open(readme, encoding="utf-8-sig") as f:
+            same = f.read() == text
+    except OSError:
+        same = False
+    if not same:
+        try:
+            with open(readme, "w", encoding="utf-8-sig") as f:   # en Windows, \n ya se escribe como \r\n
+                f.write(text)
+        except OSError:
+            pass
+    return d
+
+
+def new_mod(base=None):
+    """Crea una carpeta de mod lista para llenar (stickers/, avatars/ y mod.json). Devuelve la ruta."""
+    base = base or mods_dir()
+    name, n = t("mods_example"), 1
+    while os.path.exists(os.path.join(base, name if n == 1 else f"{name} {n}")):
+        n += 1
+    folder = os.path.join(base, name if n == 1 else f"{name} {n}")
+    for sub in ("stickers", "avatars"):
+        os.makedirs(os.path.join(folder, sub), exist_ok=True)
+    with open(os.path.join(folder, "mod.json"), "w", encoding="utf-8") as f:
+        # nombre vacio = se usa el de la carpeta (asi basta con renombrarla)
+        json.dump({"name": "", "author": ""}, f, ensure_ascii=False, indent=2)
+    return folder
+
+
+def temp_mods_dir():
+    """Mods descargados de la sala de otro jugador ("<id>+temp"); se borran al terminar."""
+    return os.path.join(app_dir(), "mods_temp")
+
+
+def my_mods(cfg):
+    import modpack
+    return modpack.load_all(mods_dir(), cfg.get("mods_disabled", []), root_name=t("mods_root"))
+
+
+def mod_folder(name):
+    """Ruta de uno de tus mods por su nombre de carpeta ("mods" = la carpeta principal)."""
+    base = mods_dir()
+    if name == os.path.basename(base):
+        return base
+    path = os.path.normpath(os.path.join(base, name))
+    if os.path.dirname(path) != os.path.normpath(base) or not os.path.isdir(path):
+        raise ValueError(t("err_unexpected", err=name))
+    return path
+
+
+def my_room_set(cfg):
+    import modpack
+    return modpack.room_set([m for m in my_mods(cfg) if m["enabled"]])
+
+
+def install_mods(game_dir, rs, log=None):
+    """Deja en el juego exactamente esos mods (vacio = ninguno). True si hubo que cambiar algo.
+    Con el plugin de BepInEx (recarga en caliente) los archivos del juego se quedan originales y
+    los mods van a la carpeta que vigila el plugin; sin el, se meten en los archivos del juego."""
+    import modinject
+    if live_mode(game_dir):
+        changed = modinject.restore(game_dir, fix=False)
+        modinject.fix_prefs(game_dir, {s["type"] for s in rs["stickers"]}, {a["data_id"] for a in rs["avatars"]})
+        return write_live(rs) or changed
+    clear_live()
+    return modinject.apply(game_dir, rs, log=log)
+
+
+# ------------------------------------------------------------------ recarga en caliente (BepInEx, opcional)
+BEPINEX_URL = ("https://github.com/BepInEx/BepInEx/releases/download/v6.0.0-pre.2/"
+               "BepInEx-Unity.IL2CPP-win-x64-6.0.0-pre.2.zip")
+BEPINEX_FILES = ("winhttp.dll", "doorstop_config.ini", ".doorstop_version", "changelog.txt", "BepInEx", "dotnet")
+PLUGIN_NAME = "CrimeSightRevival.Mods.dll"
+
+
+def live_dir():
+    return os.path.join(app_dir(), "mods_live")
+
+
+def bepinex_state(game_dir):
+    """installed: BepInEx en la carpeta del juego; plugin: nuestro plugin dentro; ready: ya arranco
+    una vez (genero sus archivos, la primera vez tarda un minuto)."""
+    if not game_dir:
+        return {"installed": False, "plugin": False, "ready": False}
+    bep = os.path.join(game_dir, "BepInEx")
+    installed = os.path.isfile(os.path.join(game_dir, "winhttp.dll")) and os.path.isdir(os.path.join(bep, "core"))
+    plugin = os.path.isfile(os.path.join(bep, "plugins", PLUGIN_NAME))
+    ready = os.path.isfile(os.path.join(bep, "interop", "Assembly-CSharp.dll"))
+    return {"installed": installed, "plugin": installed and plugin, "ready": ready}
+
+
+def live_mode(game_dir):
+    return bepinex_state(game_dir)["plugin"]
+
+
+def _plugin_source():
+    for base in (getattr(sys, "_MEIPASS", ""), os.path.dirname(HERE)):
+        p = os.path.join(base, "plugin", PLUGIN_NAME)
+        if base and os.path.isfile(p):
+            return p
+    raise ValueError(t("bep_no_plugin"))
+
+
+def install_bepinex(game_dir, progress=None):
+    """Descarga BepInEx (el cargador de mods oficial, desde su GitHub) y lo pone en la carpeta del
+    juego junto a nuestro plugin. No se incluye con el lanzador: solo si el jugador lo activa."""
+    import zipfile
+    if not is_game_dir(game_dir):
+        raise ValueError(t("err_no_game"))
+    cache = os.path.join(app_dir(), "bepinex")
+    os.makedirs(cache, exist_ok=True)
+    zpath = os.path.join(cache, os.path.basename(BEPINEX_URL))
+    if not os.path.isfile(zpath):
+        tmp = zpath + ".part"
+        try:
+            with urllib.request.urlopen(BEPINEX_URL, timeout=60) as r, open(tmp, "wb") as f:
+                total = int(r.headers.get("Content-Length") or 0)
+                done = 0
+                while True:
+                    chunk = r.read(256 * 1024)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    done += len(chunk)
+                    if progress and total:
+                        progress(int(done * 100 / total))
+        except (urllib.error.URLError, OSError) as e:
+            raise ValueError(t("bep_download_failed", err=getattr(e, "reason", e)))
+        os.replace(tmp, zpath)
+    try:
+        with zipfile.ZipFile(zpath) as z:
+            for name in z.namelist():
+                top = name.split("/")[0]
+                if top not in BEPINEX_FILES or ".." in name.replace("\\", "/").split("/"):
+                    continue
+                z.extract(name, game_dir)
+    except zipfile.BadZipFile:
+        os.remove(zpath)
+        raise ValueError(t("bep_download_failed", err="zip"))
+    plugins = os.path.join(game_dir, "BepInEx", "plugins")
+    os.makedirs(plugins, exist_ok=True)
+    shutil.copy2(_plugin_source(), os.path.join(plugins, PLUGIN_NAME))
+    _quiet_bepinex(game_dir)
+    import modinject
+    modinject.restore(game_dir, fix=False)   # con el plugin, los archivos del juego vuelven a ser los originales
+    return True
+
+
+def _quiet_bepinex(game_dir):
+    """Sin ventana de consola de BepInEx (el registro sigue en BepInEx/LogOutput.log)."""
+    cfg = os.path.join(game_dir, "BepInEx", "config", "BepInEx.cfg")
+    os.makedirs(os.path.dirname(cfg), exist_ok=True)
+    try:
+        with open(cfg, encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        text = ""
+    if "[Logging.Console]" in text:
+        text = re.sub(r"(\[Logging\.Console\][^\[]*?Enabled\s*=\s*)\w+", r"\1false", text, flags=re.S)
+    else:
+        text += "\n[Logging.Console]\nEnabled = false\n"
+    with open(cfg, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def update_plugin(game_dir):
+    """Si el lanzador trae una version nueva del plugin, la copia."""
+    if not live_mode(game_dir):
+        return False
+    src, dst = _plugin_source(), os.path.join(game_dir, "BepInEx", "plugins", PLUGIN_NAME)
+    with open(src, "rb") as a, open(dst, "rb") as b:
+        if a.read() == b.read():
+            return False
+    shutil.copy2(src, dst)
+    return True
+
+
+def uninstall_bepinex(game_dir):
+    """Quita BepInEx de la carpeta del juego (todo lo que trae su zip)."""
+    for name in BEPINEX_FILES:
+        p = os.path.join(game_dir, name)
+        if os.path.isdir(p):
+            shutil.rmtree(p, ignore_errors=True)
+        elif os.path.isfile(p):
+            os.remove(p)
+    clear_live()
+    return True
+
+
+def write_live(rs):
+    """Escribe el conjunto de mods para el plugin: imagenes ya ajustadas + live.json."""
+    import modpack, io
+    d = live_dir()
+    os.makedirs(d, exist_ok=True)
+    state_path = os.path.join(d, "live.json")
+    try:
+        with open(state_path, encoding="utf-8") as f:
+            if json.load(f).get("hash") == rs["hash"]:
+                return False
+    except (OSError, ValueError):
+        pass
+    order = list(modpack.LANGS)
+    files, stickers, avatars = set(), [], []
+    for s in rs["stickers"]:
+        fg, bg = f"s_{s['type']}.png", f"s_{s['type']}_bg.png"
+        with open(os.path.join(d, fg), "wb") as f:
+            f.write(s["png"])
+        buf = io.BytesIO()
+        modpack.sticker_background(s["png"]).save(buf, "PNG")
+        with open(os.path.join(d, bg), "wb") as f:
+            f.write(buf.getvalue())
+        entry = {"type": s["type"], "png": fg, "bg": bg}
+        if s.get("text"):
+            g = modpack.text_for_game(s["text"])
+            texts = [g[modpack.LANGS[k]] for k in order]
+            entry["doc"] = texts
+            entry["log"] = ["{player}: " + x for x in texts]
+        stickers.append(entry)
+        files |= {fg, bg}
+    for a in rs["avatars"]:
+        fn = f"a_{a['data_id']}.png"
+        with open(os.path.join(d, fn), "wb") as f:
+            f.write(a["png"])
+        avatars.append({"id": a["data_id"], "png": fn})
+        files.add(fn)
+    _write_json(state_path, {"hash": rs["hash"], "stickers": stickers, "avatars": avatars})
+    for name in os.listdir(d):                  # imagenes de un conjunto anterior
+        if name.endswith(".png") and name not in files:
+            try:
+                os.remove(os.path.join(d, name))
+            except OSError:
+                pass
+    return True
+
+
+def clear_live():
+    d = live_dir()
+    if os.path.isdir(d):
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def download_mods(url, password, expected_hash, timeout=60):
+    """Descarga el paquete de mods de un servidor y lo guarda como mods temporales."""
+    import modpack
+    req = urllib.request.Request(url + "/revival/mods", headers={"X-CSR-Password": password or ""})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            got = r.headers.get("X-CSR-Mods", "")
+            data = r.read(modpack.MAX_PACK_BYTES + 1)
+    except urllib.error.HTTPError as e:
+        raise ValueError(t("need_password") if e.code == 403 else t("mods_download_failed", err=e.code))
+    except urllib.error.URLError as e:
+        raise ValueError(t("mods_download_failed", err=e.reason))
+    if expected_hash and got != expected_hash:
+        raise ValueError(t("mods_download_failed", err="hash"))
+    modpack.clear_temp(temp_mods_dir())
+    folders = modpack.unpack(data, temp_mods_dir())
+    rs = modpack.room_set([modpack.load_mod(f) for f in folders])
+    if expected_hash and rs["hash"] != expected_hash:
+        raise ValueError(t("mods_download_failed", err="hash"))
+    return rs
+
+
+def clear_temp_mods():
+    import modpack
+    return modpack.clear_temp(temp_mods_dir())
+
+
+def open_folder(path):
+    if IS_WINDOWS:
+        os.startfile(path)  # noqa: S606
+    else:
+        subprocess.Popen(["xdg-open", path])
 
 
 # ------------------------------------------------------------------ perfiles

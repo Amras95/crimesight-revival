@@ -30,6 +30,9 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 > **Tested and working:** solo matches against the AI and matches between two people (host and friend),
 > including over Radmin VPN.
 >
+> **Sticker and avatar mods:** tested solo, with and without hot reload. Downloading the host's mods when
+> joining their room is tested locally, not yet between two people.
+>
 > **Not tested with people yet:** matches with **Watson** or **Irene** (3 or 4 players) and own servers on
 > a VPS. They should work, but if you run into any problem, please report it in
 > [Issues](https://github.com/Amras95/crimesight-revival/issues) and I'll fix it.
@@ -93,6 +96,54 @@ With the launcher's **"Your progress"** button you can:
 
 Steam Cloud isn't used, because each game's cloud storage is controlled by its publisher.
 
+## Mods: your own stickers and avatars
+
+Add your own stickers and avatars. **They're new slots**: the game's own ones (including the paid ones, which
+still depend on owning them on Steam) are never changed.
+
+1. In the launcher, click **Mods → Open mods folder** (`%APPDATA%\CrimeSightRevival\mods`). It comes ready
+   with an example mod and a `README.txt`.
+2. Put your images (PNG, JPG, WEBP…) in `stickers\` and/or `avatars\`. You can put them straight into the
+   mods folder or make one folder per mod (**New mod** button) to keep several packs.
+3. Play. The launcher adds them to the game before opening it.
+
+```
+mods\
+  stickers\        01_hello.png, Good night!.png…
+  avatars\         me.png
+  Cats\            another mod: its own stickers\ and avatars\ folders (+ optional mod.json)
+```
+
+- **Any image works.** They're adjusted to the game's size automatically (128×128 stickers with their white
+  border; 256×256 avatars placed like the original ones). A **sheet with many stickers** in a grid is split
+  automatically, and images without transparency get their background removed. Avatars that reach the edges
+  (a cropped bust, a photo) go inside a circle so they fit every frame.
+- **The sticker's message** (what shows in the log: "Amras: Good night!") is the file name; a number at the
+  start (`01_`) only sets the order. To use characters Windows doesn't allow in file names (`? : " *`), type
+  it in **Mods → Messages**. It's saved in the mod's `mod.json`.
+- **Turn each mod on or off** from the Mods window.
+- **In another player's room**, before joining you get a notice with their mods: **Download and join** or
+  **Don't join**. They're downloaded as temporary mods (`<id>+temp`), your own mods are paused during the
+  match, and when you leave the temporary ones are deleted and yours come back. If the room has no mods, you
+  join without any: every player must have exactly the same list.
+- Whatever you have on your sticker wheel and your chosen avatar **are kept** when you add images, change
+  messages or the launcher updates. A sticker is only removed if you delete or rename its image (the game
+  puts "Hello!" in its slot).
+
+### Hot reload (optional, with BepInEx)
+
+By default, changing mods needs a game restart. If you want changes to appear **while the game is open**,
+click **Mods → Hot reload → Turn on**:
+
+- The launcher downloads [BepInEx](https://github.com/BepInEx/BepInEx) (the official mod loader for Unity
+  games, 34 MB) **from its GitHub, and only if you turn it on**: it's not bundled. It installs it in the game
+  folder together with the project's plugin. The first game start takes about a minute while BepInEx sets up.
+- While you play, the launcher watches your mods folder: if you add an image, change a message or turn a mod
+  on/off, it shows up in the game within seconds. If you're the host, your room gets it too; if you're in
+  someone else's room, you get their changes.
+- Changes are never applied mid-match (they wait for the menu), so everyone keeps the same list.
+- **Remove BepInEx** (or "Restore original game") deletes everything and the game is back to normal.
+
 ## What works
 
 - Sign-in, profile, tutorial, settings and level.
@@ -109,6 +160,7 @@ Steam Cloud isn't used, because each game's cloud storage is controlled by its p
 - Point and level rewards as in the original. The Project Winter event stays open with its avatar
   unlocked. Deluxe content still depends on owning it on Steam.
 - Steam achievements can still be earned (the game itself handles them with Steam).
+- New sticker and avatar mods, shared with the room, with optional hot reload.
 
 ## Platforms
 
@@ -124,6 +176,8 @@ been tested there. There is no Mac version of the game.
 2. On the server (Python 3.10+): `pip install aiohttp pycryptodome` and
    `python server.py --password A_PASSWORD` (port 18080; open it in the firewall).
 3. Players use "Own server" with `IP_OR_DOMAIN:18080` and the password.
+4. Optional: `--mods-dir FOLDER` offers players the mods in that folder (same layout as the launcher's mods
+   folder; needs `pip install pillow`).
 
 The password protects profile sync: the game only identifies itself with its Steam ID, so a server
 without a password would let anyone pretend to be another player.
@@ -131,6 +185,8 @@ without a password would let anyone pretend to be another player.
 ## For developers
 
 - `4_lanzador.bat`: opens the launcher with Python, without building.
+- `plugin/`: source of the optional BepInEx plugin and its compiled `.dll`. It's built against the assemblies
+  BepInEx 6 (IL2CPP) generates in `BepInEx\interop` on the first game start; no game files are included.
 - `crear_exe.bat`: builds `dist\CrimeSightRevival.exe` (development build, does not update itself).
 - Every push to `main` makes GitHub Actions build the `.exe` on Windows and publish a release
   (`.github/workflows/release.yml`). Installed launchers download it, check its SHA-256 hash and
@@ -144,8 +200,30 @@ Unity 2020.3 with IL2CPP. The server address (`https://cott-game.cs.konami.net`)
 `global-metadata.dat`. Traffic is encrypted with AES-256-CBC; the keys are in the game's own
 `resources.assets`. The API is `POST /cott/api/index.php` and matches run over WebSocket with WAMP v2:
 the server drives the turn phases, hands out items and decides hazards and murders; the visual
-simulation runs on the client. Community server extras: `POST /revival/sync` (profiles) and
-`GET /revival/info`.
+simulation runs on the client. Community server extras: `POST /revival/sync` (profiles), `GET /revival/info`
+and `GET /revival/mods` (the room's mod pack).
+
+**Mods (`server/modpack.py`, `server/modimage.py`, `launcher/modinject.py`):**
+
+- Stickers are `StampData` objects in `resources.assets`; the free ones are in `StampSet` 0. The game
+  identifies them by `type | face` and sends their **position** in the list over the network (`setIndex`,
+  `dataIndex`), so every player in the room needs the same list in the same order. Each new sticker gets a
+  type from 1000 to 4095 (the game uses 0-38) computed from the mod folder and the file name, so it's stable
+  and the order (the game sorts by type) comes out the same on every PC.
+- Avatars are `CursorAvatarData` objects in `sharedassets3.assets`, listed by the `CursorAvatarSet`s of the
+  `level3` (menu) and `level4` (match) scenes; over the network they travel by name (`Icon_CSR_<hash>`).
+- **Without BepInEx**, `modinject.py` rebuilds those files with UnityPy, always starting from the originals
+  (`*.original`): it clones a template `StampData`/`CursorAvatarData`, adds an embedded RGBA32 texture and a
+  4-vertex sprite, and appends them to the lists. Messages are added to the game's text (`ctg_name`, in all
+  11 languages). If the saved wheel or avatar (PlayerPrefs) point to a mod that's gone, they're replaced with
+  one of the game's.
+- **With BepInEx**, the game files stay original: the launcher writes the room's set to
+  `%APPDATA%\CrimeSightRevival\mods_live\live.json` and the plugin (`plugin/CrimeSightRevivalMods.cs`) creates
+  the objects in memory (`Texture2D` + `Sprite.Create` + `ScriptableObject.CreateInstance`), adds them to the
+  game's lists and adds the texts to `TextManager.LangText`. It checks every second and reapplies after every
+  scene change.
+- Over the network, an internal zip carries the already adjusted and validated images (size, names, format):
+  players never have to compress anything.
 
 ## License
 
