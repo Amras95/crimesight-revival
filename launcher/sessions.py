@@ -68,7 +68,7 @@ def _own_watcher(ctx, cfg, rs):
         if new["hash"] == state["hash"]:
             return
         state["hash"] = new["hash"]
-        core.write_live(new)
+        core.write_live(new, gd)
         ctx.log(t("mods_live_updated"))
     return check
 
@@ -104,7 +104,7 @@ def _host_watcher(ctx, cfg, srv):
         rs = room.rs
         if live and rs["hash"] != state["room"]:
             state["room"] = rs["hash"]
-            core.write_live(rs)
+            core.write_live(rs, gd)
             ctx.log(t("mods_live_updated"))
     return check
 
@@ -130,7 +130,7 @@ def _room_watcher(ctx, cfg, url, password, rs):
         else:
             import modpack
             new = modpack.room_set([])
-        core.write_live(new)
+        core.write_live(new, gd)
         ctx.log(t("mods_live_updated"))
     return check
 

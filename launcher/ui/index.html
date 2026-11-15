@@ -130,7 +130,7 @@ footer .ver{margin-left:8px;opacity:.6}
 .modal .empty{color:var(--dim);font-style:italic;padding:12px 0}
 .modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
 .bep{display:flex;align-items:center;gap:12px;background:rgba(5,6,20,.6);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:12px}
-.bep .info{flex:1;min-width:0}.bep .info b{display:block;margin-bottom:2px}.bep .info small{color:var(--dim);font-size:12px;line-height:1.45}
+.bep .info{flex:1;min-width:0}.bep .warn{display:block;color:#ffb37a;margin-top:6px;user-select:text}.bep .info b{display:block;margin-bottom:2px}.bep .info small{color:var(--dim);font-size:12px;line-height:1.45}
 .stxt{display:flex;align-items:center;gap:12px;background:rgba(5,6,20,.6);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
 .stxt img{width:48px;height:48px;object-fit:contain;flex-shrink:0}
 .stxt input{flex:1;min-width:0}
@@ -230,7 +230,8 @@ footer .ver{margin-left:8px;opacity:.6}
     <p id="modsrestart" data-t="mods_restart"></p>
     <div class="sub" data-t="bep_title"></div>
     <div class="bep">
-      <div class="info"><b id="bepstatus"></b><small data-t="bep_desc"></small></div>
+      <div class="info"><b id="bepstatus"></b><small data-t="bep_desc"></small>
+        <small id="beplinux" class="warn" style="display:none"></small></div>
       <button class="btn ghost small" id="bepbtn" onclick="toggleBep()"></button>
     </div>
     <div class="actions">
@@ -280,6 +281,8 @@ function T(k,v){let s=TX[k]||k;if(v)for(const x in v)s=s.split('{'+x+'}').join(v
 function applyT(){document.querySelectorAll('[data-t]').forEach(e=>{if(TX[e.dataset.t])e.textContent=TX[e.dataset.t]})}
 
 function api(name,...args){
+  if(window.CSR_HTTP) return fetch('api/'+name,{method:'POST',body:JSON.stringify(args)})
+    .then(r=>r.json()).then(j=>j.result===undefined?null:j.result).catch(()=>null);
   if(window.pywebview&&window.pywebview.api) return window.pywebview.api[name](...args);
   return (window.MOCK&&window.MOCK[name])?Promise.resolve(window.MOCK[name](...args)):Promise.resolve(null);
 }
@@ -377,6 +380,9 @@ async function loadBep(){
   $('#bepstatus').textContent=T(BEP.plugin?(BEP.ready?'bep_status_on':'bep_status_first'):'bep_status_off');
   $('#bepbtn').textContent=T(BEP.plugin?'bep_disable':'bep_enable');$('#bepbtn').disabled=false;
   $('#modsrestart').textContent=T(BEP.plugin?'mods_live_restart':'mods_restart');
+  const L=$('#beplinux');
+  if(BEP.linux&&BEP.plugin&&BEP.launch_ok!==true){L.style.display='block';L.textContent=T('bep_linux_note',{opt:BEP.launch_option})}
+  else L.style.display='none';
 }
 async function toggleBep(){
   const r=await api(BEP&&BEP.plugin?'bep_uninstall':'bep_install');
@@ -430,6 +436,16 @@ async function boot(){
   ui.loading(null);
 }
 window.addEventListener('pywebviewready',boot);
+/* Linux / Steam Deck: la pagina va en el navegador y recibe los avisos de Python sondeando */
+async function pollEvents(){
+  for(;;){
+    try{
+      const evs=await (await fetch('events')).json();
+      for(const e of evs){ try{ ui[e.fn](...e.args) }catch(x){ console.error(x) } }
+    }catch(e){ await new Promise(r=>setTimeout(r,3000)) }
+  }
+}
+if(window.CSR_HTTP) window.addEventListener('DOMContentLoaded',()=>{ boot(); pollEvents() });
 if(window.MOCK) setTimeout(()=>{ if(!STATE) boot() },50);
 </script>
 </body>

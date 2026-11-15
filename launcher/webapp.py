@@ -1,7 +1,8 @@
 """
 CRIMESIGHT Revival - lanzador con interfaz grafica (HTML con pywebview / WebView2).
 
-Si el equipo no tiene WebView2 o pywebview falla, se abre la interfaz sencilla (app.py).
+En Windows va en su propia ventana; en Linux / Steam Deck la misma interfaz se abre en el
+navegador (browserui.py). Si nada de eso funciona, se abre la interfaz sencilla (app.py).
 Este proyecto solo ofrece la herramienta; no gestiona ni aloja servidores.
 """
 import json, logging, os, re, sys, threading, traceback, webbrowser
@@ -24,9 +25,14 @@ DIALOGS = {"OPEN_DIALOG": 10, "FOLDER_DIALOG": 20, "SAVE_DIALOG": 30}
 
 UI_DIR = os.path.join(getattr(sys, "_MEIPASS", HERE), "ui")
 _window = None
+_browser = False          # Linux / Steam Deck: la interfaz va en el navegador
 
 
 def js(fn, *args):
+    if _browser:
+        import browserui
+        browserui.push(fn, *args)
+        return
     if _window is not None:
         try:
             _window.evaluate_js(f"ui.{fn}({','.join(json.dumps(a, ensure_ascii=False) for a in args)})")
@@ -204,6 +210,9 @@ class Api:
 
     # ---------------------------------------------------------------- progreso
     def _dialog(self, kind, **kw):
+        if _browser:
+            import browserui
+            return browserui.dialog(kind, save_filename=kw.get("save_filename"))
         res = _window.create_file_dialog(DIALOGS[kind], **kw)
         if not res:
             return None
@@ -319,6 +328,10 @@ class Api:
     def bep_state(self):
         st = core.bepinex_state(self._cfg.get("game_dir"))
         st["busy"] = self._busy
+        if not core.IS_WINDOWS:          # Linux / Steam Deck: Proton necesita una opcion de lanzamiento
+            st["linux"] = True
+            st["launch_ok"] = core.linux_launch_option_ok()
+            st["launch_option"] = core.LINUX_LAUNCH_OPTION
         return st
 
     def bep_install(self):
@@ -405,18 +418,23 @@ class _GuiLog(logging.Handler):
 
 
 def main():
-    global _window
-    try:
-        import webview
-    except ImportError:
-        import app
-        return app.main()
+    global _window, _browser
     logging.getLogger("crimesight").addHandler(_GuiLog())
     try:
         core.setup_launcher_log()
     except OSError:
         pass
     logging.getLogger("crimesight").warning("Lanzador %s iniciado", VERSION)
+    if not core.IS_WINDOWS or os.environ.get("CSR_BROWSER"):
+        import browserui
+        _browser = True
+        api = Api()
+        return browserui.serve(api, UI_DIR, busy=lambda: api._busy)
+    try:
+        import webview
+    except ImportError:
+        import app
+        return app.main()
     api = Api()
     _window = webview.create_window("CRIMESIGHT Revival", os.path.join(UI_DIR, "index.html"), js_api=api,
                                     width=1280, height=780, min_size=(1100, 700), background_color="#07081a")

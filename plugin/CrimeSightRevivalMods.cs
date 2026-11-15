@@ -2,7 +2,7 @@
 //
 // Sin este plugin, el lanzador mete los mods en los archivos del juego antes de abrirlo (hay que
 // reiniciar para cambiarlos). Con BepInEx instalado, el lanzador deja el juego original y escribe
-// el conjunto de mods de la sala en %APPDATA%\CrimeSightRevival\mods_live\live.json. Este plugin
+// el conjunto de mods de la sala en BepInEx\csr_live\live.json (en la carpeta del juego). Este plugin
 // lo vigila y, fuera de las partidas, crea en memoria los stickers y avatares nuevos y los anade a
 // las listas del juego (los del juego no se tocan). Si cambia mientras juegas, se aplica al volver
 // al menu, para que todos los jugadores tengan siempre la misma lista.
@@ -99,8 +99,9 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogError(e); }
         }
 
-        public static readonly string LiveDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrimeSightRevival", "mods_live");
+        // Dentro de BepInEx, en la carpeta del juego: asi el lanzador y el plugin la ven igual en
+        // Windows y con Proton (Linux / Steam Deck), donde la carpeta de usuario es la de Wine.
+        public static readonly string LiveDir = Path.Combine(BepInEx.Paths.BepInExRootPath, "csr_live");
         const int FIRST_TYPE = 1000;
 
         float _next;

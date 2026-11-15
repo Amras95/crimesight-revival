@@ -34,6 +34,8 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 > **Mods de stickers y avatares:** probados en solitario, con y sin recarga en caliente. La descarga de los
 > mods del anfitrión al unirse a su sala está probada en local, aún no entre dos personas.
 >
+> **Linux / Steam Deck:** versión nueva, aún en pruebas.
+>
 > **Aún sin probar con personas:** partidas con **Watson** o **Irene** (3 o 4 jugadores) y el servidor propio
 > en un VPS. Deberían funcionar, pero si encontráis cualquier problema, contádmelo en
 > [Issues](https://github.com/Amras95/crimesight-revival/issues) y lo arreglo.
@@ -164,9 +166,25 @@ juego abierto**, pulsa **Mods → Recarga en caliente → Activar**:
 
 ## Plataformas
 
-CRIMESIGHT solo salió para **Windows 10/11 (64 bits)**, y el lanzador también es para Windows.
-En Linux / Steam Deck el juego podría funcionar con Proton, pero ni el juego ni este lanzador están
-probados ahí. En Mac no hay versión del juego.
+CRIMESIGHT solo salió para **Windows 10/11 (64 bits)**. En Mac no hay versión del juego.
+
+### Linux / Steam Deck (en pruebas)
+
+El juego funciona con **Proton**, y hay versión del lanzador para Linux: **`CrimeSightRevival-linux`** en
+[la última versión](https://github.com/Amras95/crimesight-revival/releases/latest).
+
+1. Descárgalo, dale permiso de ejecución (clic derecho → Propiedades → «Es ejecutable», o
+   `chmod +x CrimeSightRevival-linux`) y ábrelo. En Steam Deck, desde el **modo escritorio**.
+2. La interfaz se abre en tu **navegador** (es la misma que en Windows). Mientras la pestaña esté abierta,
+   el lanzador sigue funcionando; si la cierras sin ninguna partida en marcha, se cierra solo.
+3. Encuentra Steam y el juego solo (Steam normal, Flatpak o Snap) y abre el juego por Steam con Proton.
+
+Los mods funcionan igual. Para la **recarga en caliente** (BepInEx), además hay que poner esto en las
+**opciones de lanzamiento** de CRIMESIGHT en Steam (Propiedades → General); el lanzador te avisa si falta:
+
+```
+WINEDLLOVERRIDES="winhttp=n,b" %command%
+```
 
 ## Montar un servidor (por ejemplo, en un VPS)
 
@@ -218,7 +236,7 @@ va en el cliente. Extras del servidor comunitario: `POST /revival/sync` (perfile
   (`ctg_name`, en los 11 idiomas). Si la rueda o el avatar guardados (PlayerPrefs) apuntan a un mod que ya no
   está, se cambian por uno del juego.
 - **Con BepInEx**, los archivos del juego se quedan originales: el lanzador escribe el conjunto de la sala en
-  `%APPDATA%\CrimeSightRevival\mods_live\live.json` y el plugin (`plugin/CrimeSightRevivalMods.cs`) crea los
+  `BepInEx\csr_live\live.json` (en la carpeta del juego) y el plugin (`plugin/CrimeSightRevivalMods.cs`) crea los
   objetos en memoria (`Texture2D` + `Sprite.Create` + `ScriptableObject.CreateInstance`), los mete en las
   listas del juego y añade los textos a `TextManager.LangText`. Comprueba cada segundo y lo reaplica tras cada
   cambio de escena.

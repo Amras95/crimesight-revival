@@ -1,4 +1,4 @@
-# Cada vez que se sube algo a main: compila el lanzador en Windows y publica una release nueva.
+# Cada vez que se sube algo a main: compila el lanzador en Windows y en Linux y publica una release nueva.
 # Los lanzadores ya instalados la detectan al abrirse y se actualizan solos.
 name: Compilar y publicar
 
@@ -52,3 +52,31 @@ jobs:
             SHA-256: `${{ steps.sha.outputs.sha256 }}`
 
             Cambios / Changes: ${{ github.event.head_commit.message }}
+
+
+
+  # Version para Linux / Steam Deck (la interfaz se abre en el navegador). Se anade a la misma release.
+  linux:
+    needs: release
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dependencias
+        run: python -m pip install -r requirements.txt pyinstaller
+
+      - name: Compilar
+        run: |
+          python tools/build_exe.py 1.0.${{ github.run_number }}
+          mv dist/CrimeSightRevival dist/CrimeSightRevival-linux
+          chmod +x dist/CrimeSightRevival-linux
+
+      - name: Añadir a la release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          files: dist/CrimeSightRevival-linux

@@ -2,4 +2,5 @@
 VERSION = "dev"
 # Repositorio del que el lanzador descarga sus actualizaciones.
 REPO = "Amras95/crimesight-revival"
-ASSET = "CrimeSightRevival.exe"
+# Archivo de la release que corresponde a este sistema (Windows o Linux / Steam Deck).
+ASSET = "CrimeSightRevival.exe" if __import__("os").name == "nt" else "CrimeSightRevival-linux"

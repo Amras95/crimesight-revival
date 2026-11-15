@@ -1,5 +1,6 @@
 """
-Crea dist/CrimeSightRevival.exe con PyInstaller (lo usan crear_exe.bat y GitHub Actions).
+Crea dist/CrimeSightRevival.exe (Windows) o dist/CrimeSightRevival (Linux / Steam Deck) con
+PyInstaller (lo usan crear_exe.bat y GitHub Actions).
 
   python tools/build_exe.py            -> version "dev" (no se actualiza sola)
   python tools/build_exe.py 1.0.12     -> version publicada (se actualiza desde GitHub)
@@ -18,16 +19,20 @@ open(vfile, "w", encoding="utf-8").write("\n".join(lines) + "\n")
 
 sep = ";" if os.name == "nt" else ":"
 hidden = ["server", "match", "ai", "stats", "cscrypto", "extract_keys", "patch_client", "credits_patch",
-          "upnp", "art", "modpack", "modimage", "modroom", "modinject", "netssl", "certifi", "sessions", "app", "core", "i18n", "updater", "version"]
+          "upnp", "art", "modpack", "modimage", "modroom", "modinject", "netssl", "certifi", "browserui", "sessions", "app", "core", "i18n", "updater", "version"]
 args = ["--noconfirm", "--clean", "--onefile", "--windowed", "--name", "CrimeSightRevival",
         "--paths", "server", "--paths", "tools", "--paths", "launcher",
         "--add-data", f"launcher{os.sep}ui{sep}ui", "--add-data", f"launcher{os.sep}icon.ico{sep}.",
         # plugin opcional de BepInEx (recarga en caliente de mods); BepInEx NO va incluido
         "--add-data", f"plugin{os.sep}CrimeSightRevival.Mods.dll{sep}plugin",
-        "--icon", os.path.join("launcher", "icon.ico"),
-        "--collect-all", "UnityPy", "--collect-all", "webview",
+        "--collect-all", "UnityPy",
         # UnityPy carga su modulo de audio al sacar imagenes: sin la libreria de fmod no hay ilustraciones
         "--collect-all", "fmod_toolkit", "--collect-all", "archspec", "--collect-data", "certifi"]
+if os.name == "nt":
+    # ventana propia con WebView2; en Linux la interfaz se abre en el navegador (browserui.py)
+    args += ["--icon", os.path.join("launcher", "icon.ico"), "--collect-all", "webview"]
+else:
+    args += ["--exclude-module", "webview"]
 for h in hidden:
     args += ["--hidden-import", h]
 

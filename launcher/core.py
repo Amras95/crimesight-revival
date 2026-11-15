@@ -111,13 +111,33 @@ def _reg(path, name):
         return None
 
 
+LINUX_STEAM = ("~/.local/share/Steam", "~/.steam/steam", "~/.steam/root",          # Steam Deck / nativo
+               "~/.var/app/com.valvesoftware.Steam/.local/share/Steam",           # Flatpak
+               "~/snap/steam/common/.local/share/Steam")                           # Snap
+
+
 def steam_path():
     p = _reg(r"Software\Valve\Steam", "SteamPath")
     if p and os.path.isdir(p):
         return os.path.normpath(p)
-    for cand in (r"C:\Program Files (x86)\Steam", r"C:\Program Files\Steam", os.path.expanduser("~/.steam/steam")):
-        if os.path.isdir(cand):
+    cands = (r"C:\Program Files (x86)\Steam", r"C:\Program Files\Steam") if IS_WINDOWS else LINUX_STEAM
+    for cand in cands:
+        cand = os.path.realpath(os.path.expanduser(cand))
+        if os.path.isdir(os.path.join(cand, "steamapps")) or os.path.isdir(os.path.join(cand, "config")):
             return cand
+    return None
+
+
+def _linux_registry(key):
+    """En Linux, Steam guarda en ~/.steam/registry.vdf lo que en Windows va al registro."""
+    for p in ("~/.steam/registry.vdf", "~/.var/app/com.valvesoftware.Steam/.steam/registry.vdf"):
+        try:
+            text = open(os.path.expanduser(p), encoding="utf-8", errors="ignore").read()
+        except OSError:
+            continue
+        m = re.search(r'"%s"\s+"([^"]*)"' % re.escape(key), text)
+        if m:
+            return m.group(1)
     return None
 
 
@@ -128,6 +148,10 @@ def _vdf_pairs(text):
 def steam_account():
     """(SteamID64, nombre de usuario) de la cuenta con sesion iniciada en Steam."""
     active = _reg(r"Software\Valve\Steam\ActiveProcess", "ActiveUser")
+    if not IS_WINDOWS:
+        active = _linux_registry("ActiveUser")
+        if active == "0":
+            active = None
     if active:
         sid = str(76561197960265728 + int(active))
     else:
@@ -194,7 +218,8 @@ def game_language(game_dir, steam_id=None):
             return i18n.from_steam(m.group(1))
     except OSError:
         pass
-    return i18n.from_steam(_reg(r"Software\Valve\Steam", "Language")) or "en"
+    steam_lang = _reg(r"Software\Valve\Steam", "Language") if IS_WINDOWS else _linux_registry("language")
+    return i18n.from_steam(steam_lang) or "en"
 
 
 def is_game_dir(path):
@@ -247,16 +272,69 @@ def game_url(game_dir):
 def launch_game():
     if IS_WINDOWS:
         os.startfile(f"steam://rungameid/{APP_ID}")  # noqa: S606
+    elif shutil.which("steam"):
+        subprocess.Popen(["steam", f"steam://rungameid/{APP_ID}"], start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     else:
         subprocess.Popen(["xdg-open", f"steam://rungameid/{APP_ID}"])
 
 
 def game_running():
     if not IS_WINDOWS:
-        return False
+        return _linux_game_running()
     out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq CrimeSight.exe", "/NH"], capture_output=True,
                          text=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
     return "CrimeSight.exe" in out
+
+
+def _linux_game_running():
+    """Con Proton el juego es un proceso de Wine cuya linea de comandos incluye CrimeSight.exe."""
+    me = str(os.getpid())
+    try:
+        pids = [p for p in os.listdir("/proc") if p.isdigit() and p != me]
+    except OSError:
+        return False
+    for pid in pids:
+        try:
+            with open(f"/proc/{pid}/cmdline", "rb") as f:
+                cmd = f.read().lower()
+        except OSError:
+            continue
+        args = [a.replace(b"\\", b"/").rsplit(b"/", 1)[-1] for a in cmd.split(b"\0") if a]
+        if not args or args[0] in (b"sh", b"bash", b"zsh", b"fish", b"dash"):
+            continue                       # una terminal que solo menciona el nombre no cuenta
+        if b"crimesight.exe" in args:
+            return True
+    return False
+
+
+def linux_launch_option_ok():
+    """Linux / Steam Deck: BepInEx necesita que Proton cargue su winhttp.dll, lo que se activa con la
+    opcion de lanzamiento WINEDLLOVERRIDES="winhttp=n,b" %command% (Propiedades del juego en Steam).
+    True si esta puesta, False si no, None si no se puede saber."""
+    if IS_WINDOWS:
+        return True
+    sp, sid = steam_path(), steam_account()[0]
+    if not sp or not sid:
+        return None
+    path = os.path.join(sp, "userdata", str(int(sid) - 76561197960265728), "config", "localconfig.vdf")
+    try:
+        text = open(path, encoding="utf-8", errors="ignore").read()
+    except OSError:
+        return None
+    for m in re.finditer(r'"%d"\s*\{' % APP_ID, text):
+        depth, i = 1, m.end()
+        while i < len(text) and depth:
+            depth += {"{": 1, "}": -1}.get(text[i], 0)
+            i += 1
+        block = text[m.end():i]
+        lo = re.search(r'"LaunchOptions"\s+"((?:[^"\\]|\\.)*)"', block)
+        if lo is not None:
+            return "winhttp=n" in lo.group(1).replace(" ", "").lower()
+    return False
+
+
+LINUX_LAUNCH_OPTION = 'WINEDLLOVERRIDES="winhttp=n,b" %command%'
 
 
 def wait_game(log, start_timeout=180, stop_flag=lambda: False):
@@ -384,8 +462,8 @@ def install_mods(game_dir, rs, log=None):
     import modinject
     if live_mode(game_dir):
         changed = modinject.restore(game_dir, fix=False)
-        return write_live(rs) or changed
-    clear_live()
+        return write_live(rs, game_dir) or changed
+    clear_live(game_dir)
     return modinject.apply(game_dir, rs, log=log)
 
 
@@ -398,8 +476,10 @@ BEPINEX_FILES = ("winhttp.dll", "doorstop_config.ini", ".doorstop_version", "cha
 PLUGIN_NAME = "CrimeSightRevival.Mods.dll"
 
 
-def live_dir():
-    return os.path.join(app_dir(), "mods_live")
+def live_dir(game_dir):
+    """Carpeta que vigila el plugin: dentro de BepInEx, en la carpeta del juego. Asi sirve igual en
+    Windows y con Proton (donde el juego ve otra carpeta de usuario, la de Wine)."""
+    return os.path.join(game_dir, "BepInEx", "csr_live")
 
 
 def bepinex_state(game_dir):
@@ -545,14 +625,16 @@ def uninstall_bepinex(game_dir):
             shutil.rmtree(p, ignore_errors=True)
         elif os.path.isfile(p):
             os.remove(p)
-    clear_live()
+    old = os.path.join(app_dir(), "mods_live")          # sitio antiguo (versiones anteriores)
+    if os.path.isdir(old):
+        shutil.rmtree(old, ignore_errors=True)
     return True
 
 
-def write_live(rs):
+def write_live(rs, game_dir):
     """Escribe el conjunto de mods para el plugin: imagenes ya ajustadas + live.json."""
     import modpack, io
-    d = live_dir()
+    d = live_dir(game_dir)
     os.makedirs(d, exist_ok=True)
     state_path = os.path.join(d, "live.json")
     try:
@@ -605,8 +687,8 @@ def write_live(rs):
     return True
 
 
-def clear_live():
-    d = live_dir()
+def clear_live(game_dir):
+    d = live_dir(game_dir)
     if os.path.isdir(d):
         shutil.rmtree(d, ignore_errors=True)
 

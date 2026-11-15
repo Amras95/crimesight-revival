@@ -33,6 +33,8 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 > **Sticker and avatar mods:** tested solo, with and without hot reload. Downloading the host's mods when
 > joining their room is tested locally, not yet between two people.
 >
+> **Linux / Steam Deck:** new build, still being tested.
+>
 > **Not tested with people yet:** matches with **Watson** or **Irene** (3 or 4 players) and own servers on
 > a VPS. They should work, but if you run into any problem, please report it in
 > [Issues](https://github.com/Amras95/crimesight-revival/issues) and I'll fix it.
@@ -164,9 +166,26 @@ click **Mods → Hot reload → Turn on**:
 
 ## Platforms
 
-CRIMESIGHT was only released for **Windows 10/11 (64-bit)**, and the launcher is Windows-only too.
-On Linux / Steam Deck the game might run through Proton, but neither the game nor this launcher has
-been tested there. There is no Mac version of the game.
+CRIMESIGHT was only released for **Windows 10/11 (64-bit)**. There is no Mac version of the game.
+
+### Linux / Steam Deck (testing)
+
+The game runs through **Proton**, and there's a Linux build of the launcher: **`CrimeSightRevival-linux`**
+in [the latest release](https://github.com/Amras95/crimesight-revival/releases/latest).
+
+1. Download it, make it executable (right click → Properties → "Is executable", or
+   `chmod +x CrimeSightRevival-linux`) and open it. On Steam Deck, from **Desktop Mode**.
+2. The interface opens in your **web browser** (it's the same one as on Windows). The launcher keeps
+   running while the tab is open; if you close it with no match running, it closes by itself.
+3. It finds Steam and the game on its own (regular Steam, Flatpak or Snap) and starts the game through
+   Steam with Proton.
+
+Mods work the same. For **hot reload** (BepInEx) you also need to add this to CRIMESIGHT's **launch
+options** in Steam (Properties → General); the launcher tells you if it's missing:
+
+```
+WINEDLLOVERRIDES="winhttp=n,b" %command%
+```
 
 ## Running a server (for example, on a VPS)
 
@@ -218,7 +237,7 @@ and `GET /revival/mods` (the room's mod pack).
   11 languages). If the saved wheel or avatar (PlayerPrefs) point to a mod that's gone, they're replaced with
   one of the game's.
 - **With BepInEx**, the game files stay original: the launcher writes the room's set to
-  `%APPDATA%\CrimeSightRevival\mods_live\live.json` and the plugin (`plugin/CrimeSightRevivalMods.cs`) creates
+  `BepInEx\csr_live\live.json` (in the game folder) and the plugin (`plugin/CrimeSightRevivalMods.cs`) creates
   the objects in memory (`Texture2D` + `Sprite.Create` + `ScriptableObject.CreateInstance`), adds them to the
   game's lists and adds the texts to `TextManager.LangText`. It checks every second and reapplies after every
   scene change.

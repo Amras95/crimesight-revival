@@ -1006,6 +1006,22 @@ _OFFER = {
 for _l, _d in _OFFER.items():
     S[_l].update(_d)
 
+_LINUX = {
+    "en": "Linux / Steam Deck: also add this to CRIMESIGHT's launch options in Steam (Properties → General), or BepInEx won't load: {opt}",
+    "es": "Linux / Steam Deck: añade también esto a las opciones de lanzamiento de CRIMESIGHT en Steam (Propiedades → General), o BepInEx no se cargará: {opt}",
+    "fr": "Linux / Steam Deck : ajoutez aussi ceci aux options de lancement de CRIMESIGHT dans Steam (Propriétés → Général), sinon BepInEx ne se chargera pas : {opt}",
+    "it": "Linux / Steam Deck: aggiungi anche questo alle opzioni di avvio di CRIMESIGHT su Steam (Proprietà → Generali), altrimenti BepInEx non si caricherà: {opt}",
+    "de": "Linux / Steam Deck: Füge das auch zu den Startoptionen von CRIMESIGHT in Steam hinzu (Eigenschaften → Allgemein), sonst lädt BepInEx nicht: {opt}",
+    "pt": "Linux / Steam Deck: adicione também isto às opções de inicialização do CRIMESIGHT na Steam (Propriedades → Geral), ou o BepInEx não carregará: {opt}",
+    "ru": "Linux / Steam Deck: добавьте также это в параметры запуска CRIMESIGHT в Steam (Свойства → Общие), иначе BepInEx не загрузится: {opt}",
+    "ja": "Linux / Steam Deck：SteamでCRIMESIGHTの起動オプション（プロパティ → 一般）にこれも追加してください。追加しないとBepInExが読み込まれません：{opt}",
+    "ko": "Linux / Steam Deck: Steam에서 CRIMESIGHT 실행 옵션(속성 → 일반)에 이것도 추가하세요. 그렇지 않으면 BepInEx가 로드되지 않습니다: {opt}",
+    "zh-CN": "Linux / Steam Deck：还需在 Steam 中 CRIMESIGHT 的启动选项（属性 → 通用）里加上这一行，否则 BepInEx 不会加载：{opt}",
+    "zh-TW": "Linux / Steam Deck：還需在 Steam 中 CRIMESIGHT 的啟動選項（內容 → 一般）加上這一行，否則 BepInEx 不會載入：{opt}",
+}
+for _l, _v in _LINUX.items():
+    S[_l]["bep_linux_note"] = _v
+
 _lang = "en"
 
 

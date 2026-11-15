@@ -84,7 +84,9 @@ def apply(update, progress=lambda pct: None):
         raise ValueError("SHA-256")
     if os.path.exists(old):
         os.remove(old)
-    os.replace(exe, old)        # Windows deja renombrar el .exe en uso
+    if os.name != "nt":
+        os.chmod(new, 0o755)
+    os.replace(exe, old)        # Windows deja renombrar el .exe en uso (y Linux tambien)
     os.replace(new, exe)
     flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     subprocess.Popen([exe], close_fds=True, creationflags=flags, env=fresh_env())
