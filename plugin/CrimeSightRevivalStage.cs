@@ -50,6 +50,8 @@ namespace CrimeSightRevival.Mods
         static Vector3 _off;
         static int[] _spawnsBefore = Array.Empty<int>();
         static readonly Dictionary<string, Mesh> _readable = new();
+        static readonly List<(Transform t, Vector3 local)> _watch = new();
+        static float _watchUntil;
 
         static string TestFile => Path.Combine(LiveMods.LiveDir, "layout_test.json");
         static string NavFile => Path.Combine(LiveMods.LiveDir, "navsrc.json");
@@ -96,8 +98,17 @@ namespace CrimeSightRevival.Mods
         static void Move(Transform root, Scene sc)
         {
             _root = root; _scene = sc; _navPending = true;
-            Log($"raiz '{root.name}' en {root.position}; se mueve {_off}");
-            root.position += _off;
+            // La raiz tiene un Animator que el juego reproduce al empezar (y le devuelve su posicion),
+            // asi que se mueven sus hijos, no la raiz.
+            Log($"raiz '{root.name}' en {root.position}; se mueven sus {root.childCount} hijos {_off}");
+            _watch.Clear();
+            for (int i = 0; i < root.childCount; i++)
+            {
+                var c = root.GetChild(i);
+                c.position += _off;
+                _watch.Add((c, c.localPosition));
+            }
+            _watchUntil = Time.unscaledTime + 30f;
             Physics.SyncTransforms();
 
             var stage = root.GetComponentInChildren<Stage>(true);
@@ -135,7 +146,9 @@ namespace CrimeSightRevival.Mods
         // ---------------------------------------------------------------- despues de cargar
         public static void Frame()
         {
-            if (!_navPending || _cfg == null) return;
+            if (_cfg == null) return;
+            Watch();
+            if (!_navPending) return;
             try
             {
                 if (_root == null) { _navPending = false; return; }
@@ -149,6 +162,24 @@ namespace CrimeSightRevival.Mods
                 Probe();
             }
             catch (Exception e) { Plugin.L.LogError(e); }
+        }
+
+        // Avisa si algo del juego vuelve a colocar las piezas movidas (y las deja donde las pusimos).
+        static void Watch()
+        {
+            if (_watch.Count == 0 || Time.unscaledTime > _watchUntil) return;
+            for (int i = 0; i < _watch.Count; i++)
+            {
+                var (t, local) = _watch[i];
+                if (t == null) continue;
+                if ((t.localPosition - local).sqrMagnitude > 0.0001f)
+                {
+                    Warn($"'{t.name}' se ha movido solo de {local} a {t.localPosition} (seg {Time.unscaledTime:0.0}); se recoloca");
+                    t.localPosition = local;
+                    Physics.SyncTransforms();
+                }
+            }
+            if (_root != null && Time.frameCount % 300 == 0) Log($"raiz en {_root.position}");
         }
 
         static void Report()
