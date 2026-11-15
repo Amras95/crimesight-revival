@@ -33,7 +33,8 @@ namespace CrimeSightRevival.Mods
             L = Log;
             ClassInjector.RegisterTypeInIl2Cpp<LiveMods>();
             AddComponent<LiveMods>();
-            Harmony.CreateAndPatchAll(typeof(Hooks));
+            var h = Harmony.CreateAndPatchAll(typeof(Hooks));
+            StageLab.Init(h);
             L.LogInfo("Mods en caliente activos. Carpeta: " + LiveMods.LiveDir);
         }
     }
@@ -119,6 +120,7 @@ namespace CrimeSightRevival.Mods
 
         void Update()
         {
+            StageLab.Frame();
             if (Time.unscaledTime < _next) return;
             _next = Time.unscaledTime + 1f;
             try { Tick(); }
