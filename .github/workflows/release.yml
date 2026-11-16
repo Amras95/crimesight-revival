@@ -27,7 +27,7 @@ jobs:
       - name: Version
         id: ver
         shell: bash
-        run: echo "version=1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+        run: echo "version=1.1.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
       - name: Compilar
         run: python tools/build_exe.py ${{ steps.ver.outputs.version }}
@@ -71,12 +71,12 @@ jobs:
 
       - name: Compilar
         run: |
-          python tools/build_exe.py 1.0.${{ github.run_number }}
+          python tools/build_exe.py 1.1.${{ github.run_number }}
           mv dist/CrimeSightRevival dist/CrimeSightRevival-linux
           chmod +x dist/CrimeSightRevival-linux
 
       - name: Añadir a la release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
+          tag_name: v1.1.${{ github.run_number }}
           files: dist/CrimeSightRevival-linux

@@ -135,6 +135,72 @@ def _room_watcher(ctx, cfg, url, password, rs):
     return check
 
 
+def _stages(ctx, cfg, url, password, steam_id, srv=None, room=False):
+    """Escenarios del creador de escenarios. Solo / anfitrion: los tuyos activos se dejan listos en el
+    juego (y en la sala, para que se los bajen los demas). En la sala de otro: se bajan los suyos.
+    Siempre se le dice al servidor cuales tiene listos tu juego: solo deja jugar un escenario
+    personalizado si lo tienen todos. Devuelve la comprobacion que se repite durante la sesion."""
+    gd = cfg["game_dir"]
+    state = {"key": None, "warned": False, "fails": 0}
+
+    def check():
+        live = core.live_mode(gd)
+        if room:
+            key = (core.server_info(url).get("stages") or {}).get("hash", "")
+            if key == state["key"]:
+                return
+            if key and not live and not state["warned"]:
+                ctx.log(t("stage_room_need_bep"))
+                state["warned"] = True
+            stages = core.stage_room_fetch(url, password) if key and live else []
+        else:
+            stages = core.stage_own(cfg.get("stages_disabled", [])) if live else []
+            key = tuple((s["id"], core.stage_hash(s["layout"])) for s in stages)
+            if key == state["key"]:
+                return
+            if srv is not None:
+                srv.stages.set(stages)
+        have = core.stage_publish(gd, stages) if live else {}
+        seen = key if room else (srv.stages.key() if srv is not None else "")
+        if not core.stage_report(url, password, steam_id, have, seen) and state["fails"] < 5:
+            state["fails"] += 1                 # el servidor no se ha enterado: se repite en la proxima pasada
+            return
+        if room and have:
+            ctx.log(t("stage_room_synced", n=len(have)))
+        state["key"], state["fails"] = key, 0
+    return check
+
+
+def _both(*checks):
+    def run():
+        for c in checks:
+            try:
+                c()
+            except Exception:  # noqa: BLE001
+                log.exception("Fallo vigilando la sala")
+    return run
+
+
+def _every(n, check):
+    """La comprobacion solo se hace una de cada n veces."""
+    count = [0]
+
+    def run():
+        count[0] += 1
+        if count[0] % n == 0:
+            check()
+    return run
+
+
+def _first(ctx, check):
+    """Primera pasada de los escenarios, antes de abrir el juego (si falla, se juega sin ellos)."""
+    try:
+        check()
+    except Exception as e:  # noqa: BLE001
+        log.exception("No pude preparar los escenarios")
+        ctx.log(t("stage_room_failed", err=e))
+
+
 def solo(ctx, cfg):
     gd = cfg["game_dir"]
     port = int(cfg.get("port", core.DEFAULT_PORT))
@@ -142,7 +208,10 @@ def solo(ctx, cfg):
     ctx.log(t("srv_local_on"))
     try:
         rs = core.my_room_set(cfg)
-        _play(ctx, gd, f"http://127.0.0.1:{port}", rs, watch=_own_watcher(ctx, cfg, rs))
+        url = f"http://127.0.0.1:{port}"
+        stages = _stages(ctx, cfg, url, "", core.steam_account()[0], srv=srv)
+        _first(ctx, stages)
+        _play(ctx, gd, url, rs, watch=_both(_own_watcher(ctx, cfg, rs), stages))
     finally:
         srv.stop()
         ctx.log(t("srv_stopped"))
@@ -171,7 +240,10 @@ def host(ctx, cfg, port):
         addr = f"{ip}:{port}" if ip else f"{lan}:{port}"
         ctx.set_address(addr)
         ctx.log(t("give_address", addr=addr, lan=f"{lan}:{port}"))
-        _play(ctx, gd, f"http://127.0.0.1:{port}", rs, watch=_host_watcher(ctx, cfg, srv))
+        url = f"http://127.0.0.1:{port}"
+        stages = _stages(ctx, cfg, url, "", core.steam_account()[0], srv=srv)
+        _first(ctx, stages)
+        _play(ctx, gd, url, rs, watch=_both(_host_watcher(ctx, cfg, srv), stages))
     finally:
         mapping.close()
         if srv.room.accepted:                      # los mods de los jugadores eran solo para esta sala
@@ -198,9 +270,16 @@ def join(ctx, cfg, steam_id, address, password=""):
     _offer_own(ctx, cfg, url, password, rs)
     ctx.log(t("syncing"))
     ctx.log(t("record", **core.sync_profile(url, steam_id, password)))
+    stages = _stages(ctx, cfg, url, password, steam_id, room=True)
+    _first(ctx, stages)
     try:
-        _play(ctx, gd, url, rs, watch=_room_watcher(ctx, cfg, url, password, rs), every=10)
+        # los escenarios se miran cada 3 s (la sala no deja empezar hasta tenerlos); los mods, cada 9
+        _play(ctx, gd, url, rs, watch=_both(_every(3, _room_watcher(ctx, cfg, url, password, rs)), stages), every=3)
     finally:
+        try:                                           # vuelven tus escenarios a la lista del juego
+            core.stage_publish(gd, core.stage_own(cfg.get("stages_disabled", [])))
+        except Exception:  # noqa: BLE001
+            log.exception("No pude restaurar tus escenarios")
         if core.clear_temp_mods():
             ctx.log(t("mods_temp_cleared"))
         try:

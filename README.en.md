@@ -33,6 +33,9 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 > **Sticker and avatar mods:** tested solo, with and without hot reload. Downloading the host's mods when
 > joining their room is tested locally, not yet between two people.
 >
+> **Scenario creator (new in 1.1):** tested solo. Sharing scenarios with the room hasn't been tested
+> between two people yet.
+>
 > **Linux / Steam Deck:** new build, still being tested.
 >
 > **Not tested with people yet:** matches with **Watson** or **Irene** (3 or 4 players) and own servers on
@@ -64,8 +67,10 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 
 5. Press the button and the game opens by itself. When you close the game, the session ends.
 
-The launcher **updates itself** whenever a new version is released, and it shows up in the language
-your game is set to (all 11 of the game's languages).
+When a new version is released, the launcher **tells you on launch**, shows what's new and lets you
+decide whether to update right then or later (a notice stays next to the version number). To play with
+other people, it's best that everyone has the same version. The launcher shows up in the language your
+game is set to (all 11 of the game's languages).
 
 ### In the room
 
@@ -146,6 +151,23 @@ click **Mods → Hot reload → Turn on**:
 - Changes are never applied mid-match (they wait for the menu), so everyone keeps the same list.
 - **Remove BepInEx** (or "Restore original game") deletes everything and the game is back to normal.
 
+## Scenario creator
+
+**Mods → Scenario creator** lets you rearrange the rooms of one of the game's scenarios and save it as a
+new one. The original scenarios are never changed. Playing them needs hot reload.
+
+- Move, rotate, remove or repeat rooms; swap doors for furniture or secret passages; choose which windows
+  the wild dogs come in through, where the gas is and where the characters start. The creator warns you
+  about anything that would stop the scenario from being playable, and "Quick test" shows it in the game
+  without saving.
+- Each saved scenario shows up in the game's scenario list with its name. You can save as many as you like
+  and have up to 20 turned on at once; the ones turned off keep their design.
+- **Export / Import** shares them as `.csrstage` files. They only hold the room layout: nothing from the game.
+- In a room, everyone downloads the host's scenarios when joining. With a custom scenario selected, the
+  match can't start until everyone has it: the name of whoever is missing it says so ("loading stage…", or
+  "stage missing" if they don't have hot reload).
+- The creator reads the rooms from **your** copy of the game; the project ships none.
+
 ## What works
 
 - Sign-in, profile, tutorial, settings and level.
@@ -163,6 +185,8 @@ click **Mods → Hot reload → Turn on**:
   unlocked. Deluxe content still depends on owning it on Steam.
 - Steam achievements can still be earned (the game itself handles them with Steam).
 - New sticker and avatar mods, shared with the room, with optional hot reload.
+- Scenario creator, with scenarios shared with the room.
+- The AI players answer your stickers with a random one.
 
 ## Platforms
 
@@ -197,6 +221,8 @@ WINEDLLOVERRIDES="winhttp=n,b" %command%
 3. Players use "Own server" with `IP_OR_DOMAIN:18080` and the password.
 4. Optional: `--mods-dir FOLDER` offers players the mods in that folder (same layout as the launcher's mods
    folder; needs `pip install pillow`).
+5. Optional: `--stages-dir FOLDER` offers players the scenario-creator scenarios in that folder (the `.json`
+   files from `%APPDATA%\CrimeSightRevival\stages`).
 
 The password protects profile sync: the game only identifies itself with its Steam ID, so a server
 without a password would let anyone pretend to be another player.
@@ -207,6 +233,8 @@ without a password would let anyone pretend to be another player.
 - `plugin/`: source of the optional BepInEx plugin and its compiled `.dll`. It's built against the assemblies
   BepInEx 6 (IL2CPP) generates in `BepInEx\interop` on the first game start; no game files are included.
 - `crear_exe.bat`: builds `dist\CrimeSightRevival.exe` (development build, does not update itself).
+- `CHANGELOG.md`: what's new in each version. Its first block is what the launcher shows when it offers an
+  update, if the file changes in the push; otherwise it shows the commit message.
 - Every push to `main` makes GitHub Actions build the `.exe` on Windows and publish a release
   (`.github/workflows/release.yml`). Installed launchers download it, check its SHA-256 hash and
   replace themselves.

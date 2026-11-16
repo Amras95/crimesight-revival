@@ -353,7 +353,8 @@ def wait_game(log, start_timeout=180, stop_flag=lambda: False):
 
 # ------------------------------------------------------------------ servidor local
 class LocalServer:
-    def __init__(self, public=False, port=DEFAULT_PORT, password="", mods=None, player_mods="ignore", names=None):
+    def __init__(self, public=False, port=DEFAULT_PORT, password="", mods=None, player_mods="ignore", names=None,
+                 stages=None):
         os.environ["CSR_DATA_DIR"] = data_dir()
         import server
         if not getattr(LocalServer, "_logging", False):
@@ -361,7 +362,8 @@ class LocalServer:
             LocalServer._logging = True
         self.bg = server.BackgroundServer(host="0.0.0.0" if public else "127.0.0.1", port=port,
                                           password=password, data_dir=data_dir(), mods=mods or [],
-                                          owner=mod_owner(), player_mods=player_mods, mod_names=names)
+                                          owner=mod_owner(), player_mods=player_mods, mod_names=names,
+                                          stages=stages or [])
         self.port = port
 
     def start(self):
@@ -371,6 +373,10 @@ class LocalServer:
     @property
     def room(self):
         return self.bg.room
+
+    @property
+    def stages(self):
+        return self.bg.stages
 
     def stop(self):
         self.bg.stop()
@@ -838,6 +844,264 @@ def sync_profile(url, steam_id, password=""):
     stats.merge_into(user, remote.get("profile") or {})
     st.save()
     return local_record(steam_id)
+
+
+# ------------------------------------------------------------------ creador de escenarios
+STAGE_BASES = ("Stage_Yokn", "Stage_Yokn_v1030", "Stage_Yokn_v1040", "Stage_Yokn_v1050", "Stage_Yokn_v1060")
+_stage_cat = {}
+
+
+def stages_dir():
+    """Distribuciones guardadas por el jugador (un .json por escenario)."""
+    d = os.path.join(app_dir(), "stages")
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def stage_cache_dir():
+    return os.path.join(app_dir(), "stage_cache")
+
+
+def stage_catalog(game_dir, progress=None):
+    """Piezas de los escenarios, leidas de la copia del juego del jugador (con cache)."""
+    import stagedata
+    dev = os.environ.get("CSR_STAGE_CATALOG")          # pruebas sin el juego
+    if dev:
+        with open(dev, encoding="utf-8") as f:
+            return json.load(f)
+    if not is_game_dir(game_dir):
+        raise ValueError(t("err_no_game"))
+    key = os.path.abspath(game_dir)
+    if key not in _stage_cat:
+        try:
+            _stage_cat[key] = stagedata.load(game_dir, stage_cache_dir(), progress)
+        except stagedata.StageDataError as e:
+            raise ValueError(str(e)) from e
+    return _stage_cat[key]
+
+
+def _stage_slug(name):
+    slug = re.sub(r"[^a-z0-9]+", "-", str(name or "").lower()).strip("-")[:40]
+    return slug or "escenario"
+
+
+def stage_hash(layout):
+    """Huella de una distribucion (la misma que calcula el servidor)."""
+    import stageroom
+    return stageroom.layout_hash(layout)
+
+
+def stage_list(disabled=()):
+    """Escenarios guardados. enabled: sale en la lista de escenarios del juego."""
+    out, off = [], set(disabled or ())
+    for fn in sorted(os.listdir(stages_dir())):
+        if not fn.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(stages_dir(), fn), encoding="utf-8") as f:
+                lay = json.load(f)
+            out.append({"id": fn[:-5], "name": lay.get("name") or fn[:-5], "base": lay.get("base"),
+                        "rooms": len(lay.get("rooms") or []), "enabled": fn[:-5] not in off})
+        except (OSError, ValueError, AttributeError):
+            continue
+    return out
+
+
+def stage_load(sid):
+    with open(os.path.join(stages_dir(), os.path.basename(str(sid)) + ".json"), encoding="utf-8") as f:
+        return json.load(f)
+
+
+def stage_save(layout, sid=None):
+    """Guarda una distribucion. Sin sid, el archivo sale del nombre (y pisa al que se llame igual)."""
+    sid = sid or _stage_slug(layout.get("name"))
+    _write_json(os.path.join(stages_dir(), sid + ".json"), layout)
+    return sid
+
+
+def stage_delete(sid):
+    p = os.path.join(stages_dir(), os.path.basename(str(sid)) + ".json")
+    if os.path.isfile(p):
+        os.remove(p)
+
+
+def stage_own(disabled=()):
+    """Tus escenarios activos, como los necesita la sala: [{"id": "Stage_CSR_<id>", "name", "layout"}]."""
+    out = []
+    for it in stage_list(disabled):
+        if it["enabled"] and len(out) < MAX_GAME_STAGES:
+            try:
+                out.append({"id": STAGE_PREFIX + it["id"], "name": it["name"], "layout": stage_load(it["id"])})
+            except (OSError, ValueError):
+                continue
+    return out
+
+
+# ---- compartir: archivo .csrstage
+STAGE_EXT = ".csrstage"
+STAGE_FILE_FORMAT = "crimesight-revival-stage"
+
+
+def stage_export(sid, path):
+    _write_json(path, {"format": STAGE_FILE_FORMAT, "version": 1, "layout": stage_load(sid)})
+
+
+def stage_import(path, cat):
+    """Anade a tus escenarios el de un archivo .csrstage. Devuelve su id."""
+    import stagelayout
+    try:
+        if os.path.getsize(path) > 512 * 1024:
+            raise ValueError
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        if data.get("format") != STAGE_FILE_FORMAT:
+            raise ValueError
+        lay = stagelayout.derive(cat, data["layout"])["layout"]
+        if not lay["rooms"]:
+            raise ValueError
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, IndexError):
+        raise ValueError(t("stage_import_bad"))
+    lay["name"] = lay["name"].strip() or os.path.splitext(os.path.basename(path))[0][:60]
+    taken = {it["id"] for it in stage_list()}
+    base_name, n = lay["name"], 1
+    while _stage_slug(lay["name"]) in taken:
+        n += 1
+        lay["name"] = f"{base_name} ({n})"
+    return stage_save(lay)
+
+
+# ---- escenarios en la sala (como los mods: el anfitrion los ofrece y cada jugador se los baja)
+def stage_room_fetch(url, password, timeout=20):
+    req = urllib.request.Request(url + "/revival/stages", headers={"X-CSR-Password": password or ""})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            data = json.load(r)
+    except (urllib.error.URLError, ValueError) as e:
+        raise ValueError(t("err_unexpected", err=e))
+    return [s for s in data.get("stages") or [] if isinstance(s, dict) and isinstance(s.get("layout"), dict)]
+
+
+def stage_report(url, password, steam_id, have, seen="", timeout=10):
+    """Le dice al servidor que escenarios tiene listos tu juego (sin eso no deja jugarlos) y con que
+    lista de la sala se ha sincronizado (seen), para que sepa si aun te espera o ya no puedes tenerlos."""
+    if not steam_id:
+        return False
+    body = json.dumps({"platform": 3, "platform_id": str(steam_id), "have": have, "seen": seen or ""}).encode()
+    req = urllib.request.Request(url + "/revival/stages/have", data=body, method="POST",
+                                 headers={"Content-Type": "application/json", "X-CSR-Password": password or ""})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout):
+            return True
+    except (urllib.error.URLError, ValueError):
+        return False              # servidor de una version anterior
+
+
+STAGE_TEST_FILE = "layout_test.json"
+
+
+def stage_test(game_dir, cat, layout):
+    """Deja la distribucion lista para jugarla en el "Escenario de pruebas (CSR)" (necesita el plugin)."""
+    import stagedata, stagelayout
+    if not live_mode(game_dir):
+        raise ValueError(t("stage_need_bep"))
+    compiled = stagelayout.compile_layout(cat, layout)
+    d = live_dir(game_dir)
+    os.makedirs(d, exist_ok=True)
+    nav = stagedata.nav_path(stage_cache_dir())
+    if os.path.isfile(nav):
+        dst = os.path.join(d, "navsrc.json")
+        if not os.path.isfile(dst) or os.path.getsize(dst) != os.path.getsize(nav):
+            shutil.copyfile(nav, dst)
+    _write_json(os.path.join(d, STAGE_TEST_FILE), compiled)
+    return compiled
+
+
+STAGE_INDEX_FILE = "stages.json"
+STAGE_PREFIX = "Stage_CSR_"
+MAX_GAME_STAGES = 20
+
+
+_stage_lock = __import__("threading").Lock()
+
+
+def stage_publish(game_dir, stages, cat=None):
+    with _stage_lock:                  # lo llaman la ventana y la sesion en marcha
+        return _stage_publish(game_dir, stages, cat)
+
+
+def _stage_publish(game_dir, stages, cat=None):
+    """Deja en la carpeta del plugin esos escenarios ([{"id", "name", "layout"}]): cada uno sale en la
+    lista de escenarios del juego como uno nuevo. Los que tienen errores no se publican.
+    Devuelve {id: huella} de los que han quedado listos."""
+    import stagedata, stagelayout
+    if not game_dir or not live_mode(game_dir):
+        return {}
+    d = live_dir(game_dir)
+    os.makedirs(d, exist_ok=True)
+    index, have, keep = [], {}, {STAGE_INDEX_FILE}
+    for st in list(stages)[:MAX_GAME_STAGES]:
+        sid = str(st.get("id") or "")
+        slug = sid[len(STAGE_PREFIX):]
+        if not sid.startswith(STAGE_PREFIX) or not re.fullmatch(r"[a-z0-9-]{1,48}", slug):
+            continue
+        try:
+            cat = cat or stage_catalog(game_dir)
+            compiled = stagelayout.compile_layout(cat, st["layout"])
+        except (OSError, ValueError, KeyError, TypeError, IndexError):
+            continue                                   # con errores (o de otra version): no se publica
+        compiled["name"] = str(st.get("name") or compiled["name"] or slug)[:60]
+        fn = f"stage_{slug}.json"
+        text = json.dumps(compiled, ensure_ascii=False)
+        path = os.path.join(d, fn)
+        try:
+            with open(path, encoding="utf-8") as f:
+                same = f.read() == text
+        except OSError:
+            same = False
+        if not same:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
+        have[sid] = stage_hash(st["layout"])
+        index.append({"id": sid, "name": compiled["name"], "file": fn, "hash": have[sid]})
+        keep.add(fn)
+    for fn in os.listdir(d):
+        if fn.startswith("stage_") and fn.endswith(".json") and fn not in keep:
+            try:
+                os.remove(os.path.join(d, fn))
+            except OSError:
+                pass
+    ipath = os.path.join(d, STAGE_INDEX_FILE)
+    try:
+        with open(ipath, encoding="utf-8") as f:
+            old = json.load(f).get("stages")
+    except (OSError, ValueError, AttributeError):
+        old = None
+    if old != index:
+        _write_json(ipath, {"stages": index})
+    if index:
+        nav = stagedata.nav_path(stage_cache_dir())
+        if not os.path.isfile(nav):
+            stage_catalog(game_dir)
+        dst = os.path.join(d, "navsrc.json")
+        if os.path.isfile(nav) and (not os.path.isfile(dst) or os.path.getsize(dst) != os.path.getsize(nav)):
+            shutil.copyfile(nav, dst)
+    return have
+
+
+def stage_test_active(game_dir):
+    """Nombre de la distribucion que se jugara en el escenario de pruebas ("" si es la copia del 01)."""
+    try:
+        with open(os.path.join(live_dir(game_dir), STAGE_TEST_FILE), encoding="utf-8") as f:
+            lay = json.load(f)
+        return lay.get("name") or "?" if lay.get("format") == 2 else ""
+    except (OSError, ValueError, TypeError):
+        return ""
+
+
+def stage_test_clear(game_dir):
+    p = os.path.join(live_dir(game_dir), STAGE_TEST_FILE)
+    if os.path.isfile(p):
+        os.remove(p)
 
 
 # ------------------------------------------------------------------ copias del progreso

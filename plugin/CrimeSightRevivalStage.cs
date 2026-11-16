@@ -1,16 +1,23 @@
-// CRIMESIGHT Revival - laboratorio de escenarios (prueba de concepto del creador de escenarios).
+// CRIMESIGHT Revival - escenarios del creador de escenarios (plugin de BepInEx, opcional).
 //
-// Anade a la lista de escenarios uno de pruebas ("Escenario de pruebas (CSR)", Stage_Yokn_CSRTest),
-// que es una copia del 01 (Lauriston Gardens). Los escenarios del juego no se tocan nunca: los cambios
-// solo se aplican cuando se juega el de pruebas. Necesita el plugin en todos los jugadores de la sala.
+// Anade a la lista de escenarios del juego:
+//   - un escenario por cada distribucion guardada en el creador (Stage_CSR_<id>, con el nombre que le
+//     puso el jugador; BepInEx\csr_live\stages.json dice cuales hay y en que archivo esta cada una);
+//   - "Escenario de pruebas (CSR)" (Stage_Yokn_CSRTest), para probar sin guardar (layout_test.json).
+// Los escenarios del juego no se tocan nunca: los cambios solo se aplican al jugar uno de los
+// nuestros. Necesita el plugin en todos los jugadores de la sala.
 //
-// Que hace en el de pruebas: carga el escenario 01 y, segun BepInEx\csr_live\layout_test.json, mueve
-// sus piezas unas casillas (antes de que el juego calcule sus casillas), convierte las casillas de
-// salida de los personajes y recalcula la navegacion (NavMesh) con las mallas NAV_* del propio juego.
-// Sin ese archivo es una copia exacta del 01.
+// Al jugar uno se carga un escenario del juego (el "base") y se recolocan sus piezas segun el
+// archivo de la distribucion (lo escribe el lanzador desde el creador de escenarios):
+//   - habitaciones: se mueven y giran (con todo lo que llevan dentro); las que sobran se esconden y
+//     las que se repiten se duplican;
+//   - puertas, muebles que tapan huecos, ventanas y puerta principal: igual, pieza a pieza;
+//   - puntos de lobos, gas y pasadizos, y casillas de salida de los personajes;
+//   - la navegacion (NavMesh) se reconstruye con las mallas NAV_* del propio juego.
+// El lanzador decide donde va cada pieza (launcher/stagelayout.py); aqui solo se aplica.
+// El titulo que sale al empezar la partida es el nombre de la distribucion.
+// Sin archivo, el de pruebas es una copia exacta del escenario 01.
 //
-// layout_test.json: {"dx":0,"dz":2,"navmesh":"rebuild"}
-//   navmesh: "rebuild" (la construye de cero), "offset" (mueve la original) o "keep" (no la toca)
 // navsrc.json (lo genera el lanzador desde la copia del juego del usuario): las mallas NAV_* en
 // version legible, porque las del juego no se pueden leer desde codigo.
 using System;
@@ -18,50 +25,86 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using HarmonyLib;
+using Il2CppInterop.Runtime;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
-using System.Runtime.InteropServices;
-using Il2CppInterop.Runtime;
 
 namespace CrimeSightRevival.Mods
 {
-    public class LayoutTest
+    // de donde sale una pieza del escenario base (nombre, posicion y giro originales) y donde va
+    public class LPose
     {
-        public int dx { get; set; }
-        public int dz { get; set; }
-        public string navmesh { get; set; } = "keep";
+        public string name { get; set; }
+        public float sx { get; set; }
+        public float sz { get; set; }
+        public float syaw { get; set; }
+        public float x { get; set; }
+        public float z { get; set; }
+        public float yaw { get; set; }
+        public float w { get; set; }
+        public float d { get; set; }
     }
+    public class LByway { public float x { get; set; } public float z { get; set; } public float yaw { get; set; } public int[] shelves { get; set; } }
+    public class LWolf { public float x { get; set; } public float z { get; set; } public float yaw { get; set; } public int window { get; set; } }
+    public class LPoint { public float x { get; set; } public float z { get; set; } }
+    public class StageLayout
+    {
+        public int format { get; set; }
+        public string name { get; set; }
+        [JsonPropertyName("base")] public string baseStage { get; set; }
+        public string navmesh { get; set; } = "rebuild";
+        public LPose[] rooms { get; set; }
+        public LPose[] hide_rooms { get; set; }
+        public LPose[] pieces { get; set; }
+        public LPose[] hide { get; set; }
+        public LByway[] byways { get; set; }
+        public LWolf[] wolves { get; set; }
+        public LPoint[] gas { get; set; }
+        public int[] spawns { get; set; }
+        public float[] bounds { get; set; }
+    }
+
+    // escenarios guardados en el creador: cada uno sale en la lista del juego como un escenario mas
+    public class StageEntry { public string id { get; set; } public string name { get; set; } public string file { get; set; } }
+    public class StageIndex { public StageEntry[] stages { get; set; } }
 
     public class NavSrcMesh { public float[] v { get; set; } public int[] t { get; set; } }
     public class NavSrcFile { public Dictionary<string, NavSrcMesh> meshes { get; set; } }
 
     public static class StageLab
     {
-        const float GRID = 6f;
-        static LayoutTest _cfg;
-        static int _movedHandle = int.MinValue;
-        static readonly HashSet<int> _seenScenes = new();
-        static bool _navPending;
+        public const string TEST_STAGE = "Stage_Yokn_CSRTest";
+        const string CUSTOM_PREFIX = "Stage_CSR_";          // escenarios guardados: Stage_CSR_<id>
+        const string TITLE_KEY = "csr_stage_title";         // texto del titulo que sale al empezar la partida
+        static string _title = "";
+        static StageEntry[] _index = Array.Empty<StageEntry>();
+        static DateTime _indexSeen = DateTime.MinValue;
+        static string IndexFile => Path.Combine(LiveMods.LiveDir, "stages.json");
+        const string DEFAULT_BASE = "Stage_Yokn";
+        static readonly string[] BASES = { "Stage_Yokn", "Stage_Yokn_v1030", "Stage_Yokn_v1040", "Stage_Yokn_v1050", "Stage_Yokn_v1060" };
+
+        static bool _armed;                     // se va a jugar (o se esta jugando) el escenario de pruebas
+        static StageLayout _cfg;                // distribucion a aplicar (null: copia exacta del base)
+        static string _base = DEFAULT_BASE;
+        static int _doneHandle = int.MinValue;  // escena ya recolocada
         static Scene _scene;
         static Transform _root;
-        static Vector3 _off;
-        static int[] _spawnsBefore = Array.Empty<int>();
+        static bool _started, _ready, _pending;
+        static int _frames, _skipped;
+        static GameObject[] _placed = Array.Empty<GameObject>();     // pieza i de la distribucion -> objeto
+        static readonly List<(int k, GameObject src, Vector3 pos, Quaternion rot)> _jobs = new();
         static readonly Dictionary<string, Mesh> _readable = new();
-        static readonly List<(Transform t, Vector3 local)> _watch = new();
-        static float _watchUntil;
-        static int _agentReports;
 
         static string TestFile => Path.Combine(LiveMods.LiveDir, "layout_test.json");
         static string NavFile => Path.Combine(LiveMods.LiveDir, "navsrc.json");
         static void Log(string s) => Plugin.L.LogInfo("[Escenario] " + s);
         static void Warn(string s) => Plugin.L.LogWarning("[Escenario] " + s);
-
-        public const string TEST_STAGE = "Stage_Yokn_CSRTest";
-        const string BASE_STAGE = "Stage_Yokn";
-        static bool _armed;
 
         public static void Init(Harmony h)
         {
@@ -81,8 +124,9 @@ namespace CrimeSightRevival.Mods
             Patch(typeof(MatchSettings), "LoadStageData", nameof(MapStage));
             Patch(typeof(OutGameManager), "StartInGame", nameof(MapStage));
             Patch(typeof(GameManager), "LoadStage", nameof(BeforeLoadStage));
-            foreach (var t in new[] { typeof(Stage), typeof(Area), typeof(Room), typeof(Door), typeof(Shelf), typeof(WindowShelf) })
+            foreach (var t in new[] { typeof(Stage), typeof(Area), typeof(Room), typeof(Door), typeof(OutDoor), typeof(Shelf), typeof(WindowShelf) })
                 Patch(t, "Awake", nameof(BeforeAwake));
+            Patch(typeof(Stage), "Start", nameof(BeforeStageStart));
             Log("escenario de pruebas disponible: " + TEST_STAGE);
         }
 
@@ -94,17 +138,45 @@ namespace CrimeSightRevival.Mods
             "테스트 스테이지 (CSR)", "测试场景 (CSR)", "測試場景 (CSR)",
         };
 
+        static string TestLabel()
+        {
+            var tm = TextManager.Instance;
+            int lang = tm != null ? (int)tm.GetLangType() : 1;
+            return lang >= 0 && lang < TestName.Length ? TestName[lang] : TestName[1];
+        }
+
+        static StageEntry[] Index()
+        {
+            try
+            {
+                var t = File.Exists(IndexFile) ? File.GetLastWriteTimeUtc(IndexFile) : DateTime.MinValue;
+                if (t == _indexSeen) return _index;
+                _indexSeen = t;
+                var list = new List<StageEntry>();
+                if (t != DateTime.MinValue)
+                    foreach (var e in JsonSerializer.Deserialize<StageIndex>(File.ReadAllText(IndexFile))?.stages ?? Array.Empty<StageEntry>())
+                        if (e?.id != null && e.id.StartsWith(CUSTOM_PREFIX) && !string.IsNullOrEmpty(e.file)) list.Add(e);
+                _index = list.ToArray();
+                Log($"escenarios guardados: {_index.Length}");
+            }
+            catch (Exception e) { Warn("stages.json no valido: " + e.Message); _index = Array.Empty<StageEntry>(); }
+            return _index;
+        }
+
         public static void EnsureTexts()
         {
             var tm = TextManager.Instance;
             if (tm == null || tm.LangText == null) return;
-            int lang = (int)tm.GetLangType();
-            string text = lang >= 0 && lang < TestName.Length ? TestName[lang] : TestName[1];
-            string key = "ctg_name_stageName_" + TEST_STAGE;
-            if (!tm.LangText.ContainsKey(key) || tm.LangText[key] != text) tm.LangText[key] = text;
+            void Put(string key, string text)
+            {
+                if (!tm.LangText.ContainsKey(key) || tm.LangText[key] != text) tm.LangText[key] = text;
+            }
+            Put("ctg_name_stageName_" + TEST_STAGE, TestLabel());
+            foreach (var e in Index()) Put("ctg_name_stageName_" + e.id, string.IsNullOrEmpty(e.name) ? e.id : e.name);
+            if (!string.IsNullOrEmpty(_title)) Put(TITLE_KEY, _title);
         }
 
-        // la lista de la ventana de ajustes de la sala: se anade el de pruebas antes de "Aleatorio"
+        // la lista de la ventana de ajustes de la sala: los escenarios guardados y el de pruebas, antes de "Aleatorio"
         static void BeforeStageList(OutGameRoomPopupRoomSetting __instance)
         {
             try
@@ -112,30 +184,43 @@ namespace CrimeSightRevival.Mods
                 EnsureTexts();
                 var list = __instance.UseStageList;
                 if (list == null) return;
-                int random = -1;
-                for (int i = 0; i < list.Count; i++)
+                for (int i = list.Count - 1; i >= 0; i--)
                 {
                     var n = list[i]?.StageName;
-                    if (n == TEST_STAGE) return;
-                    if (n == "Random") random = i;
+                    if (n != null && (n == TEST_STAGE || n.StartsWith(CUSTOM_PREFIX))) list.RemoveAt(i);
                 }
-                var d = new OutGameRoomPopupRoomSetting.StageData { StageName = TEST_STAGE };
-                if (random >= 0) list.Insert(random, d); else list.Add(d);
+                int random = list.Count;
+                for (int i = 0; i < list.Count; i++)
+                    if (list[i]?.StageName == "Random") { random = i; break; }
+                foreach (var e in Index())
+                    list.Insert(random++, new OutGameRoomPopupRoomSetting.StageData { StageName = e.id });
+                list.Insert(random, new OutGameRoomPopupRoomSetting.StageData { StageName = TEST_STAGE });
             }
             catch (Exception e) { Plugin.L.LogError(e); }
         }
 
-        // el juego pide cargar el de pruebas: se carga el 01 y se activa la prueba
+        // el juego pide cargar uno de los nuestros: se carga su escenario base y se prepara la distribucion
+        static bool Ours(string stageName, out string file, out string title)
+        {
+            file = null; title = null;
+            if (stageName == TEST_STAGE) { file = TestFile; title = TestLabel(); return true; }
+            if (stageName == null || !stageName.StartsWith(CUSTOM_PREFIX)) return false;
+            title = stageName;
+            foreach (var e in Index())
+                if (e.id == stageName) { file = Path.Combine(LiveMods.LiveDir, Path.GetFileName(e.file)); title = string.IsNullOrEmpty(e.name) ? e.id : e.name; }
+            return true;
+        }
+
         static void MapStage(ref string stageName)
         {
-            if (stageName == TEST_STAGE)
+            if (Ours(stageName, out var file, out var title))
             {
-                if (!_armed) Arm();
-                stageName = BASE_STAGE;
+                Arm(file, title);
+                stageName = _base;
             }
             else if (!string.IsNullOrEmpty(stageName) && stageName.StartsWith("Stage_"))
             {
-                if (_armed) Log("escenario normal: prueba desactivada");
+                if (_armed) Log("escenario normal: sin cambios");
                 _armed = false;
             }
         }
@@ -144,172 +229,429 @@ namespace CrimeSightRevival.Mods
         {
             try
             {
-                if (__instance.currentStageName == TEST_STAGE)
+                if (Ours(__instance.currentStageName, out var file, out var title))
                 {
-                    if (!_armed) Arm();
-                    __instance.currentStageName = BASE_STAGE;
+                    Arm(file, title);
+                    __instance.currentStageName = _base;
                 }
             }
             catch (Exception e) { Plugin.L.LogError(e); }
         }
 
-        static void Arm()
+        static void Arm(string file, string title)
         {
-            _armed = true;
-            _cfg = new LayoutTest();
-            if (File.Exists(TestFile))
-                try { _cfg = JsonSerializer.Deserialize<LayoutTest>(File.ReadAllText(TestFile)) ?? new LayoutTest(); }
-                catch (Exception e) { Warn("layout_test.json no valido: " + e.Message); }
-            _off = new Vector3(_cfg.dx * GRID, 0, _cfg.dz * GRID);
-            Log($"PRUEBA ACTIVA: dx={_cfg.dx} dz={_cfg.dz} navmesh={_cfg.navmesh}");
+            _armed = true; _cfg = null; _base = DEFAULT_BASE; _title = title ?? "";
+            if (file != null && File.Exists(file))
+            {
+                try
+                {
+                    var c = JsonSerializer.Deserialize<StageLayout>(File.ReadAllText(file));
+                    if (c != null && c.format == 2 && c.rooms != null && c.rooms.Length > 0 && Array.IndexOf(BASES, c.baseStage) >= 0)
+                    {
+                        _cfg = c; _base = c.baseStage;
+                        if (!string.IsNullOrWhiteSpace(c.name)) _title = c.name;
+                    }
+                    else Warn(Path.GetFileName(file) + " no es una distribucion del creador de escenarios: se ignora");
+                }
+                catch (Exception e) { Warn(Path.GetFileName(file) + " no valido: " + e.Message); }
+            }
+            else if (file != TestFile) Warn("no encuentro la distribucion de ese escenario: se carga el 01 tal cual");
+            Log(_cfg == null ? $"'{_title}': copia exacta de {_base}"
+                : $"'{_title}' sobre {_base} ({_cfg.rooms.Length} habitaciones, {(_cfg.pieces ?? Array.Empty<LPose>()).Length} piezas)");
         }
 
-        // ---------------------------------------------------------------- mover antes de Awake
-        static void BeforeAwake(Component __instance)
+        // ---------------------------------------------------------------- recolocar antes de Awake
+        // Se engancha el Awake de las piezas del escenario: en el primero (antes de que el juego calcule
+        // nada) se recoloca todo. Devuelve false para las piezas escondidas: no deben inicializarse.
+        static bool BeforeAwake(Component __instance)
         {
+            if (!_armed) return true;
             try
             {
-                if (!_armed) return;
-                var sc = __instance.gameObject.scene;
-                int handle = sc.handle;
-                if (_seenScenes.Add(handle)) Log($"escena cargando: '{sc.name}' (primer Awake: {__instance.GetIl2CppType().Name} {__instance.gameObject.name})");
-                if (!_armed || handle == _movedHandle) return;
-                if (sc.name != BASE_STAGE) return;
-                _movedHandle = handle;
-                Move(__instance.transform.root, sc);
+                var go = __instance.gameObject;
+                var sc = go.scene;
+                if (sc.name != _base) return true;
+                if (sc.handle != _doneHandle)
+                {
+                    _doneHandle = sc.handle;
+                    _root = __instance.transform.root; _scene = sc;
+                    _started = _ready = false; _pending = _cfg != null; _frames = 0; _skipped = 0;
+                    _jobs.Clear(); _placed = Array.Empty<GameObject>();
+                    try
+                    {   // el titulo que sale al empezar ("Caso: ...") es el texto con esta clave
+                        var st = _root.GetComponentInChildren<Stage>(true);
+                        if (st != null && !string.IsNullOrEmpty(_title)) { EnsureTexts(); st.stageNamelangId = TITLE_KEY; }
+                    }
+                    catch (Exception e) { Warn("titulo: " + e.Message); }
+                    if (_cfg != null) Apply(_root, _cfg);
+                }
+                if (_cfg != null && !go.activeInHierarchy) { _skipped++; return false; }
             }
             catch (Exception e) { Plugin.L.LogError(e); }
+            return true;
         }
 
-        static void Move(Transform root, Scene sc)
+        class Src { public Transform t; public Vector3 pos; public Quaternion rot; public float yaw; }
+
+        static void Apply(Transform root, StageLayout cfg)
         {
-            _root = root; _scene = sc; _navPending = true;
-            // La raiz tiene un Animator que el juego reproduce al empezar (y le devuelve su posicion),
-            // asi que se mueven sus hijos, no la raiz.
-            Log($"raiz '{root.name}' en {root.position}; se mueven sus {root.childCount} hijos {_off}");
-            _watch.Clear();
-            for (int i = 0; i < root.childCount; i++)
+            var sw = Stopwatch.StartNew();
+            // foto de la escena original: las piezas se buscan por su nombre, posicion y giro de origen
+            var byName = new Dictionary<string, List<Src>>();
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
             {
-                var c = root.GetChild(i);
-                c.position += _off;
-                _watch.Add((c, c.localPosition));
+                if (!byName.TryGetValue(t.name, out var l)) byName[t.name] = l = new List<Src>();
+                l.Add(new Src { t = t, pos = t.position, rot = t.rotation, yaw = t.eulerAngles.y });
             }
-            _watchUntil = Time.unscaledTime + 30f;
-            _agentReports = 0;
+            Src Find(LPose p)
+            {
+                if (p?.name == null || !byName.TryGetValue(p.name, out var l)) return null;
+                Src best = null; float bd = 0.36f;
+                foreach (var s in l)
+                {
+                    if (Mathf.Abs(Mathf.DeltaAngle(s.yaw, p.syaw)) > 3f) continue;
+                    float dx = s.pos.x - p.sx, dz = s.pos.z - p.sz, d = dx * dx + dz * dz;
+                    if (d < bd) { bd = d; best = s; }
+                }
+                return best;
+            }
+            static Quaternion Rot(Src s, LPose p) => Quaternion.Euler(0, p.yaw - p.syaw, 0) * s.rot;
+            static Vector3 Pos(Src s, LPose p) => new Vector3(p.x, s.pos.y, p.z);
+
+            int moved = 0, cloned = 0, hidden = 0, missing = 0;
+            var used = new HashSet<int>();
+            // habitaciones (las repetidas se duplican ya: su Awake no depende de nada mas)
+            foreach (var r in cfg.rooms)
+            {
+                var s = Find(r);
+                if (s == null) { missing++; Warn($"no encuentro la habitacion '{r.name}' en ({r.sx},{r.sz})"); continue; }
+                if (used.Add(s.t.GetInstanceID())) { s.t.position = Pos(s, r); s.t.rotation = Rot(s, r); moved++; }
+                else
+                {
+                    var c = UnityEngine.Object.Instantiate((UnityEngine.Object)s.t.gameObject, Pos(s, r), Rot(s, r), s.t.parent).Cast<GameObject>();
+                    c.name = s.t.name + " (csr)";
+                    cloned++;
+                }
+            }
+            foreach (var r in cfg.hide_rooms ?? Array.Empty<LPose>())
+            {
+                var s = Find(r);
+                if (s == null) { missing++; continue; }
+                s.t.gameObject.SetActive(false); hidden++;
+            }
             Physics.SyncTransforms();
+            Log($"habitaciones: {moved} colocadas, {cloned} duplicadas, {hidden} escondidas" + (missing > 0 ? $", {missing} NO ENCONTRADAS" : ""));
 
-            var stage = root.GetComponentInChildren<Stage>(true);
-            if (stage == null) { Warn("no hay componente Stage"); return; }
-            var ids = stage.pawnSpawnGridIds;
-            if (ids == null) { Warn("pawnSpawnGridIds vacio"); return; }
-            _spawnsBefore = new int[ids.Length];
-            var txt = new List<string>();
-            for (int i = 0; i < ids.Length; i++)
+            // piezas de los huecos. Las repetidas se duplican mas tarde (Stage.Start), con todo ya inicializado.
+            var pieces = cfg.pieces ?? Array.Empty<LPose>();
+            _placed = new GameObject[pieces.Length];
+            moved = hidden = missing = 0;
+            for (int k = 0; k < pieces.Length; k++)
             {
-                _spawnsBefore[i] = ids[i];
-                int n = Shift(ids[i], _cfg.dx, _cfg.dz, out bool ok);
-                txt.Add($"{ids[i]}->{n}{(ok ? "" : "(FUERA)")}");
-                ids[i] = n;
+                var p = pieces[k];
+                var s = Find(p);
+                if (s == null) { missing++; Warn($"no encuentro la pieza '{p.name}' en ({p.sx},{p.sz})"); continue; }
+                if (used.Add(s.t.GetInstanceID())) { s.t.position = Pos(s, p); s.t.rotation = Rot(s, p); _placed[k] = s.t.gameObject; moved++; }
+                else _jobs.Add((k, s.t.gameObject, Pos(s, p), Rot(s, p)));
             }
-            Log("salidas: " + string.Join(", ", txt));
-        }
+            foreach (var p in cfg.hide ?? Array.Empty<LPose>())
+            {
+                var s = Find(p);
+                if (s == null) { missing++; continue; }
+                s.t.gameObject.SetActive(false); hidden++;
+            }
+            Physics.SyncTransforms();
+            Log($"piezas: {moved} colocadas, {_jobs.Count} por duplicar, {hidden} escondidas" + (missing > 0 ? $", {missing} NO ENCONTRADAS" : ""));
 
-        // GridManager: id = 10*x + (x<0 ? -z : z), casillas de 6 unidades, x -6..6, z 0..9
-        static void IdToXZ(int id, out int x, out int z)
-        {
-            int a = Math.Abs(id);
-            x = a / 10; z = a % 10;
-            if (id < 0) x = -x;
-        }
-        static int XZToId(int x, int z) => (x < 0 ? -z : z) + 10 * x;
-        static int Shift(int id, int dx, int dz, out bool ok)
-        {
-            IdToXZ(id, out int x, out int z);
-            x += dx; z += dz;
-            ok = x >= -6 && x <= 6 && z >= 0 && z <= 9;
-            return XZToId(x, z);
-        }
-
-        // ---------------------------------------------------------------- despues de cargar
-        public static void Frame()
-        {
-            if (_cfg == null) return;
-            Watch();
-            if (!_navPending) return;
             try
             {
-                if (_root == null) { _navPending = false; return; }
+                var stage = root.GetComponentInChildren<Stage>(true);
+                if (stage != null && cfg.spawns != null && cfg.spawns.Length > 0)
+                {
+                    stage.pawnSpawnGridIds = new Il2CppStructArray<int>(cfg.spawns);
+                    Log("salidas: " + string.Join(", ", cfg.spawns));
+                }
+            }
+            catch (Exception e) { Warn("salidas: " + e.Message); }
+            try { FitExtras(root, cfg); } catch (Exception e) { Warn("camara/paneles: " + e.Message); }
+            Log($"distribucion aplicada en {sw.ElapsedMilliseconds} ms");
+        }
+
+        // limites de la camara y paneles del suelo digital, al tamano de la nueva casa
+        static void FitExtras(Transform root, StageLayout cfg)
+        {
+            if (cfg.bounds == null || cfg.bounds.Length != 4) return;
+            float x0 = cfg.bounds[0], z0 = cfg.bounds[1], x1 = cfg.bounds[2], z1 = cfg.bounds[3];
+            float cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0;
+            var cam = root.Find("CameraRange");
+            if (cam != null)
+            {
+                cam.position = new Vector3(cx, cam.position.y, cz + 1f);
+                cam.localScale = new Vector3((w + 12f) / 10f, cam.localScale.y, (d + 14f) / 10f);
+            }
+            var panels = root.Find("Digital_Panel");
+            if (panels == null || panels.childCount == 0) return;
+            var list = new List<Transform>();
+            for (int i = 0; i < panels.childCount; i++) list.Add(panels.GetChild(i));
+            var tpl = list[0];
+            float y = tpl.position.y, sy = tpl.localScale.y;
+            for (int i = 0; i < cfg.rooms.Length; i++)
+            {
+                var r = cfg.rooms[i];
+                if (r.w <= 0 || r.d <= 0) continue;
+                Transform p = i < list.Count ? list[i]
+                    : UnityEngine.Object.Instantiate((UnityEngine.Object)tpl.gameObject, panels, false).Cast<GameObject>().transform;
+                p.position = new Vector3(r.x, y, r.z);
+                p.rotation = Quaternion.identity;
+                p.localScale = new Vector3((r.w + 1.4f) / 10f, sy, (r.d + 1.4f) / 10f);
+            }
+            for (int i = cfg.rooms.Length; i < list.Count; i++) list[i].gameObject.SetActive(false);
+        }
+
+        // ---------------------------------------------------------------- duplicados y puntos de interes
+        // Stage.Start: todas las piezas del escenario ya estan inicializadas (y el juego aun no ha
+        // hecho sus listas de habitaciones, puertas y muebles).
+        static void BeforeStageStart(Stage __instance)
+        {
+            if (!_armed || _cfg == null || _started) return;
+            try
+            {
+                if (__instance.gameObject.scene.handle != _doneHandle) return;
+                _started = true;
+                Physics.SyncTransforms();
+                int n = 0;
+                foreach (var j in _jobs)
+                {
+                    try
+                    {
+                        var c = UnityEngine.Object.Instantiate((UnityEngine.Object)j.src, j.pos, j.rot, j.src.transform.parent).Cast<GameObject>();
+                        c.name = j.src.name + " (csr)";
+                        _placed[j.k] = c; n++;
+                    }
+                    catch (Exception e) { Warn($"no pude duplicar '{j.src.name}': {e.Message}"); }
+                }
+                _jobs.Clear();
+                Physics.SyncTransforms();
+                if (n > 0) Log($"piezas duplicadas: {n}");
+                if (_skipped > 0) Log($"piezas escondidas sin inicializar: {_skipped}");
+                Locators(__instance, _cfg);
+                try { FogMask(_root, _cfg); } catch (Exception e) { Warn("niebla: " + e.Message); }
+            }
+            catch (Exception e) { Plugin.L.LogError(e); }
+            finally { _ready = true; }
+        }
+
+        // La niebla que rodea la casa (GB_Plane_Top / _Under) lleva una textura con el hueco de la casa
+        // original. Se pinta una nueva con el hueco de la distribucion: R = disco suave general,
+        // G = 0 dentro de la casa, B = 0 dentro y un halo ancho alrededor (como las del juego).
+        static Texture2D _fogTex;
+        static float Smooth(float a, float b, float x)
+        {
+            float t = Mathf.Clamp01((x - a) / (b - a));
+            return t * t * (3f - 2f * t);
+        }
+
+        static void FogMask(Transform root, StageLayout cfg)
+        {
+            const int N = 256;
+            const float KU = 3.273f, CU = 0.5008f, KV = 3.262f, CV = 0.4976f;     // uv de la malla GB_Normal
+            var planes = new List<Transform>();
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                if (t.name == "GB_Plane_Top" || t.name == "GB_Plane_Under") planes.Add(t);
+            if (planes.Count == 0) return;
+            var plane = planes[0];
+            // huella de la casa: habitaciones y porche de la puerta principal
+            var rects = new List<Vector4>();
+            foreach (var r in cfg.rooms)
+                if (r.w > 0 && r.d > 0) rects.Add(new Vector4(r.x - r.w / 2, r.z - r.d / 2, r.x + r.w / 2, r.z + r.d / 2));
+            foreach (var p in cfg.pieces ?? Array.Empty<LPose>())
+            {
+                if (p.name == null || !p.name.StartsWith("Out_door")) continue;
+                var f = Quaternion.Euler(0, p.yaw, 0) * Vector3.forward;           // hacia dentro de la casa
+                float cx = p.x - f.x * 1.2f, cz = p.z - f.z * 1.2f;
+                bool alongX = Mathf.Abs(f.z) > 0.5f;
+                float hx = alongX ? 3f : 1.3f, hz = alongX ? 1.3f : 3f;
+                rects.Add(new Vector4(cx - hx, cz - hz, cx + hx, cz + hz));
+            }
+            var inside = new bool[N * N];
+            for (int py = 1; py < N - 1; py++)
+                for (int px = 1; px < N - 1; px++)
+                {
+                    float u = (px + 0.5f) / N, v = (py + 0.5f) / N;
+                    var w = plane.TransformPoint(new Vector3((CU - u) / KU, 0, (CV - v) / KV));
+                    foreach (var r in rects)
+                        if (w.x >= r.x && w.x <= r.z && w.z >= r.y && w.z <= r.w) { inside[py * N + px] = true; break; }
+                }
+            float upp = (plane.TransformPoint(new Vector3(1f / (KU * N), 0, 0)) - plane.TransformPoint(Vector3.zero)).magnitude;
+            // distancia (en pixeles) al borde de la casa, por dentro y por fuera
+            float[] Dist(bool target)
+            {
+                var d = new float[N * N];
+                for (int i = 0; i < d.Length; i++) d[i] = inside[i] == target ? 0f : 1e6f;
+                for (int y = 0; y < N; y++)
+                    for (int x = 0; x < N; x++)
+                    {
+                        int i = y * N + x; float m = d[i];
+                        if (x > 0) m = Mathf.Min(m, d[i - 1] + 1f);
+                        if (y > 0) m = Mathf.Min(m, d[i - N] + 1f);
+                        if (x > 0 && y > 0) m = Mathf.Min(m, d[i - N - 1] + 1.4142f);
+                        if (x < N - 1 && y > 0) m = Mathf.Min(m, d[i - N + 1] + 1.4142f);
+                        d[i] = m;
+                    }
+                for (int y = N - 1; y >= 0; y--)
+                    for (int x = N - 1; x >= 0; x--)
+                    {
+                        int i = y * N + x; float m = d[i];
+                        if (x < N - 1) m = Mathf.Min(m, d[i + 1] + 1f);
+                        if (y < N - 1) m = Mathf.Min(m, d[i + N] + 1f);
+                        if (x < N - 1 && y < N - 1) m = Mathf.Min(m, d[i + N + 1] + 1.4142f);
+                        if (x > 0 && y < N - 1) m = Mathf.Min(m, d[i + N - 1] + 1.4142f);
+                        d[i] = m;
+                    }
+                return d;
+            }
+            var toHouse = Dist(true);      // 0 dentro; fuera, lo que falta para llegar a la casa
+            var toOut = Dist(false);       // 0 fuera; dentro, lo que falta para salir
+            var data = new byte[N * N * 4];
+            for (int py = 0; py < N; py++)
+                for (int px = 0; px < N; px++)
+                {
+                    int i = py * N + px;
+                    float sd = (toHouse[i] - toOut[i]) * upp;                       // unidades; negativo dentro
+                    float u = (px + 0.5f) / N - 0.5f, v = (py + 0.5f) / N - 0.5f;
+                    data[i * 4] = (byte)(251f * (1f - Smooth(0.283f, 0.459f, Mathf.Sqrt(u * u + v * v))));
+                    data[i * 4 + 1] = (byte)(255f * Smooth(-2.5f, 1.5f, sd));
+                    data[i * 4 + 2] = (byte)(255f * Smooth(-3f, 9f, sd));
+                    data[i * 4 + 3] = 255;
+                }
+            if (_fogTex != null) UnityEngine.Object.Destroy(_fogTex);
+            _fogTex = new Texture2D(N, N, TextureFormat.RGBA32, false, true) { name = "csr_fog_mask" };
+            _fogTex.wrapMode = TextureWrapMode.Clamp;
+            _fogTex.filterMode = FilterMode.Bilinear;
+            _fogTex.LoadRawTextureData(new Il2CppStructArray<byte>(data));
+            _fogTex.Apply(false, false);
+            int n = 0;
+            foreach (var t in planes)
+            {
+                var r = t.GetComponent<Renderer>();
+                if (r == null) continue;
+                r.material.SetTexture("_Main_Texture", _fogTex);
+                n++;
+            }
+            Log($"niebla: hueco de la casa repintado en {n} capas");
+        }
+
+        static GameObject Placed(int k) => k >= 0 && k < _placed.Length ? _placed[k] : null;
+
+        static Transform Locator(Transform reuse, Transform like, string name, float x, float z, float yaw)
+        {
+            var t = reuse;
+            if (t == null)
+            {
+                var go = new GameObject(name);
+                t = go.transform;
+                t.SetParent(like.parent, false);
+            }
+            t.position = new Vector3(x, like.position.y, z);
+            t.rotation = Quaternion.Euler(0, yaw, 0);
+            return t;
+        }
+
+        static void Locators(Stage stage, StageLayout cfg)
+        {
+            var t0 = stage.threatLocateDatas;
+            if (cfg.wolves != null && t0 != null && t0.Length > 0)
+            {
+                var arr = new Il2CppReferenceArray<ThreatLocateData>(cfg.wolves.Length);
+                int bad = 0;
+                for (int i = 0; i < cfg.wolves.Length; i++)
+                {
+                    var w = cfg.wolves[i];
+                    var d = new ThreatLocateData();
+                    d.locator = Locator(i < t0.Length ? t0[i].locator : null, t0[0].locator, "CSR_WolfLocator", w.x, w.z, w.yaw);
+                    var win = Placed(w.window);
+                    d.entryWindowShelf = win != null ? win.GetComponent<WindowShelf>() : null;
+                    if (d.entryWindowShelf == null) bad++;
+                    d.threatTypeData = t0[0].threatTypeData;
+                    arr[i] = d;
+                }
+                stage.threatLocateDatas = arr;
+                Log($"lobos: {arr.Length} entradas" + (bad > 0 ? $" ({bad} SIN VENTANA)" : ""));
+            }
+            var g0 = stage.gaspipeLocateDatas;
+            if (cfg.gas != null && g0 != null && g0.Length > 0)
+            {
+                var arr = new Il2CppReferenceArray<GaspipeLocateData>(cfg.gas.Length);
+                for (int i = 0; i < cfg.gas.Length; i++)
+                {
+                    var d = new GaspipeLocateData();
+                    d.locator = Locator(i < g0.Length ? g0[i].locator : null, g0[0].locator, "CSR_GaspipeLocator", cfg.gas[i].x, cfg.gas[i].z, 0);
+                    d.gimmickTypeData = g0[0].gimmickTypeData;
+                    arr[i] = d;
+                }
+                stage.gaspipeLocateDatas = arr;
+                Log($"gas: {arr.Length} puntos");
+            }
+            var b0 = stage.bywayLocateDatas;
+            if (cfg.byways != null && b0 != null && b0.Length > 0)
+            {
+                var arr = new Il2CppReferenceArray<BywayLocateData>(cfg.byways.Length);
+                int bad = 0;
+                for (int i = 0; i < cfg.byways.Length; i++)
+                {
+                    var b = cfg.byways[i];
+                    var d = new BywayLocateData();
+                    d.locator = Locator(i < b0.Length ? b0[i].locator : null, b0[0].locator, "CSR_BywayLocator", b.x, b.z, b.yaw);
+                    var shelves = new List<Shelf>();
+                    foreach (var k in b.shelves ?? Array.Empty<int>())
+                    {
+                        var go = Placed(k);
+                        var sh = go != null ? go.GetComponent<Shelf>() : null;
+                        if (sh != null) shelves.Add(sh);
+                    }
+                    if (shelves.Count < 2) bad++;
+                    d.shelfs = new Il2CppReferenceArray<Shelf>(shelves.ToArray());
+                    d.bywayTypeData = b0[0].bywayTypeData;
+                    arr[i] = d;
+                }
+                stage.bywayLocateDatas = arr;
+                Log($"pasadizos: {arr.Length}" + (bad > 0 ? $" ({bad} SIN SUS DOS MUEBLES)" : ""));
+            }
+        }
+
+        // ---------------------------------------------------------------- navegacion, con todo cargado
+        public static void Frame()
+        {
+            if (!_pending || !_armed || _cfg == null) return;
+            try
+            {
+                if (_root == null) { _pending = false; return; }
                 if (!_scene.isLoaded) return;
-                _navPending = false;
+                if (!_ready && ++_frames < 600) return;          // espera a Stage.Start (duplicados)
+                _pending = false;
+                if (!_ready) Warn("Stage.Start no ha llegado: sigo sin las piezas duplicadas");
                 Report();
                 if (_cfg.navmesh == "keep") Log("navmesh: sin tocar");
-                else if (_cfg.navmesh == "offset") NavOffset();
-                else if (!NavRebuild()) { Warn("reconstruccion fallida: se usa la original desplazada"); NavOffset(); }
-                WarpAgents();
+                else if (!NavRebuild()) Warn("no pude reconstruir la navegacion: los personajes pueden no moverse bien");
                 Probe();
             }
             catch (Exception e) { Plugin.L.LogError(e); }
         }
 
-        // Avisa si algo del juego vuelve a colocar las piezas movidas (y las deja donde las pusimos).
-        static void Watch()
-        {
-            if (_watch.Count == 0 || Time.unscaledTime > _watchUntil) return;
-            for (int i = 0; i < _watch.Count; i++)
-            {
-                var (t, local) = _watch[i];
-                if (t == null) continue;
-                if ((t.localPosition - local).sqrMagnitude > 0.0001f)
-                {
-                    Warn($"'{t.name}' se ha movido solo de {local} a {t.localPosition} (seg {Time.unscaledTime:0.0}); se recoloca");
-                    t.localPosition = local;
-                    Physics.SyncTransforms();
-                }
-            }
-            if (_root != null && Time.frameCount % 300 == 0 && _agentReports < 4)
-            {
-                _agentReports++;
-                var off = new List<string>();
-                foreach (var a in UnityEngine.Object.FindObjectsOfType<NavMeshAgent>(true))
-                    if (!a.isOnNavMesh && off.Count < 12)
-                        off.Add($"{a.gameObject.name}{(a.enabled ? "" : "(apagado)")} en {a.transform.position}");
-                Log(off.Count == 0 ? "todos los agentes estan en la navmesh" : "agentes fuera de la navmesh: " + string.Join("; ", off));
-            }
-        }
+        static int PosId(Vector3 p) => GridManager.PositionToId(ref p);
 
         static void Report()
         {
-            var rooms = _root.GetComponentsInChildren<Room>(true);
-            var doors = _root.GetComponentsInChildren<Door>(true);
-            var shelves = _root.GetComponentsInChildren<Shelf>(true);
-            Log($"cargado: {rooms.Length} habitaciones, {doors.Length} puertas, {shelves.Length} muebles/ventanas");
-            foreach (var r in rooms)
+            int rooms = 0, doors = 0, shelves = 0;
+            foreach (var r in _root.GetComponentsInChildren<Room>(false))
             {
+                rooms++;
                 var p = r.transform.position;
-                Log($"  {r.gameObject.name} en ({p.x:0.#},{p.z:0.#}) casilla {PosId(p)}");
+                Log($"  {r.gameObject.name} en ({p.x:0.#},{p.z:0.#}) giro {r.transform.eulerAngles.y:0} casilla {PosId(p)}");
             }
-        }
-
-        static int PosId(Vector3 p) => GridManager.PositionToId(ref p);
-
-        static NavMeshData Baked()
-        {
-            NavMeshData best = null;
-            foreach (var d in Resources.FindObjectsOfTypeAll<NavMeshData>())
-            {
-                Log($"NavMeshData '{d.name}' ({d.GetInstanceID()})");
-                if (best == null || d.GetInstanceID() > 0) best = d;   // la del escenario es un asset (id > 0)
-            }
-            return best;
-        }
-
-        static void NavOffset()
-        {
-            var baked = Baked();
-            if (baked == null) { Warn("no se encontro la NavMesh original"); return; }
-            RawNav.RemoveAll();
-            int h = RawNav.Add(baked.Pointer, _off);
-            Log($"navmesh: original desplazada (instancia {h})");
+            foreach (var d in _root.GetComponentsInChildren<Door>(false)) doors++;
+            foreach (var s in _root.GetComponentsInChildren<Shelf>(false)) shelves++;
+            Log($"en escena: {rooms} habitaciones (con las interiores), {doors} puertas, {shelves} muebles y ventanas");
         }
 
         static bool NavRebuild()
@@ -327,27 +669,36 @@ namespace CrimeSightRevival.Mods
             {
                 var go = mf.gameObject;
                 if (!go.name.StartsWith("NAV_")) continue;
+                // los objetos NAV_ estan siempre apagados: cuenta si lo esta la pieza a la que pertenecen
+                var owner = mf.transform.parent;
+                if (owner == null || !owner.gameObject.activeInHierarchy) continue;
                 var orig = mf.sharedMesh;
                 if (orig == null) continue;
                 var mesh = Readable(orig, src);
                 if (mesh == null) { missing++; Warn("sin datos: " + orig.name); continue; }
-                bool floor = go.name.StartsWith("NAV_FLOOR");
+                // Todo como en la NavMesh original: caminable. Los muebles no generan suelo util (su
+                // parte de arriba queda aislada), y los huecos de las paredes los tapan los obstaculos.
                 var m = mf.transform.localToWorldMatrix;
-                sources.Add(new RawNav.Source { transform = m, shape = 0, area = floor ? 0 : 1, instanceID = mesh.GetInstanceID() });
-                if (floor) floors++; else blocks++;
+                sources.Add(new RawNav.Source { transform = m, shape = 0, area = 0, instanceID = mesh.GetInstanceID() });
+                if (go.name.StartsWith("NAV_FLOOR")) floors++; else blocks++;
                 var wb = WorldBounds(mesh.bounds, m);
                 if (!any) { all = wb; any = true; } else all.Encapsulate(wb);
             }
-            Log($"fuentes: {floors} suelos, {blocks} bloqueos, {missing} sin datos; limites {all.center}/{all.size}");
-            if (!any || floors == 0) return false;
+            // El juego aparca a los personajes en (0,0,0) y (2,0,0) antes de colocarlos (y a los que no
+            // juegan, todo el rato). Si ahi no hay casa, Unity se queja sin parar: se deja una isla de
+            // suelo invisible (no conecta con la casa si no la toca).
+            var park = new Bounds(new Vector3(1f, -0.1f, 0f), new Vector3(8f, 0.2f, 6f));
+            sources.Add(new RawNav.Source { transform = Matrix4x4.TRS(park.center, Quaternion.identity, Vector3.one), size = park.size, shape = 2, area = 0 });
+            if (!any || floors == 0) { Warn("no hay suelos para la navegacion"); return false; }
+            all.Encapsulate(park);
             all.Expand(2f);
+            Log($"fuentes: {floors} suelos, {blocks} bloqueos, {missing} sin datos; limites {all.center}/{all.size}");
             var settings = RawNav.Settings.Default();
             IntPtr data = RawNav.Build(settings, sources, all, out bool ok);
-            Log($"construccion: ok={ok} en {sw.ElapsedMilliseconds} ms");
             if (!ok || data == IntPtr.Zero) return false;
             RawNav.RemoveAll();
             int h = RawNav.Add(data, Vector3.zero);
-            Log($"navmesh: reconstruida (instancia {h})");
+            Log($"navmesh: reconstruida en {sw.ElapsedMilliseconds} ms (instancia {h})");
             return h != 0;
         }
 
@@ -406,18 +757,7 @@ namespace CrimeSightRevival.Mods
             return wb;
         }
 
-        static void WarpAgents()
-        {
-            int n = 0, off = 0;
-            foreach (var a in UnityEngine.Object.FindObjectsOfType<NavMeshAgent>())
-            {
-                if (!a.enabled) continue;
-                if (a.Warp(a.transform.position)) n++; else off++;
-            }
-            Log($"agentes recolocados: {n} (fuera de la navmesh: {off})");
-        }
-
-        // Comprueba que hay suelo navegable en las salidas y en el centro de cada habitacion.
+        // Comprueba que hay suelo navegable en las salidas y en cada habitacion, y que los personajes lo pisan.
         static void Probe()
         {
             var stage = _root.GetComponentInChildren<Stage>(true);
@@ -429,15 +769,18 @@ namespace CrimeSightRevival.Mods
                     int id = ids[i];
                     var p = GridManager.IdToPosition(ref id);
                     bool hit = NavMesh.SamplePosition(p, out var h, 2f, -1);
-                    Log($"salida {i}: casilla {ids[i]} pos {p} -> {(hit ? $"navegable a {h.distance:0.00}" : "SIN NAVMESH")}");
+                    if (!hit || h.distance > 0.5f) Warn($"salida {i}: casilla {ids[i]} pos {p} -> {(hit ? $"suelo a {h.distance:0.00}" : "SIN NAVMESH")}");
                 }
             }
-            foreach (var r in _root.GetComponentsInChildren<Room>(true))
+            int bad = 0;
+            foreach (var r in _root.GetComponentsInChildren<Room>(false))
             {
-                var p = r.transform.position;
-                bool hit = NavMesh.SamplePosition(p, out var h, 3f, -1);
-                Log($"  {r.gameObject.name}: {(hit ? $"navegable a {h.distance:0.00}" : "SIN NAVMESH")}");
+                if (!NavMesh.SamplePosition(r.transform.position, out _, 3f, -1)) { bad++; Warn($"{r.gameObject.name}: SIN NAVMESH"); }
             }
+            int off = 0;
+            foreach (var a in UnityEngine.Object.FindObjectsOfType<NavMeshAgent>())
+                if (a.enabled && !a.Warp(a.transform.position)) off++;
+            Log($"navegacion comprobada: {bad} habitaciones sin suelo, {off} personajes fuera");
         }
     }
 

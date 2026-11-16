@@ -96,6 +96,16 @@ footer .path{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 footer a{color:#c9ccff;text-decoration:none}
 footer a.kofi{color:#ffb37a}footer a:hover{text-decoration:underline}
 footer .ver{margin-left:8px;opacity:.6}
+footer .updpill{display:none;margin-left:8px;padding:2px 9px;border-radius:999px;background:var(--accent);color:#fff;font-size:11px;cursor:pointer;text-decoration:none}
+footer .updpill.on{display:inline-block}
+#update .box{display:flex;flex-direction:column;max-height:86vh}
+.updnotes{overflow:auto;min-height:60px;background:rgba(5,6,20,.6);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.5}
+.updnotes .v{font-weight:600;margin:10px 0 4px}
+.updnotes .v:first-child{margin-top:0}
+.updnotes .v span{font-weight:400;color:var(--dim);margin-left:6px;font-size:12px}
+.updnotes ul{margin:0;padding-left:18px}
+.updnotes .ln{margin:2px 0}
+.updnotes .none{color:var(--dim);font-style:italic}
 .toast{position:fixed;left:50%;bottom:26px;z-index:6;max-width:80vw;transform:translateX(-50%) translateY(20px);opacity:0;background:#1d1f4a;border:1px solid var(--line);
   padding:10px 16px;border-radius:10px;transition:.25s;pointer-events:none}
 .toast.on{opacity:1;transform:translateX(-50%)}
@@ -136,6 +146,7 @@ footer .ver{margin-left:8px;opacity:.6}
 .stxt input{flex:1;min-width:0}
 .modlist{background:rgba(5,6,20,.6);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:14px;font-size:13px;line-height:1.7}
 </style>
+<link rel="stylesheet" href="stage.css">
 </head>
 <body>
 <div id="bg"></div>
@@ -199,7 +210,7 @@ footer .ver{margin-left:8px;opacity:.6}
     <span><span data-t="revival_by"></span> <a href="#" onclick="api('open_url','https://github.com/Amras95');return false">Amras95</a> ·
       <a href="#" onclick="api('open_url','https://x.com/AmrasMithandir');return false">@AmrasMithandir</a> ·
       <a href="#" class="kofi" onclick="api('open_url',STATE.kofi);return false">☕ <span data-t="kofi"></span></a>
-      <span class="ver" id="ver"></span></span>
+      <span class="ver" id="ver"></span><a href="#" class="updpill" id="updpill" onclick="showUpdate();return false"></a></span>
   </footer>
 </div>
 <div class="modal" id="progress" onclick="if(event.target===this)closeProgress()">
@@ -235,6 +246,7 @@ footer .ver{margin-left:8px;opacity:.6}
       <button class="btn ghost small" id="bepbtn" onclick="toggleBep()"></button>
     </div>
     <div class="actions">
+      <button class="btn ghost small" style="margin-right:auto" onclick="closeMods();SE.open()" data-t="stage_btn"></button>
       <button class="btn small" onclick="newMod()" data-t="mods_new"></button>
       <button class="btn ghost small" onclick="api('mods_open')" data-t="mods_open"></button>
       <button class="btn ghost small" onclick="loadMods()" data-t="mods_reload"></button>
@@ -272,8 +284,80 @@ footer .ver{margin-left:8px;opacity:.6}
     </div>
   </div>
 </div>
+<div class="modal" id="update">
+  <div class="box">
+    <h3 data-t="update_title"></h3>
+    <p id="updver"></p>
+    <div class="sub" data-t="update_changes"></div>
+    <div class="updnotes" id="updnotes"></div>
+    <p data-t="update_hint"></p>
+    <div class="actions">
+      <button class="btn ghost small" onclick="updateLater()" data-t="update_later"></button>
+      <button class="btn small" onclick="updateNow()" data-t="update_now"></button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
+<div class="modal" id="stage">
+  <div class="box stagebox">
+    <div class="shead">
+      <h3 data-t="stage_title"></h3>
+      <div class="sbar">
+        <label data-t="stage_base"></label><select id="stbase" onchange="SE.setBase(this.value)"></select>
+        <label data-t="stage_name"></label><input id="stname" maxlength="60">
+        <button class="btn small" onclick="SE.save()" data-t="stage_save"></button>
+        <button class="btn ghost small" id="stdel" onclick="SE.del()" data-t="stage_delete"></button>
+      </div>
+    </div>
+    <div class="sbody">
+      <div class="sleft">
+        <div class="stools" id="sttools">
+          <button data-tool="move" onclick="SE.setTool('move')" data-t="stage_tool_move"></button>
+          <button data-tool="gas" onclick="SE.setTool('gas')" data-t="stage_tool_gas"></button>
+          <button data-tool="spawn" onclick="SE.setTool('spawn')" data-t="stage_tool_spawn"></button>
+        </div>
+        <div class="shelp" id="sthelp"></div>
+        <div class="ssel" id="stsel">
+          <button class="btn ghost small" onclick="SE.rotate()" data-t="stage_rotate"></button>
+          <button class="btn ghost small" onclick="SE.remove()" data-t="stage_remove"></button>
+        </div>
+        <div class="sub" data-t="stage_add"></div>
+        <div class="spal" id="stpal"></div>
+      </div>
+      <div class="scanvas"><canvas id="stcv"></canvas></div>
+      <div class="sright">
+        <div class="sprob" id="stprob"></div>
+        <div class="sstats" id="ststats"></div>
+        <div class="sub" data-t="stage_mine" style="margin:2px 0 -2px"></div>
+        <div class="smine" id="stmine"></div>
+        <div class="ssel">
+          <button class="btn ghost small" onclick="SE.imp()" data-t="stage_import"></button>
+          <button class="btn ghost small" id="stexp" onclick="SE.exp()" data-t="stage_export"></button>
+        </div>
+        <div class="sleg">
+          <span><i style="background:#ffb347"></i><span data-t="stage_l_door"></span></span>
+          <span><i style="background:#8a8fb8"></i><span data-t="stage_l_blocked"></span></span>
+          <span><i style="background:#e04dff"></i><span data-t="stage_l_byway"></span></span>
+          <span><i style="background:#4fe3ff"></i><span data-t="stage_l_window"></span></span>
+          <span><i style="background:#ff6a3d"></i><span data-t="stage_l_wolf"></span></span>
+          <span><i style="background:#7dffb0"></i><span data-t="stage_l_entrance"></span></span>
+          <span><i style="background:#c8ff5a"></i><span data-t="stage_l_gas"></span></span>
+          <span><i style="background:#fff"></i><span data-t="stage_l_spawn"></span></span>
+        </div>
+        <div class="sstats" data-t="stage_only_host"></div>
+      </div>
+    </div>
+    <div class="sfoot">
+      <span id="stactive"></span>
+      <button class="btn ghost small" onclick="SE.setBase(document.getElementById('stbase').value)" data-t="stage_original"></button>
+      <button class="btn ghost small" id="ststop" onclick="SE.stop()" data-t="stage_test_stop"></button>
+      <button class="btn small" id="sttest" onclick="SE.test()" data-t="stage_test"></button>
+      <button class="btn ghost small" onclick="SE.close()" data-t="close"></button>
+    </div>
+    <div class="sload" id="stload"><div class="spinner"></div><div id="stloadmsg"></div></div>
+  </div>
+</div>
 <script>
 const $=s=>document.querySelector(s);
 let STATE=null, MODE='solo', BUSY=false, TX={};
@@ -430,10 +514,48 @@ window.ui={
     $('#modask').classList.add('on')},
 };
 
+/* ---- actualizacion del lanzador: se ofrece con sus novedades y el jugador decide ---- */
+let UPD=null;
+function mdLine(t){return esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`(.+?)`/g,'<code>$1</code>')}
+function updNotes(notes){
+  if(!notes||!notes.length)return `<div class="none">${esc(T('update_no_notes'))}</div>`;
+  let h='';
+  for(const n of notes){
+    h+=`<div class="v">v${esc(n.version)}<span>${esc(n.date||'')}</span></div>`;
+    let ul=false;
+    for(const raw of n.text.split('\n')){
+      const ln=raw.trim(); if(!ln)continue;
+      const m=ln.match(/^[-*•]\s+(.*)$/);
+      if(m){if(!ul){h+='<ul>';ul=true}h+=`<li>${mdLine(m[1])}</li>`}
+      else{if(ul){h+='</ul>';ul=false}h+=`<div class="ln">${mdLine(ln)}</div>`}
+    }
+    if(ul)h+='</ul>';
+  }
+  return h;
+}
+function setUpdate(u){
+  UPD=u;
+  const p=$('#updpill');p.textContent=T('update_pill',{v:u.version});p.classList.add('on');
+  if(!u.skipped)showUpdate();
+}
+function showUpdate(){
+  if(!UPD)return;
+  $('#updver').textContent=T('update_ver',{cur:UPD.current,v:UPD.version});
+  $('#updnotes').innerHTML=updNotes(UPD.notes);
+  $('#update').classList.add('on');
+}
+async function updateLater(){$('#update').classList.remove('on');await api('update_later')}
+async function updateNow(){
+  const r=await api('update_apply');
+  if(r&&r.error)return toast(r.error);
+  $('#update').classList.remove('on');
+}
+
 async function boot(){
   const s=await api('init');
   if(s) render(s);
   ui.loading(null);
+  if(s&&s.update) setUpdate(s.update);
 }
 window.addEventListener('pywebviewready',boot);
 /* Linux / Steam Deck: la pagina va en el navegador y recibe los avisos de Python sondeando */
@@ -448,5 +570,6 @@ async function pollEvents(){
 if(window.CSR_HTTP) window.addEventListener('DOMContentLoaded',()=>{ boot(); pollEvents() });
 if(window.MOCK) setTimeout(()=>{ if(!STATE) boot() },50);
 </script>
+<script src="stage.js"></script>
 </body>
 </html>

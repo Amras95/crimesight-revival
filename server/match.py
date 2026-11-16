@@ -61,6 +61,31 @@ DEFAULT_AI_DIFFICULTY = "normal"   # se puede cambiar con --ai-difficulty
 STAGES = ["Stage_Yokn", "Stage_Yokn_v1030", "Stage_Yokn_v1040", "Stage_Yokn_v1050", "Stage_Yokn_v1060"]
 # Escenarios que anade el plugin de BepInEx (no salen en "Random"). El plugin carga el escenario real.
 EXTRA_STAGES = ["Stage_Yokn_CSRTest"]
+CUSTOM_STAGE_PREFIX = "Stage_CSR_"      # escenarios hechos con el creador de escenarios (uno por nombre)
+# Mientras a un jugador le falta el escenario personalizado elegido, su nombre lo dice en la sala
+# (en el idioma del anfitrion): (su lanzador se lo esta bajando, no lo tiene ni lo va a tener)
+STAGE_WAIT = {
+    "ES": ("cargando escenario…", "sin el escenario"),
+    "EN": ("loading stage…", "stage missing"),
+    "FR": ("chargement de la carte…", "carte manquante"),
+    "IT": ("caricamento mappa…", "mappa mancante"),
+    "DE": ("Karte wird geladen…", "Karte fehlt"),
+    "PT": ("carregando cenário…", "sem o cenário"),
+    "RU": ("загрузка карты…", "нет карты"),
+    "JP": ("ステージ読み込み中…", "ステージなし"),
+    "KO": ("스테이지 로딩 중…", "스테이지 없음"),
+    "CN": ("正在加载场景…", "缺少场景"),
+    "TW": ("正在載入場景…", "缺少場景"),
+}
+
+# Stickers gratuitos del juego con los que contestan las IA: (tipo, posicion en la lista, texto del registro).
+# Sin los de sospecha (un sticker de una IA no debe parecer una pista) ni los de pago.
+BOT_STAMPS = [(28, 0, "hello"), (8, 1, "goodJob"), (37, 2, "justMoment"), (29, 3, "smirk"), (1, 8, "why"),
+              (31, 10, "worried"), (2, 11, "noWay"), (4, 12, "relieved"), (5, 13, "frightened"), (32, 14, "scream"),
+              (34, 15, "please"), (0, 16, "roger")]
+BOT_STAMP_CHANCE = 0.7          # probabilidad de que alguna IA conteste a un sticker
+BOT_STAMP_QUIET = 2.5           # segundos sin contestar despues de hacerlo (para no llenar la pantalla)
+ROOM_STAMP_ROW = 92.5           # en la sala, lo que baja el sticker por cada fila de la lista de jugadores
 # El juego deja elegir "Random" como escenario y manda ese nombre tal cual: el servidor oficial lo
 # cambiaba por uno real al empezar. Si le llega "Random", el juego intenta cargar una escena que no
 # existe y se queda en negro.
@@ -122,6 +147,13 @@ class Hub:
         for room in list(self.rooms.values()):
             if player_id in room.members:
                 room.settle_kill()
+
+    async def stage_poll(self):
+        """Avisa a las salas donde ha cambiado quien tiene (o no) el escenario personalizado elegido."""
+        for room in list(self.rooms.values()):
+            if room.phase == "lobby" and room.stage_wait() != room.stage_sig:
+                room.refresh_vars()
+                await room.control("ChangeSettings", None)
 
     def subscribe(self, sess, topic):
         sid = sess.sub_for(topic)
@@ -238,7 +270,7 @@ class Hub:
         echo = room is not None and "Control" in kw
         await self.emit(topic, kw, var=room.vars if room else None, exclude=None if echo else sess, eligible=eligible)
         if room is not None and "tag" in kw:
-            asyncio.ensure_future(room.on_player_message(sess, kw))
+            asyncio.ensure_future(room.on_player_message(sess, kw, eligible))
         call = opts.get("call")
         if isinstance(call, dict) and call.get("procedure"):
             self.deferred = []
@@ -353,6 +385,9 @@ class Room:
         self.assault = False       # hubo orden de Asalto este turno
         self.open_seats = 0        # huecos que el anfitrion reserva para humanos (expulsando a una IA)
         self.bot_task = None
+        self.stage_sig = {}        # jugadores a los que se espera por el escenario (lo que dicen las variables)
+        self.stamp_quiet = 0       # hasta cuando las IA no contestan a mas stickers
+        self.stamp_seq = 0
 
     # ---- miembros y variables
     def authrole(self, pid):
@@ -408,18 +443,50 @@ class Room:
             kw.update(extra)
             await self.hub.emit(self.topic, kw, var=self.vars)
 
-    async def on_player_message(self, sess, kw):
+    async def on_player_message(self, sess, kw, eligible=None):
         """Las IA contestan a los mensajes de coordinacion que se mandan los clientes entre si."""
         tag = kw.get("tag")
         if not self.bots() or not tag:
             return
-        if tag == "startInstruct":
+        if tag == "stamp":
+            await self.bot_stamp(sess, kw, eligible)
+        elif tag == "startInstruct":
             await asyncio.sleep(0.5)
             await self.bot_say("instruct", list=[])
         elif tag == "gameEndTimeUp":
             await self.bot_say("gameEndTimeUp")
         elif tag in ("instruct", "timeUp"):
             await self.bot_say("endWaitInstruct")
+
+    async def bot_stamp(self, sess, kw, eligible=None):
+        """Un jugador manda un sticker: a veces una IA (rara vez dos) contesta con otro al azar, para que
+        no parezca que juegas solo. Usan solo stickers gratuitos del juego y lo ve quien vio el del jugador."""
+        now = time.time()
+        if now < self.stamp_quiet or random.random() > BOT_STAMP_CHANCE or sess.player_id not in self.members:
+            return
+        self.stamp_quiet = now + BOT_STAMP_QUIET
+        try:
+            sender = int(kw.get("id", self.member_index(sess.player_id)))
+            base_y = int(kw.get("posposY", 0))
+        except (TypeError, ValueError):
+            return
+        bots = self.bots()
+        for n, pid in enumerate(random.sample(bots, 2 if len(bots) > 1 and random.random() < 0.2 else 1)):
+            await asyncio.sleep(random.uniform(0.9, 2.2) if n == 0 else random.uniform(0.4, 1.0))
+            if self.hub.rooms.get(self.id) is not self or pid not in self.members:
+                return
+            idx = self.member_index(pid)
+            typ, data_index, text = random.choice(BOT_STAMPS)
+            msg = dict(kw, id=idx, type=typ, setIndex=0, dataIndex=data_index)
+            if "createId" in kw:            # en partida: el sticker sale junto al del jugador y en el registro
+                self.stamp_seq += 1
+                msg.update(createId=(4000 + self.stamp_seq) * 16 + idx, parentCreateId=0, responseMsgId="",
+                           name=self.members[pid]["name"], logMsgId="ctg_name_log_stamp_" + text)
+                msg["posposX"] = int(kw.get("posposX", 0)) + random.choice((-14, 14)) * (n + 1)
+            else:                           # en la sala: sale junto a la fila de la IA
+                msg["posposY"] = round(base_y - ROOM_STAMP_ROW * (idx - sender))
+            targets = None if eligible is None else set(eligible) | {sess.player_id}
+            await self.hub.emit(self.topic, msg, var=self.vars, eligible=targets)
 
     async def _bot_heartbeat(self):
         """Durante la partida las IA confirman cada pocos segundos que estan listas."""
@@ -479,14 +546,16 @@ class Room:
                 v[var] = typ(self.settings[key])
         if self.current_stage:
             v["setting_stage"] = self.current_stage
+        wait = self.stage_sig = self.stage_wait()
         v["setting_capacity"] = self.shown_capacity()
         v["owner"] = self.owner
-        v["attendance"] = len(self.members)
+        # el juego solo deja empezar con la sala completa: mientras se espera a alguien, "falta uno"
+        v["attendance"] = len(self.members) - (1 if wait else 0)
         v["detective_count"] = sum(1 for m in self.members.values() if m["role"] in (ROLE_DETECTIVE, ROLE_WATSON))
         v["criminal_count"] = sum(1 for m in self.members.values() if m["role"] in (ROLE_CRIMINAL, ROLE_IRENE))
         for pid in self.ordered_members():
             m = self.members[pid]
-            v["player_" + pid] = m["name"]
+            v["player_" + pid] = f"{m['name']} ({wait[pid]})" if pid in wait else m["name"]
             v["role_" + pid] = int(m["role"])
             v["ready_" + pid] = bool(m.get("ready", False))
             v["match_count_" + pid] = int(m.get("match_count", 0))
@@ -514,6 +583,24 @@ class Room:
 
     def humans(self):
         return [pid for pid in self.members if pid in self.sessions and not self.sessions[pid].ws.closed]
+
+    def stage_wait(self, starting=False):
+        """Jugadores a los que se espera antes de poder empezar, porque no tienen (todavia) el escenario
+        personalizado elegido: {jugador: aviso que acompana a su nombre}. Vacio si se puede empezar."""
+        stage = self.settings.get("stage") or ""
+        if not starting and (self.phase != "lobby" or self.current_stage):
+            return {}
+        sync, missing = STAGE_WAIT.get(str(self.owner_lang() or "").upper(), STAGE_WAIT["EN"])
+        humans = self.humans()
+        if stage in EXTRA_STAGES:                    # "Escenario de pruebas": cada uno tiene el suyo
+            return {p: missing for p in humans if p != self.owner}
+        if not stage.startswith(CUSTOM_STAGE_PREFIX):
+            return {}
+        room_stages = getattr(self.hub.api, "stages", None)
+        if room_stages is None:
+            return {p: missing for p in humans}
+        states = {p: room_stages.state(stage, p) for p in humans}
+        return {p: sync if st == "sync" else missing for p, st in states.items() if st != "ok"}
 
     def settings_result(self):
         keys = ["campaign_id", "stage", "capacity", "time_limit", "max_turn", "private", "quick", "specify_roles",
@@ -608,9 +695,18 @@ class Room:
         return rc({})
 
     def pick_stage(self):
-        """Escenario real de esta partida: el elegido, o uno al azar si es "Random" (o desconocido)."""
+        """Escenario real de esta partida: el elegido, o uno al azar si es "Random" (o desconocido).
+        Un escenario del creador solo vale si todos los jugadores de la sala lo tienen igual (lo dice
+        el lanzador de cada uno). La sala no deja empezar mientras falte alguien; si aun asi llega la
+        orden, se juega uno normal y nadie se queda en negro."""
         stage = self.settings.get("stage") or ""
-        return stage if stage in STAGES or stage in EXTRA_STAGES else random.choice(STAGES)
+        if stage in STAGES:
+            return stage
+        if stage in EXTRA_STAGES or stage.startswith(CUSTOM_STAGE_PREFIX):
+            if not self.stage_wait(starting=True):
+                return stage
+            log.info("Escenario %s: no lo tienen todos los jugadores; se juega uno normal", stage)
+        return random.choice(STAGES)
 
     async def p_CancelCountDown(self, sess, p):
         self.current_stage = None

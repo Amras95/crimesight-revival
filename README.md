@@ -34,6 +34,9 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 > **Mods de stickers y avatares:** probados en solitario, con y sin recarga en caliente. La descarga de los
 > mods del anfitrión al unirse a su sala está probada en local, aún no entre dos personas.
 >
+> **Creador de escenarios (nuevo en la 1.1):** probado en solitario. Compartir escenarios con la sala aún
+> no está probado entre dos personas.
+>
 > **Linux / Steam Deck:** versión nueva, aún en pruebas.
 >
 > **Aún sin probar con personas:** partidas con **Watson** o **Irene** (3 o 4 jugadores) y el servidor propio
@@ -65,8 +68,10 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 
 5. Pulsa el botón y el juego se abre solo. Al cerrar el juego, termina la sesión.
 
-El lanzador se **actualiza solo** cada vez que se publica una versión nueva, y se muestra en el idioma
-en que tienes el juego (los 11 idiomas del juego).
+Cuando se publica una versión nueva, el lanzador **te avisa al abrirlo**, te enseña las novedades y tú
+decides si actualizas en ese momento o más tarde (queda un aviso junto al número de versión). Para jugar
+con otras personas, lo mejor es que todos tengáis la misma versión. El lanzador se muestra en el idioma en
+que tienes el juego (los 11 idiomas del juego).
 
 ### En la sala
 
@@ -146,6 +151,23 @@ juego abierto**, pulsa **Mods → Recarga en caliente → Activar**:
 - Los cambios nunca se aplican a mitad de partida (se esperan al menú), para que todos tengan la misma lista.
 - **Quitar BepInEx** (o «Dejar el juego original») lo borra todo y el juego vuelve a estar como siempre.
 
+## Creador de escenarios
+
+**Mods → Creador de escenarios** te deja recolocar las habitaciones de un escenario del juego y guardarlo
+como uno nuevo. Los escenarios originales no se tocan. Para jugarlos hace falta la recarga en caliente.
+
+- Mueve, gira, quita o repite habitaciones; cambia puertas por muebles o pasadizos; elige por qué ventanas
+  entran los perros salvajes, dónde hay gas y dónde empiezan los personajes. El creador avisa de lo que
+  impediría jugar el escenario, y «Prueba rápida» te deja verlo en el juego sin guardarlo.
+- Cada escenario guardado aparece en la lista de escenarios del juego con su nombre. Puedes guardar los que
+  quieras y tener hasta 20 activados a la vez; los desactivados conservan su diseño.
+- **Exportar / Importar** los comparte como archivos `.csrstage`. Solo llevan la distribución de las
+  habitaciones: nada del juego.
+- En una sala, todos se bajan los escenarios del anfitrión al unirse. Con un escenario personalizado elegido,
+  la partida no puede empezar hasta que todos lo tienen: el nombre de quien falta lo indica («cargando
+  escenario…», o «sin el escenario» si no tiene la recarga en caliente).
+- El creador lee las habitaciones de **tu** copia del juego; el proyecto no incluye ninguna.
+
 ## Qué funciona
 
 - Inicio de sesión, perfil, tutorial, ajustes y nivel.
@@ -163,6 +185,8 @@ juego abierto**, pulsa **Mods → Recarga en caliente → Activar**:
   avatar desbloqueado. El contenido Deluxe sigue dependiendo de tenerlo en Steam.
 - Los logros de Steam se siguen consiguiendo (los gestiona el propio juego con Steam).
 - Mods de stickers y avatares nuevos, compartidos con la sala, con recarga en caliente opcional.
+- Creador de escenarios, con escenarios compartidos con la sala.
+- Las IA contestan a tus stickers con otro al azar.
 
 ## Plataformas
 
@@ -195,6 +219,8 @@ WINEDLLOVERRIDES="winhttp=n,b" %command%
 3. Los jugadores usan «Servidor propio» con `IP_O_DOMINIO:18080` y la contraseña.
 4. Opcional: `--mods-dir CARPETA` ofrece a los jugadores los mods de esa carpeta (misma estructura que la
    carpeta de mods del lanzador; necesita `pip install pillow`).
+5. Opcional: `--stages-dir CARPETA` ofrece a los jugadores los escenarios del creador que haya en esa
+   carpeta (los `.json` de `%APPDATA%\CrimeSightRevival\stages`).
 
 La contraseña protege la sincronización de perfiles: el juego solo se identifica con su ID de Steam,
 así que un servidor sin contraseña permitiría a cualquiera hacerse pasar por otro jugador.
@@ -203,6 +229,8 @@ así que un servidor sin contraseña permitiría a cualquiera hacerse pasar por 
 
 - `4_lanzador.bat`: abre el lanzador con Python, sin compilar.
 - `crear_exe.bat`: crea `dist\CrimeSightRevival.exe` (versión de desarrollo, no se actualiza sola).
+- `CHANGELOG.md`: novedades de cada versión. Su primer bloque es lo que el lanzador enseña al ofrecer una
+  actualización, si el archivo cambia en la subida; si no, enseña el mensaje del commit.
 - `plugin/`: código del plugin opcional de BepInEx y su `.dll` ya compilado. Se compila contra los ensamblados
   que genera BepInEx 6 (IL2CPP) en `BepInEx\interop` al arrancar el juego por primera vez; no se incluye
   ningún archivo del juego.

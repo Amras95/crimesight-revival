@@ -3,7 +3,7 @@ Crea dist/CrimeSightRevival.exe (Windows) o dist/CrimeSightRevival (Linux / Stea
 PyInstaller (lo usan crear_exe.bat y GitHub Actions).
 
   python tools/build_exe.py            -> version "dev" (no se actualiza sola)
-  python tools/build_exe.py 1.0.12     -> version publicada (se actualiza desde GitHub)
+  python tools/build_exe.py 1.1.12     -> version publicada (se actualiza desde GitHub)
 
 El .exe no contiene ningun archivo de Konami: claves e ilustraciones se leen del juego de cada uno.
 """
@@ -19,7 +19,8 @@ open(vfile, "w", encoding="utf-8").write("\n".join(lines) + "\n")
 
 sep = ";" if os.name == "nt" else ":"
 hidden = ["server", "match", "ai", "stats", "cscrypto", "extract_keys", "patch_client", "credits_patch",
-          "upnp", "art", "modpack", "modimage", "modroom", "modinject", "netssl", "certifi", "browserui", "sessions", "app", "core", "i18n", "updater", "version"]
+          "upnp", "art", "modpack", "modimage", "modroom", "modinject", "netssl", "certifi", "browserui", "sessions", "app", "core", "i18n", "updater", "version",
+          "stagedata", "stagelayout", "stageroom"]
 args = ["--noconfirm", "--clean", "--onefile", "--windowed", "--name", "CrimeSightRevival",
         "--paths", "server", "--paths", "tools", "--paths", "launcher",
         "--add-data", f"launcher{os.sep}ui{sep}ui", "--add-data", f"launcher{os.sep}icon.ico{sep}.",

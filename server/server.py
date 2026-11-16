@@ -8,7 +8,7 @@ Fase 2: canal WebSocket/WAMP para salas y partidas (ver match.py).
 
 Uso: python server.py [--host 0.0.0.0] [--port 18080]
 """
-import argparse, hashlib, hmac, json, logging, os, secrets, sys, threading, time
+import argparse, asyncio, hashlib, hmac, json, logging, os, secrets, sys, threading, time
 
 from aiohttp import web, WSMsgType
 
@@ -16,6 +16,7 @@ import cscrypto
 import match
 import modpack
 import modroom
+import stageroom
 import stats
 
 API_PATH = "/cott/api/index.php"
@@ -347,6 +348,9 @@ async def handle_info(request):
     rs = request.app["room"].rs
     if rs["hash"]:
         info["mods"] = modpack.summary(rs)
+    stages = request.app["stages"].summary()
+    if stages:
+        info["stages"] = stages
     return web.json_response(info)
 
 
@@ -383,8 +387,45 @@ async def handle_mods_offer(request):
     return web.json_response({"status": status})
 
 
+async def handle_stages(request):
+    """Escenarios del creador que hay en la sala (los baja el lanzador al unirse y cuando cambian)."""
+    if not _password_ok(request):
+        return web.json_response({"error": "password"}, status=403)
+    return web.json_response(request.app["stages"].pack())
+
+
+async def handle_stages_have(request):
+    """El lanzador de un jugador dice que escenarios tiene listos: {"platform_id": ..., "have": {id: huella}}."""
+    if not _password_ok(request):
+        return web.json_response({"error": "password"}, status=403)
+    if (request.content_length or 0) > stageroom.MAX_BYTES:
+        return web.json_response({"error": "too_big"}, status=413)
+    try:
+        body = await request.json()
+        pid, _ = derived_ids(int(body.get("platform", 3)), str(body["platform_id"]))
+    except (ValueError, KeyError, TypeError):
+        return web.json_response({"error": "bad_request"}, status=400)
+    request.app["stages"].report(pid, body.get("have"), body.get("seen"))
+    await request.app["hub"].stage_poll()        # las salas se enteran al momento
+    return web.json_response({"ok": True})
+
+
+async def _stage_watch(app):
+    """Vigila que salas esperan a que alguien tenga el escenario elegido (y cuando dejan de esperar)."""
+    async def loop():
+        while True:
+            await asyncio.sleep(1)
+            try:
+                await app["hub"].stage_poll()
+            except Exception:  # noqa: BLE001
+                log.exception("Fallo vigilando los escenarios de las salas")
+    task = asyncio.ensure_future(loop())
+    yield
+    task.cancel()
+
+
 def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", data_dir=None, mods=None,
-              mods_dir=None, owner="", player_mods="ask", mod_names=None):
+              mods_dir=None, owner="", player_mods="ask", mod_names=None, stages=None, stages_dir=None):
     """player_mods: "ask" (el anfitrion decide desde el lanzador), "accept" (se aceptan solos) o
     "ignore" (servidor dedicado sin nadie que conteste)."""
     data_dir = data_dir or DATA_DIR
@@ -401,6 +442,10 @@ def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", 
     app.router.add_get("/revival/info", handle_info)
     app.router.add_get("/revival/mods", handle_mods)
     app.router.add_post("/revival/mods/offer", handle_mods_offer)
+    app.router.add_get("/revival/stages", handle_stages)
+    app.router.add_post("/revival/stages/have", handle_stages_have)
+    app["stages"] = api.stages = stageroom.StageRoom(list(stages or []) + stageroom.load_dir(stages_dir))
+    app.cleanup_ctx.append(_stage_watch)
     app["password"] = password or ""
     app["room"] = modroom.ModRoom(mods, mods_dir, owner=owner,
                                   offers_dir=None if player_mods == "ignore" else os.path.join(data_dir, "mods_offers"),
@@ -459,6 +504,11 @@ class BackgroundServer:
         """Los mods de la sala (el lanzador del anfitrion los cambia y contesta a las ofertas)."""
         return self.app["room"]
 
+    @property
+    def stages(self):
+        """Los escenarios del creador que hay en la sala."""
+        return self.app["stages"]
+
     def stop(self):
         if self.thread and self.thread.is_alive():
             self.loop.call_soon_threadsafe(self.loop.stop)
@@ -481,11 +531,13 @@ def main():
                     help="carpeta con mods de apariencia (stickers/avatares) que se ofrecen a los jugadores")
     ap.add_argument("--accept-player-mods", action="store_true",
                     help="usar en las salas los mods que traigan los jugadores (sin esto se ignoran)")
+    ap.add_argument("--stages-dir", default=None,
+                    help="carpeta con escenarios del creador de escenarios (.json) que se ofrecen a los jugadores")
     a = ap.parse_args()
     data_dir = a.data_dir or DATA_DIR
     setup_logging(data_dir, a.debug)
     app = build_app(a.port, a.password, a.public_url, a.ai_difficulty, data_dir, mods_dir=a.mods_dir,
-                    player_mods="accept" if a.accept_player_mods else "ignore")
+                    player_mods="accept" if a.accept_player_mods else "ignore", stages_dir=a.stages_dir)
     log.info("CRIMESIGHT Revival escuchando en http://%s:%d", a.host, a.port)
     web.run_app(app, host=a.host, port=a.port, print=None, access_log=None)
 

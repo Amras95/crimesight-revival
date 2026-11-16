@@ -19,6 +19,7 @@ from version import VERSION  # noqa: E402
 
 KOFI = "https://ko-fi.com/amrasmithandir95"
 SAVE_FILTER = "CRIMESIGHT Revival (*.csrsave)"
+STAGE_FILTER = "CRIMESIGHT Revival (*.csrstage)"
 ALL_FILTER = "All files (*.*)"
 # Tipos de dialogo de pywebview (iguales en 5.x y 6.x; los nombres antiguos estan obsoletos)
 DIALOGS = {"OPEN_DIALOG": 10, "FOLDER_DIALOG": 20, "SAVE_DIALOG": 30}
@@ -50,6 +51,7 @@ class Api:
         self._cancel = False
         self._mods_answer = None
         self._mods_event = threading.Event()
+        self._update = None
 
     # ---------------------------------------------------------------- estado
     def init(self):
@@ -60,7 +62,7 @@ class Api:
             core.save_config(self._cfg)
         gd = self._cfg.get("game_dir")
         self._update_lang()
-        self._self_update()
+        self._check_update()
         try:
             core.mods_dir()               # la carpeta de mods ya preparada desde el principio
         except OSError:
@@ -83,20 +85,47 @@ class Api:
         state = self._state()
         if notice:
             state["notice"] = notice
+        if self._update:
+            state["update"] = {"version": self._update["version"], "current": VERSION,
+                               "notes": self._update["notes"],
+                               "skipped": self._cfg.get("update_skipped") == self._update["version"]}
+        if _browser:        # los avisos de "cargando" llegan por otro camino y pueden adelantar a esta respuesta
+            js("loading", None)
         return state
 
-    def _self_update(self):
-        """Si hay una version nueva del lanzador en GitHub, se instala y se vuelve a abrir."""
+    def _check_update(self):
+        """Mira si hay una version nueva del lanzador. No se instala sola: se ofrece con sus novedades."""
         updater.cleanup_old()
-        upd = updater.check()
-        if not upd:
-            return
-        js("loading", t("updating", v=upd["version"]))
         try:
-            updater.apply(upd, progress=lambda pct: js("loading", t("updating", v=upd["version"]) + f"  {pct}%"))
-        except Exception as e:  # noqa: BLE001
-            logging.getLogger("crimesight").warning("Actualizacion fallida: %s", e)
-            js("loading", t("update_failed", err=e))
+            self._update = updater.check(i18n.get_lang())
+        except Exception:  # noqa: BLE001
+            self._update = None
+
+    def update_apply(self):
+        """El jugador acepta la actualizacion: se descarga, se instala y el lanzador se vuelve a abrir."""
+        upd = self._update
+        if not upd:
+            return {"error": t("update_failed", err="-")}
+        if self._busy:
+            return {"error": t("err_busy")}
+
+        def run():
+            js("loading", t("updating", v=upd["version"]))
+            try:
+                updater.apply(upd, progress=lambda pct: js("loading", t("updating", v=upd["version"]) + f"  {pct}%"))
+            except Exception as e:  # noqa: BLE001
+                logging.getLogger("crimesight").warning("Actualizacion fallida: %s", e)
+                js("loading", None)
+                js("error", t("update_failed", err=e))
+        threading.Thread(target=run, daemon=True).start()
+        return {"ok": True}
+
+    def update_later(self):
+        """«Ahora no»: esa version no se vuelve a ofrecer sola (queda el aviso junto al numero de version)."""
+        if self._update:
+            self._cfg["update_skipped"] = self._update["version"]
+            core.save_config(self._cfg)
+        return {"ok": True}
 
     def _update_lang(self):
         i18n.set_lang(core.game_language(self._cfg.get("game_dir"), self._steam[0]))
@@ -133,6 +162,7 @@ class Api:
         return {"ok": True}
 
     def _run(self, mode, args):
+        self._mode = mode
         try:
             core.ensure_keys(self._cfg["game_dir"])
             if mode == "solo":
@@ -149,6 +179,7 @@ class Api:
             logging.getLogger("crimesight").exception("Error en la sesion")
         finally:
             self._busy = False
+            self._mode = None
             self._auto_backup()
             self._update_lang()          # el juego pudo cambiar de idioma durante la partida
             js("state", self._state(with_art=False))
@@ -370,6 +401,188 @@ class Api:
         folder = core.new_mod()
         core.open_folder(folder)
         return os.path.basename(folder)
+
+    # ---------------------------------------------------------------- creador de escenarios
+    STAGE_LABELS = {"Stage_Yokn": "01 · Lauriston Gardens", "Stage_Yokn_v1030": "02 · Briony Lodge",
+                    "Stage_Yokn_v1040": "03 · Josiah Amberley", "Stage_Yokn_v1050": "04 · The Abbey Grange",
+                    "Stage_Yokn_v1060": "05 · Lysander Stark"}
+
+    def _stage_cat(self):
+        return core.stage_catalog(self._cfg.get("game_dir"))
+
+    def stage_open(self):
+        """Datos para abrir el editor. La primera vez hay que leer el juego (tarda): se hace aparte."""
+        gd = self._cfg.get("game_dir")
+        if not getattr(self, "_stage_ready", False):
+            if not getattr(self, "_stage_loading", False):
+                self._stage_loading = True
+
+                def work():
+                    try:
+                        core.stage_catalog(gd, progress=lambda pct: js("stageProgress", t("stage_reading", pct=pct)))
+                        self._stage_ready = True
+                        js("stageReady", "")
+                    except ValueError as e:
+                        js("stageReady", str(e))
+                    except Exception as e:  # noqa: BLE001
+                        logging.getLogger("crimesight").exception("No pude leer los escenarios")
+                        js("stageReady", t("err_unexpected", err=e))
+                    finally:
+                        self._stage_loading = False
+                threading.Thread(target=work, daemon=True).start()
+            return {"loading": True}
+        import stagedata
+        cat = self._stage_cat()
+        self._stage_publish()
+        types = {k: {x: v[x] for x in ("w", "d", "floor", "block", "outline")} for k, v in cat["types"].items()}
+        stages = [{"scene": sc, "label": self.STAGE_LABELS.get(sc, sc),
+                   "rooms": [{"type": r["type"], "entrance": r["entrance"]} for r in cat["stages"][sc]["rooms"]]}
+                  for sc in core.STAGE_BASES if sc in cat["stages"]]
+        return {"types": types, "stages": stages, "layouts": self._stage_layouts(), "bep": core.live_mode(gd),
+                "active": core.stage_test_active(gd) if gd else "",
+                "grid": [stagedata.MIN_X, stagedata.MAX_X, stagedata.MIN_Z, stagedata.MAX_Z]}
+
+    def _stage_view(self, layout):
+        import stagelayout
+        d = stagelayout.derive(self._stage_cat(), layout)
+        probs = []
+        for p in d["problems"]:
+            kw = {k: v for k, v in p.items() if k not in ("level", "code")}
+            for k in ("room", "other"):
+                if k in kw:
+                    kw[k] = kw[k] + 1
+            probs.append({"level": p["level"], "text": t("stage_p_" + p["code"], **kw),
+                          "rooms": [p[k] for k in ("room", "other") if k in p]})
+        keys = ("src", "type", "x", "z", "yaw", "i", "j", "w", "d", "rot", "entrance")
+        return {"layout": d["layout"], "rooms": [{k: r[k] for k in keys} for r in d["rooms"]], "edges": d["edges"],
+                "ok": d["ok"], "problems": probs, "stats": t("stage_stats", **d["stats"])}
+
+    def stage_default(self, scene):
+        import stagelayout
+        try:
+            return self._stage_view(stagelayout.default_layout(self._stage_cat(), scene))
+        except (ValueError, KeyError, TypeError) as e:
+            return {"error": str(e)}
+
+    def stage_derive(self, layout):
+        try:
+            return self._stage_view(layout)
+        except (ValueError, KeyError, TypeError, IndexError) as e:
+            return {"error": str(e)}
+
+    def stage_load(self, sid):
+        try:
+            return self._stage_view(core.stage_load(sid))
+        except (OSError, ValueError, KeyError, TypeError, IndexError) as e:
+            return {"error": t("err_unexpected", err=e)}
+
+    def stage_save(self, layout):
+        try:
+            view = self._stage_view(layout)
+            if not view["layout"]["name"].strip():
+                return {"error": t("stage_need_name")}
+            sid = core.stage_save(view["layout"])
+            msg = "stage_saved_errors" if not view["ok"] else None
+            if sum(1 for it in self._stage_layouts() if it["enabled"]) > core.MAX_GAME_STAGES:
+                self._stage_enable(sid, False)
+                msg = msg or "stage_saved_off"
+            live = self._stage_publish()
+        except (OSError, ValueError, KeyError, TypeError, IndexError) as e:
+            return {"error": t("err_unexpected", err=e)}
+        msg = msg or ("stage_saved_live" if live else "stage_saved")
+        return {"ok": True, "id": sid, "layouts": self._stage_layouts(), "msg": t(msg, n=core.MAX_GAME_STAGES)}
+
+    def _stage_publish(self):
+        """Tus escenarios activos -> lista de escenarios del juego (solo con el plugin). True si hay plugin.
+        En la sala de otro jugador no se toca: ahi mandan los escenarios de la sala."""
+        gd = self._cfg.get("game_dir")
+        if not gd or not core.live_mode(gd):
+            return False
+        if getattr(self, "_mode", None) in ("join", "server"):
+            return True
+        try:
+            core.stage_publish(gd, core.stage_own(self._cfg.get("stages_disabled", [])), self._stage_cat())
+        except OSError:
+            logging.getLogger("crimesight").exception("No pude publicar los escenarios")
+        return True
+
+    def _stage_layouts(self):
+        return core.stage_list(self._cfg.get("stages_disabled", []))
+
+    def _stage_enable(self, sid, on):
+        off = [x for x in self._cfg.get("stages_disabled", []) if x != sid]
+        if not on:
+            off.append(sid)
+        self._cfg["stages_disabled"] = off
+        core.save_config(self._cfg)
+
+    def stage_toggle(self, sid, on):
+        if on and sum(1 for it in self._stage_layouts() if it["enabled"]) >= core.MAX_GAME_STAGES:
+            return {"error": t("stage_too_many", n=core.MAX_GAME_STAGES)}
+        self._stage_enable(sid, bool(on))
+        self._stage_publish()
+        return {"ok": True, "layouts": self._stage_layouts()}
+
+    def stage_export(self, sid):
+        try:
+            name = core.stage_load(sid).get("name") or sid
+        except (OSError, ValueError):
+            return {"error": t("stage_import_bad")}
+        path = self._dialog("SAVE_DIALOG", save_filename=re.sub(r"[^\w.-]+", "_", name) + core.STAGE_EXT,
+                            file_types=(STAGE_FILTER,))
+        if not path:
+            return None
+        if not path.lower().endswith(core.STAGE_EXT):
+            path += core.STAGE_EXT
+        try:
+            core.stage_export(sid, path)
+        except (OSError, ValueError) as e:
+            return {"error": t("err_save_write", err=e)}
+        return {"ok": True, "msg": t("stage_exported", path=path)}
+
+    def stage_import(self):
+        path = self._dialog("OPEN_DIALOG", file_types=(STAGE_FILTER, ALL_FILTER))
+        if not path:
+            return None
+        try:
+            sid = core.stage_import(path, self._stage_cat())
+        except ValueError as e:
+            return {"error": str(e)}
+        msg = "stage_imported"
+        if sum(1 for it in self._stage_layouts() if it["enabled"]) > core.MAX_GAME_STAGES:
+            self._stage_enable(sid, False)
+            msg = "stage_saved_off"
+        self._stage_publish()
+        return {"ok": True, "id": sid, "layouts": self._stage_layouts(), "msg": t(msg, n=core.MAX_GAME_STAGES)}
+
+    def stage_delete(self, sid):
+        try:
+            core.stage_delete(sid)
+            self._stage_enable(sid, True)          # fuera de la lista de desactivados
+            self._stage_publish()
+        except OSError as e:
+            return {"error": t("err_unexpected", err=e)}
+        return {"ok": True, "layouts": self._stage_layouts()}
+
+    def stage_test(self, layout):
+        gd = self._cfg.get("game_dir")
+        try:
+            view = self._stage_view(layout)
+            if not view["ok"]:
+                return {"error": t("stage_fix_first")}
+            core.stage_test(gd, self._stage_cat(), view["layout"])
+        except ValueError as e:
+            return {"error": str(e)}
+        except (OSError, KeyError, TypeError, IndexError) as e:
+            return {"error": t("err_unexpected", err=e)}
+        return {"ok": True, "msg": t("stage_test_ok"), "active": core.stage_test_active(gd)}
+
+    def stage_test_off(self):
+        try:
+            core.stage_test_clear(self._cfg.get("game_dir") or "")
+        except OSError as e:
+            return {"error": t("err_unexpected", err=e)}
+        return {"ok": True, "msg": t("stage_test_off"), "active": ""}
 
     def answer_mods(self, ok):
         self._mods_answer = bool(ok)
