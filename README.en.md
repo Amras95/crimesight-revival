@@ -188,7 +188,7 @@ new one. The original scenarios are never changed. Playing them needs hot reload
 - Scenario creator, with scenarios shared with the room.
 - The AI players answer your stickers with a random one.
 - Controller support (Xbox, PlayStation, Switch, Steam Deck) with hot reload turned on. The button layout
-  is in the [wiki](https://github.com/Amras95/crimesight-revival/wiki/Controls#with-a-controller).
+  is in the [wiki](https://github.com/Amras95/crimesight-revival/wiki/Controller).
 
 ## Platforms
 

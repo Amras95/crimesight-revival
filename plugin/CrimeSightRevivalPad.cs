@@ -10,7 +10,8 @@
 //     juego como si fueran sus propias teclas (KeySettingManager.IsDown/IsUp/IsStatus/GetScroll).
 //   - Start pulsa "Finalizar turno" (u "Omitir accion") y Back abre o cierra el registro.
 //
-//   Stick izq.: cursor (L3 pulsado: lento)   A: clic        B: clic derecho
+//   Stick izq.: cursor                       A: clic        B: clic derecho
+//   L3 / R3: velocidad del cursor / de la camara (lenta, media, rapida; 1, 2 o 3 toques de vibracion)
 //   Stick der.: mover la camara              LB / RB: girar la camara   LT / RT: alejar / acercar
 //   X: indicadores y stickers                Y: ver sospechosos         Cruceta: flechas
 //   Start: Finalizar turno / Omitir accion   Back: Registro
@@ -24,7 +25,10 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using HarmonyLib;
 using Il2CppInterop.Runtime;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
+using TMPro;
 using UnityEngine;
+using UnityEngine.TextCore;
 
 namespace CrimeSightRevival.Mods
 {
@@ -64,6 +68,7 @@ namespace CrimeSightRevival.Mods
 
         static void Mouse(uint flags, int dx = 0, int dy = 0)
         {
+            _lastInjected = Time.unscaledTime;
             var i = new Input[1];
             i[0].type = 0;
             i[0].mi = new MouseInput { dx = dx, dy = dy, flags = flags };
@@ -84,6 +89,38 @@ namespace CrimeSightRevival.Mods
 
         static void Log(string s) => Plugin.L.LogInfo("[Mando] " + s);
 
+        // velocidades: 0 lenta, 1 media, 2 rapida (se guardan en csr_live/pad.txt)
+        static readonly float[] CursorSpeeds = { 0.5f, 0.9f, 1.4f };     // pantallas por segundo a tope
+        static readonly float[] CameraSpeeds = { 0.35f, 0.65f, 1f };      // fraccion de la velocidad del juego
+        static int _cursorSpeed = 1, _cameraSpeed = 1;
+        static string _styleSetting = "auto";
+        static float _camAccX, _camAccY;
+        static bool _camX, _camY;              // este fotograma la camara se mueve en ese eje
+
+        static string SpeedFile => System.IO.Path.Combine(LiveMods.LiveDir, "pad.txt");
+
+        static void LoadSpeeds()
+        {
+            try
+            {
+                var p = System.IO.File.ReadAllText(SpeedFile).Trim().Split(',');
+                _cursorSpeed = Math.Clamp(int.Parse(p[0]), 0, 2);
+                _cameraSpeed = Math.Clamp(int.Parse(p[1]), 0, 2);
+                if (p.Length > 2 && (p[2] == "xbox" || p[2] == "ps" || p[2] == "sw")) _styleSetting = p[2];
+            }
+            catch { }
+        }
+
+        static void SaveSpeeds()
+        {
+            try { System.IO.File.WriteAllText(SpeedFile, _cursorSpeed + "," + _cameraSpeed + "," + _styleSetting); } catch { }
+        }
+
+        static void SpeedTaps(int level)
+        {
+            for (int i = 0; i <= level; i++) Rumble(i * 0.18f, 0.08f, 0.25f, 0.5f);
+        }
+
         public static void Init(Harmony h)
         {
             void Post(string method, string post)
@@ -102,7 +139,89 @@ namespace CrimeSightRevival.Mods
             Post("IsStatus", nameof(AfterIsStatus));
             Post("GetScroll", nameof(AfterGetScroll));
             PatchRumble(h);
+            LoadSpeeds();
+            try
+            {
+                var m = AccessTools.DeclaredMethod(typeof(KeySettingManager), "GetSpriteMacro");
+                if (m != null) h.Patch(m, postfix: new HarmonyMethod(typeof(Pad).GetMethod(nameof(AfterSpriteMacro),
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Mando] iconos: " + e.Message); }
+            // GetSpriteMacro es privado y el compilador del juego lo mete dentro de quien lo llama, asi que
+            // tambien se retoca el texto ya montado: se cambian los iconos de teclado/raton por los del mando.
+            // (SetKeyMacroColor no se toca: su color llega mal al plugin y salian textos de colores raros; esos los cambia Aliases)
+            foreach (var (name, post) in new[] { ("SetKeyMacroText", nameof(AfterMacroText)) })
+            {
+                try
+                {
+                    var m = AccessTools.DeclaredMethod(typeof(KeySettingManager), name);
+                    if (m != null) h.Patch(m, postfix: new HarmonyMethod(typeof(Pad).GetMethod(post,
+                        System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
+                    else Log("KeySettingManager." + name + ": no existe");
+                }
+                catch (Exception e) { Plugin.L.LogWarning("[Mando] " + name + ": " + e.Message); }
+            }
         }
+
+        static readonly System.Text.RegularExpressions.Regex SpriteTag =
+            new System.Text.RegularExpressions.Regex("<sprite name=\"?([A-Za-z0-9_]+)\"?[^>]*>");
+
+        // Icono del juego -> icono del mando (null = se queda como esta)
+        static string PadSprite(string name)
+        {
+            switch (name)
+            {
+                case "mouse_left_click": case "keyboard_enter": case "keyboard_space": return Btn("a");
+                case "keyboard_esc": return Btn("b");
+                case "keyboard_ctrl": return Btn("x");
+                case "mouse_right_click": case "mouse_middle_click": return "";
+                case "keyboard_tab": return Btn("y");
+                case "mouse_blank": return "";                       // hueco del juego cuando no hay boton de raton
+                case "mouse_DragLeft": return Sprite("rstick");
+                case "mouse_DragRight": return Btn("lbrb");
+                case "mouse_wheel": return Btn("ltrt");
+                case "keyboard_up": case "keyboard_down": case "keyboard_left": case "keyboard_right": return Sprite("dpad");
+            }
+            return null;
+        }
+
+        // Texto ya montado -> como se monto (para rehacerlo al cambiar entre mando y raton)
+        struct Macro { public string raw; public bool colored; public Color color; }
+        static readonly Dictionary<string, Macro> _macros = new();
+
+        static void Remember(string result, Macro m)
+        {
+            if (string.IsNullOrEmpty(result) || m.raw == null) return;
+            if (_macros.Count > 3000) _macros.Clear();
+            _macros[result] = m;
+        }
+
+        static void AfterMacroText(ref string ParseText, ref string __result)
+        {
+            var raw = ParseText;
+            Swap(ref __result);
+            Remember(__result, new Macro { raw = raw });
+        }
+
+        static void Swap(ref string __result)
+        {
+            if (!_iconsReady || !_padMode || string.IsNullOrEmpty(__result) || __result.IndexOf("<sprite", StringComparison.Ordinal) < 0) return;
+            try
+            {
+                var s = SpriteTag.Replace(__result, m => m.Groups[1].Value.StartsWith("csr_") ? m.Value : (PadSprite(m.Groups[1].Value) ?? m.Value));
+                // el mismo boton dos veces seguidas (raton + tecla, o las cuatro flechas) se deja en uno
+                string prev;
+                do
+                {
+                    prev = s;
+                    s = System.Text.RegularExpressions.Regex.Replace(s,
+                        "((?:<sprite name=\"csr_[a-z0-9_]+\">)+)(?:\\s|/|,|\u30fb)*\\1", "$1");
+                } while (s != prev);
+                __result = s;
+            }
+            catch (Exception e) { if (!_macroWarned) { _macroWarned = true; Plugin.L.LogWarning("[Mando] texto de teclas: " + e.Message); } }
+        }
+        static bool _macroWarned;
 
         static bool Read(out XState s)
         {
@@ -153,8 +272,15 @@ namespace CrimeSightRevival.Mods
                 if (_connected) { Release(); _connected = false; }
                 return;
             }
-            if (!_connected) { _connected = true; if (!_announced) { Log("mando conectado"); _announced = true; } }
+            if (!_connected)
+            {
+                _connected = true;
+                if (!_announced) { _style = DetectStyle(); Log("mando conectado (" + _style + ")"); _announced = true; }
+            }
             if (!Application.isFocused) { Release(); return; }
+            Icons();
+            ClickStep();
+            SteamStyle();
 
             _prev = _now;
             _now = s.buttons;
@@ -162,8 +288,29 @@ namespace CrimeSightRevival.Mods
             _lt = s.lt > 30 ? (s.lt - 30) / 225f : 0; _rt = s.rt > 30 ? (s.rt - 30) / 225f : 0;
             float dt = Math.Min(Time.unscaledDeltaTime, 0.05f);
 
+            if (Pressed(L3)) { _cursorSpeed = (_cursorSpeed + 1) % 3; SaveSpeeds(); SpeedTaps(_cursorSpeed); Log("velocidad del cursor: " + _cursorSpeed); }
+            if (Pressed(R3)) { _cameraSpeed = (_cameraSpeed + 1) % 3; SaveSpeeds(); SpeedTaps(_cameraSpeed); Log("velocidad de la camara: " + _cameraSpeed); }
+
+            // camara: el juego la mueve a velocidad fija mientras la "tecla" esta pulsada; se pulsa solo en una
+            // parte de los fotogramas, segun cuanto se incline el stick y la velocidad elegida
+            float k = CameraSpeeds[_cameraSpeed];
+            if (ScrollMode())
+            {
+                // fuera de la partida (o con el registro abierto) el stick derecho es la rueda del raton
+                _camX = _camY = false; _camAccX = _camAccY = 0;
+                _wheel += _ry * Math.Abs(_ry) * 900f * (0.5f + 0.5f * k) * dt;
+                int w = (int)_wheel;
+                if (w != 0) { Wheel(w); _wheel -= w; }
+            }
+            else
+            {
+                _wheel = 0;
+                _camX = Tick(ref _camAccX, Math.Abs(_rx) * k);
+                _camY = Tick(ref _camAccY, Math.Abs(_ry) * k);
+            }
+
             // cursor: curva para poder apuntar fino y cruzar la pantalla rapido
-            float speed = Screen.height * (Held(L3) ? 0.35f : 1.25f);
+            float speed = Screen.height * CursorSpeeds[_cursorSpeed];
             _fx += Math.Sign(_lx) * _lx * _lx * speed * dt;
             _fy -= Math.Sign(_ly) * _ly * _ly * speed * dt;
             int mx = (int)_fx, my = (int)_fy;
@@ -192,6 +339,44 @@ namespace CrimeSightRevival.Mods
             if (Pressed(START)) TurnButton();
             if (Pressed(BACK)) ToggleLog();
             UpdateRumble();
+            UpdateMode(s);
+        }
+
+        static float _wheel, _modeNext;
+        static bool _scrollMode;
+
+        static void Wheel(int delta)
+        {
+            _lastInjected = Time.unscaledTime;
+            var i = new Input[1];
+            i[0].type = 0;
+            i[0].mi = new MouseInput { data = unchecked((uint)delta), flags = 0x0800 };
+            SendInput(1, i, Marshal.SizeOf<Input>());
+        }
+
+        static bool ScrollMode()
+        {
+            if (Time.unscaledTime < _modeNext) return _scrollMode;
+            _modeNext = Time.unscaledTime + 0.25f;
+            bool inGame = false, log = false;
+            try
+            {
+                var hud = GetHud();
+                inGame = hud != null && hud.gameObject.activeInHierarchy;
+                if (inGame) { var l = Find<InGameLogManager>(); log = l != null && l.IsOpenLogWindow(); }
+            }
+            catch { }
+            _scrollMode = !inGame || log;
+            return _scrollMode;
+        }
+
+        static bool Tick(ref float acc, float amount)
+        {
+            if (amount <= 0) { acc = 0; return false; }
+            acc += amount;
+            if (acc < 1f) return false;
+            acc -= 1f;
+            return true;
         }
 
         static void Release()
@@ -207,8 +392,17 @@ namespace CrimeSightRevival.Mods
         // ------------------------------------------------------------ botones del juego
         static T Find<T>() where T : UnityEngine.Object
         {
-            var o = UnityEngine.Object.FindObjectOfType(Il2CppType.Of<T>());
-            return o == null ? null : o.TryCast<T>();
+            // FindObjectOfType no esta en el juego (lo quito el compilador): se usa la version que devuelve todos
+            var all = UnityEngine.Object.FindObjectsOfType(Il2CppType.Of<T>());
+            if (all == null) return null;
+            foreach (var o in all) { var t = o == null ? null : o.TryCast<T>(); if (t != null) return t; }
+            return null;
+        }
+
+        static Hud GetHud()
+        {
+            try { var gm = GameManager.instance; if (gm != null && gm.hud != null) return gm.hud; } catch { }
+            try { return Find<Hud>(); } catch { return null; }
         }
 
         static bool Click(UnityEngine.UI.Button b)
@@ -218,13 +412,58 @@ namespace CrimeSightRevival.Mods
             return true;
         }
 
+        // Se pulsa el boton de verdad: el cursor va encima, clic y vuelve a donde estaba. Asi el juego hace
+        // exactamente lo mismo que con el raton (sonido, confirmaciones...).
+        [StructLayout(LayoutKind.Sequential)] struct Point { public int x, y; }
+        [DllImport("user32.dll")] static extern bool GetCursorPos(out Point p);
+        [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
+        [DllImport("user32.dll")] static extern IntPtr GetActiveWindow();
+        [DllImport("user32.dll")] static extern bool ClientToScreen(IntPtr h, ref Point p);
+        static int _clickStage;
+        static Point _clickBack;
+
+        static bool ClickAt(UnityEngine.UI.Button b)
+        {
+            if (b == null || !b.gameObject.activeInHierarchy || !b.IsInteractable()) return false;
+            var rt = b.GetComponent<RectTransform>();
+            if (rt == null) return false;
+            Camera cam = null;
+            var canvas = b.GetComponentInParent<Canvas>();
+            if (canvas != null) { canvas = canvas.rootCanvas; if (canvas.renderMode != RenderMode.ScreenSpaceOverlay) cam = canvas.worldCamera; }
+            var sp = RectTransformUtility.WorldToScreenPoint(cam, rt.TransformPoint(rt.rect.center));
+            var p = new Point { x = (int)sp.x, y = Screen.height - (int)sp.y };
+            ClientToScreen(GetActiveWindow(), ref p);
+            GetCursorPos(out _clickBack);
+            _lastInjected = Time.unscaledTime;
+            SetCursorPos(p.x, p.y);
+            _clickStage = 1;
+            return true;
+        }
+
+        // un paso por fotograma: encima -> pulsar -> soltar -> volver
+        static void ClickStep()
+        {
+            if (_clickStage == 0) return;
+            _lastInjected = Time.unscaledTime;
+            switch (_clickStage++)
+            {
+                case 1: case 2: break;                       // que el juego vea el cursor encima del boton
+                case 3: Mouse(LDOWN); break;
+                case 4: break;
+                case 5: Mouse(LUP); break;
+                default: SetCursorPos(_clickBack.x, _clickBack.y); _clickStage = 0; break;
+            }
+        }
+
         static void TurnButton()
         {
+            if (_clickStage != 0) return;
             try
             {
-                var hud = Find<Hud>();
-                if (hud == null) return;
-                if (!Click(hud.instructCompleteButton)) Click(hud.skipActionPhaseButton);
+                var hud = GetHud();
+                if (hud == null) { Log("Start: no encuentro la interfaz de la partida"); return; }
+                if (!ClickAt(hud.instructCompleteButton) && !ClickAt(hud.skipActionPhaseButton))
+                    if (!Click(hud.instructCompleteButton) && !Click(hud.skipActionPhaseButton)) Log("Start: no hay boton de turno activo");
             }
             catch (Exception e) { Plugin.L.LogWarning("[Mando] Finalizar turno: " + e.Message); }
         }
@@ -238,6 +477,354 @@ namespace CrimeSightRevival.Mods
                 if (log.IsOpenLogWindow()) log.CloseLogWindow(); else log.OpenLogWindow();
             }
             catch (Exception e) { Plugin.L.LogWarning("[Mando] Registro: " + e.Message); }
+        }
+
+        // ------------------------------------------------------------ iconos de mando en la barra de ayuda
+        // El juego dibuja las teclas con un "sprite asset" de TextMeshPro (keyboard_ctrl, mouse_wheel...). Se le
+        // anade como respaldo uno nuestro con iconos de mando (plugin/pad_icons.png, ver tools/pad_icons.py) y,
+        // mientras juegas con mando, cada accion se pinta con su boton.
+        static readonly string[] IconNames = {
+            "xbox_a", "xbox_b", "xbox_x", "xbox_y", "xbox_lb", "xbox_rb", "xbox_lt", "xbox_rt",
+            "ps_a", "ps_b", "ps_x", "ps_y", "ps_lb", "ps_rb", "ps_lt", "ps_rt",
+            "sw_a", "sw_b", "sw_x", "sw_y", "sw_lb", "sw_rb", "sw_lt", "sw_rt",
+            "lstick", "rstick", "dpad", "xbox_start", "xbox_back", "ps_start", "ps_back", "sw_start",
+            "sw_back" };
+        static readonly string[] Combos = { "xbox_lbrb", "xbox_ltrt", "ps_lbrb", "ps_ltrt", "sw_lbrb", "sw_ltrt" };
+        static readonly Dictionary<string, TMP_SpriteGlyph> _glyphs = new();
+        static TMP_SpriteAsset _src, _mine;
+        static int _baseChars;
+        static readonly Dictionary<int, string> _srcNames = new();   // nombre original de cada icono del juego
+        static string _aliasState = "";
+
+        // Icono del juego -> el nuestro (nombre en _glyphs). Asi cambia cualquier texto del juego, lo monte como lo monte.
+        static string AliasFor(string name)
+        {
+            switch (name)
+            {
+                case "mouse_left_click": case "keyboard_enter": case "keyboard_space": return _style + "_a";
+                case "keyboard_esc": return _style + "_b";
+                case "keyboard_ctrl": return _style + "_x";
+                case "keyboard_tab": return _style + "_y";
+                // en la barra cada accion sale como "boton de raton + tecla"; con mando sobra el del raton
+                case "mouse_blank": case "mouse_right_click": case "mouse_middle_click": return "blank";
+                case "mouse_DragLeft": return "rstick";
+                case "mouse_DragRight": return _style + "_lbrb";
+                case "mouse_wheel": return _style + "_ltrt";
+                case "keyboard_up": case "keyboard_down": case "keyboard_left": case "keyboard_right": return "dpad";
+            }
+            return null;
+        }
+
+        // Con mando, los iconos del juego se "esconden" (cambian de nombre) y los nuestros toman su nombre; TextMeshPro
+        // no los encuentra en el suyo y los busca en el nuestro. Con raton se deja todo como estaba.
+        static void Aliases()
+        {
+            if (_src == null || _mine == null) return;
+            string want = _padMode ? _style : "";
+            if (want == _aliasState) return;
+            try
+            {
+                var table = _src.spriteCharacterTable;
+                for (int i = 0; i < table.Count; i++)
+                {
+                    var c = table[i];
+                    if (!_srcNames.TryGetValue(i, out var orig)) { orig = c.name; _srcNames[i] = orig; }
+                    string target = _padMode && AliasFor(orig) != null ? "csrhide_" + orig : orig;
+                    if (c.name != target) c.name = target;
+                }
+                _src.UpdateLookupTables();
+
+                var mt = _mine.spriteCharacterTable;
+                if (mt.Count > _baseChars) mt.RemoveRange(_baseChars, mt.Count - _baseChars);
+                if (_padMode)
+                    foreach (var orig in _srcNames.Values)
+                    {
+                        var a = AliasFor(orig);
+                        if (a != null && _glyphs.TryGetValue(a, out var g)) mt.Add(new TMP_SpriteCharacter(0xFFFE, g) { name = orig });
+                    }
+                _mine.UpdateLookupTables();
+                _aliasState = want;
+
+                foreach (var o in Resources.FindObjectsOfTypeAll(Il2CppType.Of<TMP_Text>()))
+                {
+                    var t = o == null ? null : o.TryCast<TMP_Text>();
+                    if (t != null && t.text != null && t.text.IndexOf("<sprite", StringComparison.Ordinal) >= 0) t.SetAllDirty();
+                }
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Mando] iconos (cambio): " + e.Message); _aliasState = want; }
+        }
+
+        const int CELL = 64, SHEET = 512;
+        static bool _iconsReady, _iconsFailed, _padMode;
+        static float _iconsNextTry, _lastPadInput = -10f, _lastInjected = -10f;
+        static string _style = "xbox";         // xbox, ps o sw (Switch)
+
+        static void Icons()
+        {
+            if (_iconsReady || _iconsFailed || Time.unscaledTime < _iconsNextTry) return;
+            _iconsNextTry = Time.unscaledTime + 2f;
+            try
+            {
+                TMP_SpriteAsset src = null;
+                foreach (var o in Resources.FindObjectsOfTypeAll(Il2CppType.Of<TMP_SpriteAsset>()))
+                {
+                    var a = o.TryCast<TMP_SpriteAsset>();
+                    if (a != null && a.GetSpriteIndexFromName("keyboard_ctrl") >= 0) { src = a; break; }
+                }
+                if (src == null) return;                         // aun no se ha cargado: se vuelve a intentar
+
+                byte[] png;
+                using (var st = typeof(Pad).Assembly.GetManifestResourceStream("CrimeSightRevival.PadIcons.png"))
+                using (var ms = new System.IO.MemoryStream()) { st.CopyTo(ms); png = ms.ToArray(); }
+                var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false) { name = "csr_pad_icons" };
+                if (!ImageConversion.LoadImage(tex, png, false)) { _iconsFailed = true; Log("no pude cargar los iconos"); return; }
+                tex.hideFlags = HideFlags.DontUnloadUnusedAsset;
+
+                var mine = UnityEngine.Object.Instantiate(src);
+                mine.name = "csr_pad_icons";
+                mine.hideFlags = HideFlags.DontUnloadUnusedAsset;
+                mine.spriteSheet = tex;
+                var mat = new Material(src.material) { name = "csr_pad_icons_mat", hideFlags = HideFlags.DontUnloadUnusedAsset };
+                mat.mainTexture = tex;
+                mine.material = mat;
+                mine.hashCode = TMP_TextUtilities.GetSimpleHashCode(mine.name);
+                mine.materialHashCode = TMP_TextUtilities.GetSimpleHashCode(mat.name);
+
+                // tamano en pantalla: el de una tecla del juego, en cuadrado
+                var refGlyph = src.spriteGlyphTable[src.spriteCharacterTable[src.GetSpriteIndexFromName("keyboard_ctrl")].glyphIndex < src.spriteGlyphTable.Count
+                    ? (int)src.spriteCharacterTable[src.GetSpriteIndexFromName("keyboard_ctrl")].glyphIndex : 0];
+                var rm = refGlyph.metrics;
+                float h = rm.height;
+                var metrics = new GlyphMetrics(h, h, 0, rm.horizontalBearingY, h + Math.Max(0, rm.horizontalAdvance - rm.width));
+
+                mine.spriteGlyphTable.Clear();
+                mine.spriteCharacterTable.Clear();
+                for (int i = 0; i < IconNames.Length; i++)
+                {
+                    int col = i % (SHEET / CELL), row = i / (SHEET / CELL);
+                    var g = new TMP_SpriteGlyph((uint)i, metrics, new GlyphRect(col * CELL, SHEET - (row + 1) * CELL, CELL, CELL), refGlyph.scale, 0);
+                    mine.spriteGlyphTable.Add(g);
+                    var c = new TMP_SpriteCharacter(0xFFFE, g) { name = "csr_" + IconNames[i] };
+                    mine.spriteCharacterTable.Add(c);
+                    _glyphs[IconNames[i]] = g;
+                }
+                // botones dobles, el doble de anchos
+                var wide = new GlyphMetrics(2 * h, h, 0, rm.horizontalBearingY, 2 * h + Math.Max(0, rm.horizontalAdvance - rm.width));
+                for (int k2 = 0; k2 < Combos.Length; k2++)
+                {
+                    var g = new TMP_SpriteGlyph((uint)(IconNames.Length + k2), wide,
+                        new GlyphRect((k2 % 4) * 2 * CELL, SHEET - (6 + k2 / 4) * CELL, 2 * CELL, CELL), refGlyph.scale, 0);
+                    mine.spriteGlyphTable.Add(g);
+                    mine.spriteCharacterTable.Add(new TMP_SpriteCharacter(0xFFFE, g) { name = "csr_" + Combos[k2] });
+                    _glyphs[Combos[k2]] = g;
+                }
+                // "nada": la celda vacia de abajo a la derecha, sin ancho
+                var blank = new TMP_SpriteGlyph((uint)(IconNames.Length + Combos.Length), new GlyphMetrics(1, 1, 0, 0, 0),
+                    new GlyphRect(SHEET - CELL + 8, 8, 4, 4), refGlyph.scale, 0);
+                mine.spriteGlyphTable.Add(blank);
+                mine.spriteCharacterTable.Add(new TMP_SpriteCharacter(0xFFFE, blank) { name = "csr_blank" });
+                _glyphs["blank"] = blank;
+                _baseChars = mine.spriteCharacterTable.Count;
+                _src = src; _mine = mine;
+                mine.fallbackSpriteAssets = new Il2CppSystem.Collections.Generic.List<TMP_SpriteAsset>();
+                mine.UpdateLookupTables();
+                if (src.fallbackSpriteAssets == null) src.fallbackSpriteAssets = new Il2CppSystem.Collections.Generic.List<TMP_SpriteAsset>();
+                src.fallbackSpriteAssets.Add(mine);
+                _iconsReady = true;
+                Log("iconos de mando listos");
+                Aliases();
+                if (_padMode) RefreshHelp();
+            }
+            catch (Exception e) { _iconsFailed = true; Plugin.L.LogWarning("[Mando] iconos: " + e); }
+        }
+
+        static string Sprite(string name) => $"<sprite name=\"csr_{name}\">";
+        static string Btn(string b) => Sprite(_style + "_" + b);
+
+        static string PadMacro(string id)
+        {
+            switch (id)
+            {
+                case "Decide": case "DecideClick": case "LeftClick": return Btn("a");
+                case "Cancel": case "CancelClick": case "RightClick": return Btn("b");
+                case "PingStampMenu": return Btn("x");
+                case "ViewHint": return Btn("y");
+                case "MouseMove": return Sprite("lstick");
+                case "MouseDragLeft": case "CameraTranslate": return Sprite("rstick");
+                case "MouseDragRight": case "CameraRotate": return Btn("lbrb");
+                case "Wheel": return Btn("ltrt");
+                case "UpArrow": case "DownArrow": case "LeftArrow": case "RightArrow": return Sprite("dpad");
+            }
+            return null;                                         // F1-F6 y demas: se quedan las del teclado
+        }
+
+        static void AfterSpriteMacro(ref string __result, ref string checkKey)
+        {
+            if (!_iconsReady || !_padMode || checkKey == null) return;
+            var s = PadMacro(checkKey);
+            if (s != null) __result = s;
+        }
+
+        // Mando o raton: se usa el ultimo que se haya tocado (sin contar lo que mueve el propio mando)
+        static void UpdateMode(XState s)
+        {
+            float now = Time.unscaledTime;
+            bool pad = s.buttons != 0 || _lx != 0 || _ly != 0 || _rx != 0 || _ry != 0 || _lt != 0 || _rt != 0;
+            if (pad) _lastPadInput = now;
+            if (pad && !_padMode) SetMode(true);
+            else if (_padMode && now - _lastPadInput > 0.4f && now - _lastInjected > 0.4f)
+            {
+                bool mouse = false;
+                try { mouse = UnityEngine.Input.GetAxisRaw("Mouse X") != 0 || UnityEngine.Input.GetAxisRaw("Mouse Y") != 0; } catch { }
+                if (mouse || UnityEngine.Input.anyKeyDown) SetMode(false);
+            }
+            if (_padMode && _iconsReady && now >= _nextFix) FixTexts();
+        }
+
+        static bool _helpWarned;
+
+        static void SetMode(bool pad)
+        {
+            _padMode = pad;
+            Aliases();
+            if (_iconsReady) RefreshHelp();
+        }
+
+        static void RefreshHelp()
+        {
+            try
+            {
+                var hud = GetHud();
+                if (hud != null)
+                {
+                    try { hud.SetKeyHelpLangText(); }
+                    catch (Exception e) { if (!_helpWarned) { _helpWarned = true; Plugin.L.LogWarning("[Mando] barra de ayuda (textos): " + e); } }
+                    try { hud.RefreshKeyHelp(); } catch { }
+                }
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Mando] barra de ayuda: " + e.Message); }
+            FixTexts();
+        }
+
+        // Textos ya puestos en pantalla (barra de abajo, avisos sobre el mapa): se cambian sus iconos.
+        // Lo que se cambio a mano se recuerda para devolverlo al volver al raton.
+        static readonly Dictionary<string, string> _unswap = new();
+        static float _nextFix;
+
+        static void FixTexts()
+        {
+            _nextFix = Time.unscaledTime + 1f;
+            try
+            {
+                foreach (var t in UnityEngine.Object.FindObjectsOfType<TMP_Text>())
+                {
+                    try
+                    {
+                        var cur = t == null ? null : t.text;
+                        if (string.IsNullOrEmpty(cur) || cur.IndexOf("<sprite", StringComparison.Ordinal) < 0) continue;
+                        string next = null;
+                        if (_macros.TryGetValue(cur, out var m) && !m.colored)
+                        {
+                            var raw = m.raw;
+                            next = KeySettingManager.SetKeyMacroText(ref raw);
+                        }
+                        if (next != null && next != cur) t.text = next;
+                    }
+                    catch { }
+                }
+            }
+            catch (Exception e) { if (!_fixWarned) { _fixWarned = true; Plugin.L.LogWarning("[Mando] textos: " + e.Message); } }
+        }
+        static bool _fixWarned;
+
+        // Tipo de mando, para sus iconos. Con Steam Input el juego ve un mando de Xbox, pero el mando fisico
+        // sigue en la lista de dispositivos: se mira el fabricante (Sony 054C, Nintendo 057E). Se puede fijar
+        // en csr_live/pad.txt (tercer valor: auto, xbox, ps o sw).
+        [StructLayout(LayoutKind.Sequential)] struct RawDevice { public IntPtr handle; public uint type; }
+        [DllImport("user32.dll")] static extern uint GetRawInputDeviceList([Out] RawDevice[] list, ref uint count, uint size);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern uint GetRawInputDeviceInfoW(IntPtr dev, uint cmd, System.Text.StringBuilder data, ref uint size);
+
+        // Con Steam Input el juego solo ve un mando de Xbox. Steam sabe cual es el de verdad: se le pregunta.
+        const string SteamDll = "steam_api64";
+        [DllImport(SteamDll)] static extern IntPtr SteamAPI_SteamInput_v002();
+        [DllImport(SteamDll)] [return: MarshalAs(UnmanagedType.I1)] static extern bool SteamAPI_ISteamInput_Init(IntPtr self, [MarshalAs(UnmanagedType.I1)] bool explicitRunFrame);
+        [DllImport(SteamDll)] static extern void SteamAPI_ISteamInput_RunFrame(IntPtr self, [MarshalAs(UnmanagedType.I1)] bool reserved);
+        [DllImport(SteamDll)] static extern ulong SteamAPI_ISteamInput_GetControllerForGamepadIndex(IntPtr self, int index);
+        [DllImport(SteamDll)] static extern int SteamAPI_ISteamInput_GetConnectedControllers(IntPtr self, [Out] ulong[] handles);
+        [DllImport(SteamDll)] static extern int SteamAPI_ISteamInput_GetInputTypeForHandle(IntPtr self, ulong handle);
+        static IntPtr _steamInput;
+        static bool _steamFailed, _steamFound;
+        static float _steamNext, _steamUntil = -1;
+
+        static string SteamTypeStyle(int t) => t switch
+        {
+            5 or 12 or 13 => "ps",                 // PS4, PS3, PS5
+            8 or 9 or 10 => "sw",                  // Joy-Con, Pro Controller
+            _ => t == 0 ? null : "xbox",
+        };
+
+        static void SteamStyle()
+        {
+            if (_steamFailed || _steamFound || _styleSetting != "auto") return;
+            float now = Time.unscaledTime;
+            if (_steamUntil < 0) _steamUntil = now + 20f;            // se intenta durante 20 s
+            if (now < _steamNext) return;
+            if (now > _steamUntil) { _steamFailed = true; Log("Steam no dice que mando es"); return; }
+            _steamNext = now + 1f;
+            try
+            {
+                if (_steamInput == IntPtr.Zero)
+                {
+                    _steamInput = SteamAPI_SteamInput_v002();
+                    if (_steamInput == IntPtr.Zero) { _steamFailed = true; return; }
+                    SteamAPI_ISteamInput_Init(_steamInput, false);
+                }
+                SteamAPI_ISteamInput_RunFrame(_steamInput, false);
+                int type = 0;
+                ulong h = _slot >= 0 ? SteamAPI_ISteamInput_GetControllerForGamepadIndex(_steamInput, _slot) : 0;
+                if (h != 0) type = SteamAPI_ISteamInput_GetInputTypeForHandle(_steamInput, h);
+                if (type == 0)
+                {
+                    var hs = new ulong[16];
+                    int n = SteamAPI_ISteamInput_GetConnectedControllers(_steamInput, hs);
+                    if (n > 0) type = SteamAPI_ISteamInput_GetInputTypeForHandle(_steamInput, hs[0]);
+                }
+                var st = SteamTypeStyle(type);
+                if (st == null) return;
+                _steamFound = true;
+                Log("Steam dice que el mando es de tipo " + type + " (" + st + ")");
+                if (st != _style) { _style = st; Aliases(); if (_iconsReady && _padMode) RefreshHelp(); }
+            }
+            catch (Exception e) { _steamFailed = true; Log("Steam Input no disponible: " + e.Message); }
+        }
+
+        static bool _hidLogged;
+        static string DetectStyle()
+        {
+            if (_styleSetting != "auto") return _styleSetting;
+            try
+            {
+                uint n = 0, sz = (uint)Marshal.SizeOf<RawDevice>();
+                GetRawInputDeviceList(null, ref n, sz);
+                if (n == 0 || n > 512) return "xbox";
+                var list = new RawDevice[n];
+                if (GetRawInputDeviceList(list, ref n, sz) == uint.MaxValue) return "xbox";
+                bool sony = false, nintendo = false;
+                foreach (var d in list)
+                {
+                    if (d.type != 2) continue;                       // HID
+                    uint len = 512;
+                    var sb = new System.Text.StringBuilder(512);
+                    if (GetRawInputDeviceInfoW(d.handle, 0x20000007, sb, ref len) == uint.MaxValue) continue;
+                    var name = sb.ToString().ToUpperInvariant();
+                    if (name.Contains("VID_054C") || name.Contains("054C_PID")) sony = true;          // USB y Bluetooth (VID&0002054C_PID)
+                    if (name.Contains("VID_057E") || name.Contains("057E_PID")) nintendo = true;
+                    if (!_hidLogged && (name.Contains("VID") )) Log("dispositivo HID: " + name);
+                }
+                _hidLogged = true;
+                return sony ? "ps" : nintendo ? "sw" : "xbox";
+            }
+            catch { return "xbox"; }
         }
 
         // ------------------------------------------------------------ vibracion
@@ -379,10 +966,10 @@ namespace CrimeSightRevival.Mods
             if (!_connected || id == null) return false;
             switch (id)
             {
-                case "CameraMoveUp": return _ry > 0;
-                case "CameraMoveDown": return _ry < 0;
-                case "CameraMoveLeft": return _rx < 0;
-                case "CameraMoveRight": return _rx > 0;
+                case "CameraMoveUp": return _camY && _ry > 0;
+                case "CameraMoveDown": return _camY && _ry < 0;
+                case "CameraMoveLeft": return _camX && _rx < 0;
+                case "CameraMoveRight": return _camX && _rx > 0;
                 case "CameraRotate": return _rotating;
             }
             return Buttons.TryGetValue(id, out var b) && Held(b);
