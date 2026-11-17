@@ -371,7 +371,13 @@ def load_mod(folder, owner=""):
             stem = re.sub(r"[^A-Za-z0-9_-]+", "_", os.path.splitext(fname)[0])[:36] or "img"
             orig_stem = os.path.splitext(fname)[0]
             for n, png in enumerate(pngs, 1):
-                piece = stem if len(pngs) == 1 else f"{stem}_{n:02d}"
+                if temp:
+                    # ya viene con su nombre definitivo: recortarlo otra vez (stem[:36]) dejaba a todas
+                    # las piezas de una lamina con el mismo nombre ("..._01" -> "..."), asi que en la
+                    # sala tenian otros ids que en el PC de su dueno y no salian en su rueda
+                    piece = os.path.splitext(fname)[0]
+                else:
+                    piece = stem if len(pngs) == 1 else f"{stem}_{n:02d}"
                 it = {"file": piece + ".png", "png": png}
                 if kind == "stickers":
                     it["key"] = piece
