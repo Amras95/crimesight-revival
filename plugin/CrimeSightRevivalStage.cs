@@ -100,6 +100,7 @@ namespace CrimeSightRevival.Mods
         static GameObject[] _placed = Array.Empty<GameObject>();     // pieza i de la distribucion -> objeto
         static readonly List<(int k, GameObject src, Vector3 pos, Quaternion rot)> _jobs = new();
         static readonly Dictionary<string, Mesh> _readable = new();
+        static int _navHandle;                  // navegacion nuestra cargada en el motor (0: ninguna)
 
         static string TestFile => Path.Combine(LiveMods.LiveDir, "layout_test.json");
         static string NavFile => Path.Combine(LiveMods.LiveDir, "navsrc.json");
@@ -127,6 +128,7 @@ namespace CrimeSightRevival.Mods
             foreach (var t in new[] { typeof(Stage), typeof(Area), typeof(Room), typeof(Door), typeof(OutDoor), typeof(Shelf), typeof(WindowShelf) })
                 Patch(t, "Awake", nameof(BeforeAwake));
             Patch(typeof(Stage), "Start", nameof(BeforeStageStart));
+            Patch(typeof(NonPlayerCharacterTraitor), "PostProgress", nameof(BeforeWalkEnd));
             Log("escenario de pruebas disponible: " + TEST_STAGE);
         }
 
@@ -274,6 +276,7 @@ namespace CrimeSightRevival.Mods
                 if (sc.handle != _doneHandle)
                 {
                     _doneHandle = sc.handle;
+                    DropNav("otro escenario personalizado");
                     _root = __instance.transform.root; _scene = sc;
                     _started = _ready = false; _pending = _cfg != null; _frames = 0; _skipped = 0;
                     _jobs.Clear(); _placed = Array.Empty<GameObject>();
@@ -622,6 +625,14 @@ namespace CrimeSightRevival.Mods
         // ---------------------------------------------------------------- navegacion, con todo cargado
         public static void Frame()
         {
+            // La navegacion reconstruida no es de la escena: si no se retira al salir del escenario, se
+            // queda cargada y se mezcla con la del escenario siguiente (personajes andando por el vacio).
+            if (_navHandle != 0)
+            {
+                bool gone = true;
+                try { gone = !_scene.IsValid() || !_scene.isLoaded; } catch { }
+                if (gone) DropNav("fin del escenario");
+            }
             if (!_pending || !_armed || _cfg == null) return;
             try
             {
@@ -698,8 +709,30 @@ namespace CrimeSightRevival.Mods
             if (!ok || data == IntPtr.Zero) return false;
             RawNav.RemoveAll();
             int h = RawNav.Add(data, Vector3.zero);
+            _navHandle = h;
             Log($"navmesh: reconstruida en {sw.ElapsedMilliseconds} ms (instancia {h})");
             return h != 0;
+        }
+
+        static void DropNav(string why)
+        {
+            if (_navHandle == 0) return;
+            int h = _navHandle; _navHandle = 0;
+            try { RawNav.Remove(h); Log($"navmesh: retirada la del escenario personalizado ({why})"); }
+            catch (Exception e) { Warn("no pude retirar la navegacion del escenario personalizado: " + e.Message); }
+        }
+
+        // Fallo del propio juego: si el asesino se queda sin ruta mientras anda, pasa a "terminar de andar"
+        // sin haber elegido con que pie frena (NONE) y usa ese valor como indice de dos listas de dos
+        // elementos: da error en cada fotograma, el personaje no termina nunca y el turno se queda colgado.
+        static void BeforeWalkEnd(NonPlayerCharacterTraitor __instance)
+        {
+            try
+            {
+                if (__instance.finalStepType == ActorAnimation.STEP_TYPE.NONE && __instance.walk == ActorAnimation.WALK_SEQUENCE.WALK_END)
+                    __instance.finalStepType = ActorAnimation.STEP_TYPE.LEFT;
+            }
+            catch { }
         }
 
         // Las mallas del juego no son legibles: se crea una copia con los datos de navsrc.json.
@@ -820,6 +853,8 @@ namespace CrimeSightRevival.Mods
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void CreateD(IntPtr mono, int agentTypeID);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate int AddTD(IntPtr data, ref Vector3 pos, ref Quaternion rot);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void RemoveAllD();
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void RemoveD(int handle);
+        static RemoveD _remove;
 
         static UpdateListD _update; static CreateD _create; static AddTD _add; static RemoveAllD _removeAll;
         static readonly List<object> _keep = new();     // que el recolector no libere nada nuestro
@@ -834,6 +869,12 @@ namespace CrimeSightRevival.Mods
         }
 
         public static void RemoveAll() { Resolve(); _removeAll(); }
+
+        public static void Remove(int handle)
+        {
+            _remove ??= IL2CPP.ResolveICall<RemoveD>("UnityEngine.AI.NavMesh::RemoveNavMeshDataInternal");
+            _remove(handle);
+        }
 
         public static int Add(IntPtr data, Vector3 pos)
         {

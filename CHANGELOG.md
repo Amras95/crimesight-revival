@@ -14,6 +14,11 @@ The first block (from the first `## ` to the next one) is what the launcher show
 - Exporta e importa escenarios como archivos `.csrstage`, y activa o desactiva los que quieras (hasta 20 a la vez).
 - En una sala, todos reciben los escenarios del anfitrión. La partida no empieza hasta que todos tienen el escenario elegido.
 - Las IA contestan a tus stickers con otro al azar.
+- Los avatares hechos con una foto ya no se recortan en un círculo: llenan el cuadro y toman la forma del marco que elijas en el juego. Los que ya tenías importados hay que volver a añadirlos.
+- **Watson** ya descubre cada turno un mueble con comida, como en el juego original.
+- Si avisas con un ping de que llevas un personaje («Yo controlaré a…»), la IA de tu bando lo deja y te contesta «Entendido». Irene ya puede jugar con un Moriarty IA sin que le pise las órdenes.
+- Arreglado: tras jugar un escenario personalizado, en el siguiente los personajes podían andar por el vacío.
+- Arreglado: un fallo del propio juego que a veces dejaba al asesino andando sin parar y colgaba el turno.
 - El lanzador ya no se actualiza solo: te enseña las novedades y tú decides cuándo.
 
 ### English
@@ -21,6 +26,11 @@ The first block (from the first `## ` to the next one) is what the launcher show
 - Export and import scenarios as `.csrstage` files, and turn on or off the ones you want (up to 20 at once).
 - In a room, everyone gets the host's scenarios. The match doesn't start until everyone has the selected one.
 - The AI players answer your stickers with a random one.
+- Avatars made from a photo are no longer cut into a circle: they fill the frame and take the shape of the frame you pick in the game. Avatars you had already imported need to be added again.
+- **Watson** now discovers a piece of furniture with food every turn, like in the original game.
+- If you ping that you're taking a character ("I'll control…"), the AI on your side leaves it to you and answers "Understood". Irene can now play with an AI Moriarty without it overriding her orders.
+- Fixed: after playing a custom scenario, characters could walk through the void in the next one.
+- Fixed: a bug in the game itself that sometimes left the killer walking endlessly and froze the turn.
 - The launcher no longer updates by itself: it shows you what's new and you decide when.
 
 ## 1.0

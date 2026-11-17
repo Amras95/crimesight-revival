@@ -93,15 +93,16 @@ def _normalize_img(kind, img):
         inner = _fit(img, STICKER_SIZE - 2 * STICKER_MARGIN)
         canvas.alpha_composite(inner, (STICKER_MARGIN, STICKER_MARGIN))
         return _png(canvas)
+    if _cut_off(img):
+        return _png(_cover(img, AVATAR_SIZE))
     x, y, side = AVATAR_BOX
     canvas = Image.new("RGBA", (AVATAR_SIZE, AVATAR_SIZE), (0, 0, 0, 0))
-    canvas.alpha_composite(_medallion(img, side) if _cut_off(img) else _fit(img, side), (x, y))
+    canvas.alpha_composite(_fit(img, side), (x, y))
     return _png(canvas)
 
 
 def _cut_off(img):
-    """True si el dibujo llega hasta los bordes (una foto, o un busto cortado en cuadrado). Esos
-    avatares chocan con los marcos del juego (rombo, circulo...), asi que van en un medallon."""
+    """True si el dibujo llega hasta los bordes (una foto, o un busto cortado en cuadrado)."""
     a = img.getchannel("A").point(lambda v: 255 if v > 64 else 0)
     bbox = a.getbbox()
     if not bbox:
@@ -114,24 +115,18 @@ def _cut_off(img):
     return sum(1 for v in edge if v) > 0.25 * len(edge)
 
 
-def _medallion(img, side):
-    """Circulo que cabe dentro de cualquier marco del juego, relleno con la imagen centrada."""
-    from PIL import Image, ImageDraw
+def _cover(img, side):
+    """La imagen llenando todo el cuadro del avatar. El juego la recorta con la forma del marco que
+    elija cada jugador (el fondo del avatar lleva una mascara), asi que no se recorta aqui."""
+    from PIL import Image
     bbox = img.getchannel("A").point(lambda v: 255 if v > 64 else 0).getbbox()
     if bbox:
         img = img.crop(bbox)
-    k = side / min(img.width, img.height)              # cubre el circulo (recorta lo que sobra)
+    k = side / min(img.width, img.height)
     img = img.resize((max(side, round(img.width * k)), max(side, round(img.height * k))), Image.LANCZOS)
     left = (img.width - side) // 2
     top = min((img.height - side) // 2, round(0.08 * img.height))   # en bustos altos, mejor la cara
-    img = img.crop((left, top, left + side, top + side))
-    big = Image.new("L", (side * 4, side * 4), 0)
-    ImageDraw.Draw(big).ellipse((0, 0, side * 4 - 1, side * 4 - 1), fill=255)
-    mask = big.resize((side, side), Image.LANCZOS)
-    a = img.getchannel("A")
-    from PIL import ImageChops
-    img.putalpha(ImageChops.multiply(a, mask))
-    return img
+    return img.crop((left, top, left + side, top + side))
 
 
 def sticker_background(png):

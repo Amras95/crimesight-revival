@@ -86,6 +86,13 @@ BOT_STAMPS = [(28, 0, "hello"), (8, 1, "goodJob"), (37, 2, "justMoment"), (29, 3
 BOT_STAMP_CHANCE = 0.7          # probabilidad de que alguna IA conteste a un sticker
 BOT_STAMP_QUIET = 2.5           # segundos sin contestar despues de hacerlo (para no llenar la pantalla)
 ROOM_STAMP_ROW = 92.5           # en la sala, lo que baja el sticker por cada fila de la lista de jugadores
+
+# Pings con los que un jugador dice "este personaje lo llevo yo": la IA de su bando lo deja y contesta
+# "Entendido" (Pawn/Move/Search y los mismos de Irene, que solo ve Moriarty; Irene4 = "aqui tienes a tu asesino").
+CLAIM_PINGS = {1, 4, 7, 26, 27, 28, 29, 30}
+# Pings automaticos al dar una orden ("X ordena a Y..."): la IA tambien deja ese personaje, sin contestar.
+ORDER_PINGS = set(range(13, 26)) | {31}
+ROGER_STAMP = (0, 16, "roger")
 # El juego deja elegir "Random" como escenario y manda ese nombre tal cual: el servidor oficial lo
 # cambiaba por uno real al empezar. Si le llega "Random", el juego intenta cargar una escena que no
 # existe y se queda en negro.
@@ -377,6 +384,9 @@ class Room:
         self.drops = {}            # objeto en el suelo (cottage id) -> indice de objeto
         self.disabled_objects = set()
         self.bot_orders = {}
+        self.claims = {"sherlock": set(), "moriarty": set()}   # personajes que un humano dice que lleva este turno
+        self.watson_food = set()   # muebles con comida que Watson ya conoce
+        self.watson_done = False   # ya se le dijo a Watson que no queda comida por descubrir
         self.ai_mem = ai.new_memory()   # lo que ha visto el bando de Sherlock (IA dificil)
         self.last_view = None
         self.turn_ref = {}         # reference_data del inicio del turno (para IA y peligros)
@@ -450,6 +460,8 @@ class Room:
             return
         if tag == "stamp":
             await self.bot_stamp(sess, kw, eligible)
+        elif tag == "ping":
+            await self.bot_claim(sess, kw, eligible)
         elif tag == "startInstruct":
             await asyncio.sleep(0.5)
             await self.bot_say("instruct", list=[])
@@ -471,6 +483,10 @@ class Room:
         except (TypeError, ValueError):
             return
         bots = self.bots()
+        if eligible and any(b in eligible for b in bots):     # mensaje privado de un bando: contesta ese bando
+            bots = [b for b in bots if b in eligible]
+        if not bots:
+            return
         for n, pid in enumerate(random.sample(bots, 2 if len(bots) > 1 and random.random() < 0.2 else 1)):
             await asyncio.sleep(random.uniform(0.9, 2.2) if n == 0 else random.uniform(0.4, 1.0))
             if self.hub.rooms.get(self.id) is not self or pid not in self.members:
@@ -487,6 +503,52 @@ class Room:
                 msg["posposY"] = round(base_y - ROOM_STAMP_ROW * (idx - sender))
             targets = None if eligible is None else set(eligible) | {sess.player_id}
             await self.hub.emit(self.topic, msg, var=self.vars, eligible=targets)
+
+    async def bot_claim(self, sess, kw, eligible=None):
+        """Un humano senala un personaje con un ping ("Yo controlare a X", "Movere a X"... o el que manda
+        el juego al darle una orden): la IA de su bando deja ese personaje este turno y, si era un aviso,
+        una de ellas contesta "Entendido" junto al personaje. Asi Irene puede jugar con un Moriarty IA."""
+        try:
+            typ = int(kw.get("type", -1))
+            obj = str(kw.get("obj") or "")
+            pawn = int(obj[4:]) - 1 if obj.startswith("pawn") else -1
+        except (TypeError, ValueError):
+            return
+        if pawn < 0 or (typ not in CLAIM_PINGS and typ not in ORDER_PINGS) or sess.player_id not in self.members:
+            return
+        if self.phase != "playing":
+            return
+        team = self.side(sess.player_id)
+        mates = [b for b in self.bots() if self.side(b) == team and (eligible is None or b in eligible)]
+        if not mates:
+            return
+        claims = self.claims.setdefault(team, set())
+        new = pawn not in claims
+        claims.add(pawn)
+        if new and any(o.get("pawnId") == pawn for b in mates for o in self.bot_orders.get(b, [])):
+            log.info("Sala %s turno %s: %s se queda con el personaje %s; la IA de su bando cambia de plan",
+                     self.id, self.turn, self.members[sess.player_id]["name"], pawn)
+            self.plan_bots(self.turn_ref)
+        if typ not in CLAIM_PINGS or not new:
+            return
+        await asyncio.sleep(random.uniform(0.7, 1.6))
+        pid = random.choice(mates)
+        if self.hub.rooms.get(self.id) is not self or pid not in self.members:
+            return
+        idx = self.member_index(pid)
+        typ_s, data_index, text = ROGER_STAMP
+        self.stamp_seq += 1
+        try:
+            x, y, z = (int(kw.get(k, 0)) for k in ("posposX", "posposY", "posposZ"))
+        except (TypeError, ValueError):
+            x = y = z = 0
+        msg = {"tag": "stamp", "createId": (4000 + self.stamp_seq) * 16 + idx, "id": idx, "type": typ_s,
+               "setIndex": 0, "dataIndex": data_index, "posposX": x + 14, "posposY": y, "posposZ": z,
+               "isClick": 1, "liveTime": 0, "parentCreateId": 0, "name": self.members[pid]["name"],
+               "logMsgId": "ctg_name_log_stamp_" + text, "pingType": 34, "responseMsgId": "", "pingName": "",
+               "pingPlayerName": "", "pingPlayerId": 0, "ignore": 0, "isCutScene": 0}
+        targets = None if eligible is None else set(eligible) | {sess.player_id}
+        await self.hub.emit(self.topic, msg, var=self.vars, eligible=targets)
 
     async def _bot_heartbeat(self):
         """Durante la partida las IA confirman cada pocos segundos que estan listas."""
@@ -815,6 +877,7 @@ class Room:
         random.shuffle(items)
         self.object_items = dict(enumerate(items))
         self.ai_mem = ai.new_memory()
+        self.watson_food, self.watson_done = set(), False
         self.food_items = set(range(food))
         self.weapon_items = set(range(food, food + weapons))
         # Planos del cuadro electrico: los ultimos de la lista (ItemManager.CreateMatchItemList)
@@ -833,6 +896,8 @@ class Room:
         foods = self.objects_with(self.food_items)
         if self.members.get(pid, {}).get("role") != ROLE_CRIMINAL:
             foods = sorted(random.sample(foods, min(FOOD_OPEN_COUNT, len(foods))))
+            if self.members.get(pid, {}).get("role") == ROLE_WATSON:
+                self.watson_food |= set(foods)
             return {"weaponList": [], "foodList": foods}
         return {"weaponList": self.objects_with(self.weapon_items), "foodList": foods}
 
@@ -942,8 +1007,13 @@ class Room:
             self.turn = int(ref.get("turn", self.turn + 1)) if isinstance(ref, dict) else self.turn + 1
             self.vars["random_seed"] = random.randint(1, 2**31 - 1)
             self.turn_ref = ref if isinstance(ref, dict) else {}
+            self.claims = {"sherlock": set(), "moriarty": set()}
             self.plan_bots(self.turn_ref)
-            await self.control("StartCommandPhase", {"Turn": self.turn, "Data": {}, "RandomSeed": "random_seed"})
+            data = {}
+            found = self.watson_reveal()
+            if found is not None:
+                data["watson"] = found
+            await self.control("StartCommandPhase", {"Turn": self.turn, "Data": data, "RandomSeed": "random_seed"})
         if "action" in self.pending and self._complete("action"):
             data = self.build_action_data(self.pending.pop("action"))
             await self.control("StartActionPhase", {"Turn": self.turn, "Data": data})
@@ -970,6 +1040,23 @@ class Room:
         if "answer" in self.pending and self._complete("answer"):
             await self.finish_answers()
 
+    def watson_reveal(self):
+        """Habilidad de Watson: al empezar cada turno descubre un mueble con comida que aun no conocia
+        (el juego lo resalta, lo anade a su lista y Watson lo comenta). Cuando ya no queda, se lo dice una vez.
+        Lo lee GameManager.CommandPhaseCallback del dato "watson" (solo en el juego de Watson)."""
+        if not any(self.members[p]["role"] == ROLE_WATSON for p in self.humans()):
+            return None
+        hidden = [o for o in self.objects_with(self.food_items) if o not in self.watson_food]
+        if not hidden:
+            if self.watson_done or not self.object_items:
+                return None
+            self.watson_done = True
+            return {"nextTargetId": -1}
+        o = random.choice(hidden)
+        self.watson_food.add(o)
+        log.info("Sala %s turno %s: Watson descubre comida en el mueble %s", self.id, self.turn, o)
+        return {"nextTargetId": o, "nextItemId": self.object_items[o]}
+
     def plan_bots(self, ref):
         """La IA decide sus ordenes con el estado del turno que manda el cliente."""
         self.bot_orders = {}
@@ -984,8 +1071,9 @@ class Room:
         rng = random.Random()
         det_players = self.players_by_role([ROLE_DETECTIVE])
         cri_players = self.players_by_role([ROLE_CRIMINAL])
-        # Cada bando solo sabe que personajes ha ordenado su propio equipo
-        taken = {"sherlock": set(), "moriarty": set()}
+        # Cada bando solo sabe que personajes ha ordenado su propio equipo (y los que han reclamado
+        # sus humanos con un ping este turno)
+        taken = {team: set(c) for team, c in self.claims.items()}
         prio = {ROLE_CRIMINAL: 0, ROLE_IRENE: 1, ROLE_DETECTIVE: 2, ROLE_WATSON: 3}
         for pid in sorted(bots, key=lambda b: prio.get(self.members[b]["role"], 9)):
             m = self.members[pid]
@@ -1017,7 +1105,21 @@ class Room:
         by_pawn, from_criminal, from_detective, kill, owner = {}, set(), {}, False, {}
         criminals = set(self.players_by_role([ROLE_CRIMINAL]))
         payloads = dict(payloads)
+        # Lo que ordena un humano no lo pisa la IA de su mismo bando (p. ej. Irene con un Moriarty IA)
+        human_pawns = {"sherlock": set(), "moriarty": set()}
+        for pid, p in payloads.items():
+            pl = p.get("payload") if isinstance(p, dict) else None
+            if isinstance(pl, str):
+                try:
+                    pl = json.loads(pl)
+                except ValueError:
+                    pl = {}
+            for item in (pl or {}).get("list", []) or [] if isinstance(pl, dict) else []:
+                if isinstance(item, dict) and "pawnId" in item:
+                    human_pawns[self.side(pid)].add(int(item["pawnId"]))
         for bot, orders in (getattr(self, "bot_orders", None) or {}).items():
+            mine = human_pawns[self.side(bot)]
+            orders = [o for o in orders or [] if int(o.get("pawnId", -1)) not in mine]
             if orders:
                 payloads[bot] = {"payload": {"list": orders}}
         self.bot_orders = {}
