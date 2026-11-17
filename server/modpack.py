@@ -22,7 +22,8 @@ import hashlib, io, json, os, re, shutil, zipfile
 STICKER_SIZE = 128
 STICKER_MARGIN = 7
 AVATAR_SIZE = 256
-AVATAR_BOX = (40, 33, 176)          # x, y y lado de la zona donde dibujan los iconos originales
+AVATAR_BOX = (40, 33, 176)          # x, y y lado de la zona donde dibujan los iconos originales (la que se ve)
+COVER_RATIO = 1.25                  # fotos hasta 5:4 llenan la zona entera; mas alargadas entran enteras
 KINDS = ("stickers", "avatars")
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif")
 MAX_STICKERS = 60                   # por sala
@@ -94,7 +95,7 @@ def _normalize_img(kind, img):
         canvas.alpha_composite(inner, (STICKER_MARGIN, STICKER_MARGIN))
         return _png(canvas)
     if _cut_off(img):
-        return _png(_cover(img, AVATAR_SIZE))
+        return _png(_frame_fill(img))
     x, y, side = AVATAR_BOX
     canvas = Image.new("RGBA", (AVATAR_SIZE, AVATAR_SIZE), (0, 0, 0, 0))
     canvas.alpha_composite(_fit(img, side), (x, y))
@@ -115,18 +116,25 @@ def _cut_off(img):
     return sum(1 for v in edge if v) > 0.25 * len(edge)
 
 
-def _cover(img, side):
-    """La imagen llenando todo el cuadro del avatar. El juego la recorta con la forma del marco que
-    elija cada jugador (el fondo del avatar lleva una mascara), asi que no se recorta aqui."""
+def _frame_fill(img):
+    """Fotos y bustos: la imagen entera dentro de la zona que ensena el juego (AVATAR_BOX, la misma
+    donde dibujan los iconos originales; el marco que elija cada jugador la recorta con su forma).
+    Si es casi cuadrada la cubre del todo, sin huecos; si es muy alargada, entra entera."""
     from PIL import Image
     bbox = img.getchannel("A").point(lambda v: 255 if v > 64 else 0).getbbox()
     if bbox:
         img = img.crop(bbox)
-    k = side / min(img.width, img.height)
-    img = img.resize((max(side, round(img.width * k)), max(side, round(img.height * k))), Image.LANCZOS)
-    left = (img.width - side) // 2
-    top = min((img.height - side) // 2, round(0.08 * img.height))   # en bustos altos, mejor la cara
-    return img.crop((left, top, left + side, top + side))
+    x, y, side = AVATAR_BOX
+    w, h = img.size
+    ratio = max(w, h) / max(1, min(w, h))
+    k = side / min(w, h) if ratio <= COVER_RATIO else side / max(w, h)
+    img = img.resize((max(1, round(w * k)), max(1, round(h * k))), Image.LANCZOS)
+    canvas = Image.new("RGBA", (AVATAR_SIZE, AVATAR_SIZE), (0, 0, 0, 0))
+    # centrada en la zona visible; lo que sobresale (poco) queda en el borde del cuadro, donde no se ve
+    left = x + (side - img.width) // 2
+    top = y + (side - img.height) // 2 if img.height <= side else y - min(img.height - side, round(0.04 * img.height))
+    canvas.alpha_composite(img.crop((max(0, -left), max(0, -top), img.width, img.height)), (max(0, left), max(0, top)))
+    return canvas
 
 
 def sticker_background(png):
