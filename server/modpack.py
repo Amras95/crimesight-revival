@@ -23,7 +23,6 @@ STICKER_SIZE = 128
 STICKER_MARGIN = 7
 AVATAR_SIZE = 256
 AVATAR_BOX = (40, 33, 176)          # x, y y lado de la zona donde dibujan los iconos originales (la que se ve)
-COVER_RATIO = 1.25                  # fotos hasta 5:4 llenan la zona entera; mas alargadas entran enteras
 KINDS = ("stickers", "avatars")
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif")
 MAX_STICKERS = 60                   # por sala
@@ -83,8 +82,29 @@ def normalize_many(kind, data):
     import modimage
     if len(data) > MAX_INPUT_BYTES:
         raise ModError("imagen demasiado grande (maximo 20 MB)")
-    pieces = modimage.extract(_open(data))[:MAX_PIECES]
+    img = _open(data)
+    if kind == "avatars" and not modimage._has_alpha(img) and not _plain_border(img):
+        # una foto o un dibujo que llega a los bordes: se usa entera. Quitarle el "fondo" le abria
+        # agujeros (zonas claras tocando el borde) que en el juego se ven como huecos grises.
+        return [_normalize_img(kind, img)]
+    pieces = modimage.extract(img)[:MAX_PIECES]
     return [_normalize_img(kind, p) for p in pieces]
+
+
+def _plain_border(img, tol=18, share=0.9):
+    """True si el borde de la imagen es casi todo de un mismo color (un personaje sobre fondo liso)."""
+    rgb = img.convert("RGB")
+    w, h = rgb.size
+    k = min(1.0, 256 / max(w, h))
+    if k < 1.0:
+        rgb = rgb.resize((max(1, round(w * k)), max(1, round(h * k))))
+        w, h = rgb.size
+    px = rgb.load()
+    edge = [px[i, 0] for i in range(w)] + [px[i, h - 1] for i in range(w)] + \
+           [px[0, j] for j in range(h)] + [px[w - 1, j] for j in range(h)]
+    ref = tuple(sorted(c[i] for c in edge)[len(edge) // 2] for i in range(3))
+    near = sum(1 for c in edge if max(abs(c[i] - ref[i]) for i in range(3)) <= tol)
+    return near >= share * len(edge)
 
 
 def _normalize_img(kind, img):
@@ -116,25 +136,118 @@ def _cut_off(img):
     return sum(1 for v in edge if v) > 0.25 * len(edge)
 
 
-def _frame_fill(img):
-    """Fotos y bustos: la imagen entera dentro de la zona que ensena el juego (AVATAR_BOX, la misma
-    donde dibujan los iconos originales; el marco que elija cada jugador la recorta con su forma).
-    Si es casi cuadrada la cubre del todo, sin huecos; si es muy alargada, entra entera."""
+def _place(img, k):
+    """La imagen escalada por k y centrada en la zona visible (si es alta, se sube un poco: las caras
+    suelen estar arriba). Devuelve el lienzo final."""
     from PIL import Image
+    x, y, side = AVATAR_BOX
+    im = img.resize((max(1, round(img.width * k)), max(1, round(img.height * k))), Image.LANCZOS)
+    canvas = Image.new("RGBA", (AVATAR_SIZE, AVATAR_SIZE), (0, 0, 0, 0))
+    left = x + (side - im.width) // 2
+    top = y + (side - im.height) // 2 if im.height <= side else y - min(im.height - side, round(0.04 * im.height))
+    canvas.alpha_composite(im.crop((max(0, -left), max(0, -top), im.width, im.height)), (max(0, left), max(0, top)))
+    return canvas
+
+
+def _coverage(canvas):
+    """Parte de la zona visible que queda cubierta (0..1)."""
+    x, y, side = AVATAR_BOX
+    a = canvas.getchannel("A").crop((x, y, x + side, y + side)).point(lambda v: 255 if v > 64 else 0)
+    return a.histogram()[255] / float(side * side)
+
+
+def _trim_border(img, tol=14, share=0.97):
+    """Quita los bordes lisos de una foto (marcos, franjas de color), que en el juego se ven como huecos."""
+    rgb = img.convert("RGB")
+    w, h = rgb.size
+    px = rgb.load()
+    corners = [px[0, 0], px[w - 1, 0], px[0, h - 1], px[w - 1, h - 1]]
+    ref = tuple(sorted(c[i] for c in corners)[1] for i in range(3))
+
+    def flat(cells):
+        n = sum(1 for c in cells if max(abs(c[i] - ref[i]) for i in range(3)) <= tol)
+        return n >= share * len(cells)
+
+    top, bottom, left, right = 0, h, 0, w
+    lim_y, lim_x = h // 4, w // 4
+    while top < lim_y and flat([px[i, top] for i in range(left, right)]):
+        top += 1
+    while h - bottom < lim_y and flat([px[i, bottom - 1] for i in range(left, right)]):
+        bottom -= 1
+    while left < lim_x and flat([px[left, j] for j in range(top, bottom)]):
+        left += 1
+    while w - right < lim_x and flat([px[right - 1, j] for j in range(top, bottom)]):
+        right -= 1
+    if (top, bottom, left, right) != (0, h, 0, w) and right - left > 8 and bottom - top > 8:
+        return img.crop((left, top, right, bottom))
+    return img
+
+
+def _frame_fill(img):
+    """Fotos y bustos en la zona que ensena el juego (AVATAR_BOX). Se acerca lo justo para que no
+    queden huecos: se prueba desde "entera" hasta "cubre la zona" y se queda con el primer zoom que
+    tapa practicamente todo (lo que no se puede tapar, como los hombros de un busto, se deja)."""
     bbox = img.getchannel("A").point(lambda v: 255 if v > 64 else 0).getbbox()
     if bbox:
         img = img.crop(bbox)
-    x, y, side = AVATAR_BOX
+    img = _trim_border(img)
+    side = AVATAR_BOX[2]
     w, h = img.size
-    ratio = max(w, h) / max(1, min(w, h))
-    k = side / min(w, h) if ratio <= COVER_RATIO else side / max(w, h)
-    img = img.resize((max(1, round(w * k)), max(1, round(h * k))), Image.LANCZOS)
-    canvas = Image.new("RGBA", (AVATAR_SIZE, AVATAR_SIZE), (0, 0, 0, 0))
-    # centrada en la zona visible; lo que sobresale (poco) queda en el borde del cuadro, donde no se ve
-    left = x + (side - img.width) // 2
-    top = y + (side - img.height) // 2 if img.height <= side else y - min(img.height - side, round(0.04 * img.height))
-    canvas.alpha_composite(img.crop((max(0, -left), max(0, -top), img.width, img.height)), (max(0, left), max(0, top)))
-    return canvas
+    k_in, k_out = side / max(w, h), side / min(w, h)
+    best = _coverage(_place(img, k_out))
+    target = min(0.985, best - 0.005)
+    lo, hi = k_in, k_out
+    if _coverage(_place(img, lo)) >= target:
+        hi = lo
+    else:
+        for _ in range(12):                 # busqueda binaria del zoom minimo
+            mid = (lo + hi) / 2
+            if _coverage(_place(img, mid)) >= target:
+                hi = mid
+            else:
+                lo = mid
+    out = _place(img, hi)
+    return _extend(out)
+
+
+def _extend(canvas, strip=4):
+    """Algunos marcos (el rombo, el hexagono) ensenan algo mas que la zona AVATAR_BOX. Por cada lado en
+    el que la imagen esta cortada (una foto, o la ropa de un busto que acaba en seco) se estiran sus
+    ultimas filas hasta el borde, asi parece que sigue. Lo de dentro no cambia; lo estirado se suaviza."""
+    from PIL import Image, ImageFilter
+    W, H = canvas.size
+    a = canvas.getchannel("A").point(lambda v: 255 if v > 200 else 0)
+    bbox = a.getbbox()
+    if not bbox:
+        return canvas
+    l, t, r, b = bbox
+    if r - l < 16 or b - t < 16:
+        return canvas
+    px = a.load()
+
+    def cut(points):
+        pts = list(points)
+        return sum(1 for p in pts if px[p]) >= 0.25 * max(1, len(pts))
+
+    out = canvas.copy()
+    if b < H and cut((x, b - 1) for x in range(l, r)):
+        piece = out.crop((0, b - strip, W, b)).resize((W, H - b), Image.BILINEAR)
+        layer = Image.new("RGBA", (W, H)); layer.paste(piece, (0, b)); layer.alpha_composite(out); out = layer
+    if t > 0 and cut((x, t) for x in range(l, r)):
+        piece = out.crop((0, t, W, t + strip)).resize((W, t), Image.BILINEAR)
+        layer = Image.new("RGBA", (W, H)); layer.paste(piece, (0, 0)); layer.alpha_composite(out); out = layer
+    if r < W and cut((r - 1, y) for y in range(t, b)):
+        piece = out.crop((r - strip, 0, r, H)).resize((W - r, H), Image.BILINEAR)
+        layer = Image.new("RGBA", (W, H)); layer.paste(piece, (r, 0)); layer.alpha_composite(out); out = layer
+    if l > 0 and cut((l, y) for y in range(t, b)):
+        piece = out.crop((l, 0, l + strip, H)).resize((l, H), Image.BILINEAR)
+        layer = Image.new("RGBA", (W, H)); layer.paste(piece, (0, 0)); layer.alpha_composite(out); out = layer
+    # solo se suaviza lo anadido (fuera del recuadro de la imagen), no el contorno del dibujo
+    outside = Image.new("L", (W, H), 255)
+    outside.paste(0, (l, t, r, b))
+    out.paste(out.filter(ImageFilter.GaussianBlur(2)), (0, 0), outside)
+    out.alpha_composite(canvas)
+    return out
 
 
 def sticker_background(png):
