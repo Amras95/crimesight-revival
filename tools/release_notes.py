@@ -25,21 +25,52 @@ SHA-256: `{sha}`
 """
 
 
+def split_block(text):
+    """(titulo, cuerpo) del primer bloque "## " de un registro de cambios."""
+    out, title = [], None
+    for ln in (text or "").replace("\r\n", "\n").split("\n"):
+        if ln.startswith("## "):
+            if title is not None:
+                break
+            title = ln[3:].strip()
+            continue
+        if title is not None:
+            out.append(ln)
+    return title, "\n".join(out).strip()
+
+
 def top_block(path):
     """El primer bloque del registro de cambios, sin su titulo."""
     try:
         with open(path, encoding="utf-8") as f:
-            lines = f.read().replace("\r\n", "\n").split("\n")
+            return split_block(f.read())[1]
     except OSError:
         return ""
-    out, inside = [], False
-    for ln in lines:
-        if ln.startswith("## "):
-            if inside:
-                break
-            inside = True
+
+
+def old_changelog(before):
+    """CHANGELOG.md tal como estaba en el commit anterior ("" si no se sabe)."""
+    if not before or not before.strip("0"):
+        return ""
+    try:
+        r = subprocess.run(["git", "show", f"{before}:CHANGELOG.md"], cwd=ROOT, capture_output=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return r.stdout.decode("utf-8", "replace") if r.returncode == 0 else ""
+
+
+def only_new(block, old_block):
+    """Del bloque, solo las lineas que no estaban (con su "### idioma" delante). Si se va anadiendo
+    al mismo bloque en varias subidas, cada actualizacion ensena solo lo suyo y no todo otra vez."""
+    old = {ln.strip() for ln in old_block.split("\n") if ln.strip()}
+    out, header, pending = [], None, []
+    for ln in block.split("\n"):
+        if ln.startswith("### "):
+            header, pending = ln, []
             continue
-        if inside:
+        if ln.strip() and ln.strip() not in old:
+            if header is not None and header not in out:
+                out.append(header)
             out.append(ln)
     return "\n".join(out).strip()
 
@@ -62,7 +93,12 @@ def build(sha, before, message):
     block = top_block(os.path.join(ROOT, "CHANGELOG.md"))
     message = (message or "").strip()
     changed = changelog_changed(before)
-    if block and (changed or not message):
+    if block and changed:
+        title, _ = split_block(open(os.path.join(ROOT, "CHANGELOG.md"), encoding="utf-8").read())
+        old_title, old_block = split_block(old_changelog(before))
+        changes = only_new(block, old_block) if old_title == title else block
+        changes = changes or message or block
+    elif block and not message:
         changes = block
     else:
         changes = message or block or "-"

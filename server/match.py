@@ -1624,7 +1624,16 @@ class Room:
             await self.finish_answers()
 
     async def p_SetAnswerPhase(self, sess, p):
-        self.pending.setdefault("answer", {})[sess.player_id] = int(p.get("killer", -1))
+        answers = self.pending.setdefault("answer", {})
+        if self.phase != "selection" or sess.player_id in answers:
+            # El juego guarda las respuestas por jugador y se cierra si le llega dos veces la misma
+            # (paso con Sherlock IA y un Watson/Irene humano: la deduccion ya se habia cerrado y llego
+            # otra respuesta). Las que llegan tarde o repetidas no se reenvian.
+            if self.phase != "selection":
+                self.pending.pop("answer", None)
+            log.info("Sala %s: respuesta de %s ignorada (repetida o fuera de tiempo)", self.id, sess.player_id)
+            return rc({})
+        answers[sess.player_id] = int(p.get("killer", -1))
         await self.control("SelectionData", {"Data": {"player_id": sess.player_id, "killer": int(p.get("killer", -1)),
                                                       "ready": len(self.pending["answer"])}})
         await self.check_phase_complete()

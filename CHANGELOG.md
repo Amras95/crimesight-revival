@@ -25,6 +25,8 @@ The first block (from the first `## ` to the next one) is what the launcher show
 - **Salir de una partida**: si eres la única persona de la sala (contra IAs o en el entrenamiento), en los ajustes de la partida (la llave inglesa) está siempre el botón **«Rendirse»**, con cualquier papel y desde el primer turno. Te lleva a los resultados y de vuelta a la sala (cuenta como derrota). Con más personas en la sala sigue como en el juego original: solo Moriarty y desde el turno 4.
 - **Avatares**: ya no quedan huecos en ningún marco. Si la imagen se corta por un lado (la ropa de un busto, el borde de una foto), se continúa hasta el borde del marco sin deformar la cara. Las fotos ya no se agujerean al quitar el «fondo». No hace falta volver a añadir los avatares.
 - **Stickers de los invitados**: al unirte a una sala con tus propios stickers, el lanzador espera a que el anfitrión los acepte antes de abrir el juego. Además, los stickers sacados de una lámina con nombre largo recibían en la sala otros ids que en tu PC y no salían. Antes solo veías los del anfitrión.
+- **Votación final**: el juego ya no se cierra cuando le llega dos veces la respuesta de un jugador (pasaba con Sherlock IA y Watson o Irene humanos).
+- **Avisos de actualización**: ahora enseñan solo lo nuevo de cada versión, no todo el registro de cambios.
 - **Mando**:
   - La barra de ayuda enseña los iconos del mando (antes seguía enseñando las teclas), sin iconos repetidos ni colores raros.
   - Con Steam Input, los mandos de PlayStation y Switch salen con sus propios iconos: Revival le pregunta a Steam qué mando es de verdad.
@@ -47,6 +49,8 @@ The first block (from the first `## ` to the next one) is what the launcher show
 - **Leaving a match**: if you're the only person in the room (against AIs or in training), the match settings (the wrench) always have the **"Surrender"** button, with any role and from the first turn. It takes you to the results and back to the room (counts as a loss). With more people in the room it stays as in the original game: Moriarty only, from turn 4.
 - **Avatars**: no more gaps in any frame. If the picture is cut on one side (a bust's clothes, the edge of a photo), it's continued to the edge of the frame without distorting the face. Photos no longer get holes when the "background" is removed. No need to add your avatars again.
 - **Guests' stamps**: when you join a room with your own stamps, the launcher waits for the host to accept them before opening the game. Also, stamps cut from a sheet with a long file name got different ids in the room than on your PC and didn't show up. Before, you only saw the host's.
+- **Final vote**: the game no longer closes when it gets the same player's answer twice (it happened with an AI Sherlock and a human Watson or Irene).
+- **Update notices**: they now show only what's new in each version, not the whole changelog.
 - **Controller**:
   - The help bar shows the controller icons (it kept showing the keys before), with no repeated icons or odd colours.
   - With Steam Input, PlayStation and Switch controllers get their own icons: Revival asks Steam which controller it really is.
