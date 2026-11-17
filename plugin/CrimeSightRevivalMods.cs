@@ -36,6 +36,7 @@ namespace CrimeSightRevival.Mods
             var h = Harmony.CreateAndPatchAll(typeof(Hooks));
             StageLab.Init(h);
             Pad.Init(h);
+            Quit.Init(h);
             L.LogInfo("Mods en caliente activos. Carpeta: " + LiveMods.LiveDir);
         }
     }

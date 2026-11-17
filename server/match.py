@@ -94,10 +94,17 @@ CLAIM_PINGS = {1, 4, 7, 26, 27, 28, 30}
 ORDER_PINGS = set(range(13, 26)) | {31}
 ROGER_STAMP = (0, 16, "roger")
 # Partidas en solitario (una sola persona contra IAs) con Irene o Watson: ayudas para el papel de apoyo
-IRENE_PICK_PING = 29            # "Aqui tienes a tu asesino!" sobre un personaje: Moriarty IA lo movera
+IRENE_PICK_PINGS = {27, 28, 29}   # pings de Irene sobre un personaje ("Aqui tienes a tu asesino!", mover,
+                                  # registrar): Moriarty IA lo movera este turno
 IRENE_PLACE_PINGS = {26, 27, 28, 30}   # despues, un ping de Irene en el suelo: a donde lo lleva
+IRENE_KILLER_STAMP = 38         # el sticker de Irene "Aqui tienes a tu asesino!" (es un sticker, no un ping)
 IRENE_MAX_PICKS = 2
-SUSPECT_PING, NO_SUSPECT_PING = 9, 10  # Watson: "Sospecho que es el asesino" / "No creo que sea el asesino"
+SUSPECT_PING, NO_SUSPECT_PING = 9, 10
+# Durante la partida la sala pasa de "playing" a "command" con la primera orden y ahi se queda: antes
+# solo se miraba "playing" y, desde el primer turno, las IAs dejaban de atender a los pings (ordenes de
+# Irene, sospechas de Watson, "lo llevo yo") y de avisar de sus personajes.
+IN_MATCH = ("playing", "command")
+GHOST_CRIMINAL = "csr-moriarty"   # Moriarty IA de las salas de entrenamiento (no es un jugador de la sala)  # Watson: "Sospecho que es el asesino" / "No creo que sea el asesino"
 # El juego deja elegir "Random" como escenario y manda ese nombre tal cual: el servidor oficial lo
 # cambiaba por uno real al empezar. Si le llega "Random", el juego intenta cargar una escena que no
 # existe y se queda en negro.
@@ -180,6 +187,14 @@ class Hub:
         if sid is not None:
             sess.subs.pop(sid, None)
         return sid
+
+    async def emit_now(self, topic, kw, var=None, exclude=None, eligible=None):
+        """Como emit(), pero sin esperar al RESULT de la llamada en curso."""
+        held, self.deferred = self.deferred, None
+        try:
+            await self.emit(topic, kw, var=var, exclude=exclude, eligible=eligible)
+        finally:
+            self.deferred = held
 
     async def emit(self, topic, kw, var=None, exclude=None, eligible=None):
         """Publica un EVENT a quien este suscrito al tema."""
@@ -475,8 +490,14 @@ class Room:
         tag = kw.get("tag")
         if not self.bots() or not tag:
             return
+        seen = self.__dict__.setdefault("tags_seen", set())
+        if tag not in seen:
+            seen.add(tag)
+            log.info("Sala %s: primer mensaje %r de los jugadores: %s", self.id, tag,
+                     {k: kw[k] for k in list(kw)[:14]})
         if tag == "stamp":
-            await self.bot_stamp(sess, kw, eligible)
+            if not await self.solo_command(sess, kw, eligible):
+                await self.bot_stamp(sess, kw, eligible)
         elif tag == "ping":
             if not await self.solo_command(sess, kw, eligible):
                 await self.bot_claim(sess, kw, eligible)
@@ -489,8 +510,9 @@ class Room:
             await self.bot_say("endWaitInstruct")
 
     async def bot_stamp(self, sess, kw, eligible=None):
-        """Un jugador manda un sticker: a veces una IA (rara vez dos) contesta con otro al azar, para que
-        no parezca que juegas solo. Usan solo stickers gratuitos del juego y lo ve quien vio el del jugador."""
+        """Un jugador manda un sticker: a veces una IA (rara vez dos) contesta, para que no parezca que
+        juegas solo. Si es uno de los gratuitos del juego contesta con el mismo ("Hola" -> "Hola"); si no
+        (de pago o de un mod), con uno gratuito al azar. Lo ve quien vio el del jugador."""
         now = time.time()
         if now < self.stamp_quiet or random.random() > BOT_STAMP_CHANCE or sess.player_id not in self.members:
             return
@@ -500,6 +522,11 @@ class Room:
             base_y = int(kw.get("posposY", 0))
         except (TypeError, ValueError):
             return
+        try:
+            same = next((st for st in BOT_STAMPS if st[0] == int(kw.get("type", -1))
+                         and int(kw.get("setIndex", 0) or 0) == 0), None)
+        except (TypeError, ValueError):
+            same = None
         bots = self.bots()
         if eligible and any(b in eligible for b in bots):     # mensaje privado de un bando: contesta ese bando
             bots = [b for b in bots if b in eligible]
@@ -510,7 +537,7 @@ class Room:
             if self.hub.rooms.get(self.id) is not self or pid not in self.members:
                 return
             idx = self.member_index(pid)
-            typ, data_index, text = random.choice(BOT_STAMPS)
+            typ, data_index, text = same or random.choice(BOT_STAMPS)
             msg = dict(kw, id=idx, type=typ, setIndex=0, dataIndex=data_index)
             if "createId" in kw:            # en partida: el sticker sale junto al del jugador y en el registro
                 self.stamp_seq += 1
@@ -534,7 +561,7 @@ class Room:
             return
         if pawn < 0 or (typ not in CLAIM_PINGS and typ not in ORDER_PINGS) or sess.player_id not in self.members:
             return
-        if self.phase != "playing":
+        if self.phase not in IN_MATCH:
             return
         team = self.side(sess.player_id)
         mates = [b for b in self.bots() if self.side(b) == team and (eligible is None or b in eligible)]
@@ -571,33 +598,42 @@ class Room:
         - Watson: "Sospecho que es el asesino" sobre alguien -> Sherlock IA aparta de el a quien este en su
           habitacion (todos los turnos); "No creo que sea el asesino" sobre el mismo -> lo olvida.
         Devuelve True si el ping era una de estas ordenes."""
-        if self.phase != "playing" or not self.solo() or sess.player_id not in self.members:
+        if self.phase not in IN_MATCH or not self.solo() or sess.player_id not in self.members:
             return False
+        tag = kw.get("tag")
         try:
             typ = int(kw.get("type", -1))
             obj = str(kw.get("obj") or "")
             pawn = int(obj[4:]) - 1 if obj.startswith("pawn") else -1
-            x, z = int(kw.get("posposX", 0)) / 10, int(kw.get("posposZ", 0)) / 10
+            x, z = float(kw.get("posposX", 0) or 0) / 10, float(kw.get("posposZ", 0) or 0) / 10
         except (TypeError, ValueError):
             return False
         role = self.members[sess.player_id]["role"]
+        if role not in (ROLE_IRENE, ROLE_WATSON):
+            return False
+        if pawn < 0 and tag == "stamp":
+            pawn = self.pawn_near(x, z)          # los stickers no dicen a quien senalan: el mas cercano
+        log.info("Sala %s turno %s: %s %s de %s sobre %r/%s en (%.0f, %.0f)", self.id, self.turn, tag, typ,
+                 ROLE_KEY[role], obj, pawn, x, z)
         if role == ROLE_IRENE:
             mor = [b for b in self.bots() if self.members[b]["role"] == ROLE_CRIMINAL]
             if not mor:
                 return False
-            if typ == IRENE_PICK_PING and pawn >= 0:
+            waiting = self.irene_cmds and self.irene_cmds[-1]["dest"] is None
+            if tag == "ping" and typ in IRENE_PLACE_PINGS and waiting and (pawn < 0 or typ != 29):
+                self.irene_cmds[-1]["dest"] = (x, z)          # "a donde": un ping de Irene despues de elegir
+            elif pawn >= 0 and ((tag == "stamp" and typ == IRENE_KILLER_STAMP) or
+                                (tag == "ping" and typ in IRENE_PICK_PINGS)):
                 self.irene_cmds = [c for c in self.irene_cmds if c["pawn"] != pawn][-(IRENE_MAX_PICKS - 1):]
                 self.irene_cmds.append({"pawn": pawn, "dest": None})
                 self.claims["moriarty"].discard(pawn)
-            elif typ in IRENE_PLACE_PINGS and pawn < 0 and self.irene_cmds and self.irene_cmds[-1]["dest"] is None:
-                self.irene_cmds[-1]["dest"] = (x, z)
             else:
                 return False
             log.info("Sala %s turno %s: Irene pide a Moriarty IA %s", self.id, self.turn, self.irene_cmds)
             self.plan_bots(self.turn_ref)
             asyncio.ensure_future(self.bot_roger(mor[0], sess, kw, eligible))
             return True
-        if role == ROLE_WATSON and pawn >= 0 and typ in (SUSPECT_PING, NO_SUSPECT_PING):
+        if role == ROLE_WATSON and tag == "ping" and pawn >= 0 and typ in (SUSPECT_PING, NO_SUSPECT_PING):
             det = [b for b in self.bots() if self.members[b]["role"] == ROLE_DETECTIVE]
             if not det:
                 return False
@@ -612,6 +648,18 @@ class Room:
             asyncio.ensure_future(self.bot_roger(det[0], sess, kw, eligible))
             return True
         return False
+
+    def pawn_near(self, x, z, reach=7.0):
+        """Personaje mas cercano a un punto del mundo (en el reference_data del turno)."""
+        best, dist = -1, reach * reach
+        for p in (self.turn_ref or {}).get("pawns") or []:
+            if not isinstance(p, dict) or "pawnId" not in p:
+                continue
+            px, pz = grid_pos(p.get("gridId"))
+            d = (px - x) ** 2 + (pz - z) ** 2
+            if d < dist:
+                best, dist = int(p["pawnId"]), d
+        return best
 
     def irene_orders(self, view, idx, taken, rng):
         """Ordenes que Irene le ha pedido a Moriarty IA (en solitario)."""
@@ -675,7 +723,7 @@ class Room:
         va a mover este turno ("Yo controlare a X"). Asi sabes que hace tu companero IA, y las pistas del
         juego ("es posible que X haya recibido ordenes de...") funcionan en vez de decir que no se sabe."""
         await asyncio.sleep(random.uniform(1.5, 3.0) if delay is None else delay)
-        if self.hub.rooms.get(self.id) is not self or self.phase != "playing":
+        if self.hub.rooms.get(self.id) is not self or self.phase not in IN_MATCH:
             return
         pawns = {int(p.get("pawnId", -1)): p for p in (self.turn_ref.get("pawns") or []) if isinstance(p, dict)}
         humans = self.humans()
@@ -849,7 +897,14 @@ class Room:
         if "target" in p:
             self.target = int(p["target"])
         self.refresh_vars()
-        await self.announce_enter(sess)
+        if str(self.settings.get("capacity", 1)) == "1":
+            # Sala en solitario del juego (el entrenamiento): nada mas crearla, el juego empieza la
+            # partida con la lista de jugadores de la sala. Si esa lista le llega despues de la
+            # respuesta, esta vacia y el juego se cierra. Asi que aqui va antes.
+            await self.hub.emit_now(self.topic, {"Control": {"Enter": {
+                "PlayerId": sess.player_id, "PlayerName": sess.name, "RandomSeed": "random_seed"}}}, var=self.vars)
+        else:
+            await self.announce_enter(sess)
         return rc(self.settings_result())
 
     async def p_ChangeCapacity(self, sess, p):
@@ -905,6 +960,7 @@ class Room:
                 self.members[pid]["role"] = int(role)
         self.static_data = p.get("static_data")
         self.assign_roles()
+        self.boost_support()
         self.current_stage = self.pick_stage()
         self.refresh_vars()
         await self.control("StartCountDown", {"CountDownTimer": COUNTDOWN_SECONDS})
@@ -927,6 +983,7 @@ class Room:
 
     async def p_CancelCountDown(self, sess, p):
         self.current_stage = None
+        self.restore_support()
         self.refresh_vars()
         if self.countdown_task:
             self.countdown_task.cancel()
@@ -947,6 +1004,24 @@ class Room:
         await self.control("StartMatch", None)
         if self.bots():
             self.bot_task = asyncio.ensure_future(self._bot_heartbeat())
+
+    def boost_support(self):
+        """En solitario con Irene o Watson, la IA de tu bando juega en Dificil, y asi se llama en la
+        partida (antes seguia poniendo "Normal" y no se entendia). Al volver a la sala recupera la suya."""
+        self.restore_support()
+        for pid in self.bots():
+            m = self.members[pid]
+            if self.solo_support(self.side(pid)) and m.get("difficulty") != "hard":
+                m["lobby_difficulty"] = m.get("difficulty")
+                m["difficulty"] = "hard"
+                m["name"] = ai.bot_name(m["slot"], "hard", self.owner_lang())
+        self.refresh_vars()
+
+    def restore_support(self):
+        for m in self.members.values():
+            if m.get("bot") and m.get("lobby_difficulty"):
+                m["difficulty"] = m.pop("lobby_difficulty")
+                m["name"] = ai.bot_name(m["slot"], m["difficulty"], self.owner_lang())
 
     def assign_roles(self):
         """Reparte los roles con las plazas de la partida: 1 Moriarty, las Irene/Watson que pida la
@@ -1246,11 +1321,17 @@ class Room:
                 diff = "hard"               # en solitario, el companero de Irene/Watson juega en serio
             if role == ROLE_CRIMINAL:
                 n = max(1, 2 // max(1, len(cri_players)))
-                orders = self.irene_orders(views[team], idx, taken[team], rng) if self.solo_support(team) else []
-                if len(orders) < n and not any(o["type"] == ai.TARGET for o in orders):
-                    more, _ = ai.plan_moriarty(views[team], idx, self.killer, self.target, n - len(orders), diff,
-                                               rng, taken[team] | {o["pawnId"] for o in orders})
-                    orders += more
+                own, _ = ai.plan_moriarty(views[team], idx, self.killer, self.target, n, diff, rng, taken[team])
+                if self.solo_support(team) and self.irene_cmds:
+                    # Lo que pide Irene va primero, salvo un asalto: si Moriarty puede matar este turno, mata
+                    # (antes las ordenes de Irene ocupaban sus dos personajes y no atacaba nunca)
+                    strike = [o for o in own if o["type"] == ai.TARGET]
+                    busy = taken[team] | {o["pawnId"] for o in strike}
+                    orders = (strike + self.irene_orders(views[team], idx, busy, rng))[:n]
+                    used = {o["pawnId"] for o in orders}
+                    orders += [o for o in own if o["pawnId"] not in used][:n - len(orders)]
+                else:
+                    orders = own
             elif role == ROLE_IRENE:
                 orders = ai.plan_irene(views[team], idx, self.killer, self.target, diff, rng, taken[team])
             elif role == ROLE_DETECTIVE:
@@ -1293,10 +1374,14 @@ class Room:
             if orders:
                 payloads[bot] = {"payload": {"list": orders}}
         self.bot_orders = {}
+        ghost = self.ghost_moriarty()
+        if ghost:
+            payloads[GHOST_CRIMINAL] = {"payload": {"list": ghost}}
+            criminals.add(GHOST_CRIMINAL)
         rank = {ROLE_IRENE: 1, ROLE_CRIMINAL: 2}
         order = list(payloads)
         random.shuffle(order)
-        for pid in sorted(order, key=lambda x: rank.get(self.members.get(x, {}).get("role"), 0)):
+        for pid in sorted(order, key=lambda x: 2 if x == GHOST_CRIMINAL else rank.get(self.members.get(x, {}).get("role"), 0)):
             role = self.members.get(pid, {}).get("role")
             pl = payloads[pid].get("payload")
             if isinstance(pl, str):
@@ -1417,6 +1502,23 @@ class Room:
                         break
             if score:
                 mem["moved"][p] = mem["moved"].get(p, 0) + score
+
+    def ghost_moriarty(self):
+        """Entrenamiento en solitario del juego: la sala es de una sola persona y nadie lleva a
+        Moriarty. El servidor oficial movia al asesino por su cuenta; sin esto no pasaba nada en toda
+        la partida. Aqui juega un Moriarty IA que no esta en la sala (no sale en la lista)."""
+        ref = self.turn_ref or {}
+        if self.killer < 0 or not ref.get("pawns") or self.players_by_role([ROLE_CRIMINAL]) \
+                or not self.players_by_role([ROLE_DETECTIVE, ROLE_WATSON]):
+            return []
+        view = ai.View(ref, set(self.searched) | self.disabled_objects)
+        view.weapon_objects = set(self.objects_with(self.weapon_items))
+        view.food_objects = set(self.objects_with(self.food_items))
+        orders, _ = ai.plan_moriarty(view, -1, self.killer, self.target, 2, "normal", random.Random())
+        if orders:
+            log.info("Sala %s turno %s: Moriarty sin jugador -> %s", self.id, self.turn,
+                     [(o["pawnId"], o["type"], o["grid"], o["targetId"]) for o in orders])
+        return orders
 
     def npc_orders(self, by_pawn):
         """Pawn.RunNpcAction: quien no recibe ordenes registra algo cercano o da un paseo."""
@@ -1604,11 +1706,13 @@ class Room:
         await self.control("Abandon", {"Data": {
             "killer": self.killer, "target": self.target,
             "criminal_player": crim[0] if crim else "", "criminal_name": self.members[crim[0]]["name"] if crim else "",
-            "detective_player": det[0] if det else "", "detective_name": self.members[det[0]]["name"] if det else ""}})
+            "detective_player": det[0] if det else "", "detective_name": self.members[det[0]]["name"] if det else "",
+            "message": p.get("message", "")}})     # "Rendirse" manda aqui quien se rinde (surrenderPlayerId)
         return rc({})
 
     async def p_Rematch(self, sess, p):
         self.phase = "lobby"
+        self.restore_support()
         self.current_stage = None          # con "Random", la siguiente partida sortea otro escenario
         self.refresh_vars()
         self.killer = self.target = -1

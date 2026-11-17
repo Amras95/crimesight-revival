@@ -7,6 +7,50 @@ mensaje del commit.
 
 The first block (from the first `## ` to the next one) is what the launcher shows when it offers an update.
 
+## 1.1 (actualización) · Irene, entrenamiento y salir de partidas / Irene, training and leaving matches
+
+### Español
+- **Irene ya puede dirigir a Moriarty IA de verdad** (en solitario: tú eres Irene y Moriarty es la IA). Antes no funcionaba: el servidor dejaba de hacer caso a tus avisos después de la primera orden de la partida y no reconocía el sticker de Irene. Cómo se hace:
+  1. Pon el sticker de Irene **«¡Aquí tienes a tu asesino!»** sobre un personaje. Moriarty IA lo moverá este turno y te contesta «Entendido». Si el sticker no cae justo encima, cuenta el personaje más cercano.
+  2. Justo después, pon el ping de Irene **«Moverse»** en el suelo, donde quieras que vaya. Si no pones ninguno, Moriarty lo mueve a su manera.
+  3. Puedes hacerlo con **dos personajes por turno**: sticker y «Moverse» para el primero, y luego lo mismo para el segundo.
+  4. **Para matar**: sticker sobre el asesino y «Moverse» en la casilla de la víctima. Si el asesino lleva arma y llega este turno, ataca. Asegúrate de que no hay testigos: Moriarty hace lo que le pides aunque los haya.
+  5. Si no le das órdenes, Moriarty juega solo y ataca cuando puede hacerlo sin que le vean (antes, si le pedías dos personajes, ya no atacaba nunca).
+  6. **«Yo controlaré a…»** sobre un personaje = Moriarty no lo toca este turno.
+- Cuando dirige a tu compañero, solo contesta él (antes contestaba cualquier IA con un sticker al azar).
+- Tu compañero IA en solitario con Irene o Watson se llama ahora «(Difícil)» en la partida, que es como juega. En la sala vuelve a su dificultad.
+- Las IA ya vuelven a avisarte con un ping de qué personajes van a mover y a hacer caso de tus «Yo controlaré a…» durante toda la partida (dejaban de hacerlo tras la primera orden).
+- Las IA contestan a tu sticker con el mismo («Hola» → «Hola»). Si es uno de pago o de un mod, con uno gratuito al azar.
+- **Entrenamiento en solitario** (menú del juego): ya no se cierra el juego al empezarlo, y Moriarty mueve al asesino y mata, como en el original (antes no pasaba nada en toda la partida).
+- **Salir de una partida**: si eres la única persona de la sala (contra IAs o en el entrenamiento), en los ajustes de la partida (la llave inglesa) está siempre el botón **«Rendirse»**, con cualquier papel y desde el primer turno. Te lleva a los resultados y de vuelta a la sala (cuenta como derrota). Con más personas en la sala sigue como en el juego original: solo Moriarty y desde el turno 4.
+- **Avatares**: ya no quedan huecos en ningún marco. Si la imagen se corta por un lado (la ropa de un busto, el borde de una foto), se continúa hasta el borde del marco sin deformar la cara. Las fotos ya no se agujerean al quitar el «fondo». No hace falta volver a añadir los avatares.
+- **Mando**:
+  - La barra de ayuda enseña los iconos del mando (antes seguía enseñando las teclas), sin iconos repetidos ni colores raros.
+  - Con Steam Input, los mandos de PlayStation y Switch salen con sus propios iconos: Revival le pregunta a Steam qué mando es de verdad.
+  - Start (Options / +) pulsa «Finalizar turno» de verdad.
+  - El stick derecho desplaza las listas en los menús, en los ajustes de la sala y en el Registro.
+
+### English
+- **Irene can now really direct an AI Moriarty** (solo: you're Irene and Moriarty is the AI). It didn't work before: the server stopped listening to your pings after the first order of the match and didn't recognise Irene's stamp. How it works:
+  1. Put Irene's **"Here is your villain!"** stamp on a character. The AI Moriarty will move it this turn and answers "Understood". If the stamp doesn't land right on top, the nearest character counts.
+  2. Right after, put Irene's **"Move"** ping on the floor where you want it to go. If you don't, Moriarty moves it its own way.
+  3. You can do it with **two characters per turn**: stamp and "Move" for the first one, then the same for the second.
+  4. **To kill**: stamp on the killer and "Move" on the victim's tile. If the killer is armed and can get there this turn, it attacks. Make sure there are no witnesses: Moriarty does what you ask even if there are.
+  5. If you don't give orders, Moriarty plays on its own and attacks when it can do it unseen (before, once you asked for two characters it never attacked).
+  6. **"I'll command…"** on a character = Moriarty leaves it alone this turn.
+- When you direct your teammate, only it answers (before, any AI answered with a random stamp).
+- Your AI teammate when playing solo as Irene or Watson is now called "(Hard)" in the match, which is how it plays. Back in the room it returns to its difficulty.
+- The AIs ping which characters they're going to move again, and respect your "I'll command…" for the whole match (they stopped after the first order).
+- The AIs answer your stamp with the same one ("Hello" → "Hello"). If it's a paid or modded one, with a random free one.
+- **Solo training** (game menu): the game no longer closes when you start it, and Moriarty now moves the killer and kills, like in the original (nothing happened during the whole match before).
+- **Leaving a match**: if you're the only person in the room (against AIs or in training), the match settings (the wrench) always have the **"Surrender"** button, with any role and from the first turn. It takes you to the results and back to the room (counts as a loss). With more people in the room it stays as in the original game: Moriarty only, from turn 4.
+- **Avatars**: no more gaps in any frame. If the picture is cut on one side (a bust's clothes, the edge of a photo), it's continued to the edge of the frame without distorting the face. Photos no longer get holes when the "background" is removed. No need to add your avatars again.
+- **Controller**:
+  - The help bar shows the controller icons (it kept showing the keys before), with no repeated icons or odd colours.
+  - With Steam Input, PlayStation and Switch controllers get their own icons: Revival asks Steam which controller it really is.
+  - Start (Options / +) really presses "Commit Command".
+  - The right stick scrolls lists in menus, in the room settings and in the Log.
+
 ## 1.1 · Creador de escenarios / Scenario creator
 
 ### Español
