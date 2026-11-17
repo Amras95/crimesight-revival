@@ -7,7 +7,7 @@ ctx tiene que ofrecer:
   ctx.cancelled()           True si el jugador pulso "Terminar sesion"
   ctx.confirm_mods(info)    pregunta si descargar los mods de la sala (True = descargar y unirse)
 """
-import logging, threading
+import logging, threading, time
 
 import core
 import upnp
@@ -267,7 +267,7 @@ def join(ctx, cfg, steam_id, address, password=""):
     if info.get("password") and not password:
         raise ValueError(t("need_password"))
     rs = _room_mods(ctx, cfg, url, password, info.get("mods"))
-    _offer_own(ctx, cfg, url, password, rs)
+    rs = _offer_own(ctx, cfg, url, password, rs)
     ctx.log(t("syncing"))
     ctx.log(t("record", **core.sync_profile(url, steam_id, password)))
     stages = _stages(ctx, cfg, url, password, steam_id, room=True)
@@ -309,16 +309,41 @@ def _room_mods(ctx, cfg, url, password, info):
     return core.download_mods(url, password, info["hash"])
 
 
-def _offer_own(ctx, cfg, url, password, room):
-    """Ofrece tus mods al anfitrion: si los acepta, los veis todos en la sala."""
+def _offer_own(ctx, cfg, url, password, room, wait=60):
+    """Ofrece tus mods al anfitrion: si los acepta, los veis todos en la sala. Devuelve los mods con
+    los que se entra en la sala.
+
+    Se espera a que el anfitrion conteste ANTES de abrir el juego: si el juego arrancara con los mods
+    de la sala sin los tuyos, al no encontrar tus stickers los quitaria de tu rueda (y lo guarda), y
+    cuando llegaran despues ya no estarian puestos: solo verias los del anfitrion."""
     own = core.my_room_set(cfg)
     have = {m["uid"] for m in room.get("mods", [])}
     if not own["hash"] or all(m["uid"] in have for m in own["mods"]):
-        return
+        return room
     try:
         status = core.offer_mods(url, password, own, core.steam_account()[1])
     except ValueError as e:
         ctx.log(f"✗ {e}")
-        return
+        return room
+    if status not in ("pending", "accepted"):
+        return room
     if status == "pending":
         ctx.log(t("mods_offer_sent"))
+        ctx.log(t("mods_offer_waiting"))
+    mine = {m["uid"] for m in own["mods"]}
+    deadline = time.time() + (wait if status == "pending" else 10)
+    while time.time() < deadline:
+        h = (core.server_info(url).get("mods") or {}).get("hash", "")
+        if h and h != room.get("hash"):
+            try:
+                new = core.download_mods(url, password, h)
+            except ValueError as e:
+                ctx.log(f"✗ {e}")
+                return room
+            if mine <= {m["uid"] for m in new.get("mods", [])}:
+                ctx.log(t("mods_offer_ok"))
+                return new
+            room = new                    # el anfitrion cambio otra cosa: se sigue esperando
+        time.sleep(2)
+    ctx.log(t("mods_offer_timeout"))
+    return room
