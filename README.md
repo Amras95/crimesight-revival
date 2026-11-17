@@ -187,6 +187,8 @@ como uno nuevo. Los escenarios originales no se tocan. Para jugarlos hace falta 
 - Mods de stickers y avatares nuevos, compartidos con la sala, con recarga en caliente opcional.
 - Creador de escenarios, con escenarios compartidos con la sala.
 - Las IA contestan a tus stickers con otro al azar.
+- Controles con mando (Xbox, PlayStation, Switch, Steam Deck), con la recarga en caliente activada. Los
+  botones están en la [wiki](https://github.com/Amras95/crimesight-revival/wiki/Controles#con-mando).
 
 ## Plataformas
 
