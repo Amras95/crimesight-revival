@@ -1,5 +1,5 @@
 # Cada vez que se sube algo a main: compila el lanzador en Windows y en Linux y publica una release nueva.
-# Los lanzadores ya instalados la detectan al abrirse y se actualizan solos.
+# Los lanzadores ya instalados la detectan al abrirse y la ofrecen con sus novedades (tools/release_notes.py).
 name: Compilar y publicar
 
 on:
@@ -16,6 +16,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # hace falta el historial para saber si CHANGELOG.md cambia en esta subida
 
       - uses: actions/setup-python@v5
         with:
@@ -37,23 +39,20 @@ jobs:
         shell: bash
         run: echo "sha256=$(sha256sum dist/CrimeSightRevival.exe | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
+      # Novedades: el primer bloque de CHANGELOG.md si cambia en esta subida; si no, el mensaje del commit
+      - name: Notas de la version
+        shell: bash
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: python tools/release_notes.py "${{ steps.sha.outputs.sha256 }}" "${{ github.event.before }}" notas.md
+
       - name: Publicar release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.version }}
           name: CRIMESIGHT Revival ${{ steps.ver.outputs.version }}
           files: dist/CrimeSightRevival.exe
-          body: |
-            Descarga **CrimeSightRevival.exe** y ábrelo. Necesitas tener CRIMESIGHT en tu biblioteca de Steam.
-            Download **CrimeSightRevival.exe** and run it. You need to own CRIMESIGHT on Steam.
-
-            Si ya lo tienes, se actualizará solo al abrirlo. · If you already have it, it updates itself on launch.
-
-            SHA-256: `${{ steps.sha.outputs.sha256 }}`
-
-            Cambios / Changes: ${{ github.event.head_commit.message }}
-
-
+          body_path: notas.md
 
   # Version para Linux / Steam Deck (la interfaz se abre en el navegador). Se anade a la misma release.
   linux:
