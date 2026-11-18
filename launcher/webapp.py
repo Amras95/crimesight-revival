@@ -634,20 +634,39 @@ class Api:
         self._mods_event.set()
 
     # contexto de sessions.py: unirse a una sala con mods / un jugador trae mods a tu sala
-    def _ask(self, fn, info):
+    def _ask(self, fn, info, poll=None):
         self._mods_answer = None
         self._mods_event.clear()
         js(fn, info)
         while not self._mods_event.wait(0.3):
             if self._cancel:
                 return False
+            got = poll() if poll else None
+            if got is not None:                 # contestado desde el juego
+                js("closeOffer")
+                return got
         return bool(self._mods_answer)
 
     def confirm_mods(self, info):
         return self._ask("confirmMods", info)
 
     def confirm_offer(self, info):
-        return self._ask("confirmOffer", info)
+        """Un invitado trae mods: se pregunta en el lanzador y tambien dentro del juego (con el plugin)."""
+        gd = self._cfg.get("game_dir") or ""
+        oid = str(info.get("id", ""))
+        shown = False
+        try:
+            body = t("mods_offer_text", player=info.get("player", "?")) + "\n\n" + \
+                t("mods_count", stickers=info.get("stickers", 0), avatars=info.get("avatars", 0))
+            shown = bool(gd) and core.offer_prompt(gd, oid, t("mods_offer_title", player=info.get("player", "?")),
+                                                   body, t("mods_offer_yes"), t("mods_offer_no"))
+        except (OSError, ValueError, KeyError):
+            logging.getLogger("crimesight").warning("No pude llevar el aviso de mods al juego", exc_info=True)
+        try:
+            return self._ask("confirmOffer", info, poll=(lambda: core.offer_answer(gd, oid)) if shown else None)
+        finally:
+            if shown:
+                core.offer_clear(gd)
 
     def save_server(self, name, address, password):
         name = (name or address or "").strip()

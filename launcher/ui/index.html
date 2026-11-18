@@ -539,6 +539,7 @@ window.ui={
   error(t){toast(t)},
   bepProgress(t){$('#bepstatus').textContent=t},
   bepDone(t,err){toast(t);loadBep()},
+  closeOffer(){$('#modoffer').classList.remove('on')},
   confirmOffer(info){
     $('#modoffert').textContent=T('mods_offer_title',{player:info.player});
     $('#modofferp').textContent=T('mods_offer_text',{player:info.player});

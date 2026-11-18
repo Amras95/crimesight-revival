@@ -857,6 +857,38 @@ def write_live(rs, game_dir):
     return True
 
 
+def offer_prompt(game_dir, oid, title, body, yes, no):
+    """Aviso de mods de un invitado dentro del juego: el plugin lo ensena con dos botones y escribe
+    la respuesta en offer_answer.json (el anfitrion suele estar en el juego, no en el lanzador)."""
+    d = live_dir(game_dir)
+    if not os.path.isdir(d):
+        return False
+    try:
+        os.remove(os.path.join(d, "offer_answer.json"))
+    except OSError:
+        pass
+    _write_json(os.path.join(d, "offer.json"), {"id": oid, "title": title, "body": body, "yes": yes, "no": no})
+    return True
+
+
+def offer_answer(game_dir, oid):
+    """True/False si se ha contestado desde el juego a ese aviso; None si aun no."""
+    try:
+        with open(os.path.join(live_dir(game_dir), "offer_answer.json"), encoding="utf-8") as f:
+            a = json.load(f)
+    except (OSError, ValueError):
+        return None
+    return bool(a.get("accept")) if a.get("id") == oid else None
+
+
+def offer_clear(game_dir):
+    for name in ("offer.json", "offer_answer.json"):
+        try:
+            os.remove(os.path.join(live_dir(game_dir), name))
+        except OSError:
+            pass
+
+
 def clear_live(game_dir):
     d = live_dir(game_dir)
     if os.path.isdir(d):
