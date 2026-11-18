@@ -532,7 +532,7 @@ def main():
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--port", type=int, default=18080)
     ap.add_argument("--debug", action="store_true", help="registra cada mensaje WebSocket")
-    ap.add_argument("--ai-difficulty", choices=["easy", "normal", "hard"], default="normal",
+    ap.add_argument("--ai-difficulty", choices=["easy", "normal", "hard", "expert", "nightmare"], default="normal",
                     help="dificultad inicial de los jugadores IA")
     ap.add_argument("--public-url", default=None,
                     help="URL fija con la que los clientes ven este servidor (por defecto, la que use cada uno)")

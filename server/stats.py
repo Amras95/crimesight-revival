@@ -25,7 +25,7 @@ POINT_IDS = {DETECTIVE: 10, CRIMINAL: 20, IRENE: 30, WATSON: 40}
 # Puntos por partida (sistema generoso: el juego ya no tiene comunidad, que desbloquear no sea un trabajo)
 # Victoria segun el nivel: IA facil 200, normal 400, dificil 800; contra otras personas 1000 (ahora
 # cuesta mucho encontrar partida). Empate o derrota: la mitad. Abandonar: 0.
-WIN_POINTS = {"easy": 200, "normal": 400, "hard": 800, "online": 1000}
+WIN_POINTS = {"easy": 200, "normal": 400, "hard": 800, "expert": 1000, "nightmare": 1200, "online": 1000}
 LEVELS = tuple(WIN_POINTS)
 RESULT_POINTS = {"win": 400, "draw": 250, "lose": 250, "abandon": 0}   # tabla antigua (partidas viejas)
 RECORD_VERSION = 2
@@ -104,7 +104,7 @@ HISTORY_MAX = 20000          # unas cuantas vidas de partidas; el registro se re
 def record_match(user, role, outcome, actions=(), stage="", match_id=None, level=None):
     """Anota una partida terminada. Devuelve los puntos ganados.
     match_id identifica la partida en cualquier servidor: al juntar perfiles no se duplica.
-    level: "easy"/"normal"/"hard" (contra la IA) u "online" (contra personas)."""
+    level: "easy"/"normal"/"hard"/"expert"/"nightmare" (contra la IA) u "online" (contra personas)."""
     if role not in COUNT_IDS or outcome not in RESULT_POINTS:
         return 0
     hist = user.setdefault("history", [])

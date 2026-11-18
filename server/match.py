@@ -13,6 +13,8 @@ import asyncio, json, logging, random, secrets, time
 import os
 
 import ai
+import matchlog
+import profiles
 import stats
 import cscrypto
 
@@ -99,7 +101,11 @@ IRENE_PICK_PINGS = {27, 28, 29}   # pings de Irene sobre un personaje ("Aqui tie
 IRENE_PLACE_PINGS = {26, 27, 28, 30}   # despues, un ping de Irene en el suelo: a donde lo lleva
 IRENE_KILLER_STAMP = 38         # el sticker de Irene "Aqui tienes a tu asesino!" (es un sticker, no un ping)
 IRENE_MAX_PICKS = 2
-SUSPECT_PING, NO_SUSPECT_PING = 9, 10
+# Watson: "Sospecho que es el asesino" (ping 9 o su sticker) o "Peligro" (ping 2) sobre alguien -> Sherlock IA
+# lo vigila y al final lo acusa; "No creo que sea el asesino" (ping 10 o su sticker) -> lo olvida. Watson casi
+# nunca tiene los pings de sospecha a mano: lo normal es usar los stickers (Stamp.Type 25/24) o "Peligro".
+WATSON_SUSPECT_PINGS, WATSON_CLEAR_PINGS = {9, 2}, {10}
+WATSON_SUSPECT_STAMPS, WATSON_CLEAR_STAMPS = {25}, {24}   # KILLER_SUSPICION / KILLER_NOSUSPICION
 # Durante la partida la sala pasa de "playing" a "command" con la primera orden y ahi se queda: antes
 # solo se miraba "playing" y, desde el primer turno, las IAs dejaban de atender a los pings (ordenes de
 # Irene, sospechas de Watson, "lo llevo yo") y de avisar de sus personajes.
@@ -643,7 +649,8 @@ class Room:
             waiting = self.irene_cmds and self.irene_cmds[-1]["dest"] is None
             if tag == "ping" and typ in IRENE_PLACE_PINGS and waiting and (pawn < 0 or typ != 29):
                 self.irene_cmds[-1]["dest"] = (x, z)          # "a donde": un ping de Irene despues de elegir
-            elif pawn >= 0 and ((tag == "stamp" and typ == IRENE_KILLER_STAMP) or
+            elif pawn >= 0 and ((tag == "stamp" and (typ == IRENE_KILLER_STAMP or
+                                                     str(kw.get("logMsgId") or "").endswith("_handle_killer"))) or
                                 (tag == "ping" and typ in IRENE_PICK_PINGS)):
                 self.irene_cmds = [c for c in self.irene_cmds if c["pawn"] != pawn][-(IRENE_MAX_PICKS - 1):]
                 self.irene_cmds.append({"pawn": pawn, "dest": None})
@@ -654,13 +661,21 @@ class Room:
             self.plan_bots(self.turn_ref)
             asyncio.ensure_future(self.bot_roger(mor[0], sess, kw, eligible))
             return True
-        if role == ROLE_WATSON and tag == "ping" and pawn >= 0 and typ in (SUSPECT_PING, NO_SUSPECT_PING):
+        if role == ROLE_WATSON and pawn >= 0:
             det = [b for b in self.bots() if self.members[b]["role"] == ROLE_DETECTIVE]
             if not det:
                 return False
-            if typ == SUSPECT_PING:
+            msg_id = str(kw.get("logMsgId") or "")
+            if tag == "ping":
+                suspect, clear = typ in WATSON_SUSPECT_PINGS, typ in WATSON_CLEAR_PINGS
+            elif tag == "stamp":
+                suspect = msg_id.endswith("_killerSuspicion") or (typ in WATSON_SUSPECT_STAMPS and "_csr_" not in msg_id)
+                clear = msg_id.endswith("_killerNoSuspicion") or (typ in WATSON_CLEAR_STAMPS and "_csr_" not in msg_id)
+            else:
+                suspect = clear = False
+            if suspect:
                 self.watson_suspect = pawn
-            elif self.watson_suspect == pawn:
+            elif clear and self.watson_suspect == pawn:
                 self.watson_suspect = None
             else:
                 return False
@@ -970,7 +985,11 @@ class Room:
         return rc({})
 
     async def p_Kick(self, sess, p):
-        pid = p.get("player_id")
+        pid = str(p.get("player_id") or "")
+        if "#" in pid:
+            # El plugin elige la dificultad con su ventana: "bot0001#expert", "bot0001#expert#all", "bot0001#free"
+            pid, _, choice = pid.partition("#")
+            return await self.set_bot_difficulty(sess, pid, choice)
         bot = self.members.get(pid, {})
         if sess.player_id == self.owner and bot.get("bot"):
             # Expulsar a una IA cambia su dificultad: Normal -> Dificil -> Facil -> hueco libre
@@ -992,6 +1011,32 @@ class Room:
         if target and sess.player_id == self.owner:
             await self.control("Kick", {"PlayerId": target.player_id, "PlayerName": target.name, "Kicked": True})
             await self.leave(target)
+        return rc({})
+
+    async def set_bot_difficulty(self, sess, pid, choice):
+        """La ventana de la IA del plugin: dificultad de una IA (o de todas) o dejar su hueco libre."""
+        bot = self.members.get(pid, {})
+        if sess.player_id != self.owner or not bot.get("bot") or self.phase != "lobby":
+            return rc({})
+        parts = choice.split("#")
+        diff, everyone = parts[0], "all" in parts[1:]
+        if diff == "free":
+            name = self.members.pop(pid)["name"]
+            self.open_seats += 1
+            self.refresh_vars()
+            await self.control("Leave", {"PlayerId": pid, "PlayerName": name, "OwnerId": self.owner,
+                                         "OwnerName": self.members[self.owner]["name"]})
+            return rc({})
+        if diff not in ai.DIFFICULTIES:
+            return rc({})
+        for b in (self.bots() if everyone else [pid]):
+            m = self.members[b]
+            m.pop("lobby_difficulty", None)
+            m["difficulty"] = diff
+            m["name"] = ai.bot_name(m["slot"], diff, self.owner_lang())
+        log.info("Sala %s: IA %s -> %s", self.id, "todas" if everyone else pid, diff)
+        self.refresh_vars()
+        await self.control("ChangeSettings", None)
         return rc({})
 
     async def p_SetRoles(self, sess, p):
@@ -1047,6 +1092,24 @@ class Room:
             m["ready"] = False
         self.refresh_vars()
         self.match_id = f"{self.id}-{int(time.time())}-{secrets.token_hex(3)}"
+        try:
+            self.mlog = matchlog.MatchLog(os.path.dirname(self.hub.api.s.path), self.match_id,
+                                          self.current_stage or self.settings.get("stage", ""), self.settings,
+                                          self.members, self.killer, self.target, ROLE_KEY)
+        except Exception:  # noqa: BLE001  (el registro nunca debe parar una partida)
+            log.exception("No pude empezar el registro de la partida")
+            self.mlog = None
+        self.profiles = {"moriarty": None, "sherlock": None}
+        if any(m.get("difficulty") == "nightmare" for m in self.members.values() if m.get("bot")):
+            try:
+                recs = matchlog.read_all(os.path.dirname(self.hub.api.s.path))
+                self.profiles = profiles.for_room(recs, self.members, ROLE_KEY)
+                log.info("Sala %s: IA Pesadilla con %s partidas guardadas; perfiles: Moriarty %s, Sherlock %s",
+                         self.id, len(recs),
+                         (self.profiles["moriarty"] or {}).get("matches", "sin datos"),
+                         (self.profiles["sherlock"] or {}).get("matches", "sin datos"))
+            except Exception:  # noqa: BLE001
+                log.exception("No pude leer los perfiles para la IA Pesadilla")
         log.info("Sala %s: empieza la partida (asesino %s, victima %s, roles %s)", self.id, self.killer, self.target,
                  {m["name"]: m["role"] for m in self.members.values()})
         await self.control("StartMatch", None)
@@ -1059,11 +1122,17 @@ class Room:
         self.restore_support()
         for pid in self.bots():
             m = self.members[pid]
-            if self.solo_support(self.side(pid)) and m.get("difficulty") != "hard":
+            lvl = self.support_level()
+            if self.solo_support(self.side(pid)) and m.get("difficulty") != lvl:
                 m["lobby_difficulty"] = m.get("difficulty")
-                m["difficulty"] = "hard"
-                m["name"] = ai.bot_name(m["slot"], "hard", self.owner_lang())
+                m["difficulty"] = lvl
+                m["name"] = ai.bot_name(m["slot"], lvl, self.owner_lang())
         self.refresh_vars()
+
+    def support_level(self):
+        """Nivel de la IA companera en solitario: Dificil, o Experto si los rivales son expertos."""
+        rivals = [m.get("lobby_difficulty") or m.get("difficulty") for m in self.members.values() if m.get("bot")]
+        return "expert" if {"expert", "nightmare"} & set(rivals) else "hard"
 
     def restore_support(self):
         for m in self.members.values():
@@ -1258,6 +1327,7 @@ class Room:
 
     async def end_by_kill(self):
         log.info("Sala %s turno %s: la victima ha muerto", self.id, self.turn)
+        self.log_call("killed", self.turn, self.assault)
         await self.send_result(True)
         self.conclude("moriarty", {ROLE_CRIMINAL: [ACT_ASSAIL_KILL] if self.assault else []})
 
@@ -1289,6 +1359,7 @@ class Room:
             self.turn = int(ref.get("turn", self.turn + 1)) if isinstance(ref, dict) else self.turn + 1
             self.vars["random_seed"] = random.randint(1, 2**31 - 1)
             self.turn_ref = ref if isinstance(ref, dict) else {}
+            self.log_call("turn_state", self.turn, self.turn_ref)
             self.claims = {"sherlock": set(), "moriarty": set()}
             self.irene_cmds = []
             self.plan_bots(self.turn_ref)
@@ -1352,6 +1423,11 @@ class Room:
         views = {"moriarty": ai.View(ref, gone), "sherlock": ai.View(ref, gone)}   # cada bando, lo suyo
         views["moriarty"].weapon_objects = set(self.objects_with(self.weapon_items))
         views["moriarty"].food_objects = set(self.objects_with(self.food_items))
+        for v in views.values():
+            v.max_turn = int(self.settings.get("max_turn") or 0) or None
+        prof = getattr(self, "profiles", None) or {}
+        self.ai_mem["prof_moriarty"] = prof.get("moriarty")     # lo aprendido de las personas (Pesadilla)
+        self.ai_mem["prof_sherlock"] = prof.get("sherlock")
         self.last_view = view = views["sherlock"]
         rng = random.Random()
         det_players = self.players_by_role([ROLE_DETECTIVE])
@@ -1366,10 +1442,11 @@ class Room:
             role, diff = m["role"], m["difficulty"]
             team = "moriarty" if role in (ROLE_CRIMINAL, ROLE_IRENE) else "sherlock"
             if self.solo_support(team):
-                diff = "hard"               # en solitario, el companero de Irene/Watson juega en serio
+                diff = self.support_level()  # en solitario, el companero de Irene/Watson juega en serio
             if role == ROLE_CRIMINAL:
                 n = max(1, 2 // max(1, len(cri_players)))
-                own, _ = ai.plan_moriarty(views[team], idx, self.killer, self.target, n, diff, rng, taken[team])
+                own, _ = ai.plan_moriarty(views[team], idx, self.killer, self.target, n, diff, rng, taken[team],
+                                          memory=self.ai_mem)
                 if self.solo_support(team) and self.irene_cmds:
                     # Lo que pide Irene va primero, salvo un asalto: si Moriarty puede matar este turno, mata
                     # (antes las ordenes de Irene ocupaban sus dos personajes y no atacaba nunca)
@@ -1381,7 +1458,8 @@ class Room:
                 else:
                     orders = own
             elif role == ROLE_IRENE:
-                orders = ai.plan_irene(views[team], idx, self.killer, self.target, diff, rng, taken[team])
+                orders = ai.plan_irene(views[team], idx, self.killer, self.target, diff, rng, taken[team],
+                                       memory=self.ai_mem)
             elif role == ROLE_DETECTIVE:
                 n = max(1, 3 // max(1, len(det_players)))
                 orders = ai.plan_sherlock(views[team], idx, n, diff, rng, taken[team], self.ai_mem)
@@ -1460,6 +1538,8 @@ class Room:
         self.score_actions(commands, owner)
         commands += self.npc_orders(by_pawn)
         self.remember(commands, set(from_detective))
+        sides = {p: ("M" if o == GHOST_CRIMINAL or self.side(o) == "moriarty" else "S") for p, o in owner.items()}
+        self.log_call("turn_orders", self.turn, commands, sides, kill)
         threat_i, gas_i = self.roll_hazard("threat"), self.roll_hazard("gaspipe")
         self.assault = kill
         data = {}
@@ -1520,7 +1600,7 @@ class Room:
         """Nivel de la partida para los puntos: contra personas "online"; si no, el de la IA."""
         if len([p for p, m in self.members.items() if not m.get("bot")]) >= 2:
             return "online"
-        order = {"easy": 0, "normal": 1, "hard": 2}
+        order = ai.RANK
         diffs = [m.get("difficulty", "normal") for m in self.members.values() if m.get("bot")]
         return max(diffs, key=lambda d: order.get(d, 1)) if diffs else "normal"
 
@@ -1538,7 +1618,13 @@ class Room:
             if p in ordered_by_sherlock or int(c.get("type", 0)) not in (2, 3, 4, 5):
                 continue
             # Lo que llama la atencion: correr (nadie corre por su cuenta) o acercarse a una posible victima
-            score = 1 if int(c.get("isRun", 0) or 0) or int(c.get("type", 0)) in (4, 5) else 0
+            ran = bool(int(c.get("isRun", 0) or 0)) or int(c.get("type", 0)) in (4, 5)
+            if int(c.get("type", 0)) == 3:
+                mem.setdefault("search", {})[p] = mem["search"].get(p, 0) + 1
+            score = 1 if ran else 0
+            mem.setdefault("acts", {})[p] = mem["acts"].get(p, 0) + 1
+            if ran:
+                mem.setdefault("ran", {})[p] = mem["ran"].get(p, 0) + 1
             me = pawns.get(p, {})
             dest = next((g for g in me.get("gridList") or [] if g.get("gridId") == c.get("grid")), None)
             if dest is not None:
@@ -1547,6 +1633,7 @@ class Room:
                 for v in victims:
                     if v != p and v < len(after) and after[v] < before.get(v, 99) and after[v] <= 2:
                         score += 1
+                        mem.setdefault("approach", {})[p] = mem["approach"].get(p, 0) + 1
                         break
             if score:
                 mem["moved"][p] = mem["moved"].get(p, 0) + score
@@ -1702,6 +1789,12 @@ class Room:
             if m["role"] in (ROLE_DETECTIVE, ROLE_WATSON):
                 guess = ai.accuse(self.last_view, self.killer, m["difficulty"], random.Random(), self.pawn_count,
                                   self.ai_mem)
+                # en solitario con Watson, Sherlock IA acusa a quien Watson le ha dicho (si aun puede serlo)
+                ws = self.watson_suspect
+                if m["role"] == ROLE_DETECTIVE and ws is not None and self.solo_support(self.side(bot)):
+                    pawns = (self.last_view.pawns if self.last_view else {}) or {}
+                    if not pawns or pawns.get(ws, {}).get("isKillerCandidate", True):
+                        guess = ws
                 selections.append({"player_id": bot, "killer": guess})
 
         def ids(roles):
@@ -1720,7 +1813,19 @@ class Room:
             "watson_ids": wat_ids, "watson_names": wat_names}})
         self.record_result(selections)
 
+    def log_call(self, name, *args):
+        """Apunta algo en el registro de la partida (matchlog); si falla, la partida sigue igual."""
+        ml = getattr(self, "mlog", None)
+        if ml is None:
+            return
+        try:
+            getattr(ml, name)(*args)
+        except Exception:  # noqa: BLE001
+            log.exception("Fallo apuntando la partida (%s)", name)
+
     def record_result(self, selections):
+        self.log_call("accusations", [(s["player_id"], s["killer"], self.members.get(s["player_id"], {}).get("bot"))
+                                      for s in selections])
         """Fin por deduccion: si Sherlock acierta gana su bando; si no, empate (no hubo asesinato)."""
         right = [s["player_id"] for s in selections if s["killer"] == self.killer
                  and self.members.get(s["player_id"], {}).get("role") == ROLE_DETECTIVE]
@@ -1732,6 +1837,9 @@ class Room:
         if self.recorded:
             return
         self.recorded = True
+        ml = getattr(self, "mlog", None)
+        reason = "abandon" if quitter else ("kill" if ml is not None and ml.rec.get("kill") else "deduction")
+        self.log_call("finish", winner, reason)
         extra = extra or {}
         for pid, m in self.members.items():
             if m.get("bot"):

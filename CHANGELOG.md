@@ -7,6 +7,42 @@ mensaje del commit.
 
 The first block (from the first `## ` to the next one) is what the launcher shows when it offers an update.
 
+## 1.2 · IA Experto y Pesadilla / Expert and Nightmare AI
+
+### Español
+
+- **Nueva dificultad de la IA: Experto** (por encima de Difícil; se elige en la sala, con la ventana de abajo o expulsando a la IA). Juega con lo mismo que vería una persona, sin trampas, pero piensa más:
+  - **Sherlock / Watson**: sospechan con más criterio (correr sin que lo mande Sherlock delata, porque quien va por su cuenta nunca corre; también las órdenes pisadas, acercarse a las posibles víctimas y llevar arma). Alejan primero al sospechoso claro de todas las víctimas, nunca lo acercan al grupo, y en los últimos turnos lo dan todo por proteger.
+  - **Moriarty**: prevé lo que va a ordenar Sherlock y no le da a su asesino órdenes que chocarían y le delatarían. Si su asesino ya es el principal sospechoso, se esconde y hace correr a un inocente hacia otra posible víctima para que parezca el culpable. En los últimos turnos busca el asesinato con lo previsto, y en el último se la juega.
+  - **Irene**: aparta testigos hacia los peligros y, si no hay nada mejor, hace parecer culpable a un inocente.
+  - Ganar contra la IA Experta da 1000 puntos. En solitario con Irene o Watson, si los rivales son Expertos, tu compañero IA también lo es.
+- **Nueva dificultad: Pesadilla** (después de Experto en el ciclo). Es la Experta, pero aprende de tus partidas anteriores en ese servidor, como haría un rival que ya ha jugado contra ti:
+  - **Contra tu Moriarty**: aprende qué delata a tu asesino (si suele correr, registrar, acercarse a las víctimas…) comparándolo con cómo se mueven los inocentes, y en qué turnos sueles atacar; en esos turnos lo da todo por proteger.
+  - **Contra tu Sherlock o Watson**: aprende si te tragas los señuelos (si acusas al inocente que corrió) y si vigilas al asesino con tus órdenes. Si te los tragas, Moriarty usa señuelos casi siempre; si no, casi nunca, y esconde antes a su asesino si le vigilas. Además busca el asesinato desde cuatro turnos antes del final.
+  - Necesita al menos 3 partidas tuyas en ese papel; hasta entonces juega como Experta, algo más agresiva. Ganarle da 1200 puntos.
+- **Elegir la dificultad de la IA con una ventana** (con el plugin de BepInEx): en la sala, al pulsar «Expulsar» sobre una IA sale una ventana con las cinco dificultades a la vista (al pasar el ratón explica qué hace cada una), la opción de aplicarla a todas las IA de la sala y la de dejar el hueco libre. Funciona con ratón, mando y Esc para cancelar. Sin el plugin, expulsar sigue cambiando la dificultad en ciclo como antes.
+- **Stickers cruzados en la sala al unirse otro jugador con mods**: cuando llegaban sus stickers, tu rueda de la sala (que suele estar cerrada) se quedaba con las posiciones de antes y al usar «tu» sticker salía el de otro hasta empezar la partida. Ahora se recalculan también las ruedas cerradas y, por si acaso, cada rueda al abrirse.
+- **Las ventanas del plugin** (aviso de mods de los invitados y dificultad de la IA) son una copia de las ventanas del propio juego (banda verde con el título, papel, recuadro y botones en chevrón, que se iluminan igual al pasar el ratón); solo cambian sus textos y botones. La opción elegida va en ámbar, como «Iniciar partida».
+- **Registro de partidas**: el servidor guarda lo que pasa en cada partida (quién llevaba cada papel, las órdenes de cada turno, el asesinato y las acusaciones) en la carpeta de datos, en `match_logs`. Solo se queda en el PC de quien hace de servidor y es de donde aprende la dificultad Pesadilla.
+- **El servidor ya no se cierra solo al acabar una partida**: el lanzador comprobaba si el juego seguía abierto y, si Windows tardaba en responder (pasa con el PC cargado), lo daba por cerrado y terminaba la sesión. Ahora vuelve a mirar antes de cerrar nada.
+
+### English
+
+- **New AI difficulty: Expert** (above Hard; you pick it in the room, with the window below or by kicking the AI). It plays with the same information a person would have, no cheating, but thinks harder:
+  - **Sherlock / Watson**: sharper suspicion (running without Sherlock's order gives it away, since characters acting on their own never run; so do overridden orders, getting close to possible victims and carrying a weapon). They move the clear suspect away from every victim first, never bring them back to the group, and go all-in on protection in the last turns.
+  - **Moriarty**: predicts Sherlock's orders and doesn't give its killer orders that would clash and give it away. If its killer is already the main suspect, it lies low and makes an innocent run towards another possible victim to frame them. In the last turns it hunts for the kill using that prediction, and on the final one it goes for it.
+  - **Irene**: lures witnesses towards hazards and, if there's nothing better, frames an innocent.
+  - Beating the Expert AI gives 1000 points. Playing solo as Irene or Watson against Expert rivals, your AI partner is Expert too.
+- **New difficulty: Nightmare** (after Expert in the cycle). It's the Expert AI, but it learns from your previous matches on that server, like an opponent who has already played against you:
+  - **Against your Moriarty**: it learns what gives your killer away (whether it tends to run, search, get close to victims…) by comparing it with how innocents move, and on which turns you usually strike; on those turns it goes all-in on protection.
+  - **Against your Sherlock or Watson**: it learns whether you fall for decoys (whether you accuse the innocent who ran) and whether you watch the killer with your orders. If you fall for them, Moriarty uses decoys almost always; if not, hardly ever, and it hides its killer earlier if you watch it. It also hunts for the kill from four turns before the end.
+  - It needs at least 3 of your matches in that role; until then it plays like Expert, a bit more aggressive. Beating it gives 1200 points.
+- **Pick the AI difficulty from a window** (with the BepInEx plugin): in the room, clicking "Kick" on an AI opens a window with all five difficulties in view (hover to see what each one does), the option to apply it to every AI in the room and to free the seat. Works with mouse, controller and Esc to cancel. Without the plugin, kicking still cycles the difficulty like before.
+- **Mixed-up stamps in the room when another player joins with mods**: when their stamps arrived, your room stamp wheel (usually closed) kept the old positions, so using "your" stamp showed someone else's until the match started. Now closed wheels are recalculated too and, just in case, each wheel when it opens.
+- **The plugin's windows** (guests' mods prompt and AI difficulty) are copies of the game's own windows (green title band, paper, frame and chevron buttons that light up the same way on hover); only their texts and buttons change. The chosen option is amber, like "Start match".
+- **Match records**: the server saves what happens in each match (who played each role, every turn's orders, the murder and the accusations) in its data folder, under `match_logs`. It stays on the host's PC and it's what the Nightmare difficulty learns from.
+- **The server no longer closes on its own after a match**: the launcher checked whether the game was still open and, if Windows was slow to answer (it happens with a busy PC), assumed it was closed and ended the session. Now it checks again before closing anything.
+
 ## 1.1 (actualización) · Irene, entrenamiento y salir de partidas / Irene, training and leaving matches
 
 ### Español

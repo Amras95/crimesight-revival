@@ -39,6 +39,8 @@ namespace CrimeSightRevival.Mods
             Quit.Init(h);
             Turns.Init(h);
             CustomCursor.Init(h);
+            AiPicker.Init(h);
+            Guide.Init(h);
             L.LogInfo("Mods en caliente activos. Carpeta: " + LiveMods.LiveDir);
         }
     }
@@ -56,6 +58,12 @@ namespace CrimeSightRevival.Mods
 
         [HarmonyPrefix, HarmonyPatch(typeof(PingStampMenuBase), nameof(PingStampMenuBase.RefreshMenuStampReferenceSaveData))]
         static void BeforeStampMenu() => LiveMods.Instance?.Sync();
+
+        [HarmonyPostfix, HarmonyPatch(typeof(PingStampMenuBase), nameof(PingStampMenuBase.SetActive))]
+        static void AfterMenuActive(PingStampMenuBase __instance, bool isActive)
+        {
+            if (isActive) LiveMods.MenuOpened(__instance);
+        }
 
         [HarmonyPostfix, HarmonyPatch(typeof(CursorAvatarManager), nameof(CursorAvatarManager.RegistCursorAvatarSet))]
         static void AfterAvatarSet() => LiveMods.Instance?.Sync();
@@ -128,10 +136,17 @@ namespace CrimeSightRevival.Mods
             try { Pad.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Mando] " + e.Message); }
             try { CustomCursor.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Cursor] " + e.Message); }
             try { ModOffer.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Mods] " + e.Message); }
+            try { AiPicker.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[IA] " + e.Message); }
+            try { Guide.Frame(false); } catch (Exception e) { Plugin.L.LogWarning("[Guia] " + e.Message); }
             if (Time.unscaledTime < _next) return;
             _next = Time.unscaledTime + 1f;
             try { Tick(); }
             catch (Exception e) { Plugin.L.LogError(e); }
+        }
+
+        void LateUpdate()
+        {
+            try { Guide.Frame(true); } catch { }
         }
 
         void Tick()
@@ -258,6 +273,7 @@ namespace CrimeSightRevival.Mods
                     foreach (var o in kv.Value.Assets) if (o != null) UnityEngine.Object.Destroy(o);
             _cache.Clear();
             foreach (var kv in next) _cache[kv.Key] = kv.Value;
+            RefreshMenus();
             Plugin.L.LogInfo($"Mods aplicados: {_stamps.Count} stickers y {_avatars.Count} avatares.");
         }
 
@@ -290,26 +306,50 @@ namespace CrimeSightRevival.Mods
         // La rueda de stickers guarda "posicion en la lista" (no el sticker). Al cambiar la lista
         // (entran los mods de otro jugador, que se intercalan al ordenar por tipo), las posiciones de
         // los tuyos cambian: hay que volver a calcular la rueda desde tus ajustes, o saldrian otros.
+        // Se recalculan TODAS las ruedas, tambien las que estan cerradas (en la sala suele estarlo cuando
+        // llegan los mods de otro): antes solo se buscaban las visibles y la cerrada se quedaba con las
+        // posiciones viejas (usabas "tu" sticker y salia el de otro) hasta que empezaba la partida. Y por si
+        // acaso, al abrir una rueda se recalcula si los stickers han cambiado desde la ultima vez.
+        static int _stampGen;
+        static readonly Dictionary<IntPtr, int> _menuGen = new();
+
         [HideFromIl2Cpp]
         static void RefreshMenus()
         {
-            var found = UnityEngine.Object.FindObjectsOfType(Il2CppType.Of<PingStampMenuBase>());
+            _stampGen++;
+            UnityEngine.Object[] found;
+            try { found = Resources.FindObjectsOfTypeAll(Il2CppType.Of<PingStampMenuBase>()); }
+            catch { found = null; }
             if (found == null) return;
             foreach (var o in found)
             {
                 var menu = o?.TryCast<PingStampMenuBase>();
-                if (menu == null) continue;
-                try
-                {
-                    for (int p = 0; p < 4; p++)
-                    {
-                        var preset = (StampManager.PresetType)p;
-                        menu.RefreshMenuStampReferenceSaveData(ref preset);
-                    }
-                    menu.RefreshMenuStampReferenceCustom();
-                }
-                catch (Exception e) { Plugin.L.LogWarning("No pude refrescar la rueda: " + e.Message); }
+                if (menu == null || !menu.gameObject.scene.IsValid()) continue;     // los prefabs no
+                RefreshMenu(menu);
             }
+        }
+
+        [HideFromIl2Cpp]
+        internal static void RefreshMenu(PingStampMenuBase menu)
+        {
+            try
+            {
+                for (int p = 0; p < 4; p++)
+                {
+                    var preset = (StampManager.PresetType)p;
+                    menu.RefreshMenuStampReferenceSaveData(ref preset);
+                }
+                menu.RefreshMenuStampReferenceCustom();
+                _menuGen[menu.Pointer] = _stampGen;
+            }
+            catch (Exception e) { Plugin.L.LogWarning("No pude refrescar la rueda: " + e.Message); }
+        }
+
+        [HideFromIl2Cpp]
+        internal static void MenuOpened(PingStampMenuBase menu)
+        {
+            if (menu == null || _stampGen == 0) return;
+            if (!_menuGen.TryGetValue(menu.Pointer, out var g) || g != _stampGen) RefreshMenu(menu);
         }
 
         // cada segundo: las listas del juego tienen justo nuestros stickers/avatares (al cambiar de

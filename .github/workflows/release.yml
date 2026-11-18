@@ -11,9 +11,16 @@ on:
 permissions:
   contents: write
 
+# Serie de versiones: para pasar a la siguiente (1.3, 2.0...) basta con cambiar esto. El ultimo numero cuenta
+# las releases ya publicadas de la serie: la primera es X.Y.0, luego X.Y.1, X.Y.2...
+env:
+  SERIES: "1.2"
+
 jobs:
   release:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,7 +36,10 @@ jobs:
       - name: Version
         id: ver
         shell: bash
-        run: echo "version=1.1.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+        run: |
+          git fetch --tags --force --quiet
+          n=$(git tag -l "v${SERIES}.*" | wc -l)
+          echo "version=${SERIES}.$((n))" >> "$GITHUB_OUTPUT"
 
       - name: Compilar
         run: python tools/build_exe.py ${{ steps.ver.outputs.version }}
@@ -70,12 +80,12 @@ jobs:
 
       - name: Compilar
         run: |
-          python tools/build_exe.py 1.1.${{ github.run_number }}
+          python tools/build_exe.py ${{ needs.release.outputs.version }}
           mv dist/CrimeSightRevival dist/CrimeSightRevival-linux
           chmod +x dist/CrimeSightRevival-linux
 
       - name: Añadir a la release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1.${{ github.run_number }}
+          tag_name: v${{ needs.release.outputs.version }}
           files: dist/CrimeSightRevival-linux

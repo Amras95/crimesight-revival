@@ -19,7 +19,7 @@ open(vfile, "w", encoding="utf-8").write("\n".join(lines) + "\n")
 
 sep = ";" if os.name == "nt" else ":"
 hidden = ["server", "match", "ai", "stats", "cscrypto", "extract_keys", "patch_client", "credits_patch",
-          "upnp", "art", "modpack", "modimage", "modroom", "modinject", "netssl", "certifi", "browserui", "sessions", "app", "core", "i18n", "updater", "version",
+          "upnp", "art", "modpack", "modimage", "modroom", "matchlog", "profiles", "modinject", "netssl", "certifi", "browserui", "sessions", "app", "core", "i18n", "updater", "version",
           "stagedata", "stagelayout", "stageroom"]
 args = ["--noconfirm", "--clean", "--onefile", "--windowed", "--name", "CrimeSightRevival",
         "--paths", "server", "--paths", "tools", "--paths", "launcher",

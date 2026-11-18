@@ -715,6 +715,10 @@ namespace CrimeSightRevival.Mods
         }
 
         static string Sprite(string name) => $"<sprite name=\"csr_{name}\">";
+        // para la Guia Revival: los iconos del juego (con los nuestros de respaldo) y el tipo de mando
+        internal static TMP_SpriteAsset KeyIcons => _src;
+        internal static void EnsureIcons() { try { Icons(); } catch { } }   // sin mando conectado tambien
+        internal static string PadStyle => _style;
         static string Btn(string b) => Sprite(_style + "_" + b);
 
         static string PadMacro(string id)

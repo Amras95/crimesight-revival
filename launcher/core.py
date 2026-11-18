@@ -342,12 +342,26 @@ def launch_game():
         subprocess.Popen(["xdg-open", f"steam://rungameid/{APP_ID}"])
 
 
+_last_running = False
+
+
 def game_running():
+    """Si CrimeSight.exe esta abierto. Si tasklist falla o tarda (pasa con el PC muy cargado, p. ej. al
+    cargar el final de la partida), no se sabe: se devuelve lo ultimo que se vio, en vez de dar el juego
+    por cerrado y terminar la sesion."""
+    global _last_running
     if not IS_WINDOWS:
         return _linux_game_running()
-    out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq CrimeSight.exe", "/NH"], capture_output=True,
-                         text=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
-    return "CrimeSight.exe" in out
+    try:
+        r = subprocess.run(["tasklist", "/FI", "IMAGENAME eq CrimeSight.exe", "/NH"], capture_output=True,
+                           timeout=20, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except (OSError, subprocess.SubprocessError):
+        return _last_running
+    out = (r.stdout or b"").decode("utf-8", errors="ignore")   # el texto viene en la codificacion de la consola
+    if r.returncode != 0 or not out.strip():
+        return _last_running
+    _last_running = "crimesight.exe" in out.lower()
+    return _last_running
 
 
 def close_game(wait=10):
@@ -467,17 +481,20 @@ def wait_game(log, start_timeout=180, stop_flag=lambda: False):
         log(t("game_not_seen"))
         return False
     log(t("game_open"))
-    opened = time.time()
+    opened, restarted = time.time(), False
     while not stop_flag():
         if game_running():
             time.sleep(2)
             continue
-        if time.time() - opened < 90:          # Steam lo esta reabriendo
-            if not _wait_start(120, stop_flag):
+        if not restarted and time.time() - opened < 60:
+            # Steam lo esta reabriendo: solo pasa una vez, nada mas arrancar
+            restarted = True
+            if not _wait_start(45, stop_flag):
                 break
-            opened = time.time()
-        elif not _wait_start(6, stop_flag):    # cerrado de verdad
+        elif not _wait_start(6, stop_flag):    # cerrado de verdad (se vuelve a mirar unos segundos)
             break
+    if not stop_flag():
+        logging.getLogger("crimesight").info("El juego se ha cerrado: termina la sesion")
     return True
 
 

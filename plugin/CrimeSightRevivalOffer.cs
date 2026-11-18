@@ -36,11 +36,8 @@ namespace CrimeSightRevival.Mods
         static RectTransform _yesRect, _noRect, _alwaysRect;
         static Image _yesImg, _noImg, _alwaysImg;
 
-        static readonly Color Back = new Color(0.07f, 0.08f, 0.16f, 0.97f);
-        static readonly Color Btn = new Color(0.20f, 0.22f, 0.42f, 1f);
-        static readonly Color BtnHover = new Color(0.36f, 0.38f, 0.70f, 1f);
-        static readonly Color BtnNo = new Color(0.16f, 0.17f, 0.26f, 1f);
-        static readonly Color BtnNoHover = new Color(0.28f, 0.29f, 0.42f, 1f);
+        static Color _yesBase, _noBase, _alwaysBase;      // colores de los botones (del aspecto propio)
+        static GameWindow _gw;                             // ventana clonada del juego (null: aspecto propio)
 
         public static void Frame()
         {
@@ -80,9 +77,13 @@ namespace CrimeSightRevival.Mods
             bool overYes = _yesRect != null && RectTransformUtility.RectangleContainsScreenPoint(_yesRect, mouse, null);
             bool overNo = _noRect != null && RectTransformUtility.RectangleContainsScreenPoint(_noRect, mouse, null);
             bool overAlways = _alwaysRect != null && RectTransformUtility.RectangleContainsScreenPoint(_alwaysRect, mouse, null);
-            if (_yesImg != null) _yesImg.color = overYes ? BtnHover : Btn;
-            if (_noImg != null) _noImg.color = overNo ? BtnNoHover : BtnNo;
-            if (_alwaysImg != null) _alwaysImg.color = overAlways ? BtnNoHover : BtnNo;
+            if (_gw != null) _gw.KeepTexts();       // con la ventana del juego, el brillo lo ponen sus botones
+            else
+            {
+                if (_yesImg != null) _yesImg.color = overYes ? Skin.Hover(_yesBase) : _yesBase;
+                if (_noImg != null) _noImg.color = overNo ? Skin.Hover(_noBase) : _noBase;
+                if (_alwaysImg != null) _alwaysImg.color = overAlways ? Skin.Hover(_alwaysBase) : _alwaysBase;
+            }
             if (!Input.GetMouseButtonDown(0)) return;
             if (overYes) Answer(true);
             else if (overAlways) Answer(true, true);
@@ -93,9 +94,10 @@ namespace CrimeSightRevival.Mods
         {
             if (_root != null) UnityEngine.Object.Destroy(_root);
             _root = null; _yesRect = _noRect = _alwaysRect = null; _yesImg = _noImg = _alwaysImg = null; _shownId = null;
+            _gw = null;
         }
 
-        static TMP_FontAsset GameFont()
+        internal static TMP_FontAsset GameFont()
         {
             try
             {
@@ -114,7 +116,7 @@ namespace CrimeSightRevival.Mods
             return null;
         }
 
-        static RectTransform Box(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 pos, Vector2 size)
+        internal static RectTransform Box(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 pos, Vector2 size)
         {
             var go = new GameObject(name);
             var rt = go.AddComponent<RectTransform>();
@@ -125,7 +127,7 @@ namespace CrimeSightRevival.Mods
             return rt;
         }
 
-        static TextMeshProUGUI Label(Transform parent, string text, TMP_FontAsset font, float size, Vector2 pos, Vector2 box)
+        internal static TextMeshProUGUI Label(Transform parent, string text, TMP_FontAsset font, float size, Vector2 pos, Vector2 box)
         {
             var rt = Box("Text", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, box);
             var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
@@ -140,21 +142,13 @@ namespace CrimeSightRevival.Mods
             return t;
         }
 
-        static Image Button(Transform parent, string text, TMP_FontAsset font, Vector2 pos, Color c, out RectTransform rt)
-        {
-            rt = Box("Button", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, new Vector2(236, 64));
-            var img = rt.gameObject.AddComponent<Image>();
-            img.color = c;
-            Label(rt, text, font, 26, Vector2.zero, new Vector2(216, 56));
-            return img;
-        }
 
         static void Show(Msg m)
         {
             Hide();
             try
             {
-                var font = GameFont();
+                var sk = Skin.Get();
                 _root = new GameObject("CSR_ModOffer");
                 UnityEngine.Object.DontDestroyOnLoad(_root);
                 var canvas = _root.AddComponent<Canvas>();
@@ -169,21 +163,37 @@ namespace CrimeSightRevival.Mods
                 var dim = Box("Dim", _root.transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
                 dim.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f);
 
-                var panel = Box("Panel", _root.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(820, 420));
-                panel.gameObject.AddComponent<Image>().color = Back;
-                Label(panel, m.title, font, 38, new Vector2(0, 150), new Vector2(760, 60));
-                Label(panel, m.body, font, 26, new Vector2(0, 25), new Vector2(760, 180));
+                _gw = GameWindow.Create(_root.transform);
+                if (_gw != null)
+                {
+                    _gw.SetText(_gw.Title, m.title);
+                    _gw.SetText(_gw.Body, m.body);
+                    bool three = !string.IsNullOrEmpty(m.always);
+                    int n = three ? 3 : 2;
+                    _yesImg = _gw.AddBottomButton(m.yes, false, 0, n, GameWindow.Amber, out _yesRect, out _);
+                    if (three) _alwaysImg = _gw.AddBottomButton(m.always, false, 1, n, null, out _alwaysRect, out _);
+                    _noImg = _gw.AddBottomButton(m.no, false, n - 1, n, null, out _noRect, out _);
+                    _shownId = m.id;
+                    Plugin.L.LogInfo("[Mods] aviso de mods en el juego: " + m.title);
+                    return;
+                }
+                var panel = sk.MakePanel(_root.transform, new Vector2(860, 440)).transform;
+                sk.MakeText(panel, m.title, 38, new Vector2(0, 160), new Vector2(780, 60), true);
+                sk.MakeText(panel, m.body, 26, new Vector2(0, 30), new Vector2(780, 180), false);
+                var bs = new Vector2(236, 64);
                 if (string.IsNullOrEmpty(m.always))
                 {
-                    _yesImg = Button(panel, m.yes, font, new Vector2(-140, -150), Btn, out _yesRect);
-                    _noImg = Button(panel, m.no, font, new Vector2(140, -150), BtnNo, out _noRect);
+                    _yesImg = sk.MakeButton(panel, m.yes, true, new Vector2(-140, -155), bs, 26, out _yesRect, out _);
+                    _noImg = sk.MakeButton(panel, m.no, false, new Vector2(140, -155), bs, 26, out _noRect, out _);
                 }
                 else
                 {
-                    _yesImg = Button(panel, m.yes, font, new Vector2(-256, -150), Btn, out _yesRect);
-                    _alwaysImg = Button(panel, m.always, font, new Vector2(0, -150), BtnNo, out _alwaysRect);
-                    _noImg = Button(panel, m.no, font, new Vector2(256, -150), BtnNo, out _noRect);
+                    _yesImg = sk.MakeButton(panel, m.yes, true, new Vector2(-256, -155), bs, 26, out _yesRect, out _);
+                    _alwaysImg = sk.MakeButton(panel, m.always, false, new Vector2(0, -155), bs, 26, out _alwaysRect, out _);
+                    _noImg = sk.MakeButton(panel, m.no, false, new Vector2(256, -155), bs, 26, out _noRect, out _);
                 }
+                _yesBase = _yesImg.color; _noBase = _noImg.color;
+                if (_alwaysImg != null) _alwaysBase = _alwaysImg.color;
                 _shownId = m.id;
                 Plugin.L.LogInfo("[Mods] aviso de mods en el juego: " + m.title);
             }
