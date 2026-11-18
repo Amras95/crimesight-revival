@@ -311,7 +311,7 @@ class App:
             return
         gd = self.cfg.get("game_dir")
         if not gd:
-            messagebox.showerror(TITLE, "Primero elige la carpeta del juego.")
+            messagebox.showerror(TITLE, "Primero elige el ejecutable del juego.")
             return
         if not self.steam_id:
             self.steam_id, self.steam_name = core.steam_account()
