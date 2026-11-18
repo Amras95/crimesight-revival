@@ -30,6 +30,11 @@ The first block (from the first `## ` to the next one) is what the launcher show
 - **Tiempo por turno**: ahora va de **60 a 999 segundos** en cualquier sala (antes, en las públicas, el máximo era 180), por si quieres jugar con calma.
 - **Cursor propio**: en el lanzador, Mods → «Cursor propio»: eliges una imagen y será el cursor del juego (se ajusta sola a 32×32 y se le quita el fondo si no tiene transparencia). Puedes elegir dónde hace clic (punta o centro), activarlo o desactivarlo, y ver cuál tienes puesto. Solo lo ves tú y necesita el plugin de BepInEx.
 - **Mando: cursor más suave**: el stick izquierdo ya no mueve el cursor «a cuadros». La dirección es exactamente la del dedo (se pueden hacer círculos y diagonales finas), con una zona muerta redonda, y la aceleración del ratón de Windows ya no lo tuerce.
+- **Mando: cámara más suave**: el stick derecho mueve la cámara sin tirones, en la dirección exacta del stick y más rápido cuanto más lo inclinas, igual que el cursor. Arranca y frena con suavidad, y la velocidad (R3) se sigue pudiendo cambiar.
+- **Mods de los invitados en el juego**: cuando alguien entra en tu sala con sus stickers o avatares, el aviso para descargarlos sale también dentro del juego (antes solo en el lanzador y pasaba desapercibido). Puedes contestar en cualquiera de los dos.
+- **«Aceptar siempre» los mods de los invitados**: en el aviso o en Mods → «Mods de los invitados». Así se añaden sin preguntar cada vez.
+- **Aviso de actualización con el lanzador abierto**: cada media hora mira si hay versión nueva y, si la hay, aparece una campana arriba. Al pulsarla ves las novedades y puedes actualizar al momento; si el juego, una sesión u otro lanzador están abiertos, te avisa y los cierra antes de actualizar.
+- **El servidor ya no se cierra al empezar si el juego estaba abierto**: ahora te dice que cierres el juego (el lanzador lo abre ya conectado). La línea de créditos de la pantalla de título tampoco puede tumbar la sesión si Windows no deja tocar el archivo.
 - **Votación final**: el juego ya no se cierra cuando le llega dos veces la respuesta de un jugador (pasaba con Sherlock IA y Watson o Irene humanos).
 - **Avisos de actualización**: ahora enseñan solo lo nuevo de cada versión, no todo el registro de cambios.
 - **Mando**:
@@ -59,6 +64,11 @@ The first block (from the first `## ` to the next one) is what the launcher show
 - **Turn time**: now goes from **60 to 999 seconds** in any room (public rooms used to stop at 180), for anyone who wants to take it slow.
 - **Custom cursor**: in the launcher, Mods → "Custom cursor": choose an image and it becomes the game's cursor (it's fitted to 32×32 and its background removed if it has no transparency). You can choose where it clicks (tip or centre), turn it on or off, and see which one you have. Only you see it and it needs the BepInEx plugin.
 - **Controller: smoother cursor**: the left stick no longer moves the cursor in a "grid". The direction is exactly your thumb's (circles and fine diagonals work), with a round dead zone, and Windows mouse acceleration no longer bends it.
+- **Controller: smoother camera**: the right stick moves the camera without stutter, in the stick's exact direction and faster the more you tilt it, just like the cursor. It eases in and out, and you can still change its speed (R3).
+- **Guests' mods in the game**: when someone joins your room with their own stickers or avatars, the prompt to download them also shows up inside the game (before it was only in the launcher and went unnoticed). You can answer in either.
+- **"Always accept" guests' mods**: from the prompt or in Mods → "Guests' mods", so they're added without asking every time.
+- **Update notice with the launcher open**: it checks for a new version every half hour and, if there is one, a bell appears at the top. Click it to see what's new and update right away; if the game, a session or another launcher is open, it warns you and closes them first.
+- **The server no longer closes on start if the game was already open**: it now tells you to close the game (the launcher opens it already connected). The credits line on the title screen can't bring the session down either if Windows won't let it touch the file.
 - **Final vote**: the game no longer closes when it gets the same player's answer twice (it happened with an AI Sherlock and a human Watson or Irene).
 - **Update notices**: they now show only what's new in each version, not the whole changelog.
 - **Controller**:

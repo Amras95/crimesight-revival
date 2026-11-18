@@ -5,7 +5,7 @@ En Windows va en su propia ventana; en Linux / Steam Deck la misma interfaz se a
 navegador (browserui.py). Si nada de eso funciona, se abre la interfaz sencilla (app.py).
 Este proyecto solo ofrece la herramienta; no gestiona ni aloja servidores.
 """
-import json, logging, os, re, sys, threading, traceback, webbrowser
+import json, logging, os, re, sys, threading, time, traceback, webbrowser
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -65,6 +65,7 @@ class Api:
         gd = self._cfg.get("game_dir")
         self._update_lang()
         self._check_update()
+        self._watch_updates()
         try:
             core.mods_dir()               # la carpeta de mods ya preparada desde el principio
         except OSError:
@@ -88,9 +89,7 @@ class Api:
         if notice:
             state["notice"] = notice
         if self._update:
-            state["update"] = {"version": self._update["version"], "current": VERSION,
-                               "notes": self._update["notes"],
-                               "skipped": self._cfg.get("update_skipped") == self._update["version"]}
+            state["update"] = self._update_info()
         if _browser:        # los avisos de "cargando" llegan por otro camino y pueden adelantar a esta respuesta
             js("loading", None)
         return state
@@ -103,15 +102,51 @@ class Api:
         except Exception:  # noqa: BLE001
             self._update = None
 
-    def update_apply(self):
-        """El jugador acepta la actualizacion: se descarga, se instala y el lanzador se vuelve a abrir."""
+    def _update_info(self):
+        u = self._update
+        return {"version": u["version"], "current": VERSION, "notes": u["notes"],
+                "skipped": self._cfg.get("update_skipped") == u["version"]}
+
+    def _watch_updates(self, every=30 * 60):
+        """Con el lanzador abierto se vuelve a mirar cada media hora: si sale una version nueva, aparece
+        la campana (sin abrir ninguna ventana, que puede haber una partida en marcha)."""
+        if getattr(self, "_watching", False) or not updater.frozen():
+            return
+        self._watching = True
+
+        def loop():
+            while True:
+                time.sleep(every)
+                try:
+                    new = updater.check(i18n.get_lang())
+                except Exception:  # noqa: BLE001
+                    new = None
+                if new and (not self._update or new["version"] != self._update["version"]):
+                    self._update = new
+                    js("update", self._update_info())
+        threading.Thread(target=loop, daemon=True).start()
+
+    def update_apply(self, force=False):
+        """El jugador acepta la actualizacion: se descarga, se instala y el lanzador se vuelve a abrir.
+        Si hay una sesion, el juego u otro lanzador abiertos, primero se pregunta; al confirmar se cierra
+        todo (la sesion termina como al pulsar "Terminar sesion") y se actualiza."""
         upd = self._update
         if not upd:
             return {"error": t("update_failed", err="-")}
-        if self._busy:
-            return {"error": t("err_busy")}
+        need_close = self._busy or core.game_running() or bool(core.other_launchers())
+        if need_close and not force:
+            return {"confirm": t("update_confirm_close")}
 
         def run():
+            if need_close:
+                js("loading", t("update_closing"))
+                core.close_game()
+                if self._busy:
+                    self.stop()
+                    t0 = time.time()
+                    while self._busy and time.time() - t0 < 40:
+                        time.sleep(0.5)
+                core.close_other_launchers()
             js("loading", t("updating", v=upd["version"]))
             try:
                 updater.apply(upd, progress=lambda pct: js("loading", t("updating", v=upd["version"]) + f"  {pct}%"))
@@ -630,8 +665,21 @@ class Api:
         return {"ok": True, "msg": t("stage_test_off"), "active": ""}
 
     def answer_mods(self, ok):
+        if ok == "always":                      # "Aceptar siempre" en el aviso
+            self._set_guest_always(True)
+            ok = True
         self._mods_answer = bool(ok)
         self._mods_event.set()
+
+    def _set_guest_always(self, on):
+        self._cfg["guest_mods_always"] = bool(on)
+        core.save_config(self._cfg)
+
+    def guest_mods(self, mode=None):
+        """Anfitrion: que hacer cuando un invitado trae mods ("ask" o "always")."""
+        if mode in ("ask", "always"):
+            self._set_guest_always(mode == "always")
+        return {"mode": "always" if self._cfg.get("guest_mods_always") else "ask"}
 
     # contexto de sessions.py: unirse a una sala con mods / un jugador trae mods a tu sala
     def _ask(self, fn, info, poll=None):
@@ -659,11 +707,16 @@ class Api:
             body = t("mods_offer_text", player=info.get("player", "?")) + "\n\n" + \
                 t("mods_count", stickers=info.get("stickers", 0), avatars=info.get("avatars", 0))
             shown = bool(gd) and core.offer_prompt(gd, oid, t("mods_offer_title", player=info.get("player", "?")),
-                                                   body, t("mods_offer_yes"), t("mods_offer_no"))
+                                                   body, t("mods_offer_yes"), t("mods_offer_no"),
+                                                   t("mods_offer_always"))
         except (OSError, ValueError, KeyError):
             logging.getLogger("crimesight").warning("No pude llevar el aviso de mods al juego", exc_info=True)
         try:
-            return self._ask("confirmOffer", info, poll=(lambda: core.offer_answer(gd, oid)) if shown else None)
+            got = self._ask("confirmOffer", info, poll=(lambda: core.offer_answer(gd, oid)) if shown else None)
+            if got == "always":                 # "Aceptar siempre" desde el juego
+                self._set_guest_always(True)
+                return True
+            return bool(got)
         finally:
             if shown:
                 core.offer_clear(gd)

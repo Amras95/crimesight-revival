@@ -1050,6 +1050,89 @@ _OFFER = {
 for _l, _d in _OFFER.items():
     S[_l].update(_d)
 
+# --- anfitrion: que hacer con los mods de los invitados (preguntar o aceptar siempre) -------------
+_GUEST = {
+    "en": dict(guest_mods_title="Guests' mods", guest_mods_ask="Ask me", guest_mods_always="Always accept",
+               guest_mods_desc="When you host and someone joins with their own stickers or avatars. You're asked in the game and in the launcher; with \"Always accept\" they're added straight away.",
+               mods_offer_always="Always accept", mods_offer_auto="{player}'s mods added to the room (you always accept them)."),
+    "es": dict(guest_mods_title="Mods de los invitados", guest_mods_ask="Preguntarme", guest_mods_always="Aceptar siempre",
+               guest_mods_desc="Cuando hosteas y alguien entra con sus propios stickers o avatares. Se te pregunta en el juego y en el lanzador; con «Aceptar siempre» se añaden sin preguntar.",
+               mods_offer_always="Aceptar siempre", mods_offer_auto="Mods de {player} añadidos a la sala (los aceptas siempre)."),
+    "fr": dict(guest_mods_title="Mods des invités", guest_mods_ask="Me demander", guest_mods_always="Toujours accepter",
+               guest_mods_desc="Quand vous hébergez et que quelqu'un rejoint avec ses propres stickers ou avatars. On vous le demande dans le jeu et dans le lanceur ; avec « Toujours accepter » ils sont ajoutés directement.",
+               mods_offer_always="Toujours accepter", mods_offer_auto="Mods de {player} ajoutés au salon (vous les acceptez toujours)."),
+    "it": dict(guest_mods_title="Mod degli ospiti", guest_mods_ask="Chiedimelo", guest_mods_always="Accetta sempre",
+               guest_mods_desc="Quando ospiti e qualcuno entra con i propri sticker o avatar. Ti viene chiesto nel gioco e nel launcher; con «Accetta sempre» vengono aggiunti subito.",
+               mods_offer_always="Accetta sempre", mods_offer_auto="Mod di {player} aggiunti alla stanza (li accetti sempre)."),
+    "de": dict(guest_mods_title="Mods der Gäste", guest_mods_ask="Nachfragen", guest_mods_always="Immer annehmen",
+               guest_mods_desc="Wenn du hostest und jemand mit eigenen Stickern oder Avataren beitritt. Du wirst im Spiel und im Launcher gefragt; mit „Immer annehmen“ werden sie direkt hinzugefügt.",
+               mods_offer_always="Immer annehmen", mods_offer_auto="Mods von {player} zum Raum hinzugefügt (du nimmst sie immer an)."),
+    "pt": dict(guest_mods_title="Mods dos convidados", guest_mods_ask="Perguntar", guest_mods_always="Aceitar sempre",
+               guest_mods_desc="Quando você hospeda e alguém entra com stickers ou avatares próprios. Você é perguntado no jogo e no launcher; com \"Aceitar sempre\" eles são adicionados na hora.",
+               mods_offer_always="Aceitar sempre", mods_offer_auto="Mods de {player} adicionados à sala (você sempre aceita)."),
+    "ru": dict(guest_mods_title="Моды гостей", guest_mods_ask="Спрашивать", guest_mods_always="Всегда принимать",
+               guest_mods_desc="Когда вы хост и кто-то заходит со своими стикерами или аватарами. Вопрос появится в игре и в лаунчере; с «Всегда принимать» они добавляются сразу.",
+               mods_offer_always="Всегда принимать", mods_offer_auto="Моды {player} добавлены в комнату (вы всегда их принимаете)."),
+    "ja": dict(guest_mods_title="ゲストのMOD", guest_mods_ask="毎回確認", guest_mods_always="常に受け入れる",
+               guest_mods_desc="ホスト中に誰かが自分のスタンプやアバターを持って参加したとき。ゲーム内とランチャーで確認されます。「常に受け入れる」ならすぐに追加されます。",
+               mods_offer_always="常に受け入れる", mods_offer_auto="{player} のMODをルームに追加しました（常に受け入れる設定）。"),
+    "ko": dict(guest_mods_title="게스트 모드", guest_mods_ask="매번 묻기", guest_mods_always="항상 수락",
+               guest_mods_desc="호스트 중 누군가 자신의 스탬프나 아바타를 가지고 들어올 때입니다. 게임과 런처에서 물어보며, '항상 수락'이면 바로 추가됩니다.",
+               mods_offer_always="항상 수락", mods_offer_auto="{player} 님의 모드를 방에 추가했습니다(항상 수락)."),
+    "zh-CN": dict(guest_mods_title="访客的模组", guest_mods_ask="每次询问", guest_mods_always="总是接受",
+               guest_mods_desc="当你做房主、有人带着自己的贴图或头像加入时。会在游戏内和启动器中询问你；选择“总是接受”则直接加入。",
+               mods_offer_always="总是接受", mods_offer_auto="已将 {player} 的模组加入房间（你设置为总是接受）。"),
+    "zh-TW": dict(guest_mods_title="訪客的模組", guest_mods_ask="每次詢問", guest_mods_always="總是接受",
+               guest_mods_desc="當你當房主、有人帶著自己的貼圖或頭像加入時。會在遊戲內和啟動器中詢問你；選擇「總是接受」則直接加入。",
+               mods_offer_always="總是接受", mods_offer_auto="已將 {player} 的模組加入房間（你設定為總是接受）。"),
+}
+for _l, _d in _GUEST.items():
+    S[_l].update(_d)
+
+_GAME_OPEN = {
+    "en": "CRIMESIGHT is already open. Close it and press the button again: the launcher opens it for you, already connected.",
+    "es": "CRIMESIGHT ya está abierto. Ciérralo y vuelve a pulsar el botón: el lanzador lo abre por ti, ya conectado.",
+    "fr": "CRIMESIGHT est déjà ouvert. Fermez-le et appuyez de nouveau sur le bouton : le lanceur l'ouvre pour vous, déjà connecté.",
+    "it": "CRIMESIGHT è già aperto. Chiudilo e premi di nuovo il pulsante: il launcher lo apre per te, già connesso.",
+    "de": "CRIMESIGHT ist bereits geöffnet. Schließe es und drücke den Knopf erneut: Der Launcher öffnet es für dich, schon verbunden.",
+    "pt": "O CRIMESIGHT já está aberto. Feche-o e aperte o botão de novo: o launcher abre para você, já conectado.",
+    "ru": "CRIMESIGHT уже открыта. Закройте её и нажмите кнопку ещё раз: лаунчер сам откроет игру, уже с подключением.",
+    "ja": "CRIMESIGHTはすでに起動しています。終了してからもう一度ボタンを押してください。ランチャーが接続済みの状態で起動します。",
+    "ko": "CRIMESIGHT가 이미 실행 중입니다. 종료한 뒤 버튼을 다시 누르세요. 런처가 연결된 상태로 실행해 줍니다.",
+    "zh-CN": "CRIMESIGHT 已经在运行。请先关闭它，再按一次按钮：启动器会帮你打开并自动连接。",
+    "zh-TW": "CRIMESIGHT 已經在執行。請先關閉它，再按一次按鈕：啟動器會幫你開啟並自動連線。",
+}
+for _l, _v in _GAME_OPEN.items():
+    S[_l]["err_game_open"] = _v
+
+# --- actualizar con el juego, una sesion u otro lanzador abiertos ------------------------------------
+_UPD_CLOSE = {
+    "en": dict(update_confirm_close="To update, the game, the current session and any other open launcher will be closed. If you're in the middle of a match, it counts as leaving it.",
+               update_close_btn="Close everything and update", update_closing="Closing the game and the session to update…"),
+    "es": dict(update_confirm_close="Para actualizar se cerrarán el juego, la sesión en marcha y cualquier otro lanzador abierto. Si estás en mitad de una partida, contará como abandono.",
+               update_close_btn="Cerrar todo y actualizar", update_closing="Cerrando el juego y la sesión para actualizar…"),
+    "fr": dict(update_confirm_close="Pour mettre à jour, le jeu, la session en cours et tout autre lanceur ouvert seront fermés. Si vous êtes en pleine partie, cela compte comme un abandon.",
+               update_close_btn="Tout fermer et mettre à jour", update_closing="Fermeture du jeu et de la session pour la mise à jour…"),
+    "it": dict(update_confirm_close="Per aggiornare verranno chiusi il gioco, la sessione in corso e qualsiasi altro launcher aperto. Se sei a metà partita, conta come abbandono.",
+               update_close_btn="Chiudi tutto e aggiorna", update_closing="Chiusura del gioco e della sessione per l'aggiornamento…"),
+    "de": dict(update_confirm_close="Zum Aktualisieren werden das Spiel, die laufende Sitzung und alle anderen offenen Launcher geschlossen. Mitten in einer Partie zählt das als Verlassen.",
+               update_close_btn="Alles schließen und aktualisieren", update_closing="Spiel und Sitzung werden für das Update geschlossen…"),
+    "pt": dict(update_confirm_close="Para atualizar, o jogo, a sessão em andamento e qualquer outro launcher aberto serão fechados. Se você estiver no meio de uma partida, conta como abandono.",
+               update_close_btn="Fechar tudo e atualizar", update_closing="Fechando o jogo e a sessão para atualizar…"),
+    "ru": dict(update_confirm_close="Для обновления будут закрыты игра, текущий сеанс и другие открытые лаунчеры. Если вы посреди матча, это засчитается как выход.",
+               update_close_btn="Закрыть всё и обновить", update_closing="Закрываю игру и сеанс для обновления…"),
+    "ja": dict(update_confirm_close="アップデートのため、ゲーム・実行中のセッション・ほかに開いているランチャーを閉じます。対戦中の場合は途中退出になります。",
+               update_close_btn="すべて閉じてアップデート", update_closing="アップデートのためゲームとセッションを終了しています…"),
+    "ko": dict(update_confirm_close="업데이트하려면 게임, 진행 중인 세션, 열려 있는 다른 런처가 모두 종료됩니다. 대전 중이라면 이탈로 처리됩니다.",
+               update_close_btn="모두 닫고 업데이트", update_closing="업데이트를 위해 게임과 세션을 종료하는 중…"),
+    "zh-CN": dict(update_confirm_close="更新时会关闭游戏、正在进行的会话以及其他打开的启动器。如果你正在对局中，将算作中途退出。",
+                  update_close_btn="全部关闭并更新", update_closing="正在关闭游戏和会话以进行更新…"),
+    "zh-TW": dict(update_confirm_close="更新時會關閉遊戲、正在進行的工作階段以及其他開啟的啟動器。如果你正在對局中，將算作中途退出。",
+                  update_close_btn="全部關閉並更新", update_closing="正在關閉遊戲和工作階段以進行更新…"),
+}
+for _l, _d in _UPD_CLOSE.items():
+    S[_l].update(_d)
+
 _LINUX = {
     "en": "Linux / Steam Deck: also add this to CRIMESIGHT's launch options in Steam (Properties → General), or BepInEx won't load: {opt}",
     "es": "Linux / Steam Deck: añade también esto a las opciones de lanzamiento de CRIMESIGHT en Steam (Propiedades → General), o BepInEx no se cargará: {opt}",

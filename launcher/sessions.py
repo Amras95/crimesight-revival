@@ -30,6 +30,9 @@ def _mods(ctx, game_dir, rs):
 
 
 def _play(ctx, game_dir, url, rs=None, watch=None, every=3):
+    if core.game_running():
+        # con el juego abierto no se pueden preparar sus archivos (y no se conectaria a esta sesion)
+        raise ValueError(t("err_game_open"))
     if rs is not None:
         _mods(ctx, game_dir, rs)
     try:
@@ -100,11 +103,12 @@ def _host_watcher(ctx, cfg, srv):
                 ctx.log(t("mods_offer_need_live", player=off["player"]))
                 room.answer(off["id"], False)
                 continue
+            auto = bool(cfg.get("guest_mods_always"))   # "Aceptar siempre": sin preguntar
             ask = getattr(ctx, "confirm_offer", None)
-            ok = bool(ask and ask(off))
+            ok = auto or bool(ask and ask(off))
             room.answer(off["id"], ok)
             if ok:
-                ctx.log(t("mods_offer_accepted", player=off["player"]))
+                ctx.log(t("mods_offer_auto" if auto else "mods_offer_accepted", player=off["player"]))
         rs = room.rs
         if live and rs["hash"] != state["room"]:
             state["room"] = rs["hash"]

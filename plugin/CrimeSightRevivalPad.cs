@@ -97,8 +97,11 @@ namespace CrimeSightRevival.Mods
         static readonly float[] CameraSpeeds = { 0.35f, 0.65f, 1f };      // fraccion de la velocidad del juego
         static int _cursorSpeed = 1, _cameraSpeed = 1;
         static string _styleSetting = "auto";
-        static float _camAccX, _camAccY;
-        static bool _camX, _camY;              // este fotograma la camara se mueve en ese eje
+        // camara con el stick derecho: se mueve aqui directamente (no pulsando "teclas" a ratos, que daba
+        // tirones), en la direccion exacta del stick y con la velocidad segun lo inclinado
+        static float _camVx, _camVy;           // velocidad actual (suavizada), -1..1 por eje
+        static int _camAllowedFrame = -10;     // ultimo fotograma en que el juego dejaba mover la camara
+        const float KeyStep = 0.25f;           // lo que mueve el juego por fotograma con las teclas (KEY_MOVE_SPEED)
 
         static string SpeedFile => System.IO.Path.Combine(LiveMods.LiveDir, "pad.txt");
 
@@ -338,7 +341,7 @@ namespace CrimeSightRevival.Mods
             if (ScrollMode())
             {
                 // fuera de la partida (o con el registro abierto) el stick derecho es la rueda del raton
-                _camX = _camY = false; _camAccX = _camAccY = 0;
+                _camVx = _camVy = 0;
                 _wheel += _ry * Math.Abs(_ry) * 900f * (0.5f + 0.5f * k) * dt;
                 int w = (int)_wheel;
                 if (w != 0) { Wheel(w); _wheel -= w; }
@@ -346,8 +349,8 @@ namespace CrimeSightRevival.Mods
             else
             {
                 _wheel = 0;
-                _camX = Tick(ref _camAccX, Math.Abs(_rx) * k);
-                _camY = Tick(ref _camAccY, Math.Abs(_ry) * k);
+                try { CameraStick(s.rx, s.ry, k, dt); }
+                catch (Exception e) { if (!_camWarned) { _camWarned = true; Plugin.L.LogWarning("[Mando] camara: " + e.Message); } }
             }
 
             // cursor: el stick como un vector (zona muerta redonda y curva sobre la distancia, no por eje),
@@ -407,6 +410,40 @@ namespace CrimeSightRevival.Mods
             catch { }
             _scrollMode = !inGame || log;
             return _scrollMode;
+        }
+
+        static bool _camWarned;
+
+        // Igual que hace el juego con las flechas (se suelta el seguimiento de la ficha y se desplaza el punto
+        // al que mira), pero con un vector analogico: zona muerta redonda, curva suave y arranque/frenada
+        // progresivos. Se mide por tiempo, asi va igual a 30 que a 144 fps.
+        static void CameraStick(short sx, short sy, float k, float dt)
+        {
+            float x = Math.Max(-1f, sx / 32767f), y = Math.Max(-1f, sy / 32767f);
+            float m = (float)Math.Sqrt(x * x + y * y);
+            float tx = 0, ty = 0;
+            const float dead = 0.16f;
+            if (m > dead)
+            {
+                float n = Math.Min(1f, (m - dead) / (1f - dead));
+                float c = (0.3f * n + 0.7f * n * n) * k / m;
+                tx = x * c; ty = y * c;
+            }
+            float a = Math.Min(1f, dt * 14f);
+            _camVx += (tx - _camVx) * a;
+            _camVy += (ty - _camVy) * a;
+            if (tx == 0 && Math.Abs(_camVx) < 0.004f) _camVx = 0;
+            if (ty == 0 && Math.Abs(_camVy) < 0.004f) _camVy = 0;
+            if ((_camVx == 0 && _camVy == 0) || _rotating) return;
+            if (Time.frameCount - _camAllowedFrame > 2) return;     // menus, escenas, registro abierto...
+            var cm = CameraManager.Instance;
+            if (cm == null) return;
+            var cam = cm.GetCurrentCamera();
+            if (cam == null || !cm.ResetFocusObject()) return;
+            var t = cam.transform;
+            Vector3 off = (t.up * _camVy + t.right * _camVx) * (KeyStep * 60f * dt);
+            Vector3 pos = Vector3.zero;
+            if (cm.GetTargetPosition(ref off, ref pos)) cam.SetTarget(ref pos);
         }
 
         static bool Tick(ref float acc, float amount)
@@ -1005,10 +1042,6 @@ namespace CrimeSightRevival.Mods
             if (!_connected || id == null) return false;
             switch (id)
             {
-                case "CameraMoveUp": return _camY && _ry > 0;
-                case "CameraMoveDown": return _camY && _ry < 0;
-                case "CameraMoveLeft": return _camX && _rx < 0;
-                case "CameraMoveRight": return _camX && _rx > 0;
                 case "CameraRotate": return _rotating;
             }
             return Buttons.TryGetValue(id, out var b) && Held(b);
@@ -1019,7 +1052,11 @@ namespace CrimeSightRevival.Mods
 
         static void AfterIsDown(ref bool __result, ref string id) { if (!__result && Down(id)) __result = true; }
         static void AfterIsUp(ref bool __result, ref string id) { if (!__result && Up(id)) __result = true; }
-        static void AfterIsStatus(ref bool __result, ref string id) { if (!__result && Status(id)) __result = true; }
+        static void AfterIsStatus(ref bool __result, ref string id)
+        {
+            if (id == "CameraMoveRight") _camAllowedFrame = Time.frameCount;   // el juego esta mirando si mover la camara
+            if (!__result && Status(id)) __result = true;
+        }
 
         static void AfterGetScroll(ref float __result)
         {

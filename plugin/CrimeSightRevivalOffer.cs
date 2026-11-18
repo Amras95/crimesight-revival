@@ -24,6 +24,7 @@ namespace CrimeSightRevival.Mods
             public string body { get; set; }
             public string yes { get; set; }
             public string no { get; set; }
+            public string always { get; set; }
         }
 
         static string File_ => Path.Combine(LiveMods.LiveDir, "offer.json");
@@ -32,8 +33,8 @@ namespace CrimeSightRevival.Mods
         static float _next;
         static string _shownId, _answeredId;
         static GameObject _root;
-        static RectTransform _yesRect, _noRect;
-        static Image _yesImg, _noImg;
+        static RectTransform _yesRect, _noRect, _alwaysRect;
+        static Image _yesImg, _noImg, _alwaysImg;
 
         static readonly Color Back = new Color(0.07f, 0.08f, 0.16f, 0.97f);
         static readonly Color Btn = new Color(0.20f, 0.22f, 0.42f, 1f);
@@ -61,12 +62,12 @@ namespace CrimeSightRevival.Mods
             Show(m);
         }
 
-        static void Answer(bool accept)
+        static void Answer(bool accept, bool always = false)
         {
             try
             {
-                File.WriteAllText(AnswerFile, JsonSerializer.Serialize(new { id = _shownId, accept }));
-                Plugin.L.LogInfo("[Mods] mods del invitado " + (accept ? "aceptados" : "rechazados") + " desde el juego");
+                File.WriteAllText(AnswerFile, JsonSerializer.Serialize(new { id = _shownId, accept, always }));
+                Plugin.L.LogInfo("[Mods] mods del invitado " + (always ? "aceptados (siempre)" : accept ? "aceptados" : "rechazados") + " desde el juego");
             }
             catch (Exception e) { Plugin.L.LogWarning("[Mods] no pude guardar la respuesta: " + e.Message); }
             _answeredId = _shownId;
@@ -78,17 +79,20 @@ namespace CrimeSightRevival.Mods
             Vector2 mouse = Input.mousePosition;
             bool overYes = _yesRect != null && RectTransformUtility.RectangleContainsScreenPoint(_yesRect, mouse, null);
             bool overNo = _noRect != null && RectTransformUtility.RectangleContainsScreenPoint(_noRect, mouse, null);
+            bool overAlways = _alwaysRect != null && RectTransformUtility.RectangleContainsScreenPoint(_alwaysRect, mouse, null);
             if (_yesImg != null) _yesImg.color = overYes ? BtnHover : Btn;
             if (_noImg != null) _noImg.color = overNo ? BtnNoHover : BtnNo;
+            if (_alwaysImg != null) _alwaysImg.color = overAlways ? BtnNoHover : BtnNo;
             if (!Input.GetMouseButtonDown(0)) return;
             if (overYes) Answer(true);
+            else if (overAlways) Answer(true, true);
             else if (overNo) Answer(false);
         }
 
         static void Hide()
         {
             if (_root != null) UnityEngine.Object.Destroy(_root);
-            _root = null; _yesRect = _noRect = null; _yesImg = _noImg = null; _shownId = null;
+            _root = null; _yesRect = _noRect = _alwaysRect = null; _yesImg = _noImg = _alwaysImg = null; _shownId = null;
         }
 
         static TMP_FontAsset GameFont()
@@ -138,10 +142,10 @@ namespace CrimeSightRevival.Mods
 
         static Image Button(Transform parent, string text, TMP_FontAsset font, Vector2 pos, Color c, out RectTransform rt)
         {
-            rt = Box("Button", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, new Vector2(260, 64));
+            rt = Box("Button", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, new Vector2(236, 64));
             var img = rt.gameObject.AddComponent<Image>();
             img.color = c;
-            Label(rt, text, font, 26, Vector2.zero, new Vector2(240, 56));
+            Label(rt, text, font, 26, Vector2.zero, new Vector2(216, 56));
             return img;
         }
 
@@ -169,8 +173,17 @@ namespace CrimeSightRevival.Mods
                 panel.gameObject.AddComponent<Image>().color = Back;
                 Label(panel, m.title, font, 38, new Vector2(0, 150), new Vector2(760, 60));
                 Label(panel, m.body, font, 26, new Vector2(0, 25), new Vector2(760, 180));
-                _yesImg = Button(panel, m.yes, font, new Vector2(-150, -150), Btn, out _yesRect);
-                _noImg = Button(panel, m.no, font, new Vector2(150, -150), BtnNo, out _noRect);
+                if (string.IsNullOrEmpty(m.always))
+                {
+                    _yesImg = Button(panel, m.yes, font, new Vector2(-140, -150), Btn, out _yesRect);
+                    _noImg = Button(panel, m.no, font, new Vector2(140, -150), BtnNo, out _noRect);
+                }
+                else
+                {
+                    _yesImg = Button(panel, m.yes, font, new Vector2(-256, -150), Btn, out _yesRect);
+                    _alwaysImg = Button(panel, m.always, font, new Vector2(0, -150), BtnNo, out _alwaysRect);
+                    _noImg = Button(panel, m.no, font, new Vector2(256, -150), BtnNo, out _noRect);
+                }
                 _shownId = m.id;
                 Plugin.L.LogInfo("[Mods] aviso de mods en el juego: " + m.title);
             }

@@ -245,7 +245,10 @@ def ensure_keys(game_dir):
 def point_game_to(game_dir, url):
     import patch_client, credits_patch
     if not credits_patch.is_patched(game_dir):
-        credits_patch.patch(game_dir)        # linea de creditos en la pantalla de titulo
+        try:
+            credits_patch.patch(game_dir)    # linea de creditos en la pantalla de titulo (solo decorativa)
+        except OSError as e:
+            logging.getLogger("crimesight").warning("No pude poner la linea de creditos (%s); se intentara la proxima vez", e)
     return patch_client.patch(game_dir, url)
 
 
@@ -305,6 +308,53 @@ def game_running():
     out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq CrimeSight.exe", "/NH"], capture_output=True,
                          text=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
     return "CrimeSight.exe" in out
+
+
+def close_game(wait=10):
+    """Cierra el juego (para actualizar el lanzador). Primero se le pide que se cierre; si no, a la fuerza."""
+    if not game_running():
+        return
+    if IS_WINDOWS:
+        quiet = {"capture_output": True, "creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)}
+        subprocess.run(["taskkill", "/IM", "CrimeSight.exe"], **quiet)
+        t0 = time.time()
+        while game_running() and time.time() - t0 < wait:
+            time.sleep(1)
+        if game_running():
+            subprocess.run(["taskkill", "/F", "/IM", "CrimeSight.exe"], **quiet)
+    else:
+        subprocess.run(["pkill", "-f", "CrimeSight.exe"], capture_output=True)
+    t0 = time.time()
+    while game_running() and time.time() - t0 < 5:
+        time.sleep(0.5)
+
+
+def other_launchers():
+    """PIDs de otros lanzadores abiertos (solo el .exe compilado de Windows; desde Python, ninguno)."""
+    if not (IS_WINDOWS and getattr(sys, "frozen", False)):
+        return []
+    from version import ASSET
+    mine = {os.getpid(), os.getppid()}           # el .exe de un archivo son dos procesos: este y su padre
+    names = {os.path.basename(sys.executable).lower(), ASSET.lower()}
+    out = subprocess.run(["tasklist", "/FO", "CSV", "/NH"], capture_output=True, text=True,
+                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
+    pids = []
+    for line in out.splitlines():
+        parts = [p.strip('"') for p in line.split('","')]
+        if len(parts) > 1 and parts[0].strip('"').lower() in names:
+            try:
+                pid = int(parts[1])
+            except ValueError:
+                continue
+            if pid not in mine:
+                pids.append(pid)
+    return pids
+
+
+def close_other_launchers():
+    for pid in other_launchers():
+        subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True,
+                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
 
 def _linux_game_running():
@@ -857,7 +907,7 @@ def write_live(rs, game_dir):
     return True
 
 
-def offer_prompt(game_dir, oid, title, body, yes, no):
+def offer_prompt(game_dir, oid, title, body, yes, no, always=""):
     """Aviso de mods de un invitado dentro del juego: el plugin lo ensena con dos botones y escribe
     la respuesta en offer_answer.json (el anfitrion suele estar en el juego, no en el lanzador)."""
     d = live_dir(game_dir)
@@ -867,18 +917,21 @@ def offer_prompt(game_dir, oid, title, body, yes, no):
         os.remove(os.path.join(d, "offer_answer.json"))
     except OSError:
         pass
-    _write_json(os.path.join(d, "offer.json"), {"id": oid, "title": title, "body": body, "yes": yes, "no": no})
+    _write_json(os.path.join(d, "offer.json"), {"id": oid, "title": title, "body": body, "yes": yes, "no": no,
+                                                "always": always})
     return True
 
 
 def offer_answer(game_dir, oid):
-    """True/False si se ha contestado desde el juego a ese aviso; None si aun no."""
+    """True/False ("always" si eligio aceptar siempre) si se ha contestado desde el juego; None si aun no."""
     try:
         with open(os.path.join(live_dir(game_dir), "offer_answer.json"), encoding="utf-8") as f:
             a = json.load(f)
     except (OSError, ValueError):
         return None
-    return bool(a.get("accept")) if a.get("id") == oid else None
+    if a.get("id") != oid:
+        return None
+    return "always" if a.get("always") else bool(a.get("accept"))
 
 
 def offer_clear(game_dir):

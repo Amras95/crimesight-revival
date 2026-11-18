@@ -99,8 +99,26 @@ def patch(game_dir, text=CREDITS):
     tmp = path + ".tmp"
     with open(tmp, "wb") as f:
         f.write(d)
-    os.replace(tmp, path)
+    _replace(tmp, path)
     return done
+
+
+def _replace(tmp, path, tries=6, wait=0.5):
+    """Windows no deja reemplazar el archivo si alguien lo tiene abierto (el juego, Steam comprobando los
+    archivos, un antivirus...). Se reintenta un momento; si sigue bloqueado se deja como estaba."""
+    import time
+    for i in range(tries):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if i == tries - 1:
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+                raise
+            time.sleep(wait)
 
 
 def is_patched(game_dir, text=CREDITS):
