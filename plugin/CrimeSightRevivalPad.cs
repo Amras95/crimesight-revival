@@ -78,7 +78,10 @@ namespace CrimeSightRevival.Mods
         // ------------------------------------------------------------ estado
         static ushort _now, _prev;
         static float _lx, _ly, _rx, _ry, _lt, _rt;
-        static float _fx, _fy;                 // restos de pixel del cursor
+        static float _rawLx, _rawLy;           // stick izquierdo sin zona muerta (-1..1)
+        static double _cx, _cy;                // posicion del cursor con decimales
+        static bool _cursorHeld;               // _cx/_cy siguen al cursor real
+        const float CursorDead = 0.16f;
         static int _rotDone;                   // pixeles movidos para girar (se devuelven al soltar)
         static bool _rotating, _connected, _announced;
         static readonly Dictionary<string, ushort> Buttons = new()
@@ -252,6 +255,43 @@ namespace CrimeSightRevival.Mods
         static int _slot = -1;
         static float _nextScan;
 
+        [StructLayout(LayoutKind.Sequential)] struct Rect32 { public int left, top, right, bottom; }
+        [DllImport("user32.dll")] static extern bool GetClientRect(IntPtr h, out Rect32 r);
+
+        static void MoveCursor(float dt)
+        {
+            float x = _rawLx, y = _rawLy;
+            float mag = (float)Math.Sqrt(x * x + y * y);
+            if (mag < CursorDead) { _cursorHeld = false; return; }
+            float m = Math.Min(1f, (mag - CursorDead) / (1f - CursorDead));
+            float curve = 0.25f * m + 0.75f * m * m;               // fino al empezar, rapido a tope
+            float speed = Screen.height * CursorSpeeds[_cursorSpeed] * curve * dt;
+            float dx = x / mag * speed, dy = -y / mag * speed;
+            if (!GetCursorPos(out var now)) return;
+            // si el cursor real no esta donde lo dejamos (lo ha movido el raton), se parte de ahi
+            if (!_cursorHeld || Math.Abs(now.x - Math.Round(_cx)) > 1 || Math.Abs(now.y - Math.Round(_cy)) > 1)
+            {
+                _cx = now.x; _cy = now.y; _cursorHeld = true;
+            }
+            _cx += dx; _cy += dy;
+            // sin salirse de la ventana del juego
+            var w = GetActiveWindow();
+            if (w != IntPtr.Zero && GetClientRect(w, out var rc))
+            {
+                var tl = new Point { x = rc.left, y = rc.top };
+                var br = new Point { x = rc.right - 1, y = rc.bottom - 1 };
+                ClientToScreen(w, ref tl); ClientToScreen(w, ref br);
+                _cx = Math.Max(tl.x, Math.Min(br.x, _cx));
+                _cy = Math.Max(tl.y, Math.Min(br.y, _cy));
+            }
+            int nx = (int)Math.Round(_cx), ny = (int)Math.Round(_cy);
+            if (nx != now.x || ny != now.y)
+            {
+                _lastInjected = Time.unscaledTime;
+                SetCursorPos(nx, ny);
+            }
+        }
+
         static float Stick(short v, float dead = 0.22f)
         {
             float f = Math.Max(-1f, v / 32767f);
@@ -285,6 +325,7 @@ namespace CrimeSightRevival.Mods
             _prev = _now;
             _now = s.buttons;
             _lx = Stick(s.lx); _ly = Stick(s.ly); _rx = Stick(s.rx); _ry = Stick(s.ry);
+            _rawLx = Math.Max(-1f, s.lx / 32767f); _rawLy = Math.Max(-1f, s.ly / 32767f);
             _lt = s.lt > 30 ? (s.lt - 30) / 225f : 0; _rt = s.rt > 30 ? (s.rt - 30) / 225f : 0;
             float dt = Math.Min(Time.unscaledDeltaTime, 0.05f);
 
@@ -309,13 +350,11 @@ namespace CrimeSightRevival.Mods
                 _camY = Tick(ref _camAccY, Math.Abs(_ry) * k);
             }
 
-            // cursor: curva para poder apuntar fino y cruzar la pantalla rapido
-            float speed = Screen.height * CursorSpeeds[_cursorSpeed];
-            _fx += Math.Sign(_lx) * _lx * _lx * speed * dt;
-            _fy -= Math.Sign(_ly) * _ly * _ly * speed * dt;
-            int mx = (int)_fx, my = (int)_fy;
-            if (_rotating) { _fx = _fy = 0; }                      // mientras gira, el cursor es de la camara
-            else if (mx != 0 || my != 0) { Mouse(MOVE, mx, my); _fx -= mx; _fy -= my; }
+            // cursor: el stick como un vector (zona muerta redonda y curva sobre la distancia, no por eje),
+            // asi la direccion es la del dedo y se pueden hacer circulos. Se mueve a una posicion exacta
+            // (no "x pixeles"), para que la aceleracion del raton de Windows no lo tuerza hacia los ejes.
+            if (_rotating) { _cursorHeld = false; }                // mientras gira, el cursor es de la camara
+            else MoveCursor(dt);
 
             if (Pressed(A)) Mouse(LDOWN);
             if (Released(A)) Mouse(LUP);
@@ -669,7 +708,7 @@ namespace CrimeSightRevival.Mods
         static void UpdateMode(XState s)
         {
             float now = Time.unscaledTime;
-            bool pad = s.buttons != 0 || _lx != 0 || _ly != 0 || _rx != 0 || _ry != 0 || _lt != 0 || _rt != 0;
+            bool pad = s.buttons != 0 || _lx != 0 || _ly != 0 || _rawLx * _rawLx + _rawLy * _rawLy > CursorDead * CursorDead || _rx != 0 || _ry != 0 || _lt != 0 || _rt != 0;
             if (pad) _lastPadInput = now;
             if (pad && !_padMode) SetMode(true);
             else if (_padMode && now - _lastPadInput > 0.4f && now - _lastInjected > 0.4f)

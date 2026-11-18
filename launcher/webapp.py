@@ -21,6 +21,7 @@ KOFI = "https://ko-fi.com/amrasmithandir95"
 SAVE_FILTER = "CRIMESIGHT Revival (*.csrsave)"
 STAGE_FILTER = "CRIMESIGHT Revival (*.csrstage)"
 ALL_FILTER = "All files (*.*)"
+IMAGE_FILTER = "Images (*.png;*.jpg;*.jpeg;*.gif;*.webp;*.bmp)"
 # Tipos de dialogo de pywebview (iguales en 5.x y 6.x; los nombres antiguos estan obsoletos)
 DIALOGS = {"OPEN_DIALOG": 10, "FOLDER_DIALOG": 20, "SAVE_DIALOG": 30}
 
@@ -354,6 +355,47 @@ class Api:
 
     def mods_open(self):
         core.open_folder(core.mods_dir())
+
+    def _cursor_apply(self):
+        try:                                   # si el juego ya esta abierto, se aplica en caliente
+            core.install_cursor(self._cfg.get("game_dir") or "")
+        except (OSError, KeyError, TypeError):
+            pass
+        return core.cursor_state()
+
+    def cursor_open(self):
+        core.open_folder(core.cursor_dir())
+        return self._cursor_apply()
+
+    def cursor_state(self):
+        return self._cursor_apply()
+
+    def cursor_pick(self):
+        path = self._dialog("OPEN_DIALOG", file_types=(IMAGE_FILTER, ALL_FILTER))
+        if not path:
+            return None
+        if isinstance(path, (list, tuple)):
+            path = path[0] if path else ""
+        try:
+            core.cursor_set_image(path)
+        except ValueError as e:
+            return {"error": str(e)}
+        self._cfg["cursor_enabled"] = True
+        core.save_config(self._cfg)
+        return self._cursor_apply()
+
+    def cursor_hotspot(self, mode):
+        core.cursor_set_hotspot(mode)
+        return self._cursor_apply()
+
+    def cursor_toggle(self, on):
+        self._cfg["cursor_enabled"] = bool(on)
+        core.save_config(self._cfg)
+        return self._cursor_apply()
+
+    def cursor_remove(self):
+        core.cursor_remove()
+        return self._cursor_apply()
 
     # recarga en caliente (BepInEx, opcional)
     def bep_state(self):

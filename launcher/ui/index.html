@@ -140,7 +140,10 @@ footer .updpill.on{display:inline-block}
 .modal .empty{color:var(--dim);font-style:italic;padding:12px 0}
 .modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
 .bep{display:flex;align-items:center;gap:12px;background:rgba(5,6,20,.6);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:12px}
-.bep .info{flex:1;min-width:0}.bep .warn{display:block;color:#ffb37a;margin-top:6px;user-select:text}.bep .info b{display:block;margin-bottom:2px}.bep .info small{color:var(--dim);font-size:12px;line-height:1.45}
+.bep.off img{opacity:.35}.bep .info{flex:1;min-width:0}.bep .warn{display:block;color:#ffb37a;margin-top:6px;user-select:text}.bep .info b{display:block;margin-bottom:2px}.bep .info small{color:var(--dim);font-size:12px;line-height:1.45}
+.bep.cur{flex-direction:column;align-items:stretch;gap:10px}.bep.cur .currow{display:flex;align-items:center;gap:12px;min-width:0}
+.bep.cur .curctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.bep.cur .curctl select{min-width:0;padding:8px 10px;font-size:13px}
+.bep.cur .info small{display:block}
 .stxt{display:flex;align-items:center;gap:12px;background:rgba(5,6,20,.6);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
 .stxt img{width:48px;height:48px;object-fit:contain;flex-shrink:0}
 .stxt input{flex:1;min-width:0}
@@ -244,6 +247,22 @@ footer .updpill.on{display:inline-block}
       <div class="info"><b id="bepstatus"></b><small data-t="bep_desc"></small>
         <small id="beplinux" class="warn" style="display:none"></small></div>
       <button class="btn ghost small" id="bepbtn" onclick="toggleBep()"></button>
+    </div>
+    <div class="sub" data-t="mods_cursor"></div>
+    <div class="bep cur" id="cursorbox">
+      <div class="currow">
+        <img id="curimg" alt="" style="width:32px;height:32px;flex:none;display:none">
+        <div class="info"><b id="curstatus"></b><small id="curdesc"></small></div>
+      </div>
+      <div class="curctl">
+        <select id="curhot" class="small" onchange="cursorHot(this.value)" style="display:none">
+          <option value="tip" data-t="cursor_hot_tip"></option><option value="center" data-t="cursor_hot_center"></option>
+          <option value="custom" data-t="cursor_hot_custom" disabled></option>
+        </select>
+        <button class="btn ghost small" onclick="cursorPick()" data-t="cursor_pick"></button>
+        <button class="btn ghost small" id="curtoggle" onclick="cursorToggle()" style="display:none"></button>
+        <button class="btn ghost small" onclick="cursorFolder()" data-t="cursor_folder"></button>
+      </div>
     </div>
     <div class="actions">
       <button class="btn ghost small" style="margin-right:auto" onclick="closeMods();SE.open()" data-t="stage_btn"></button>
@@ -488,7 +507,23 @@ async function saveText(el){
   if(r){el.value=r.text;toast(T('mods_text_saved'))}
 }
 function closeTexts(){$('#modtexts').classList.remove('on')}
-function openMods(){$('#mods').classList.add('on');loadMods();loadBep()}
+function openMods(){$('#mods').classList.add('on');loadMods();loadBep();loadCursor()}
+let CUR=null;
+function showCursor(st){
+  if(!st)return; if(st.error){toast(st.error);return}
+  CUR=st;
+  const img=$('#curimg'); img.style.display=st.exists?'block':'none'; if(st.exists)img.src=st.thumb;
+  $('#curstatus').textContent=T(!st.exists?'cursor_none':(st.enabled?'cursor_on':'cursor_off'));
+  $('#curdesc').textContent=st.exists?T('cursor_desc_on',{size:st.size||'',extra:st.extra.length}):T('cursor_desc_none');
+  const h=$('#curhot'); h.style.display=st.exists?'':'none'; h.value=st.hotspot||'tip';
+  const b=$('#curtoggle'); b.style.display=st.exists?'':'none'; b.textContent=T(st.enabled?'cursor_disable':'cursor_enable');
+  $('#cursorbox').classList.toggle('off',st.exists&&!st.enabled);
+}
+async function loadCursor(){showCursor(await api('cursor_state'))}
+async function cursorPick(){const r=await api('cursor_pick');if(r)showCursor(r)}
+async function cursorHot(v){showCursor(await api('cursor_hotspot',v))}
+async function cursorToggle(){showCursor(await api('cursor_toggle',!(CUR&&CUR.enabled)))}
+async function cursorFolder(){showCursor(await api('cursor_open'))}
 function closeMods(){$('#mods').classList.remove('on')}
 function answerOffer(ok){$('#modoffer').classList.remove('on');api('answer_mods',ok)}
 function answerMods(ok){$('#modask').classList.remove('on');api('answer_mods',ok)}

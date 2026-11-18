@@ -138,6 +138,7 @@ class Session:
         self.name = ""
         self.subs = {}       # sub_id -> topic
         self.room = None
+        self.remote = ""
 
     async def send(self, msg):
         if self.ws.closed:
@@ -188,6 +189,14 @@ class Hub:
             sess.subs.pop(sid, None)
         return sid
 
+    def match_state(self, pid, remote):
+        """Partida en curso de un jugador, solo si pregunta desde el mismo sitio que su juego (asi nadie
+        puede mirar el papel de otro)."""
+        for sess in self.sessions:
+            if sess.player_id == pid and sess.remote == remote and sess.room is not None:
+                return sess.room.match_state(pid)
+        return None
+
     async def emit_now(self, topic, kw, var=None, exclude=None, eligible=None):
         """Como emit(), pero sin esperar al RESULT de la llamada en curso."""
         held, self.deferred = self.deferred, None
@@ -212,8 +221,9 @@ class Hub:
                 await s.send([EVENT, sid, self.next_pub, details, [], kw])
 
     # ---------------- bucle de una conexion
-    async def run(self, ws):
+    async def run(self, ws, remote=""):
         sess = Session(self, ws)
+        sess.remote = remote
         self.sessions.add(sess)
         try:
             async for msg in ws:
@@ -295,6 +305,17 @@ class Hub:
             base = eligible if eligible is not None else {s.player_id for s in self.sessions}
             eligible = {p for p in base if room.authrole(p) not in roles}
         echo = room is not None and "Control" in kw
+        if room is not None and "tag" in kw:
+            # Quien ve cada mensaje lo decide el juego con estas opciones: se apunta una vez por
+            # papel, tipo de mensaje y opciones, para poder comprobar que el reparto es el del original
+            who = ROLE_KEY.get(room.members.get(sess.player_id, {}).get("role"), "?")
+            sig = (who, kw.get("tag"), json.dumps({k: v for k, v in opts.items() if k != "call"}, sort_keys=True))
+            seen = room.__dict__.setdefault("vis_seen", set())
+            if sig not in seen and len(seen) < 60:
+                seen.add(sig)
+                names = sorted(room.members.get(p, {}).get("name", p) for p in eligible) if eligible is not None else "todos"
+                log.info("Sala %s: %s manda %r %s con %s -> lo ven %s", room.id, who, kw.get("tag"),
+                         kw.get("type"), sig[2], names)
         await self.emit(topic, kw, var=room.vars if room else None, exclude=None if echo else sess, eligible=eligible)
         if room is not None and "tag" in kw:
             asyncio.ensure_future(room.on_player_message(sess, kw, eligible))
@@ -782,6 +803,10 @@ class Room:
         pid = sess.player_id
         if pid not in self.members:
             return
+        if self.phase not in ("lobby", "ended") and not self.recorded and not self.members[pid].get("bot"):
+            # Se va a mitad de partida (cierra el juego, se le cae la conexion...): cuenta como si se
+            # rindiera. Pierde su bando y gana el otro; a los que quedan el juego les ensena el final.
+            await self.forfeit(pid, reason="sale de la partida")
         name = self.members.pop(pid)["name"]
         self.sessions.pop(pid, None)
         self.hub.unsubscribe(sess, self.topic)
@@ -867,6 +892,27 @@ class Room:
         states = {p: room_stages.state(stage, p) for p in humans}
         return {p: sync if st == "sync" else missing for p, st in states.items() if st != "ok"}
 
+    def clamp_turns(self):
+        """Maximo de turnos: de 1 a 99 (el juego original dejaba de 6 a 15; por defecto son 10).
+        Tiempo por turno: de 60 a 999 segundos."""
+        try:
+            self.settings["max_turn"] = max(1, min(99, int(self.settings.get("max_turn", 10))))
+        except (TypeError, ValueError):
+            self.settings["max_turn"] = 10
+        # Tiempo por turno: de 60 a 999 segundos (el original: 10-999 en salas privadas, 60-180 en publicas)
+        try:
+            self.settings["time_limit"] = max(60, min(999, int(self.settings.get("time_limit", 180))))
+        except (TypeError, ValueError):
+            self.settings["time_limit"] = 180
+
+    def match_state(self, pid):
+        """Para el lanzador de un invitado: si esta en mitad de una partida, con que papel."""
+        m = self.members.get(pid)
+        if not m or self.phase in ("lobby", "ended") or self.recorded:
+            return None
+        return {"role": int(m["role"]), "match_id": getattr(self, "match_id", ""),
+                "stage": self.current_stage or self.settings.get("stage", ""), "level": self.level()}
+
     def settings_result(self):
         keys = ["campaign_id", "stage", "capacity", "time_limit", "max_turn", "private", "quick", "specify_roles",
                 "irene_count", "watson_count", "auto_start", "secret_passage", "switchboard_count",
@@ -891,6 +937,7 @@ class Room:
             self.settings["stage"] = random.choice(STAGES)
         self.settings.setdefault("time_limit", 180)
         self.settings.setdefault("max_turn", 10)
+        self.clamp_turns()
         self.fill_bots()
         if "killer" in p:
             self.killer = int(p["killer"])
@@ -917,6 +964,7 @@ class Room:
 
     async def p_ChangeSettings(self, sess, p):
         self.settings.update(p)
+        self.clamp_turns()
         self.refresh_vars()
         await self.control("ChangeSettings", None)
         return rc({})
@@ -1707,17 +1755,28 @@ class Room:
         return rc({})
 
     async def p_Abandon(self, sess, p):
+        await self.forfeit(sess.player_id, message=p.get("message", ""), reason="se rinde")
+        return rc({})
+
+    async def forfeit(self, pid, message="", reason=""):
+        """pid se rinde o se va: pierde su bando, gana el otro, y la partida termina para todos."""
         self.phase = "ended"
-        role = self.members.get(sess.player_id, {}).get("role")
-        self.conclude("moriarty" if role in (ROLE_DETECTIVE, ROLE_WATSON) else "sherlock", quitter=sess.player_id)
+        role = self.members.get(pid, {}).get("role")
+        log.info("Sala %s: %s %s", self.id, self.members.get(pid, {}).get("name", pid), reason)
+        winner = "moriarty" if role in (ROLE_DETECTIVE, ROLE_WATSON) else "sherlock"
+        self.conclude(winner, quitter=pid)
         crim = self.players_by_role([ROLE_CRIMINAL])
         det = self.players_by_role([ROLE_DETECTIVE])
         await self.control("Abandon", {"Data": {
             "killer": self.killer, "target": self.target,
             "criminal_player": crim[0] if crim else "", "criminal_name": self.members[crim[0]]["name"] if crim else "",
             "detective_player": det[0] if det else "", "detective_name": self.members[det[0]]["name"] if det else "",
-            "message": p.get("message", "")}})     # "Rendirse" manda aqui quien se rinde (surrenderPlayerId)
-        return rc({})
+            "message": message,       # "Rendirse" manda aqui quien se rinde (surrenderPlayerId)
+            # El juego da por hecho que quien se rinde es Moriarty: el plugin usa esto para ensenar
+            # victoria o derrota bien cuando se rinde (o se va) otro papel
+            "csr_winner": winner,
+            # y quien ha sido (papel) y si se ha rendido o se ha ido, para el texto del aviso
+            "csr_quitter_role": ROLE_KEY.get(role, ""), "csr_reason": "surrender" if message else "left"}})
 
     async def p_Rematch(self, sess, p):
         self.phase = "lobby"

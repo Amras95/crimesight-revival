@@ -312,7 +312,7 @@ async def handle_ws(request: web.Request):
     ws = web.WebSocketResponse(heartbeat=20, max_msg_size=8 * 1024 * 1024)
     await ws.prepare(request)
     log.info("WS conectado desde %s", request.remote)
-    await request.app["hub"].run(ws)
+    await request.app["hub"].run(ws, remote=request.remote or "")
     return ws
 
 
@@ -341,6 +341,17 @@ async def handle_sync(request):
     api.s.save()
     log.info("Perfil sincronizado: %s (%s)", user.get("name") or platform_id, stats.summary(user))
     return web.json_response({"player_id": pid, "profile": stats.export_profile(user)})
+
+
+async def handle_match(request):
+    """GET /revival/match?platform_id=... -> {"match": {"role", "match_id", "stage", "level"} o null}.
+    El lanzador de un invitado lo mira durante la partida: si el anfitrion desaparece a mitad, cuenta
+    como victoria para quien se queda (el servidor no puede apuntarla porque ya no esta)."""
+    platform_id = str(request.query.get("platform_id", ""))
+    if not platform_id.isdigit():
+        return web.json_response({"error": "platform_id"}, status=400)
+    pid, _ = derived_ids(3, platform_id)
+    return web.json_response({"match": request.app["hub"].match_state(pid, request.remote or "")})
 
 
 async def handle_info(request):
@@ -440,6 +451,7 @@ def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", 
     app.router.add_get(WS_PATH, handle_ws)
     app.router.add_post("/revival/sync", handle_sync)
     app.router.add_get("/revival/info", handle_info)
+    app.router.add_get("/revival/match", handle_match)
     app.router.add_get("/revival/mods", handle_mods)
     app.router.add_post("/revival/mods/offer", handle_mods_offer)
     app.router.add_get("/revival/stages", handle_stages)

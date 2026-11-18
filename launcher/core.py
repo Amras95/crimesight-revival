@@ -482,6 +482,150 @@ BEPINEX_FILES = ("winhttp.dll", "doorstop_config.ini", ".doorstop_version", "cha
 PLUGIN_NAME = "CrimeSightRevival.Mods.dll"
 
 
+CURSOR_README = """CRIMESIGHT Revival - cursor propio / custom cursor
+
+ES
+Pon aqui tus imagenes PNG (con fondo transparente; mejor de 32x32 o 64x64 pixeles):
+  cursor.png    el cursor normal, en los menus y en la partida.
+  hotspot.txt   opcional: el punto que hace clic en cursor.png, "x,y" en pixeles desde la esquina de
+                arriba a la izquierda (por defecto 0,0, como una flecha). Para una mira centrada de
+                32x32, por ejemplo: 16,16
+  otros .png    opcional: sustituyen un cursor concreto del juego (moverse, correr, atacar...) si se
+                llaman igual que el. Los nombres salen en el registro de BepInEx (LogOutput.log),
+                en las lineas "[Cursor] el juego usa el cursor ...".
+Hace falta el plugin de BepInEx activado. Solo lo ves tu. Para volver al cursor del juego, vacia la carpeta.
+
+EN
+Put your PNG images here (transparent background; 32x32 or 64x64 pixels work best):
+  cursor.png    the normal cursor, in menus and in matches.
+  hotspot.txt   optional: the point of cursor.png that clicks, "x,y" in pixels from the top-left
+                corner (0,0 by default, like an arrow). For a centred 32x32 crosshair, e.g.: 16,16
+  other .png    optional: replace a specific game cursor (move, run, attack...) if they have the same
+                name. The names show up in the BepInEx log (LogOutput.log), in the lines
+                "[Cursor] el juego usa el cursor ...".
+It needs the BepInEx plugin turned on. Only you see it. To go back to the game's cursor, empty the folder.
+"""
+
+
+def cursor_dir():
+    """Tu cursor propio (cursor.png y, si quieres, los demas cursores del juego)."""
+    d = os.path.join(app_dir(), "cursor")
+    os.makedirs(d, exist_ok=True)
+    readme = os.path.join(d, "README.txt")
+    if not os.path.exists(readme):
+        with open(readme, "w", encoding="utf-8") as f:
+            f.write(CURSOR_README)
+    return d
+
+
+CURSOR_SIZE = 32
+
+
+def cursor_enabled():
+    return load_config().get("cursor_enabled", True)
+
+
+def cursor_state():
+    """Para el lanzador: si tienes cursor propio, si esta activado, su miniatura y su punto de clic."""
+    import base64
+    d = cursor_dir()
+    path = os.path.join(d, "cursor.png")
+    st = {"exists": os.path.isfile(path), "enabled": cursor_enabled(), "thumb": "", "hotspot": "tip",
+          "extra": sorted(f for f in os.listdir(d) if f.lower().endswith(".png") and f.lower() != "cursor.png")}
+    if st["exists"]:
+        with open(path, "rb") as f:
+            st["thumb"] = "data:image/png;base64," + base64.b64encode(f.read()).decode()
+        try:
+            from PIL import Image
+            w, h = Image.open(path).size
+            st["size"] = f"{w}x{h}"
+            x, y = [int(float(v)) for v in open(os.path.join(d, "hotspot.txt")).read().replace(";", ",").split(",")[:2]]
+            st["hotspot"] = "center" if (x, y) == (w // 2, h // 2) else ("tip" if x <= 2 and y <= 2 else "custom")
+        except (OSError, ValueError, ImportError):
+            pass
+    return st
+
+
+def cursor_set_image(path):
+    """Pone una imagen como cursor: con transparencia, cuadrada y de 32x32 (el tamano que mejor admite
+    Windows). Si la imagen no tiene transparencia se le quita el fondo liso."""
+    from PIL import Image
+    import modimage
+    try:
+        img = Image.open(path)
+        img.load()
+    except (OSError, ValueError) as e:
+        raise ValueError(t("cursor_bad_image", err=e))
+    img = img.convert("RGBA")
+    if not modimage._has_alpha(img):
+        pieces = modimage.extract(img)
+        if pieces:
+            img = pieces[0]
+    box = img.getchannel("A").point(lambda v: 255 if v > 20 else 0).getbbox()
+    if box:
+        img = img.crop(box)
+    side = max(img.size)
+    sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    sq.alpha_composite(img, (0, 0))              # pegado arriba a la izquierda: la punta de una flecha
+    sq = sq.resize((CURSOR_SIZE, CURSOR_SIZE), Image.LANCZOS)
+    d = cursor_dir()
+    sq.save(os.path.join(d, "cursor.png"))
+    if not os.path.isfile(os.path.join(d, "hotspot.txt")):
+        cursor_set_hotspot("tip")
+
+
+def cursor_set_hotspot(mode):
+    """Punto de clic del cursor: "tip" (la esquina de arriba a la izquierda, como una flecha) o "center"."""
+    xy = (CURSOR_SIZE // 2, CURSOR_SIZE // 2) if mode == "center" else (0, 0)
+    try:
+        from PIL import Image
+        w, h = Image.open(os.path.join(cursor_dir(), "cursor.png")).size
+        if mode == "center":
+            xy = (w // 2, h // 2)
+    except (OSError, ImportError):
+        pass
+    with open(os.path.join(cursor_dir(), "hotspot.txt"), "w") as f:
+        f.write(f"{xy[0]},{xy[1]}\n")
+
+
+def cursor_remove():
+    d = cursor_dir()
+    for f in os.listdir(d):
+        if f.lower().endswith(".png") or f.lower() == "hotspot.txt":
+            os.remove(os.path.join(d, f))
+
+
+def install_cursor(game_dir):
+    """Copia tu cursor a la carpeta que vigila el plugin (solo lo que cambia). True si hubo cambios.
+    Desactivado en el lanzador = la carpeta del plugin se queda vacia (vuelve el cursor del juego)."""
+    if not game_dir or not live_mode(game_dir):
+        return False
+    src, dst = cursor_dir(), os.path.join(live_dir(game_dir), "cursor")
+    os.makedirs(dst, exist_ok=True)
+    want = {f for f in os.listdir(src) if f.lower().endswith(".png") or f.lower() == "hotspot.txt"}
+    if not cursor_enabled():
+        want = set()
+    changed = False
+    for f in os.listdir(dst):
+        if f not in want:
+            os.remove(os.path.join(dst, f))
+            changed = True
+    for f in want:
+        with open(os.path.join(src, f), "rb") as a:
+            data = a.read()
+        path = os.path.join(dst, f)
+        try:
+            with open(path, "rb") as b:
+                if b.read() == data:
+                    continue
+        except OSError:
+            pass
+        with open(path, "wb") as b:
+            b.write(data)
+        changed = True
+    return changed
+
+
 def live_dir(game_dir):
     """Carpeta que vigila el plugin: dentro de BepInEx, en la carpeta del juego. Asi sirve igual en
     Windows y con Proton (donde el juego ve otra carpeta de usuario, la de Wine)."""
@@ -811,6 +955,44 @@ def server_info(url, timeout=6):
         return info
     except urllib.error.URLError as e:
         raise ValueError(t("err_unreachable", url=url, reason=e.reason))
+
+
+def match_state(url, steam_id, timeout=5):
+    """Tu partida en curso en ese servidor ({"role", "match_id", ...} o None). ValueError si no contesta."""
+    try:
+        with urllib.request.urlopen(f"{url}/revival/match?platform_id={steam_id}", timeout=timeout) as r:
+            return json.load(r).get("match")
+    except urllib.error.HTTPError as e:
+        if e.code == 404:              # anfitrion con una version sin esto
+            return None
+        raise ValueError(str(e))
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        raise ValueError(str(e))
+
+
+def internet_ok(timeout=5):
+    """True si hay internet (para no dar por ganada una partida si el que se ha quedado sin conexion eres tu)."""
+    for u in ("https://api.github.com", "https://store.steampowered.com"):
+        try:
+            with urllib.request.urlopen(u, timeout=timeout):
+                return True
+        except urllib.error.HTTPError:
+            return True
+        except (urllib.error.URLError, OSError):
+            continue
+    return False
+
+
+def record_host_left(steam_id, state):
+    """El anfitrion ha desaparecido a mitad de partida: cuenta como victoria para ti. Devuelve los puntos.
+    Lleva el mismo id de partida que en el servidor, asi que nunca se apunta dos veces."""
+    import stats
+    st = _store()
+    user = _local_user(st, steam_id)
+    pts = stats.record_match(user, int(state.get("role", 0)), "win", (), state.get("stage", ""),
+                             match_id=state.get("match_id") or None, level=state.get("level") or "online")
+    st.save()
+    return pts
 
 
 def _local_user(st, steam_id):

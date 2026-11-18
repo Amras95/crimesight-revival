@@ -36,6 +36,10 @@ def _play(ctx, game_dir, url, rs=None, watch=None, every=3):
         core.update_plugin(game_dir)
     except (OSError, ValueError):
         pass
+    try:
+        core.install_cursor(game_dir)
+    except OSError as e:
+        log.warning("No pude copiar el cursor: %s", e)
     ctx.log(t("pointing", url=url))
     core.point_game_to(game_dir, url)
     ctx.log(t("opening"))
@@ -171,6 +175,26 @@ def _stages(ctx, cfg, url, password, steam_id, srv=None, room=False):
     return check
 
 
+def _host_watcher(ctx, url, steam_id):
+    """En la sala de otro: si el anfitrion desaparece a mitad de partida (cierra el lanzador, se queda sin
+    conexion...), su servidor ya no puede apuntar el resultado. Entonces cuenta como victoria para ti,
+    siempre que tu si tengas internet (si el que se ha caido eres tu, no)."""
+    state = {"match": None, "fails": 0}
+
+    def check():
+        try:
+            state["match"] = core.match_state(url, steam_id) or None
+            state["fails"] = 0
+            return
+        except ValueError:
+            state["fails"] += 1
+        if state["match"] and state["fails"] >= 4 and core.internet_ok():
+            m, state["match"] = state["match"], None
+            pts = core.record_host_left(steam_id, m)
+            ctx.log(t("host_left_win", points=pts))
+    return check
+
+
 def _both(*checks):
     def run():
         for c in checks:
@@ -274,7 +298,8 @@ def join(ctx, cfg, steam_id, address, password=""):
     _first(ctx, stages)
     try:
         # los escenarios se miran cada 3 s (la sala no deja empezar hasta tenerlos); los mods, cada 9
-        _play(ctx, gd, url, rs, watch=_both(_every(3, _room_watcher(ctx, cfg, url, password, rs)), stages), every=3)
+        _play(ctx, gd, url, rs, watch=_both(_every(3, _room_watcher(ctx, cfg, url, password, rs)), stages,
+                                            _host_watcher(ctx, url, steam_id)), every=3)
     finally:
         try:                                           # vuelven tus escenarios a la lista del juego
             core.stage_publish(gd, core.stage_own(cfg.get("stages_disabled", [])))
