@@ -269,9 +269,29 @@ def game_url(game_dir):
 
 
 # ------------------------------------------------------------------ juego
+def game_exe_path():
+    """CrimeSight.exe: the one chosen in the launcher, or the one inside the game folder."""
+    cfg = load_config()
+    exe = cfg.get("game_exe")
+    if exe and os.path.isfile(exe):
+        return exe
+    gd = cfg.get("game_dir")
+    if gd:
+        guess = os.path.join(gd, "CrimeSight.exe")
+        if os.path.isfile(guess):
+            return guess
+    return None
+
+
 def launch_game():
     if IS_WINDOWS:
-        os.startfile(f"steam://rungameid/{APP_ID}")  # noqa: S606
+        exe = game_exe_path()
+        if not exe:
+            raise ValueError("No encuentro CrimeSight.exe. Elígelo con «Cambiar ejecutable…».")
+        try:
+            subprocess.Popen([exe], cwd=os.path.dirname(exe))
+        except OSError as e:
+            raise ValueError(f"No se pudo iniciar el juego: {e}")
     elif shutil.which("steam"):
         subprocess.Popen(["steam", f"steam://rungameid/{APP_ID}"], start_new_session=True,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

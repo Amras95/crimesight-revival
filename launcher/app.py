@@ -51,7 +51,7 @@ class App:
         row.pack(fill="x")
         self.lbl_game = ttk.Label(row, text="")
         self.lbl_game.pack(side="left", fill="x", expand=True)
-        ttk.Button(row, text="Cambiar carpeta…", command=self.pick_game).pack(side="right")
+        ttk.Button(row, text="Cambiar ejecutable…", command=self.pick_game).pack(side="right")
 
         nb = ttk.Notebook(root)
         nb.pack(fill="x", **pad)
@@ -200,17 +200,22 @@ class App:
             acc += f"   ·   Tu registro: {core.local_summary(self.steam_id)}"
         self.lbl_account.configure(text=acc)
         gd = self.cfg.get("game_dir")
-        self.lbl_game.configure(text=f"Juego: {gd}" if gd else "No encuentro CrimeSight: elige su carpeta.")
+        self.lbl_game.configure(text=f"Juego: {core.game_exe_path() or gd}" if gd else "No encuentro CrimeSight: elige CrimeSight.exe.")
 
     def pick_game(self):
-        d = filedialog.askdirectory(title="Carpeta de CrimeSight (la que tiene CrimeSight.exe)")
-        if d:
-            if not core.is_game_dir(d):
-                messagebox.showerror(TITLE, "Esa carpeta no parece la del juego.")
-                return
-            self.cfg["game_dir"] = os.path.normpath(d)
-            core.save_config(self.cfg)
-            self.refresh_header()
+        exe = filedialog.askopenfilename(
+            title="Ejecutable de CrimeSight (CrimeSight.exe)",
+            filetypes=[("Ejecutable", "*.exe"), ("Todos", "*.*")])
+        if not exe:
+            return
+        d = os.path.dirname(exe)
+        if not core.is_game_dir(d):
+            messagebox.showerror(TITLE, "Ese ejecutable no parece el del juego.")
+            return
+        self.cfg["game_dir"] = os.path.normpath(d)
+        self.cfg["game_exe"] = os.path.normpath(exe)
+        core.save_config(self.cfg)
+        self.refresh_header()
 
     def copy_addr(self):
         self.root.clipboard_clear()

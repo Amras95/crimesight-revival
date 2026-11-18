@@ -22,6 +22,7 @@ SAVE_FILTER = "CRIMESIGHT Revival (*.csrsave)"
 STAGE_FILTER = "CRIMESIGHT Revival (*.csrstage)"
 ALL_FILTER = "All files (*.*)"
 IMAGE_FILTER = "Images (*.png;*.jpg;*.jpeg;*.gif;*.webp;*.bmp)"
+EXE_FILTER = "Executable (*.exe)"
 # Tipos de dialogo de pywebview (iguales en 5.x y 6.x; los nombres antiguos estan obsoletos)
 DIALOGS = {"OPEN_DIALOG": 10, "FOLDER_DIALOG": 20, "SAVE_DIALOG": 30}
 
@@ -216,13 +217,15 @@ class Api:
             webbrowser.open(url)
 
     def pick_game(self):
-        d = self._dialog("FOLDER_DIALOG")
-        if not d:
+        exe = self._dialog("OPEN_DIALOG", file_types=(EXE_FILTER, ALL_FILTER))
+        if not exe:
             return None
+        d = os.path.dirname(exe)
         if not core.is_game_dir(d):
             js("error", t("err_bad_folder"))
             return None
         self._cfg["game_dir"] = os.path.normpath(d)
+        self._cfg["game_exe"] = os.path.normpath(exe)
         core.save_config(self._cfg)
         self._update_lang()
         if not art.ready(core.app_dir()):
