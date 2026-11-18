@@ -242,6 +242,35 @@ def ensure_keys(game_dir):
     return path
 
 
+def unlock_game_files(game_dir):
+    """Quita el atributo de "solo lectura" a los archivos del juego que toca el lanzador. Con el puesto
+    (pasa tras copiar o restaurar la carpeta del juego desde otro sitio), Windows no deja sustituirlos
+    y sale "Acceso denegado" aunque nadie los tenga abiertos. Devuelve cuantos se han desbloqueado."""
+    if not IS_WINDOWS or not game_dir:
+        return 0
+    import stat
+    n = 0
+    for sub in ("CrimeSight_Data", os.path.join("CrimeSight_Data", "il2cpp_data", "Metadata"),
+                os.path.join("BepInEx", "plugins")):
+        d = os.path.join(game_dir, sub)
+        try:
+            names = os.listdir(d)
+        except OSError:
+            continue
+        for name in names:
+            p = os.path.join(d, name)
+            try:
+                st = os.stat(p)
+                if os.path.isfile(p) and not st.st_mode & stat.S_IWRITE:
+                    os.chmod(p, st.st_mode | stat.S_IWRITE)
+                    n += 1
+            except OSError:
+                pass
+    if n:
+        logging.getLogger("crimesight").warning("Quitado 'solo lectura' a %d archivos del juego", n)
+    return n
+
+
 def point_game_to(game_dir, url):
     import patch_client, credits_patch
     if not credits_patch.is_patched(game_dir):
@@ -249,11 +278,16 @@ def point_game_to(game_dir, url):
             credits_patch.patch(game_dir)    # linea de creditos en la pantalla de titulo (solo decorativa)
         except OSError as e:
             logging.getLogger("crimesight").warning("No pude poner la linea de creditos (%s); se intentara la proxima vez", e)
-    return patch_client.patch(game_dir, url)
+    try:
+        return patch_client.patch(game_dir, url)
+    except PermissionError as e:
+        logging.getLogger("crimesight").warning("No puedo modificar el juego: %s", e)
+        raise ValueError(t("err_game_locked", path=getattr(e, "filename", "") or game_dir))
 
 
 def restore_game(game_dir):
     import patch_client, credits_patch, modinject
+    unlock_game_files(game_dir)
     m = modinject.restore(game_dir)
     if live_mode(game_dir):                 # el juego original no lleva BepInEx
         uninstall_bepinex(game_dir)

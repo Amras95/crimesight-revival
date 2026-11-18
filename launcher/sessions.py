@@ -33,6 +33,7 @@ def _play(ctx, game_dir, url, rs=None, watch=None, every=3):
     if core.game_running():
         # con el juego abierto no se pueden preparar sus archivos (y no se conectaria a esta sesion)
         raise ValueError(t("err_game_open"))
+    core.unlock_game_files(game_dir)
     if rs is not None:
         _mods(ctx, game_dir, rs)
     try:

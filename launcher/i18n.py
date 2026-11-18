@@ -1105,6 +1105,22 @@ _GAME_OPEN = {
 for _l, _v in _GAME_OPEN.items():
     S[_l]["err_game_open"] = _v
 
+_LOCKED = {
+    "en": "Windows won't let the launcher modify the game's files ({path}). Make sure the game is closed. If you use Windows Security's \"Controlled folder access\", allow the launcher there. Steam → CRIMESIGHT → Properties → Installed files → \"Verify integrity\" also fixes damaged files.",
+    "es": "Windows no deja al lanzador modificar los archivos del juego ({path}). Comprueba que el juego está cerrado. Si usas el «Acceso controlado a carpetas» de Seguridad de Windows, permite ahí el lanzador. En Steam → CRIMESIGHT → Propiedades → Archivos instalados → «Verificar integridad» también se arreglan archivos dañados.",
+    "fr": "Windows n'autorise pas le lanceur à modifier les fichiers du jeu ({path}). Vérifiez que le jeu est fermé. Si vous utilisez « Dispositif d'accès contrôlé aux dossiers » de Sécurité Windows, autorisez-y le lanceur. Steam → CRIMESIGHT → Propriétés → Fichiers installés → « Vérifier l'intégrité » répare aussi les fichiers endommagés.",
+    "it": "Windows non permette al launcher di modificare i file del gioco ({path}). Assicurati che il gioco sia chiuso. Se usi «Accesso alle cartelle controllato» di Sicurezza di Windows, consenti lì il launcher. Steam → CRIMESIGHT → Proprietà → File installati → «Verifica integrità» ripara anche i file danneggiati.",
+    "de": "Windows lässt den Launcher die Spieldateien nicht ändern ({path}). Prüfe, ob das Spiel geschlossen ist. Wenn du in der Windows-Sicherheit den „Überwachten Ordnerzugriff“ nutzt, erlaube dort den Launcher. Steam → CRIMESIGHT → Eigenschaften → Installierte Dateien → „Dateien auf Fehler überprüfen“ repariert beschädigte Dateien.",
+    "pt": "O Windows não deixa o launcher modificar os arquivos do jogo ({path}). Verifique se o jogo está fechado. Se você usa o \"Acesso controlado a pastas\" da Segurança do Windows, permita o launcher lá. Steam → CRIMESIGHT → Propriedades → Arquivos instalados → \"Verificar integridade\" também corrige arquivos danificados.",
+    "ru": "Windows не даёт лаунчеру изменить файлы игры ({path}). Убедитесь, что игра закрыта. Если включён «Контролируемый доступ к папкам» в Безопасности Windows, разрешите там лаунчер. Steam → CRIMESIGHT → Свойства → Установленные файлы → «Проверить целостность» также исправит повреждённые файлы.",
+    "ja": "Windowsがランチャーによるゲームファイルの変更を許可していません（{path}）。ゲームが閉じているか確認してください。Windowsセキュリティの「コントロールされたフォルダーアクセス」を使っている場合は、ランチャーを許可してください。Steam → CRIMESIGHT → プロパティ → インストール済みファイル →「整合性を確認」で破損ファイルも直ります。",
+    "ko": "Windows가 런처의 게임 파일 수정을 허용하지 않습니다({path}). 게임이 종료되어 있는지 확인하세요. Windows 보안의 '제어된 폴더 액세스'를 사용 중이라면 런처를 허용하세요. Steam → CRIMESIGHT → 속성 → 설치된 파일 → '무결성 확인'으로 손상된 파일도 복구됩니다.",
+    "zh-CN": "Windows 不允许启动器修改游戏文件（{path}）。请确认游戏已关闭。如果你开启了 Windows 安全中心的“受控文件夹访问”，请在其中允许启动器。在 Steam → CRIMESIGHT → 属性 → 已安装文件 →“验证完整性”也能修复损坏的文件。",
+    "zh-TW": "Windows 不允許啟動器修改遊戲檔案（{path}）。請確認遊戲已關閉。如果你開啟了 Windows 安全性的「受控制的資料夾存取」，請在其中允許啟動器。在 Steam → CRIMESIGHT → 內容 → 已安裝檔案 →「驗證完整性」也能修復損壞的檔案。",
+}
+for _l, _v in _LOCKED.items():
+    S[_l]["err_game_locked"] = _v
+
 # --- actualizar con el juego, una sesion u otro lanzador abiertos ------------------------------------
 _UPD_CLOSE = {
     "en": dict(update_confirm_close="To update, the game, the current session and any other open launcher will be closed. If you're in the middle of a match, it counts as leaving it.",

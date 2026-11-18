@@ -35,6 +35,7 @@ The first block (from the first `## ` to the next one) is what the launcher show
 - **«Aceptar siempre» los mods de los invitados**: en el aviso o en Mods → «Mods de los invitados». Así se añaden sin preguntar cada vez.
 - **Aviso de actualización con el lanzador abierto**: cada media hora mira si hay versión nueva y, si la hay, aparece una campana arriba. Al pulsarla ves las novedades y puedes actualizar al momento; si el juego, una sesión u otro lanzador están abiertos, te avisa y los cierra antes de actualizar.
 - **El servidor ya no se cierra al empezar si el juego estaba abierto**: ahora te dice que cierres el juego (el lanzador lo abre ya conectado). La línea de créditos de la pantalla de título tampoco puede tumbar la sesión si Windows no deja tocar el archivo.
+- **«Acceso denegado» al empezar una sesión**: si los archivos del juego estaban marcados como de solo lectura (pasa al copiar o restaurar la carpeta del juego), el lanzador les quita esa marca antes de tocarlos. Si Windows sigue sin dejar, te explica qué revisar en vez de cerrar el servidor sin más.
 - **Votación final**: el juego ya no se cierra cuando le llega dos veces la respuesta de un jugador (pasaba con Sherlock IA y Watson o Irene humanos).
 - **Avisos de actualización**: ahora enseñan solo lo nuevo de cada versión, no todo el registro de cambios.
 - **Mando**:
@@ -69,6 +70,7 @@ The first block (from the first `## ` to the next one) is what the launcher show
 - **"Always accept" guests' mods**: from the prompt or in Mods → "Guests' mods", so they're added without asking every time.
 - **Update notice with the launcher open**: it checks for a new version every half hour and, if there is one, a bell appears at the top. Click it to see what's new and update right away; if the game, a session or another launcher is open, it warns you and closes them first.
 - **The server no longer closes on start if the game was already open**: it now tells you to close the game (the launcher opens it already connected). The credits line on the title screen can't bring the session down either if Windows won't let it touch the file.
+- **"Access denied" when starting a session**: if the game's files were marked read-only (it happens when copying or restoring the game folder), the launcher clears that before touching them. If Windows still refuses, it tells you what to check instead of just closing the server.
 - **Final vote**: the game no longer closes when it gets the same player's answer twice (it happened with an AI Sherlock and a human Watson or Irene).
 - **Update notices**: they now show only what's new in each version, not the whole changelog.
 - **Controller**:
