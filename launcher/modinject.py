@@ -212,11 +212,25 @@ def _build_avatars(data_dir, orig, avatars):
         _write(os.path.join(data_dir, level), lf.save())
 
 
-def _write(path, data):
+def _write(path, data, tries=30, wait=0.5):
+    """Escribe a un .tmp y lo cambia por el original. Si el antivirus esta revisando el .tmp recien escrito
+    (o el original), Windows no deja renombrarlo ("Acceso denegado"): se reintenta unos segundos."""
+    import time
     tmp = path + ".tmp"
     with open(tmp, "wb") as f:
         f.write(data)
-    os.replace(tmp, path)
+    for i in range(tries):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if i == tries - 1:
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+                raise
+            time.sleep(wait)
 
 
 # ------------------------------------------------------------------ estado y originales

@@ -259,6 +259,12 @@ def unlock_game_files(game_dir):
             continue
         for name in names:
             p = os.path.join(d, name)
+            if name.endswith(".tmp") and os.path.isfile(p[:-4]):
+                try:                         # copia a medias de un intento anterior (puede ocupar cientos de MB)
+                    os.remove(p)
+                except OSError:
+                    pass
+                continue
             try:
                 st = os.stat(p)
                 if os.path.isfile(p) and not st.st_mode & stat.S_IWRITE:
@@ -441,17 +447,37 @@ def linux_launch_option_ok():
 LINUX_LAUNCH_OPTION = 'WINEDLLOVERRIDES="winhttp=n,b" %command%'
 
 
-def wait_game(log, start_timeout=180, stop_flag=lambda: False):
-    """Espera a que el juego se abra y despues a que se cierre."""
+def _wait_start(timeout, stop_flag):
     t0 = time.time()
     while not game_running():
-        if stop_flag() or time.time() - t0 > start_timeout:
-            log(t("game_not_seen"))
+        if stop_flag() or time.time() - t0 > timeout:
             return False
-        time.sleep(2)
+        time.sleep(1)
+    return True
+
+
+def wait_game(log, start_timeout=180, stop_flag=lambda: False):
+    """Espera a que el juego se abra y despues a que se cierre.
+
+    Al abrir CrimeSight.exe directamente (no desde Steam), el juego suele cerrarse al momento para que
+    Steam lo vuelva a abrir. Si eso se tomara por "el jugador ha cerrado el juego", la sesion terminaria
+    y el juego reabierto no encontraria el servidor (error 100010). Por eso, si desaparece poco despues
+    de abrirse, se espera a que vuelva; y si se cierra mas tarde, se da un margen de unos segundos."""
+    if not _wait_start(start_timeout, stop_flag):
+        log(t("game_not_seen"))
+        return False
     log(t("game_open"))
-    while game_running() and not stop_flag():
-        time.sleep(3)
+    opened = time.time()
+    while not stop_flag():
+        if game_running():
+            time.sleep(2)
+            continue
+        if time.time() - opened < 90:          # Steam lo esta reabriendo
+            if not _wait_start(120, stop_flag):
+                break
+            opened = time.time()
+        elif not _wait_start(6, stop_flag):    # cerrado de verdad
+            break
     return True
 
 

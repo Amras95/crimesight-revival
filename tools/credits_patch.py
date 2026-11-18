@@ -74,6 +74,7 @@ def patch(game_dir, text=CREDITS):
     compact_key = f'"msg_id":"{MSG_ID}"'.encode()
     done = 0
     pos = 0
+    edits = []                      # (posicion, bytes): el bloque de textos cambia sin cambiar de tamano
     while True:
         a, b = d.find(key, pos), d.find(compact_key, pos)
         hits = [x for x in (a, b) if x >= 0]
@@ -91,34 +92,24 @@ def patch(game_dir, text=CREDITS):
                                                               separators=(",", ":")).encode("utf-8")
             if len(new) > length:
                 raise ValueError("El credito no cabe en el archivo de textos.")
-            d[start:start + length] = new + b" " * (length - len(new))
+            block = new + b" " * (length - len(new))
+            d[start:start + length] = block
+            edits.append((start, bytes(block)))
             done += 1
         pos = start + length
     if not done:
         raise ValueError("No encuentro la linea de copyright de la pantalla de titulo.")
-    tmp = path + ".tmp"
-    with open(tmp, "wb") as f:
-        f.write(d)
-    _replace(tmp, path)
+    # Se escriben solo esos bytes, en el mismo archivo: nada de copiar entero el .assets (cientos de MB)
+    # a un .tmp y renombrarlo, que el antivirus revisa al momento y bloquea ("Acceso denegado").
+    with open(path, "r+b") as f:
+        for start, block in edits:
+            f.seek(start)
+            f.write(block)
+    try:
+        os.remove(path + ".tmp")    # el que dejaban las versiones anteriores si fallaban
+    except OSError:
+        pass
     return done
-
-
-def _replace(tmp, path, tries=6, wait=0.5):
-    """Windows no deja reemplazar el archivo si alguien lo tiene abierto (el juego, Steam comprobando los
-    archivos, un antivirus...). Se reintenta un momento; si sigue bloqueado se deja como estaba."""
-    import time
-    for i in range(tries):
-        try:
-            os.replace(tmp, path)
-            return
-        except PermissionError:
-            if i == tries - 1:
-                try:
-                    os.remove(tmp)
-                except OSError:
-                    pass
-                raise
-            time.sleep(wait)
 
 
 def is_patched(game_dir, text=CREDITS):
