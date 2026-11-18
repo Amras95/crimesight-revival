@@ -175,7 +175,7 @@ def _stages(ctx, cfg, url, password, steam_id, srv=None, room=False):
     return check
 
 
-def _host_watcher(ctx, url, steam_id):
+def _host_gone_watcher(ctx, url, steam_id):
     """En la sala de otro: si el anfitrion desaparece a mitad de partida (cierra el lanzador, se queda sin
     conexion...), su servidor ya no puede apuntar el resultado. Entonces cuenta como victoria para ti,
     siempre que tu si tengas internet (si el que se ha caido eres tu, no)."""
@@ -299,7 +299,7 @@ def join(ctx, cfg, steam_id, address, password=""):
     try:
         # los escenarios se miran cada 3 s (la sala no deja empezar hasta tenerlos); los mods, cada 9
         _play(ctx, gd, url, rs, watch=_both(_every(3, _room_watcher(ctx, cfg, url, password, rs)), stages,
-                                            _host_watcher(ctx, url, steam_id)), every=3)
+                                            _host_gone_watcher(ctx, url, steam_id)), every=3)
     finally:
         try:                                           # vuelven tus escenarios a la lista del juego
             core.stage_publish(gd, core.stage_own(cfg.get("stages_disabled", [])))
