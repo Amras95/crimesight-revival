@@ -69,12 +69,14 @@ namespace CrimeSightRevival.Mods
                 "• Si el juego ya estaba abierto, ciérralo y vuelve a pulsar el modo: el lanzador lo abre ya conectado.\n" +
                 "• Cuando sale una versión nueva aparece una {H}campana{/H} arriba: ahí ves las novedades y actualizas. Si el juego está abierto, el lanzador lo cierra antes.\n" +
                 "• En {H}Mods{/H} están los stickers, avatares, el cursor propio y el creador de escenarios.",
-            "{LS}  Mover el cursor          {A}  Clic          {B}  Clic derecho\n" +
-                "{RS}  Mover la cámara\n" +
-                "{LBRB}  Girar la cámara          {LTRT}  Alejar / acercar\n" +
-                "{X}  Indicadores y stickers          {Y}  Ver sospechosos\n" +
-                "{DPAD}  Flechas\n" +
-                "{START}  Finalizar turno          {BACK}  Registro\n\n" +
+            "<size=85%><pos=7.5%>Alejar<pos=22.25%>Girar<pos=70.25%>Girar<pos=82.75%>Acercar</size>\n" +
+                "<size=130%><pos=8%>{LT}<pos=22%>{LB}<pos=70%>{RB}<pos=84%>{RT}</size>\n" +
+                "<size=85%><pos=36%>Registro<pos=51.25%>Fin turno<pos=71.75%>Sospechosos</size>\n" +
+                "<size=130%><pos=38%>{BACK}<pos=54%>{START}<pos=76%>{Y}</size>\n" +
+                "<size=85%><pos=7.5%>Cursor<pos=66%>Stickers<pos=81%>Clic derecho</size>\n" +
+                "<size=130%><pos=8%>{LS}<pos=68%>{X}<pos=84%>{B}</size>\n" +
+                "<size=85%><pos=20.75%>Flechas<pos=59.5%>Cámara<pos=77%>Clic</size>\n" +
+                "<size=130%><pos=22%>{DPAD}<pos=60%>{RS}<pos=76%>{A}</size>\n\n" +
                 "La barra de ayuda de abajo enseña los botones del mando mientras lo usas.",
             "• Pulsa {LS} (el {H}stick izquierdo{/H}) para cambiar la velocidad del cursor y {RS} (el {H}derecho{/H}) para la de la cámara: lenta, media o rápida (el mando vibra 1, 2 o 3 veces).\n" +
                 "• Vibra al elegir un personaje, al darle una orden y en los momentos de tensión.\n" +
@@ -150,12 +152,14 @@ namespace CrimeSightRevival.Mods
                 "• If the game was already open, close it and press the mode again: the launcher opens it already connected.\n" +
                 "• When a new version is out, a {H}bell{/H} appears at the top: see what's new and update there. If the game is open, the launcher closes it first.\n" +
                 "• {H}Mods{/H} has stamps, avatars, the custom cursor and the scenario creator.",
-            "{LS}  Move the cursor          {A}  Click          {B}  Right click\n" +
-                "{RS}  Move the camera\n" +
-                "{LBRB}  Rotate the camera          {LTRT}  Zoom out / in\n" +
-                "{X}  Pings and stamps          {Y}  View suspects\n" +
-                "{DPAD}  Arrows\n" +
-                "{START}  End turn          {BACK}  Log\n\n" +
+            "<size=85%><pos=6%>Zoom out<pos=21.5%>Rotate<pos=69.5%>Rotate<pos=82.75%>Zoom in</size>\n" +
+                "<size=130%><pos=8%>{LT}<pos=22%>{LB}<pos=70%>{RB}<pos=84%>{RT}</size>\n" +
+                "<size=85%><pos=39.75%>Log<pos=52%>End turn<pos=74%>Suspects</size>\n" +
+                "<size=130%><pos=38%>{BACK}<pos=54%>{START}<pos=76%>{Y}</size>\n" +
+                "<size=85%><pos=7.5%>Cursor<pos=62%>Pings/stamps<pos=81.5%>Right-click</size>\n" +
+                "<size=130%><pos=8%>{LS}<pos=68%>{X}<pos=84%>{B}</size>\n" +
+                "<size=85%><pos=21.5%>Arrows<pos=59.5%>Camera<pos=76.25%>Click</size>\n" +
+                "<size=130%><pos=22%>{DPAD}<pos=60%>{RS}<pos=76%>{A}</size>\n\n" +
                 "The help bar at the bottom shows the controller buttons while you use it.",
             "• Click {LS} (the {H}left stick{/H}) to change the cursor speed and {RS} (the {H}right{/H} one) for the camera speed: slow, medium or fast (it vibrates 1, 2 or 3 times).\n" +
                 "• It vibrates when you pick a character, when you give an order and in tense moments.\n" +
