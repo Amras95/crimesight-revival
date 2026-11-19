@@ -26,7 +26,7 @@ namespace CrimeSightRevival.Mods
         const string TitleId = "ctg_outgame_tutorialTips_title";
         const string HeaderId = "ctg_outgame_tutorialTips_subtitle_tips";
         const string HelpId = "csr_guide_help";                 // texto de ayuda al pasar el raton por el boton
-        static readonly string[] ButtonLabel = { "Revivalガイド", "Revival guide", "Guide Revival", "Guida Revival",
+        static readonly string[] ButtonLabel = { "Revivalガイド", "Revival Guide", "Guide Revival", "Guida Revival",
             "Revival-Leitfaden", "Guía Revival", "Guia Revival", "Гид Revival", "Revival 가이드", "Revival 指南", "Revival 指南" };
 
         public static bool Active;

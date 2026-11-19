@@ -12,7 +12,7 @@ namespace CrimeSightRevival.Mods
 {
     static class GuideText
     {
-        public static string Title(int lang) => lang == 5 ? "Guía Revival" : "Revival guide";
+        public static string Title(int lang) => lang == 5 ? "Guía Revival" : "Revival Guide";
 
         static readonly string[] TitlesEs =
         {
