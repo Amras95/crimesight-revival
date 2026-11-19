@@ -40,7 +40,8 @@ namespace CrimeSightRevival.Mods
         const float BodySize = 24f;                                        // tamano de letra de todas las paginas
         const float MinBodySize = 18f;                                     // solo si el texto no cabe ni quitando la captura
         const float Side = 34, Top = 26, Bottom = 26, Gap = 12;            // margenes de la pagina y entre captura y texto
-        const float PicMaxShare = 0.6f;                                    // la captura, como mucho esta parte de la altura
+        const float ExtraBelow = 220;                                      // la pagina sigue por debajo del recuadro de imagen del juego (hay sitio hasta "Volver")
+        const float PicMinShare = 0.6f;                                    // si el texto no cabe, la captura se encoge hasta esta parte de la altura
         static OutGameTips _tips;                                          // la pantalla donde se ve
         static int _topic = -1;
         static string _shown;                                              // lo que tiene puesto _page
@@ -659,7 +660,7 @@ namespace CrimeSightRevival.Mods
             if (key == _laidOut) return;
             _laidOut = key;
 
-            float w = size.x - 2 * Side, h = size.y - Top - Bottom;
+            float w = size.x - 2 * Side, h = size.y + ExtraBelow - Top - Bottom;
             _page.enableAutoSizing = false;
             _page.fontSize = BodySize;
             float textH = _page.GetPreferredValues(_shown, w, 0).y;
@@ -668,13 +669,15 @@ namespace CrimeSightRevival.Mods
             if (pic)
             {
                 float aspect = _pic.texture.width / (float)Math.Max(1, _pic.texture.height);
-                picH = Math.Min(w / aspect, h * PicMaxShare);           // de lado a lado (el texto va en lo que sobra)
+                float full = w / aspect;                                 // de lado a lado (el texto va en lo que sobra)
+                float left = h - textH - Gap;                            // lo que deja libre el texto
+                picH = full <= left ? full : Math.Min(full, Math.Max(left, h * PicMinShare));
                 _pic.rectTransform.anchoredPosition = new Vector2(0, -Top);
                 _pic.rectTransform.sizeDelta = new Vector2(Math.Min(w, picH * aspect), picH);
             }
             var prt = _page.rectTransform;
             prt.anchorMin = Vector2.zero; prt.anchorMax = Vector2.one;
-            prt.offsetMin = new Vector2(Side, Bottom);
+            prt.offsetMin = new Vector2(Side, Bottom - ExtraBelow);
             prt.offsetMax = new Vector2(-Side, -(Top + (pic ? picH + Gap : 0)));
 
             float room = h - (pic ? picH + Gap : 0);
