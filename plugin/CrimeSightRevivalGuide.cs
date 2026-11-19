@@ -774,6 +774,8 @@ namespace CrimeSightRevival.Mods
     {
         static readonly Dictionary<int, string> _names = new();   // tipo de sticker -> nombre del icono
         static readonly HashSet<int> _wanted = new() { 38, 25, 24 };   // Irene "asesino", sospecho, no creo
+        // 24 y 25 tienen una version por personaje (killerSuspicion_I, _M, _S, _W...): la guia los usa en la pagina de Watson
+        static readonly Dictionary<int, string> _suffix = new() { [24] = "_W", [25] = "_W" };
         static float _nextTry;
 
         /// <summary>El icono del sticker para TextMeshPro, o nada si aun no esta.</summary>
@@ -796,6 +798,7 @@ namespace CrimeSightRevival.Mods
                     if (!_wanted.Contains(type) || _names.ContainsKey(type)) continue;
                     var sp = d.spriteImageThumbnail ?? d.spriteImage;
                     if (sp == null || sp.texture == null) continue;
+                    if (_suffix.TryGetValue(type, out var suf) && !sp.name.EndsWith(suf)) continue;
                     var name = "csr_stamp_" + type;
                     var asset = Build(root, sp, name);
                     if (asset == null) continue;
