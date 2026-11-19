@@ -145,6 +145,7 @@ footer .updpill.on{display:inline-block}
 .modal .box.full .mod .info{flex:0 0 220px}
 .mod .thumbs.big{flex:1;flex-wrap:wrap;min-width:0}
 .mod .thumbs.big img{width:48px;height:48px}
+#modelslist .mod select{min-width:200px}
 .mods{max-height:46vh;overflow:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:8px}
 .mod{display:flex;align-items:center;gap:12px;background:rgba(5,6,20,.6);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .mod.off{opacity:.55}
@@ -264,6 +265,7 @@ footer .updpill.on{display:inline-block}
       <button class="tab" data-tab="stickers" onclick="modTab('stickers')" data-t="mods_tab_stickers"></button>
       <button class="tab" data-tab="avatars" onclick="modTab('avatars')" data-t="mods_tab_avatars"></button>
       <button class="tab" data-tab="cursor" onclick="modTab('cursor')" data-t="mods_cursor"></button>
+      <button class="tab" data-tab="models" onclick="modTab('models')" data-t="mods_tab_models"></button>
     </div>
     <div class="tabbody">
       <div class="pane" data-pane="general">
@@ -294,6 +296,11 @@ footer .updpill.on{display:inline-block}
         <p data-t="mods_how"></p>
         <p class="note" data-t="mods_toggle_note"></p>
         <div class="mods" id="modlist_avatars"></div>
+      </div>
+      <div class="pane" data-pane="models">
+        <p data-t="models_desc"></p>
+        <p class="note" id="modelsbep" data-t="models_need_bep" style="display:none"></p>
+        <div class="mods" id="modelslist"></div>
       </div>
       <div class="pane" data-pane="cursor">
         <div class="bep cur" id="cursorbox">
@@ -535,6 +542,20 @@ async function loadMods(){
       :`<div class="empty">${esc(T(r.mods.length?(kind==='avatars'?'mods_none_avatars':'mods_none_stickers'):'mods_empty'))}</div>`;
   }
 }
+let MODELS=null;
+async function loadModels(){
+  const r=await api('models_state');if(!r)return;MODELS=r;
+  $('#modelsbep').style.display=r.live?'none':'block';
+  $('#modelslist').innerHTML=r.slots.map(s=>{
+    const cur=r.swaps[s.id]||'';
+    const opts=[`<option value="">${esc(T('models_original'))}</option>`].concat(
+      r.targets.filter(x=>x.id!==s.id).map(x=>`<option value="${esc(x.id)}"${x.id===cur?' selected':''}>${esc(x.name)}</option>`)).join('');
+    return `<div class="mod${cur?'':' plain'}"><div class="info"><b>${esc(s.name)}</b>
+      <small>${esc(cur?T('models_now',{name:(r.targets.find(x=>x.id===cur)||{}).name||cur}):T('models_original'))}</small></div>
+      <select class="small" onchange="setModel(${esc(JSON.stringify(s.id))},this.value)">${opts}</select></div>`;
+  }).join('');
+}
+async function setModel(slot,target){const r=await api('models_set',slot,target);if(r&&r.error){toast(r.error);return}loadModels()}
 let MODTAB='general';
 function modTab(t){
   MODTAB=t;
@@ -574,7 +595,7 @@ async function saveText(el){
   if(r){el.value=r.text;toast(T('mods_text_saved'))}
 }
 function closeTexts(){$('#modtexts').classList.remove('on')}
-function openMods(){modTab(MODTAB);$('#mods').classList.add('on');loadMods();loadBep();loadCursor();loadGuest()}
+function openMods(){modTab(MODTAB);$('#mods').classList.add('on');loadMods();loadBep();loadCursor();loadGuest();loadModels()}
 async function loadGuest(){const r=await api('guest_mods');if(r)$('#guestmods').value=r.mode}
 async function guestMods(v){const r=await api('guest_mods',v);if(r)$('#guestmods').value=r.mode}
 let CUR=null;

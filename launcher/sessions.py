@@ -44,6 +44,10 @@ def _play(ctx, game_dir, url, rs=None, watch=None, every=3):
         core.install_cursor(game_dir)
     except OSError as e:
         log.warning("No pude copiar el cursor: %s", e)
+    try:
+        core.install_models(game_dir)
+    except OSError as e:
+        log.warning("No pude guardar los modelos: %s", e)
     ctx.log(t("pointing", url=url))
     core.point_game_to(game_dir, url)
     ctx.log(t("opening"))
