@@ -7,11 +7,12 @@
 //   ("Aqui tienes a tu asesino", "Sospecho que es el asesino", "No creo que sea el asesino");
 //   {H}...{/H}: resaltado en verde.
 // Espanol para el juego en espanol; ingles para los demas idiomas.
+// Algunas paginas llevan una captura arriba, de lado a lado, y el texto debajo (ver Images y tools/guide_images.py).
 namespace CrimeSightRevival.Mods
 {
     static class GuideText
     {
-        public static string Title(int lang) => lang == 5 ? "Guía Revival" : "Revival guide";
+        public static string Title(int lang) => lang == 5 ? "Guía Revival" : "Revival Guide";
 
         static readonly string[] TitlesEs =
         {
@@ -59,16 +60,12 @@ namespace CrimeSightRevival.Mods
                 "• Partidas contra la IA, con amigos o en servidores de la comunidad.\n" +
                 "• Mando, cinco dificultades de IA, stickers y avatares propios, escenarios propios y más.\n\n" +
                 "Revival no incluye archivos de Konami: necesitas tener CRIMESIGHT en Steam.",
-            "Cuatro formas de jugar:\n\n" +
-                "• {H}Jugar solo{/H}: partidas contra la IA en tu PC.\n" +
-                "• {H}Ser anfitrión{/H}: abre una partida para tus amigos y te da la dirección que deben usar.\n" +
-                "• {H}Unirme a un amigo{/H}: escribe la dirección que te pase.\n" +
-                "• {H}Servidor propio{/H}: entra en un servidor montado por alguien, con contraseña si la tiene.\n\n" +
+            "Elige uno de los {H}cuatro modos{/H} y pulsa {H}«Jugar»{/H}: el lanzador abre el juego ya conectado.\n\n" +
                 "Tus partidas, victorias y puntos se guardan en tu PC.",
-            "Mientras juegas, la sesión sigue abierta en el lanzador. Termina sola al cerrar el juego, o con {H}«Terminar sesión»{/H}.\n\n" +
-                "• Si el juego ya estaba abierto, ciérralo y vuelve a pulsar el modo: el lanzador lo abre ya conectado.\n" +
-                "• Cuando sale una versión nueva aparece una {H}campana{/H} arriba: ahí ves las novedades y actualizas. Si el juego está abierto, el lanzador lo cierra antes.\n" +
-                "• En {H}Mods{/H} están los stickers, avatares, el cursor propio y el creador de escenarios.",
+            "La sesión termina al cerrar el juego o con {H}«Terminar sesión»{/H}.\n" +
+                "• ¿El juego ya estaba abierto? Ciérralo y vuelve a pulsar el modo.\n" +
+                "• Una {H}campana{/H} arriba avisa de una versión nueva: ahí actualizas.\n" +
+                "• {H}Mods{/H}: stickers, avatares, cursor y escenarios.",
             "<size=85%><pos=7.5%>Alejar<pos=22.25%>Girar<pos=70.25%>Girar<pos=82.75%>Acercar</size>\n" +
                 "<size=130%><pos=8%>{LT}<pos=22%>{LB}<pos=70%>{RB}<pos=84%>{RT}</size>\n" +
                 "<size=85%><pos=36%>Registro<pos=51.25%>Fin turno<pos=71.75%>Sospechosos</size>\n" +
@@ -142,16 +139,12 @@ namespace CrimeSightRevival.Mods
                 "• Matches against the AI, with friends or on community servers.\n" +
                 "• Controller support, five AI difficulties, your own stamps and avatars, custom scenarios and more.\n\n" +
                 "Revival includes no Konami files: you need to own CRIMESIGHT on Steam.",
-            "Four ways to play:\n\n" +
-                "• {H}Play solo{/H}: matches against the AI on your PC.\n" +
-                "• {H}Host{/H}: open a match for your friends; it gives you the address they need.\n" +
-                "• {H}Join a friend{/H}: type the address they give you.\n" +
-                "• {H}Own server{/H}: join a server someone runs, with a password if it has one.\n\n" +
+            "Pick one of the {H}four modes{/H} and press {H}\"Play\"{/H}: the launcher opens the game already connected.\n\n" +
                 "Your matches, wins and points are saved on your PC.",
-            "While you play, the session stays open in the launcher. It ends by itself when you close the game, or with {H}\"End session\"{/H}.\n\n" +
-                "• If the game was already open, close it and press the mode again: the launcher opens it already connected.\n" +
-                "• When a new version is out, a {H}bell{/H} appears at the top: see what's new and update there. If the game is open, the launcher closes it first.\n" +
-                "• {H}Mods{/H} has stamps, avatars, the custom cursor and the scenario creator.",
+            "The session ends when you close the game, or with {H}\"End session\"{/H}.\n" +
+                "• Game already open? Close it and press the mode again.\n" +
+                "• A {H}bell{/H} at the top means a new version: update there.\n" +
+                "• {H}Mods{/H}: stamps, avatars, cursor and scenarios.",
             "<size=85%><pos=6%>Zoom out<pos=21.5%>Rotate<pos=69.5%>Rotate<pos=82.75%>Zoom in</size>\n" +
                 "<size=130%><pos=8%>{LT}<pos=22%>{LB}<pos=70%>{RB}<pos=84%>{RT}</size>\n" +
                 "<size=85%><pos=39.75%>Log<pos=52%>End turn<pos=74%>Suspects</size>\n" +
@@ -221,6 +214,16 @@ namespace CrimeSightRevival.Mods
         public static string Help(int lang) => lang == 5
             ? "Cómo funciona lo que añade Revival: lanzador, mando, IA, stickers y más."
             : "How everything Revival adds works: launcher, controller, AI, stamps and more.";
+
+        // Tema -> captura (nombre en GuideImages) que sale encima del texto
+        static readonly System.Collections.Generic.Dictionary<int, string> Images = new()
+        {
+            [1] = "launcher_modes",   // El lanzador: modos de juego
+            [2] = "launcher_bars",    // El lanzador: sesion y novedades
+        };
+
+        /// <summary>La captura de la pagina, o null si no tiene.</summary>
+        public static string Image(int t) => Images.TryGetValue(t, out var n) ? n : null;
 
         public static int Count => TitlesEs.Length;
         public static string TopicTitle(int t, int lang) => lang == 5 ? TitlesEs[t] : TitlesEn[t];

@@ -6,6 +6,9 @@
 // ese boton, la lista solo tiene las entradas de la guia (registradas como consejos del juego) y el texto
 // de cada pagina, con los iconos de los botones del mando que uses, va donde normalmente va la imagen.
 // Los textos de la guia estan en GuideText.cs (espanol e ingles; los demas idiomas ven el ingles).
+// Todas las paginas usan el mismo tamano de letra (BodySize). Las que tienen captura (GuideText.Image) la
+// ensenan arriba, de lado a lado, y el texto debajo; las capturas estan en GuideImages.cs, generado por
+// tools/guide_images.py.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -23,7 +26,7 @@ namespace CrimeSightRevival.Mods
         const string TitleId = "ctg_outgame_tutorialTips_title";
         const string HeaderId = "ctg_outgame_tutorialTips_subtitle_tips";
         const string HelpId = "csr_guide_help";                 // texto de ayuda al pasar el raton por el boton
-        static readonly string[] ButtonLabel = { "Revivalガイド", "Revival guide", "Guide Revival", "Guida Revival",
+        static readonly string[] ButtonLabel = { "Revivalガイド", "Revival Guide", "Guide Revival", "Guida Revival",
             "Revival-Leitfaden", "Guía Revival", "Guia Revival", "Гид Revival", "Revival 가이드", "Revival 指南", "Revival 指南" };
 
         public static bool Active;
@@ -31,6 +34,13 @@ namespace CrimeSightRevival.Mods
         static readonly Dictionary<IntPtr, int> _topicOf = new();        // TipsData -> tema
         static readonly Dictionary<string, string> _saved = new();         // textos del juego cambiados mientras se ve la guia
         static TextMeshProUGUI _page;                                      // texto de la pagina (sobre la imagen)
+        static RawImage _pic;                                              // captura de la pagina (arriba, de lado a lado), si tiene
+        static readonly Dictionary<string, Texture2D> _picTex = new();     // nombre -> textura (null si no se pudo cargar)
+        static string _laidOut;                                            // tamano de pagina + texto con los que se coloco todo
+        const float BodySize = 24f;                                        // tamano de letra de todas las paginas
+        const float MinBodySize = 18f;                                     // solo si el texto no cabe ni quitando la captura
+        const float Side = 34, Top = 26, Bottom = 26, Gap = 12;            // margenes de la pagina y entre captura y texto
+        const float PicMaxShare = 0.6f;                                    // la captura, como mucho esta parte de la altura
         static OutGameTips _tips;                                          // la pantalla donde se ve
         static int _topic = -1;
         static string _shown;                                              // lo que tiene puesto _page
@@ -55,6 +65,8 @@ namespace CrimeSightRevival.Mods
                 Patch(h, typeof(OutGameTips), "RefreshSoloRoomList", pre: nameof(OnlyGuide));
                 Patch(h, typeof(OutGameTips), "GetTipsDoneFromSaveData", pre: nameof(BeforeTipsDone));
                 Patch(h, typeof(OutGameTips), "SetTutorialDisplay", pre: nameof(BeforeTutorialDisplay));    // sin "Empezar el tutorial"
+                Patch(h, typeof(OutGameTips), "RefreshTipsList", post: nameof(AfterRefreshTips));
+                Patch(h, typeof(OutGameTips), "Open", pre: nameof(BeforeTipsOpen));     // listas de la guia o del juego
             }
             catch (Exception e) { Plugin.L.LogWarning("[Guia] " + e.Message); }
         }
@@ -253,8 +265,14 @@ namespace CrimeSightRevival.Mods
             return copy.Find(string.Join("/", path));
         }
 
+        // ClickTipsButton tambien lo usa el juego (su propio boton de consejos abre la misma pantalla): la guia solo
+        // se enciende si el clic es en nuestro boton: si se acaba de pulsar o si el raton (o el mando) esta sobre el.
+        static float _ourClickAt = -100f;
+        const float OurClickWindow = 1f;
+
         static void OpenFromMenu()
         {
+            _ourClickAt = Time.unscaledTime;
             try { if (_menu != null) _menu.ClickTipsButton(); }
             catch (Exception e) { Plugin.L.LogWarning("[Guia] abrir: " + e.Message); }
         }
@@ -343,6 +361,13 @@ namespace CrimeSightRevival.Mods
 
         static void BeforeOpenGuide()
         {
+            bool ours = Time.unscaledTime - _ourClickAt <= OurClickWindow || Hot(_copyButton);
+            if (!ours)                                                   // la pantalla de consejos del juego, no la guia
+            {
+                Plugin.L.LogInfo("[Guia] consejos del juego (no la guia)");
+                Close();
+                return;
+            }
             Active = true;
             _lang = Lang();
             SetGameText(TitleId, GuideText.Title(_lang));
@@ -356,6 +381,92 @@ namespace CrimeSightRevival.Mods
         static void NotGuide() => Close();
 
         static bool OnlyGuide() => !Active;
+
+        // ------------------------------------------------------------ listas de la pantalla de consejos
+        // El juego monta las listas de la izquierda (tutoriales, salas de entrenamiento, consejos) una sola vez, la
+        // primera vez que se abre la pantalla, y luego las reutiliza. La guia y el boton de consejos del juego usan
+        // la misma pantalla: si se abre la otra, se borran las entradas y se vuelven a montar (con la guia, los
+        // parches de arriba hacen que solo salgan sus temas).
+        const int BuiltNone = 0, BuiltGame = 1, BuiltGuide = 2;
+        static int _builtFor = BuiltNone;
+        static bool _rebuilding;
+
+        static void AfterRefreshTips(bool isNew)
+        {
+            if (isNew && !_rebuilding) _builtFor = Active ? BuiltGuide : BuiltGame;
+        }
+
+        static void BeforeTipsOpen(OutGameTips __instance)
+        {
+            try
+            {
+                int want = Active ? BuiltGuide : BuiltGame;
+                if (_builtFor == BuiltNone || _builtFor == want || _rebuilding) return;
+                RebuildLists(__instance, want);
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Guia] listas: " + e); }
+        }
+
+        // Las cabeceras de seccion (Tutorial, Consejos...) las crea el juego la primera vez que monta cada seccion
+        // y ya no se borran. Con la guia, las que no son suyas se esconden (vacias se verian igual); sin la guia,
+        // se vuelven a ensenar y "Tutorial" va antes que "Consejos", como en el juego sin mods.
+        static readonly List<GameObject> _hiddenHeaders = new();
+
+        static void FixHeaders(OutGameTips t, int want)
+        {
+            try
+            {
+                if (want == BuiltGuide)
+                {
+                    foreach (var h in new[] { t.headerTutorial, t.headerSoloRoom, t.headerImitation, t.headerPJW })
+                        if (h != null && h.activeSelf) { h.SetActive(false); _hiddenHeaders.Add(h); }
+                }
+                else
+                {
+                    foreach (var h in _hiddenHeaders) if (h != null) h.SetActive(true);
+                    _hiddenHeaders.Clear();
+                    var tut = t.headerTutorial; var tips = t.headerTips;
+                    var items = t.headerTutorialTransform;          // solo si sus entradas van dentro (si no, se separarian)
+                    if (tut != null && tips != null && tut.transform.parent == tips.transform.parent
+                        && (items == null || items.IsChildOf(tut.transform))
+                        && tut.transform.GetSiblingIndex() > tips.transform.GetSiblingIndex())
+                        tut.transform.SetSiblingIndex(tips.transform.GetSiblingIndex());
+                }
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Guia] cabeceras: " + e.Message); }
+        }
+
+        static void RebuildLists(OutGameTips t, int want)
+        {
+            _rebuilding = true;
+            try
+            {
+                int old = 0;
+                var list = t.instanceTipsListButton;
+                if (list != null)
+                {
+                    foreach (var b in list)
+                        if (b != null && b.parentObj != null) { UnityEngine.Object.Destroy(b.parentObj); old++; }   // no es un componente: su boton es parentObj
+                    list.Clear();
+                }
+                // en el orden del juego sin mods (comprobado): "Tutorial" arriba y "Consejos" (Tips) debajo
+                t.RefreshTutorialList(true);       // con la guia no hacen nada (OnlyGuide)
+                t.RefreshSoloRoomList(true);
+                t.RefreshTipsList(true);
+                // los nombres de las secciones se ponen al montar la pantalla; la guia cambia el de "Consejos"
+                // mientras esta abierta (y lo devuelve al cerrarse), asi que se vuelven a poner
+                try { t.SetTipsHeaderText(); t.SetTutorialHeaderText(); t.SetSoloRoomHeaderText(); }
+                catch (Exception e) { Plugin.L.LogWarning("[Guia] nombres de secciones: " + e.Message); }
+                // lo seleccionado era de la lista de antes (sin esto, al volver al tutorial el juego falla al montar su lista)
+                try { t.selectTipsIndex = 0; t.selectTipsIndexPre = 0; }
+                catch (Exception e) { Plugin.L.LogWarning("[Guia] seleccion: " + e.Message); }
+                FixHeaders(t, want);
+                _builtFor = want;
+                Plugin.L.LogInfo($"[Guia] listas rehechas para {(want == BuiltGuide ? "la guia" : "el juego")}: " +
+                    $"{old} entradas quitadas, {(list != null ? list.Count : -1)} nuevas");
+            }
+            finally { _rebuilding = false; }
+        }
 
         static void AfterRootPhase(object[] __args)
         {
@@ -376,6 +487,7 @@ namespace CrimeSightRevival.Mods
                 foreach (var kv in _saved) tm.LangText[kv.Key] = kv.Value;
             _saved.Clear();
             if (_page != null) _page.gameObject.SetActive(false);
+            if (_pic != null) _pic.gameObject.SetActive(false);
         }
 
         static void SetGameText(string id, string text, bool keep = false)
@@ -467,6 +579,7 @@ namespace CrimeSightRevival.Mods
                 if (!Ours(Arg(__args), out int topic) || !Active)
                 {
                     if (_page != null) _page.gameObject.SetActive(false);
+                    if (_pic != null) _pic.gameObject.SetActive(false);
                     return;
                 }
                 if (_page == null || _page.transform.parent != img.transform)
@@ -483,8 +596,8 @@ namespace CrimeSightRevival.Mods
                     _page.alignment = TextAlignmentOptions.TopLeft;
                     _page.enableWordWrapping = true;
                     _page.richText = true;
-                    _page.enableAutoSizing = true;
-                    _page.fontSizeMax = 30; _page.fontSizeMin = 16; _page.fontSize = 30;
+                    _page.enableAutoSizing = false;
+                    _page.fontSize = BodySize;
                     _page.lineSpacing = 12;
                     _page.raycastTarget = false;
                 }
@@ -493,9 +606,93 @@ namespace CrimeSightRevival.Mods
                 _tips = __instance;
                 _topic = topic;
                 _shown = null;
+                SetPicture(img.transform, topic);
                 RefreshPage();
             }
             catch (Exception e) { Plugin.L.LogWarning("[Guia] pagina: " + e.Message); }
+        }
+
+        /// <summary>La captura del tema (si tiene) va arriba, y el texto debajo; ver Layout.</summary>
+        static void SetPicture(Transform parent, int topic)
+        {
+            var name = GuideText.Image(topic);
+            var tex = name == null ? null : PictureTexture(name);
+            _laidOut = null;
+            if (tex == null)
+            {
+                if (_pic != null) _pic.gameObject.SetActive(false);
+                return;
+            }
+            if (_pic == null || _pic.transform.parent != parent)
+            {
+                var go = new GameObject("CSR_GuidePic");
+                var rt = go.AddComponent<RectTransform>();
+                rt.SetParent(parent, false);
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
+                _pic = go.AddComponent<RawImage>();
+                _pic.raycastTarget = false;
+            }
+            _pic.texture = tex;
+            _pic.gameObject.SetActive(true);
+        }
+
+        /// <summary>Coloca la pagina: la captura arriba, de lado a lado; el texto debajo, siempre a BodySize (las
+        /// paginas con captura llevan poco texto para que quepa). Se repite si cambia el tamano de la pagina (al
+        /// abrirse aun puede no tenerlo) o el texto.</summary>
+        static void Layout()
+        {
+            if (_page == null || _shown == null) return;
+            var size = _page.transform.parent.GetComponent<RectTransform>().rect.size;
+            if (size.x <= 0 || size.y <= 0) return;
+            bool pic = _pic != null && _pic.gameObject.activeSelf && _pic.texture != null;
+            string key = size.x + "x" + size.y + (pic ? "p" : "") + _shown.Length;
+            if (key == _laidOut) return;
+            _laidOut = key;
+
+            float w = size.x - 2 * Side, h = size.y - Top - Bottom;
+            _page.enableAutoSizing = false;
+            _page.fontSize = BodySize;
+            float textH = _page.GetPreferredValues(_shown, w, 0).y;
+
+            float picH = 0;
+            if (pic)
+            {
+                float aspect = _pic.texture.width / (float)Math.Max(1, _pic.texture.height);
+                picH = Math.Min(w / aspect, h * PicMaxShare);           // de lado a lado (el texto va en lo que sobra)
+                _pic.rectTransform.anchoredPosition = new Vector2(0, -Top);
+                _pic.rectTransform.sizeDelta = new Vector2(Math.Min(w, picH * aspect), picH);
+            }
+            var prt = _page.rectTransform;
+            prt.anchorMin = Vector2.zero; prt.anchorMax = Vector2.one;
+            prt.offsetMin = new Vector2(Side, Bottom);
+            prt.offsetMax = new Vector2(-Side, -(Top + (pic ? picH + Gap : 0)));
+
+            float room = h - (pic ? picH + Gap : 0);
+            if (textH > room)                                            // no cabe: se encoge solo esta pagina
+            {
+                _page.enableAutoSizing = true;
+                _page.fontSizeMax = BodySize; _page.fontSizeMin = MinBodySize;
+                Plugin.L.LogInfo($"[Guia] la pagina {_topic + 1} no cabe a {BodySize} ({textH:0} de {room:0} px): se reduce la letra");
+            }
+        }
+
+        /// <summary>La captura (de GuideImages) como textura; se carga una vez.</summary>
+        static Texture2D PictureTexture(string name)
+        {
+            if (_picTex.TryGetValue(name, out var t)) return t;
+            Texture2D tex = null;
+            try
+            {
+                if (GuideImages.Data.TryGetValue(name, out var b64))
+                {
+                    tex = new Texture2D(2, 2, TextureFormat.RGBA32, false) { name = "csr_guide_" + name, hideFlags = HideFlags.DontUnloadUnusedAsset };
+                    if (!ImageConversion.LoadImage(tex, Convert.FromBase64String(b64), false)) tex = null;
+                }
+                if (tex == null) Plugin.L.LogWarning("[Guia] no pude cargar la captura " + name);
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Guia] captura " + name + ": " + e.Message); tex = null; }
+            _picTex[name] = tex;
+            return tex;
         }
 
         /// <summary>Pone el texto del tema (otra vez si ya hay iconos o stickers que antes no estaban).</summary>
@@ -504,9 +701,10 @@ namespace CrimeSightRevival.Mods
             if (_page == null || _topic < 0) return;
             if (Pad.KeyIcons != null && _page.spriteAsset != Pad.KeyIcons) { _page.spriteAsset = Pad.KeyIcons; _shown = null; }
             var text = Icons(GuideText.Page(_topic, _lang));
-            if (text == _shown) return;
+            if (text == _shown) { Layout(); return; }
             _page.text = text;
             _shown = text;
+            Layout();
         }
 
         /// <summary>Cada fotograma con la guia abierta: iconos, stickers, texto y sin flechas de pagina.</summary>
