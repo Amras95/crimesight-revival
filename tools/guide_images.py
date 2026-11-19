@@ -13,11 +13,12 @@ from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WIDTH, QUALITY, GAP = 1000, 82, 6
-LAUNCHER = "assets/screenshots/launcher.jpg"
+MODES = "assets/screenshots/launcher.jpg"            # lanzador sin sesion: tarjetas y barra de "Play"
+SESSION = "assets/screenshots/launcher_session.jpg"  # lanzador con una sesion abierta
 # nombre que usa el plugin -> (captura del repo, [recortes (izq, arriba, der, abajo)])
 IMAGES = {
-    "launcher_modes": (LAUNCHER, [(0, 138, 1264, 546)]),                     # las cuatro tarjetas
-    "launcher_bars": (LAUNCHER, [(0, 0, 1264, 132), (0, 546, 1264, 773)]),   # arriba; sesion abierta y barra de abajo
+    "launcher_modes": (MODES, [(0, 136, 1260, 712)]),                          # las cuatro tarjetas y la barra de "Play"
+    "launcher_bars": (SESSION, [(0, 40, 1259, 132), (0, 545, 1259, 767)]),    # arriba; sesion abierta y barra de abajo
 }
 OUT = os.path.join(ROOT, "plugin", "CrimeSightRevivalGuideImages.cs")
 

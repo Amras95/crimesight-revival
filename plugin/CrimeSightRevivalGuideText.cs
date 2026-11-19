@@ -127,7 +127,7 @@ namespace CrimeSightRevival.Mods
                 "• Actívalo o desactívalo cuando quieras.\n\n" +
                 "Solo lo ves tú. Necesita la recarga en caliente.",
             "En el lanzador, {H}Mods → «Creador de escenarios»{/H}: recoloca las habitaciones de un escenario y guárdalo como uno nuevo.\n\n" +
-                "• Mueve, gira, quita o repite habitaciones; elige puertas, ventanas de los perros, gas y {H}casillas de salida{/H}.\n" +
+                "• Mueve, gira, quita o repite habitaciones; elige puertas, ventanas de los perros, gas y casillas de salida.\n" +
                 "• {H}«Prueba rápida»{/H}: pruébalo en el {H}«Escenario de pruebas (CSR)»{/H} sin guardarlo.\n" +
                 "• Los escenarios guardados salen en la lista de escenarios de la sala.\n" +
                 "• En una sala, todos reciben los escenarios del anfitrión antes de empezar.\n\n" +
@@ -208,7 +208,7 @@ namespace CrimeSightRevival.Mods
                 "• Turn it on or off whenever you like.\n\n" +
                 "Only you see it. Needs hot reload.",
             "In the launcher, {H}Mods → \"Scenario creator\"{/H}: rearrange the rooms of a scenario and save it as a new one.\n\n" +
-                "• Move, rotate, remove or repeat rooms; choose doors, dog windows, gas and {H}starting cells{/H}.\n" +
+                "• Move, rotate, remove or repeat rooms; choose doors, dog windows, gas and starting cells.\n" +
                 "• {H}\"Quick test\"{/H}: try it in the {H}\"Test scenario (CSR)\"{/H} without saving it.\n" +
                 "• Saved scenarios appear in the room's scenario list.\n" +
                 "• In a room, everyone gets the host's scenarios before the match starts.\n\n" +
