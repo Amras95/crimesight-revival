@@ -19,8 +19,7 @@ namespace CrimeSightRevival.Mods
             "Qué añade Revival",
             "El lanzador: modos de juego",
             "El lanzador: sesión y novedades",
-            "Botones del mando",
-            "Mando: velocidad y vibración",
+            "Mando",
             "Elegir la dificultad de la IA",
             "Las cinco dificultades",
             "Irene en solitario",
@@ -38,8 +37,7 @@ namespace CrimeSightRevival.Mods
             "What Revival adds",
             "The launcher: ways to play",
             "The launcher: session and updates",
-            "Controller buttons",
-            "Controller: speed and vibration",
+            "Controller",
             "Choosing the AI difficulty",
             "The five difficulties",
             "Irene on your own",
@@ -58,8 +56,7 @@ namespace CrimeSightRevival.Mods
             "{H}CRIMESIGHT Revival{/H} devuelve el juego en línea con servidores de la comunidad y le añade funciones nuevas. Esta guía explica cómo se usan.\n\n" +
                 "• Se juega desde el {H}lanzador{/H}: eliges un modo y él abre el juego ya conectado.\n" +
                 "• Puedes jugar contra la IA, con amigos o en servidores de la comunidad.\n" +
-                "• Hay soporte de mando, cinco dificultades de IA, stickers, avatares y escenarios propios, y más.\n" +
-                "• Algunas funciones necesitan la {H}recarga en caliente (BepInEx){/H}: actívala en el lanzador, en {H}Mods{/H}.\n\n" +
+                "• Hay soporte de mando, cinco dificultades de IA, stickers, avatares y escenarios propios, y más.\n\n" +
                 "Revival no incluye archivos de Konami: necesitas tener CRIMESIGHT en Steam.",
             "Elige uno de los {H}cuatro modos{/H} y pulsa {H}«Jugar»{/H}: el lanzador abre el juego ya conectado.\n\n" +
                 "Tus partidas, victorias y puntos se guardan en tu PC.",
@@ -74,17 +71,13 @@ namespace CrimeSightRevival.Mods
                 "<size=85%><pos=7.5%>Cursor<pos=66%>Stickers<pos=81%>Clic derecho</size>\n" +
                 "<size=130%><pos=8%>{LS}<pos=68%>{X}<pos=84%>{B}</size>\n" +
                 "<size=85%><pos=20.75%>Flechas<pos=59.5%>Cámara<pos=77%>Clic</size>\n" +
-                "<size=130%><pos=22%>{DPAD}<pos=60%>{RS}<pos=76%>{A}</size>\n\n" +
-                "La barra de ayuda de abajo enseña los botones del mando mientras lo usas.",
-            "• Pulsa {LS} ({H}stick izquierdo{/H}) para cambiar la velocidad del cursor y {RS} ({H}stick derecho{/H}) para la de la cámara: lenta, media o rápida (el mando vibra 1, 2 o 3 veces).\n" +
-                "• Vibra al elegir un personaje, al darle una orden y en los momentos de tensión.\n" +
-                "• Funciona con mandos de Xbox, PlayStation, Switch y Steam Deck (con Steam Input), y los iconos se adaptan al tuyo.\n\n" +
-                "Necesita la recarga en caliente.",
+                "<size=130%><pos=22%>{DPAD}<pos=60%>{RS}<pos=76%>{A}</size>\n\n\n" +
+                "• Pulsa {LS} para cambiar la velocidad del cursor, o {RS} para la de la cámara: lenta, media o rápida (el mando vibra 1, 2 o 3 veces).\n" +
+                "• Funciona con mandos de Xbox, PlayStation, Switch y Steam Deck (con Steam Input). Los iconos de los botones se adaptan al tuyo.",
             "En la sala, pulsa {H}«Expulsar»{/H} sobre una IA. Sale una ventana para:\n\n" +
                 "• Elegir su dificultad: Fácil, Normal, Difícil, Experto o Pesadilla (pasa el cursor por encima para ver qué hace cada una).\n" +
                 "• Aplicarla a {H}todas las IA{/H} de la sala.\n" +
-                "• {H}Dejar el hueco libre{/H} para que entre otra persona.\n\n" +
-                "Sin la recarga en caliente, cada expulsión pasa la IA a la siguiente dificultad.",
+                "• {H}Dejar el hueco libre{/H} para que entre otra persona.",
             "• {H}Fácil{/H}: comete errores; ideal para aprender.\n" +
                 "• {H}Normal{/H}: juega con cabeza, sin pasarse.\n" +
                 "• {H}Difícil{/H}: solo ataca si es seguro y no deja a nadie solo.\n" +
@@ -120,18 +113,18 @@ namespace CrimeSightRevival.Mods
                 "• Quien se une descarga los mods del anfitrión.\n" +
                 "• Si traes los tuyos, al anfitrión le sale un aviso aquí en el juego: {H}«Descargar»{/H}, {H}«Aceptar siempre»{/H} o {H}«No, gracias»{/H}.\n" +
                 "• «Aceptar siempre» también se puede elegir en el lanzador, en {H}Mods → «Mods de los invitados»{/H}.\n\n" +
-                "Con la recarga en caliente, los cambios se ven sin reiniciar el juego.",
+                "Los cambios se ven sin reiniciar el juego.",
             "En el lanzador, {H}Mods → «Cursor propio»{/H}:\n\n" +
                 "• {H}«Elegir imagen…»{/H}: cualquier imagen se convierte en el cursor del juego (se ajusta sola y se le quita el fondo si no tiene transparencia).\n" +
                 "• Elige dónde hace clic: en la punta (flecha) o en el centro (mira).\n" +
                 "• Actívalo o desactívalo cuando quieras.\n\n" +
-                "Solo lo ves tú. Necesita la recarga en caliente.",
+                "Solo lo ves tú.",
             "En el lanzador, {H}Mods → «Creador de escenarios»{/H}: recoloca las habitaciones de un escenario y guárdalo como uno nuevo.\n\n" +
                 "• Mueve, gira, quita o repite habitaciones; elige puertas, ventanas de los perros, gas y casillas de salida.\n" +
                 "• {H}«Prueba rápida»{/H}: pruébalo en el {H}«Escenario de pruebas (CSR)»{/H} sin guardarlo.\n" +
                 "• Los escenarios guardados salen en la lista de escenarios de la sala.\n" +
                 "• En una sala, todos reciben los escenarios del anfitrión antes de empezar.\n\n" +
-                "Necesita la recarga en caliente: en una sala, todos los jugadores deben tenerla activada.",
+                "Todos en la sala deben activar esto en el lanzador: {H}Mods → «Recarga en caliente»{/H}.",
         };
 
         static readonly string[] PagesEn =
@@ -139,8 +132,7 @@ namespace CrimeSightRevival.Mods
             "{H}CRIMESIGHT Revival{/H} brings online play back with community servers and adds new features. This guide explains how to use them.\n\n" +
                 "• You play from the {H}launcher{/H}: pick a mode and it opens the game already connected.\n" +
                 "• You can play against the AI, with friends or on community servers.\n" +
-                "• There's controller support, five AI difficulties, your own stamps, avatars and scenarios, and more.\n" +
-                "• Some features need {H}hot reload (BepInEx){/H}: turn it on in the launcher, in {H}Mods{/H}.\n\n" +
+                "• There's controller support, five AI difficulties, your own stamps, avatars and scenarios, and more.\n\n" +
                 "Revival includes no Konami files: you need to own CRIMESIGHT on Steam.",
             "Pick one of the {H}four modes{/H} and press {H}\"Play\"{/H}: the launcher opens the game already connected.\n\n" +
                 "Your matches, wins and points are saved on your PC.",
@@ -155,17 +147,13 @@ namespace CrimeSightRevival.Mods
                 "<size=85%><pos=7.5%>Cursor<pos=66.75%>Stamps<pos=81.5%>Right-click</size>\n" +
                 "<size=130%><pos=8%>{LS}<pos=68%>{X}<pos=84%>{B}</size>\n" +
                 "<size=85%><pos=21.5%>Arrows<pos=59.5%>Camera<pos=76.25%>Click</size>\n" +
-                "<size=130%><pos=22%>{DPAD}<pos=60%>{RS}<pos=76%>{A}</size>\n\n" +
-                "The help bar at the bottom shows the controller buttons while you're using one.",
-            "• Press {LS} ({H}left stick{/H}) to change the cursor speed and {RS} ({H}right stick{/H}) to change the camera speed: slow, medium or fast (the controller vibrates 1, 2 or 3 times).\n" +
-                "• It vibrates when you pick a character, when you give an order and in tense moments.\n" +
-                "• It works with Xbox, PlayStation, Switch and Steam Deck controllers (with Steam Input), and the icons match yours.\n\n" +
-                "Needs hot reload.",
+                "<size=130%><pos=22%>{DPAD}<pos=60%>{RS}<pos=76%>{A}</size>\n\n\n" +
+                "• Press {LS} to change the cursor speed, or {RS} to change the camera speed: slow, medium or fast (the controller vibrates 1, 2 or 3 times).\n" +
+                "• It works with Xbox, PlayStation, Switch and Steam Deck controllers (with Steam Input). The button icons match yours.",
             "In the room, click {H}\"Kick\"{/H} on an AI. A window opens to:\n\n" +
                 "• Pick its difficulty: Easy, Normal, Hard, Expert or Nightmare (hover to see what each one does).\n" +
                 "• Apply it to {H}every AI{/H} in the room.\n" +
-                "• {H}Free the seat{/H} so another person can join.\n\n" +
-                "Without hot reload, each kick moves the AI to the next difficulty.",
+                "• {H}Free the seat{/H} so another person can join.",
             "• {H}Easy{/H}: makes mistakes; good for learning.\n" +
                 "• {H}Normal{/H}: plays sensibly, without going overboard.\n" +
                 "• {H}Hard{/H}: only strikes when it's safe and never leaves anyone alone.\n" +
@@ -201,18 +189,18 @@ namespace CrimeSightRevival.Mods
                 "• Whoever joins downloads the host's mods.\n" +
                 "• If you bring yours, the host gets a prompt here in the game: {H}\"Download\"{/H}, {H}\"Always accept\"{/H} or {H}\"No thanks\"{/H}.\n" +
                 "• \"Always accept\" can also be set in the launcher, in {H}Mods → \"Guests' mods\"{/H}.\n\n" +
-                "With hot reload, changes show up without restarting the game.",
+                "Changes show up without restarting the game.",
             "In the launcher, {H}Mods → \"Custom cursor\"{/H}:\n\n" +
                 "• {H}\"Choose image…\"{/H}: any image becomes the game's cursor (it's resized automatically, and its background is removed if it has no transparency).\n" +
                 "• Choose where it clicks: the tip (arrow) or the centre (crosshair).\n" +
                 "• Turn it on or off whenever you like.\n\n" +
-                "Only you see it. Needs hot reload.",
+                "Only you see it.",
             "In the launcher, {H}Mods → \"Scenario creator\"{/H}: rearrange the rooms of a scenario and save it as a new one.\n\n" +
                 "• Move, rotate, remove or repeat rooms; choose doors, dog windows, gas and starting cells.\n" +
                 "• {H}\"Quick test\"{/H}: try it in the {H}\"Test scenario (CSR)\"{/H} without saving it.\n" +
                 "• Saved scenarios appear in the room's scenario list.\n" +
                 "• In a room, everyone gets the host's scenarios before the match starts.\n\n" +
-                "Needs hot reload: in a room, every player must have it turned on.",
+                "Everyone in the room must turn this on in the launcher: {H}Mods → \"Hot reload\"{/H}.",
         };
 
         public static string Help(int lang) => lang == 5
