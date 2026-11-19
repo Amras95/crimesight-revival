@@ -66,18 +66,18 @@ namespace CrimeSightRevival.Mods
                 Patch(h, typeof(OutGameTips), "GetTipsDoneFromSaveData", pre: nameof(BeforeTipsDone));
                 Patch(h, typeof(OutGameTips), "SetTutorialDisplay", pre: nameof(BeforeTutorialDisplay));    // sin "Empezar el tutorial"
                 Patch(h, typeof(OutGameTips), "RefreshTipsList", post: nameof(AfterRefreshTips));
-                Patch(h, typeof(OutGameTips), "Open", pre: nameof(BeforeTipsOpen));     // listas de la guia o del juego
+                Patch(h, typeof(OutGameTips), "Open", pre: nameof(BeforeTipsOpen), fin: nameof(TipsOpenError));   // listas de la guia o del juego
             }
             catch (Exception e) { Plugin.L.LogWarning("[Guia] " + e.Message); }
         }
 
-        static void Patch(Harmony h, Type t, string method, string pre = null, string post = null)
+        static void Patch(Harmony h, Type t, string method, string pre = null, string post = null, string fin = null)
         {
             var m = AccessTools.Method(t, method);
             if (m == null) { Plugin.L.LogWarning("[Guia] no encuentro " + t.Name + "." + method); return; }
             HarmonyMethod Hm(string n) => n == null ? null : new HarmonyMethod(typeof(Guide).GetMethod(n,
                 System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic));
-            h.Patch(m, prefix: Hm(pre), postfix: Hm(post));
+            h.Patch(m, prefix: Hm(pre), postfix: Hm(post), finalizer: Hm(fin));
         }
 
         static int Lang()
@@ -333,7 +333,7 @@ namespace CrimeSightRevival.Mods
                     if (_cd[i].alpha != _cs[i].alpha) _cd[i].alpha = _cs[i].alpha;
                 }
                 var root = _btn.transform; var sr = _src.transform;
-                var scale = sr.localScale * 0.9f;                                 // un 10 % mas pequeno
+                var scale = sr.localScale * 0.8f;                                 // un 20 % mas pequeno (con hueco, como los demas)
                 if (root.localScale != scale) root.localScale = scale;
                 if (root.localRotation != sr.localRotation) root.localRotation = sr.localRotation;
 
@@ -343,7 +343,7 @@ namespace CrimeSightRevival.Mods
                 {
                     var ai = _aiButton.position; var tut = _srcButton.position;
                     // debajo de "Entrenamiento individual" y a la izquierda de "Tutorial"
-                    var target = new Vector3(ai.x, tut.y + 0.5f * (tut.y - ai.y), tut.z);
+                    var target = new Vector3(ai.x, tut.y + 0.6f * (tut.y - ai.y), tut.z);
                     want = sr.position + (target - tut);
                 }
                 else want = sr.position + new Vector3(0, -((RectTransform)sr).rect.height * sr.lossyScale.y * 1.1f, 0);
@@ -394,6 +394,16 @@ namespace CrimeSightRevival.Mods
         static void AfterRefreshTips(bool isNew)
         {
             if (isNew && !_rebuilding) _builtFor = Active ? BuiltGuide : BuiltGame;
+        }
+
+        // Al abrirse, la pantalla selecciona el primer tutorial de la lista; con la guia no hay tutoriales y el juego
+        // falla (ArgumentOutOfRange) justo ahi, al final de Open: lo que se salta (abrir ese tutorial) la guia no lo
+        // quiere, asi que con la guia ese error se calla. Sin la guia, el error sigue su curso.
+        static Exception TipsOpenError(Exception __exception)
+        {
+            if (__exception == null || !Active) return __exception;
+            if (!__exception.ToString().Contains("ArgumentOutOfRange")) return __exception;
+            return null;
         }
 
         static void BeforeTipsOpen(OutGameTips __instance)

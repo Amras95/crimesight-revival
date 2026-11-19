@@ -5,3 +5,5 @@ build/
 dist/
 *.spec
 launcher/ui/icon.png
+plugin/bin/
+plugin/obj/

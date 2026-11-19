@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    CRIMESIGHT Revival - BepInEx 6 (IL2CPP) plugin / plugin de BepInEx 6 (IL2CPP).
+
+    Build / Compilar:
+      dotnet build -c Release -p:GameDir="D:\SteamLibrary\steamapps\common\CrimeSight"
+    (or set CRIMESIGHT_DIR / o define CRIMESIGHT_DIR con la carpeta del juego)
+
+    EN: Compiles against the DLLs BepInEx generates on the game's first start (dotnet, BepInEx\core,
+        BepInEx\interop); no game files are included. The DLL is then copied here (the committed one) and to
+        the game's BepInEx\plugins. Close the game first.
+    ES: Se compila contra las DLL que genera BepInEx al abrir el juego la primera vez; no incluye archivos del
+        juego. La DLL se copia aqui (la que se sube al repo) y a BepInEx\plugins del juego. Cierra antes el juego.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>CrimeSightRevival.Mods</AssemblyName>
+    <RootNamespace>CrimeSightRevival.Mods</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Optimize>true</Optimize>
+    <DebugType>none</DebugType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS0618;CS0162;CS0168;CS0219;CS0649;CS0414;CS8632</NoWarn>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- No NuGet packages: it builds against the .NET 6 that BepInEx ships (game's dotnet folder) -->
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <NoStdLib>true</NoStdLib>
+    <NoCompilerStandardLib>true</NoCompilerStandardLib>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <GameDir Condition="'$(GameDir)' == ''">$(CRIMESIGHT_DIR)</GameDir>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\CrimeSight</GameDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="pad_icons.png" LogicalName="CrimeSightRevival.PadIcons.png" />
+    <GameRef Include="$(GameDir)\dotnet\*.dll" />
+    <GameRef Include="$(GameDir)\BepInEx\core\*.dll" />
+    <GameRef Include="$(GameDir)\BepInEx\interop\*.dll" />
+    <Reference Include="@(GameRef)" Private="false" />
+  </ItemGroup>
+
+  <Target Name="CheckGameDir" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(GameDir)\BepInEx\interop')"
+           Text="Can't find '$(GameDir)\BepInEx\interop'. Pass the game folder with -p:GameDir=&quot;...&quot; (or CRIMESIGHT_DIR), and start the game once with BepInEx so it generates the DLLs. / No encuentro esa carpeta: pasa la del juego con -p:GameDir y abre el juego una vez con BepInEx." />
+  </Target>
+
+  <Target Name="CopyPlugin" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MSBuildProjectDirectory)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\BepInEx\plugins" Condition="Exists('$(GameDir)\BepInEx\plugins')" ContinueOnError="true" />
+  </Target>
+</Project>
