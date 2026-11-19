@@ -29,6 +29,23 @@ DEFAULT_PORT = 18080
 IS_WINDOWS = os.name == "nt"
 
 
+def _clean_child_env():
+    """Linux, version empaquetada (PyInstaller): el empaquetador apunta LD_LIBRARY_PATH a sus propias librerias,
+    y los programas que abrimos (/bin/sh, steam, xdg-open, el navegador de la interfaz...) las heredan. Con un readline o un libc
+    distinto al del sistema revientan ("symbol lookup error: /bin/sh: undefined symbol: rl_trim_arg_from_keyseq").
+    El lanzador ya cargo lo suyo al arrancar, asi que para los hijos se deja el entorno como estaba."""
+    if IS_WINDOWS or not getattr(sys, "frozen", False):
+        return
+    orig = os.environ.get("LD_LIBRARY_PATH_ORIG")       # el que habia antes de abrir el lanzador
+    if orig is not None:
+        os.environ["LD_LIBRARY_PATH"] = orig
+    else:
+        os.environ.pop("LD_LIBRARY_PATH", None)
+
+
+_clean_child_env()
+
+
 # ------------------------------------------------------------------ carpetas y configuracion
 def app_dir():
     base = os.environ.get("APPDATA") if IS_WINDOWS else os.path.expanduser("~/.local/share")
@@ -128,15 +145,28 @@ def steam_path():
     return None
 
 
+def _linux_steam_roots():
+    """Carpetas de Steam que existen en Linux (nativo, Flatpak, Snap), sin repetir."""
+    out = []
+    for cand in LINUX_STEAM:
+        p = os.path.realpath(os.path.expanduser(cand))
+        if os.path.isdir(p) and p not in out:
+            out.append(p)
+    return out
+
+
 def _linux_registry(key):
     """En Linux, Steam guarda en ~/.steam/registry.vdf lo que en Windows va al registro."""
-    for p in ("~/.steam/registry.vdf", "~/.var/app/com.valvesoftware.Steam/.steam/registry.vdf"):
+    paths = ["~/.steam/registry.vdf", "~/.var/app/com.valvesoftware.Steam/.steam/registry.vdf",
+             "~/snap/steam/common/.steam/registry.vdf"]
+    paths += [os.path.join(r, "..", "registry.vdf") for r in _linux_steam_roots()]
+    for p in paths:
         try:
             text = open(os.path.expanduser(p), encoding="utf-8", errors="ignore").read()
         except OSError:
             continue
         m = re.search(r'"%s"\s+"([^"]*)"' % re.escape(key), text)
-        if m:
+        if m and m.group(1) not in ("", "0"):
             return m.group(1)
     return None
 
@@ -145,30 +175,79 @@ def _vdf_pairs(text):
     return re.findall(r'"([^"]+)"\s+"([^"]*)"', text)
 
 
-def steam_account():
-    """(SteamID64, nombre de usuario) de la cuenta con sesion iniciada en Steam."""
-    active = _reg(r"Software\Valve\Steam\ActiveProcess", "ActiveUser")
-    if not IS_WINDOWS:
-        active = _linux_registry("ActiveUser")
-        if active == "0":
-            active = None
-    if active:
-        sid = str(76561197960265728 + int(active))
-    else:
-        sid = None
-    name = _reg(r"Software\Valve\Steam", "AutoLoginUser") or ""
-    sp = steam_path()
-    if sp:
+def _login_users():
+    """[(SteamID64, campos)] de config/loginusers.vdf, de todas las carpetas de Steam que haya."""
+    roots = [steam_path()] + ([] if IS_WINDOWS else _linux_steam_roots())
+    seen, out = set(), []
+    for sp in roots:
+        if not sp:
+            continue
         try:
             text = open(os.path.join(sp, "config", "loginusers.vdf"), encoding="utf-8", errors="ignore").read()
-            for block in re.finditer(r'"(\d{17})"\s*\{([^}]*)\}', text):
-                fields = dict(_vdf_pairs(block.group(2)))
-                if sid == block.group(1) or (not sid and fields.get("MostRecent") == "1"):
-                    sid = block.group(1)
-                    name = fields.get("PersonaName") or fields.get("AccountName") or name
-                    break
         except OSError:
-            pass
+            continue
+        for block in re.finditer(r'"(\d{17})"\s*\{([^}]*)\}', text):
+            if block.group(1) not in seen:
+                seen.add(block.group(1))
+                out.append((block.group(1), dict(_vdf_pairs(block.group(2)))))
+    return out
+
+
+def _newest_userdata():
+    """La cuenta que uso Steam por ultima vez: la carpeta userdata/<id> modificada mas recientemente."""
+    best = None
+    roots = [steam_path()] + ([] if IS_WINDOWS else _linux_steam_roots())
+    for sp in roots:
+        ud = os.path.join(sp or "", "userdata")
+        try:
+            for d in os.listdir(ud):
+                if d.isdigit() and d != "0":
+                    t_ = os.path.getmtime(os.path.join(ud, d))
+                    if not best or t_ > best[0]:
+                        best = (t_, d)
+        except OSError:
+            continue
+    return best[1] if best else None
+
+
+_ACC_LOGGED = None
+
+
+def steam_account():
+    """(SteamID64, nombre de usuario) de la cuenta con sesion iniciada en Steam.
+    Windows: el registro. Linux: ~/.steam/registry.vdf; si no, la cuenta marcada como la mas reciente en
+    loginusers.vdf; si no, la unica cuenta que haya; si no, la carpeta userdata usada por ultima vez."""
+    active = _reg(r"Software\Valve\Steam\ActiveProcess", "ActiveUser") if IS_WINDOWS else _linux_registry("ActiveUser")
+    sid = None
+    try:
+        if active and int(active) > 0:
+            sid = str(76561197960265728 + int(active))
+    except ValueError:
+        sid = None
+    name = _reg(r"Software\Valve\Steam", "AutoLoginUser") or ""
+    users = _login_users()
+    how = "registro" if sid else ""
+    if not sid:
+        recent = [u for u in users if u[1].get("MostRecent") == "1"]
+        if recent:
+            sid, how = recent[0][0], "loginusers (MostRecent)"
+        elif len(users) == 1:
+            sid, how = users[0][0], "loginusers (unica cuenta)"
+    if not sid and not IS_WINDOWS:
+        acc = _newest_userdata()
+        if acc:
+            sid, how = str(76561197960265728 + int(acc)), "userdata"
+    for uid, fields in users:
+        if uid == sid:
+            name = fields.get("PersonaName") or fields.get("AccountName") or name
+            break
+    if not IS_WINDOWS:
+        global _ACC_LOGGED
+        msg = "Cuenta de Steam: %s (%s). Carpetas de Steam: %s; cuentas en loginusers: %d" % (
+            sid or "ninguna", how or "no encontrada", ", ".join(_linux_steam_roots()) or "ninguna", len(users))
+        if msg != _ACC_LOGGED:                       # al registro (launcher.log) una vez por cambio
+            _ACC_LOGGED = msg
+            logging.getLogger("crimesight").warning(msg)
     return sid, name
 
 
