@@ -1089,6 +1089,45 @@ _GUEST = {
 for _l, _d in _GUEST.items():
     S[_l].update(_d)
 
+# ventana de mods por pestañas
+_MODTABS = {
+    "en": dict(mods_tab_general="General", mods_tab_stickers="Stickers", mods_tab_avatars="Avatars",
+               mods_none_stickers="None of your mods has stickers yet.", mods_none_avatars="None of your mods has avatars yet.",
+               mods_toggle_note="Turning a mod on or off affects all of it: its stickers and its avatars."),
+    "es": dict(mods_tab_general="General", mods_tab_stickers="Stickers", mods_tab_avatars="Avatares",
+               mods_none_stickers="Ninguno de tus mods tiene stickers todavía.", mods_none_avatars="Ninguno de tus mods tiene avatares todavía.",
+               mods_toggle_note="Activar o desactivar un mod afecta a todo él: a sus stickers y a sus avatares."),
+    "fr": dict(mods_tab_general="Général", mods_tab_stickers="Stickers", mods_tab_avatars="Avatars",
+               mods_none_stickers="Aucun de vos mods n'a encore de stickers.", mods_none_avatars="Aucun de vos mods n'a encore d'avatars.",
+               mods_toggle_note="Activer ou désactiver un mod s'applique à tout le mod : ses stickers et ses avatars."),
+    "it": dict(mods_tab_general="Generale", mods_tab_stickers="Sticker", mods_tab_avatars="Avatar",
+               mods_none_stickers="Nessuno dei tuoi mod ha ancora sticker.", mods_none_avatars="Nessuno dei tuoi mod ha ancora avatar.",
+               mods_toggle_note="Attivare o disattivare un mod vale per tutto il mod: i suoi sticker e i suoi avatar."),
+    "de": dict(mods_tab_general="Allgemein", mods_tab_stickers="Sticker", mods_tab_avatars="Avatare",
+               mods_none_stickers="Noch keine deiner Mods hat Sticker.", mods_none_avatars="Noch keine deiner Mods hat Avatare.",
+               mods_toggle_note="Eine Mod ein- oder auszuschalten gilt für die ganze Mod: ihre Sticker und ihre Avatare."),
+    "pt": dict(mods_tab_general="Geral", mods_tab_stickers="Stickers", mods_tab_avatars="Avatares",
+               mods_none_stickers="Nenhum dos seus mods tem stickers ainda.", mods_none_avatars="Nenhum dos seus mods tem avatares ainda.",
+               mods_toggle_note="Ativar ou desativar um mod vale para o mod inteiro: os stickers e os avatares dele."),
+    "ru": dict(mods_tab_general="Общее", mods_tab_stickers="Стикеры", mods_tab_avatars="Аватары",
+               mods_none_stickers="Ни в одном вашем моде пока нет стикеров.", mods_none_avatars="Ни в одном вашем моде пока нет аватаров.",
+               mods_toggle_note="Включение или выключение мода действует на весь мод: и на стикеры, и на аватары."),
+    "ja": dict(mods_tab_general="全般", mods_tab_stickers="スタンプ", mods_tab_avatars="アバター",
+               mods_none_stickers="スタンプが入ったMODはまだありません。", mods_none_avatars="アバターが入ったMODはまだありません。",
+               mods_toggle_note="MODのオン・オフはMOD全体（スタンプとアバターの両方）に適用されます。"),
+    "ko": dict(mods_tab_general="일반", mods_tab_stickers="스탬프", mods_tab_avatars="아바타",
+               mods_none_stickers="아직 스탬프가 있는 모드가 없습니다.", mods_none_avatars="아직 아바타가 있는 모드가 없습니다.",
+               mods_toggle_note="모드를 켜거나 끄면 모드 전체(스탬프와 아바타 모두)에 적용됩니다."),
+    "zh-CN": dict(mods_tab_general="常规", mods_tab_stickers="贴图", mods_tab_avatars="头像",
+               mods_none_stickers="你的模组里还没有贴图。", mods_none_avatars="你的模组里还没有头像。",
+               mods_toggle_note="开启或关闭模组会作用于整个模组：它的贴图和头像。"),
+    "zh-TW": dict(mods_tab_general="一般", mods_tab_stickers="貼圖", mods_tab_avatars="頭像",
+               mods_none_stickers="你的模組裡還沒有貼圖。", mods_none_avatars="你的模組裡還沒有頭像。",
+               mods_toggle_note="開啟或關閉模組會作用於整個模組：它的貼圖和頭像。"),
+}
+for _l, _d in _MODTABS.items():
+    S[_l].update(_d)
+
 _GAME_OPEN = {
     "en": "CRIMESIGHT is already open. Close it and press the button again: the launcher opens it for you, already connected.",
     "es": "CRIMESIGHT ya está abierto. Ciérralo y vuelve a pulsar el botón: el lanzador lo abre por ti, ya conectado.",

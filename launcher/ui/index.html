@@ -133,6 +133,18 @@ footer .updpill.on{display:inline-block}
 .modal .close{display:flex;justify-content:flex-end;margin-top:6px}
 /* mods */
 .modal .box.wide{width:640px}
+/* ventana de mods: casi a pantalla completa, por pestañas; solo baja lo de dentro */
+.modal .box.full{width:min(1100px,96vw);height:92vh;display:flex;flex-direction:column}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:14px;flex-wrap:wrap}
+.tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);font:600 14px var(--sans);padding:9px 14px;cursor:pointer;margin-bottom:-1px}
+.tab:hover{color:var(--text)}.tab.on{color:var(--text);border-bottom-color:var(--accent)}
+.tabbody{flex:1;min-height:0;overflow:auto;padding-right:4px}
+.pane{display:none}.pane.on{display:block}
+.modal .box.full .mods{max-height:none}
+.modal p.note{color:#c9ccff}
+.modal .box.full .mod .info{flex:0 0 220px}
+.mod .thumbs.big{flex:1;flex-wrap:wrap;min-width:0}
+.mod .thumbs.big img{width:48px;height:48px}
 .mods{max-height:46vh;overflow:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:8px}
 .mod{display:flex;align-items:center;gap:12px;background:rgba(5,6,20,.6);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .mod.off{opacity:.55}
@@ -244,42 +256,61 @@ footer .updpill.on{display:inline-block}
   </div>
 </div>
 <div class="modal" id="mods" onclick="if(event.target===this)closeMods()">
-  <div class="box wide">
+  <div class="box full">
     <h3 data-t="mods_title"></h3>
     <p data-t="mods_desc"></p>
-    <div class="mods" id="modlist"></div>
-    <p data-t="mods_how"></p>
-    <p data-t="mods_text_hint"></p>
-    <p id="modsrestart" data-t="mods_restart"></p>
-    <div class="sub" data-t="bep_title"></div>
-    <div class="bep">
-      <div class="info"><b id="bepstatus"></b><small data-t="bep_desc"></small>
-        <small id="beplinux" class="warn" style="display:none"></small></div>
-      <button class="btn ghost small" id="bepbtn" onclick="toggleBep()"></button>
+    <div class="tabs" id="modtabs">
+      <button class="tab" data-tab="general" onclick="modTab('general')" data-t="mods_tab_general"></button>
+      <button class="tab" data-tab="stickers" onclick="modTab('stickers')" data-t="mods_tab_stickers"></button>
+      <button class="tab" data-tab="avatars" onclick="modTab('avatars')" data-t="mods_tab_avatars"></button>
+      <button class="tab" data-tab="cursor" onclick="modTab('cursor')" data-t="mods_cursor"></button>
     </div>
-    <div class="sub" data-t="mods_cursor"></div>
-    <div class="bep cur" id="cursorbox">
-      <div class="currow">
-        <img id="curimg" alt="" style="width:32px;height:32px;flex:none;display:none">
-        <div class="info"><b id="curstatus"></b><small id="curdesc"></small></div>
+    <div class="tabbody">
+      <div class="pane" data-pane="general">
+        <div class="sub" data-t="bep_title"></div>
+        <div class="bep">
+          <div class="info"><b id="bepstatus"></b><small data-t="bep_desc"></small>
+            <small id="beplinux" class="warn" style="display:none"></small></div>
+          <button class="btn ghost small" id="bepbtn" onclick="toggleBep()"></button>
+        </div>
+        <p id="modsrestart" data-t="mods_restart"></p>
+        <div class="sub" data-t="guest_mods_title"></div>
+        <div class="bep cur">
+          <div class="currow"><div class="info"><small data-t="guest_mods_desc"></small></div></div>
+          <div class="curctl">
+            <select id="guestmods" class="small" onchange="guestMods(this.value)">
+              <option value="ask" data-t="guest_mods_ask"></option><option value="always" data-t="guest_mods_always"></option>
+            </select>
+          </div>
+        </div>
       </div>
-      <div class="curctl">
-        <select id="curhot" class="small" onchange="cursorHot(this.value)" style="display:none">
-          <option value="tip" data-t="cursor_hot_tip"></option><option value="center" data-t="cursor_hot_center"></option>
-          <option value="custom" data-t="cursor_hot_custom" disabled></option>
-        </select>
-        <button class="btn ghost small" onclick="cursorPick()" data-t="cursor_pick"></button>
-        <button class="btn ghost small" id="curtoggle" onclick="cursorToggle()" style="display:none"></button>
-        <button class="btn ghost small" onclick="cursorFolder()" data-t="cursor_folder"></button>
+      <div class="pane" data-pane="stickers">
+        <p data-t="mods_how"></p>
+        <p data-t="mods_text_hint"></p>
+        <p class="note" data-t="mods_toggle_note"></p>
+        <div class="mods" id="modlist_stickers"></div>
       </div>
-    </div>
-    <div class="sub" data-t="guest_mods_title"></div>
-    <div class="bep cur">
-      <div class="currow"><div class="info"><small data-t="guest_mods_desc"></small></div></div>
-      <div class="curctl">
-        <select id="guestmods" class="small" onchange="guestMods(this.value)">
-          <option value="ask" data-t="guest_mods_ask"></option><option value="always" data-t="guest_mods_always"></option>
-        </select>
+      <div class="pane" data-pane="avatars">
+        <p data-t="mods_how"></p>
+        <p class="note" data-t="mods_toggle_note"></p>
+        <div class="mods" id="modlist_avatars"></div>
+      </div>
+      <div class="pane" data-pane="cursor">
+        <div class="bep cur" id="cursorbox">
+          <div class="currow">
+            <img id="curimg" alt="" style="width:32px;height:32px;flex:none;display:none">
+            <div class="info"><b id="curstatus"></b><small id="curdesc"></small></div>
+          </div>
+          <div class="curctl">
+            <select id="curhot" class="small" onchange="cursorHot(this.value)" style="display:none">
+              <option value="tip" data-t="cursor_hot_tip"></option><option value="center" data-t="cursor_hot_center"></option>
+              <option value="custom" data-t="cursor_hot_custom" disabled></option>
+            </select>
+            <button class="btn ghost small" onclick="cursorPick()" data-t="cursor_pick"></button>
+            <button class="btn ghost small" id="curtoggle" onclick="cursorToggle()" style="display:none"></button>
+            <button class="btn ghost small" onclick="cursorFolder()" data-t="cursor_folder"></button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="actions">
@@ -484,16 +515,32 @@ async function clearBackup(){done(await api('clear_backup'))}
 
 /* mods de apariencia */
 function modCount(m){return T('mods_count',{stickers:m.stickers,avatars:m.avatars})}
-async function loadMods(){
-  const r=await api('mods_list');const L=$('#modlist');if(!r){L.innerHTML='';return}
-  if(!r.mods.length){L.innerHTML=`<div class="empty">${esc(T('mods_empty'))}</div>`;return}
-  L.innerHTML=r.mods.map(m=>`<div class="mod${m.enabled?'':' off'}">
-    <div class="thumbs">${m.thumbs.map(u=>`<img src="${u}">`).join('')}</div>
+function modRow(m,kind){
+  const th=(kind==='avatars'?m.avatar_thumbs:m.sticker_thumbs)||m.thumbs||[];
+  return `<div class="mod${m.enabled?'':' off'}">
     <div class="info"><b>${esc(m.name)}</b><small>${esc(modCount(m))}${m.author?' · '+esc(T('mods_by',{author:m.author})):''}</small>
       ${m.errors?`<small class="warn"> · ${esc(T('mods_bad_images',{n:m.errors}))}</small>`:''}</div>
-    ${m.stickers?`<button class="btn ghost small" onclick="openTexts(${esc(JSON.stringify(m.folder))})">${esc(T('mods_texts_btn'))}</button>`:''}
+    <div class="thumbs big">${th.map(u=>`<img src="${u}">`).join('')}</div>
+    ${kind==='stickers'?`<button class="btn ghost small" onclick="openTexts(${esc(JSON.stringify(m.folder))})">${esc(T('mods_texts_btn'))}</button>`:''}
     <button class="btn ghost small" onclick="toggleMod(${esc(JSON.stringify(m.folder))},${!m.enabled})">${esc(T(m.enabled?'mods_on':'mods_off'))}</button>
-  </div>`).join('');
+  </div>`;
+}
+async function loadMods(){
+  const r=await api('mods_list');
+  for(const kind of ['stickers','avatars']){
+    const L=$('#modlist_'+kind);
+    if(!r){L.innerHTML='';continue}
+    const ms=r.mods.filter(m=>m[kind]>0);
+    L.innerHTML=ms.length?ms.map(m=>modRow(m,kind)).join('')
+      :`<div class="empty">${esc(T(r.mods.length?(kind==='avatars'?'mods_none_avatars':'mods_none_stickers'):'mods_empty'))}</div>`;
+  }
+}
+let MODTAB='general';
+function modTab(t){
+  MODTAB=t;
+  document.querySelectorAll('#modtabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  document.querySelectorAll('#mods .pane').forEach(p=>p.classList.toggle('on',p.dataset.pane===t));
+  $('#mods .tabbody').scrollTop=0;
 }
 async function newMod(){await api('mods_new');loadMods()}
 async function toggleMod(folder,on){await api('mods_toggle',folder,on);loadMods()}
@@ -527,7 +574,7 @@ async function saveText(el){
   if(r){el.value=r.text;toast(T('mods_text_saved'))}
 }
 function closeTexts(){$('#modtexts').classList.remove('on')}
-function openMods(){$('#mods').classList.add('on');loadMods();loadBep();loadCursor();loadGuest()}
+function openMods(){modTab(MODTAB);$('#mods').classList.add('on');loadMods();loadBep();loadCursor();loadGuest()}
 async function loadGuest(){const r=await api('guest_mods');if(r)$('#guestmods').value=r.mode}
 async function guestMods(v){const r=await api('guest_mods',v);if(r)$('#guestmods').value=r.mode}
 let CUR=null;

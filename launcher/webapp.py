@@ -355,11 +355,14 @@ class Api:
         import base64
         out = []
         for m in core.my_mods(self._cfg):
-            imgs = [it["png"] for it in (m["stickers"] + m["avatars"])[:5]]
+            def thumbs(items, n):
+                return ["data:image/png;base64," + base64.b64encode(it["png"]).decode() for it in items[:n]]
             out.append({"folder": os.path.basename(m["folder"]), "name": m["name"], "author": m["author"],
                         "stickers": len(m["stickers"]), "avatars": len(m["avatars"]), "enabled": m["enabled"],
                         "errors": len(m["errors"]),
-                        "thumbs": ["data:image/png;base64," + base64.b64encode(p).decode() for p in imgs]})
+                        "thumbs": thumbs(m["stickers"] + m["avatars"], 5),
+                        "sticker_thumbs": thumbs(m["stickers"], 12),     # pestañas de la ventana de mods
+                        "avatar_thumbs": thumbs(m["avatars"], 12)})
         return {"dir": core.mods_dir(), "mods": out}
 
     def mods_stickers(self, folder):
