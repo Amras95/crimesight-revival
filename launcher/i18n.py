@@ -1128,6 +1128,56 @@ _MODTABS = {
 for _l, _d in _MODTABS.items():
     S[_l].update(_d)
 
+# modelos 3D (cambiar un personaje por otro)
+_MODELS = {
+    "en": dict(mods_tab_models="Models", models_original="Original", models_now="Looks like {name}",
+               models_desc="Swap a character's 3D model for another character's from the game (Sherlock and Moriarty too). They keep their own animations and behaviour; only the look changes. Only you see it, and the 2D portraits don't change.",
+               models_need_bep="Needs hot reload (BepInEx), in the General tab.",
+               models_survivor="Victim", models_traitor="Traitor"),
+    "es": dict(mods_tab_models="Modelos", models_original="Original", models_now="Se ve como {name}",
+               models_desc="Cambia el modelo 3D de un personaje por el de otro del juego (también Sherlock y Moriarty). Conserva sus animaciones y su forma de actuar; solo cambia su aspecto. Solo lo ves tú, y los retratos 2D no cambian.",
+               models_need_bep="Necesita la recarga en caliente (BepInEx), en la pestaña General.",
+               models_survivor="Víctima", models_traitor="Traidor"),
+    "fr": dict(mods_tab_models="Modèles", models_original="Original", models_now="À l'apparence de {name}",
+               models_desc="Remplacez le modèle 3D d'un personnage par celui d'un autre personnage du jeu (Sherlock et Moriarty aussi). Il garde ses animations et son comportement ; seule son apparence change. Vous seul le voyez, et les portraits 2D ne changent pas.",
+               models_need_bep="Nécessite le rechargement à chaud (BepInEx), dans l'onglet Général.",
+               models_survivor="Victime", models_traitor="Traître"),
+    "it": dict(mods_tab_models="Modelli", models_original="Originale", models_now="Ha l'aspetto di {name}",
+               models_desc="Sostituisci il modello 3D di un personaggio con quello di un altro personaggio del gioco (anche Sherlock e Moriarty). Mantiene le sue animazioni e il suo comportamento; cambia solo l'aspetto. Lo vedi solo tu e i ritratti 2D non cambiano.",
+               models_need_bep="Serve il ricaricamento a caldo (BepInEx), nella scheda Generale.",
+               models_survivor="Vittima", models_traitor="Traditore"),
+    "de": dict(mods_tab_models="Modelle", models_original="Original", models_now="Sieht aus wie {name}",
+               models_desc="Ersetze das 3D-Modell einer Figur durch das einer anderen Figur des Spiels (auch Sherlock und Moriarty). Sie behält ihre Animationen und ihr Verhalten; nur das Aussehen ändert sich. Nur du siehst es, und die 2D-Porträts ändern sich nicht.",
+               models_need_bep="Braucht Hot Reload (BepInEx), im Tab Allgemein.",
+               models_survivor="Opfer", models_traitor="Verräter"),
+    "pt": dict(mods_tab_models="Modelos", models_original="Original", models_now="Aparece como {name}",
+               models_desc="Troque o modelo 3D de um personagem pelo de outro personagem do jogo (Sherlock e Moriarty também). Ele mantém as animações e o comportamento; só muda a aparência. Só você vê, e os retratos 2D não mudam.",
+               models_need_bep="Precisa da recarga a quente (BepInEx), na aba Geral.",
+               models_survivor="Vítima", models_traitor="Traidor"),
+    "ru": dict(mods_tab_models="Модели", models_original="Оригинал", models_now="Выглядит как {name}",
+               models_desc="Замените 3D-модель персонажа на модель другого персонажа игры (в том числе Шерлока и Мориарти). Анимации и поведение остаются прежними, меняется только внешний вид. Видите это только вы, 2D-портреты не меняются.",
+               models_need_bep="Нужна горячая перезагрузка (BepInEx) на вкладке «Общее».",
+               models_survivor="Жертва", models_traitor="Предатель"),
+    "ja": dict(mods_tab_models="モデル", models_original="オリジナル", models_now="{name} の見た目",
+               models_desc="キャラクターの3Dモデルを、ゲーム内の別のキャラクター（シャーロックやモリアーティも）のものに変更します。アニメーションや行動はそのままで、見た目だけが変わります。見えるのはあなただけで、2Dの肖像は変わりません。",
+               models_need_bep="「全般」タブのホットリロード（BepInEx）が必要です。",
+               models_survivor="遭難者", models_traitor="トレイター"),
+    "ko": dict(mods_tab_models="모델", models_original="원래 모델", models_now="{name}의 모습",
+               models_desc="캐릭터의 3D 모델을 게임 속 다른 캐릭터(셜록과 모리아티 포함)의 모델로 바꿉니다. 애니메이션과 행동은 그대로이고 겉모습만 바뀝니다. 나에게만 보이며 2D 초상화는 바뀌지 않습니다.",
+               models_need_bep="'일반' 탭의 핫 리로드(BepInEx)가 필요합니다.",
+               models_survivor="조난자", models_traitor="배신자"),
+    "zh-CN": dict(mods_tab_models="模型", models_original="原样", models_now="外观为 {name}",
+               models_desc="把角色的3D模型换成游戏里另一个角色的模型（也包括夏洛克和莫里亚蒂）。动作和行为保持不变，只改变外观。只有你能看到，2D头像不会改变。",
+               models_need_bep="需要“常规”页中的热重载（BepInEx）。",
+               models_survivor="外来受困者", models_traitor="背叛者"),
+    "zh-TW": dict(mods_tab_models="模型", models_original="原樣", models_now="外觀為 {name}",
+               models_desc="把角色的3D模型換成遊戲裡另一個角色的模型（也包括夏洛克和莫里亞蒂）。動作和行為保持不變，只改變外觀。只有你看得到，2D頭像不會改變。",
+               models_need_bep="需要「一般」頁中的熱重載（BepInEx）。",
+               models_survivor="遇難者", models_traitor="背叛者"),
+}
+for _l, _d in _MODELS.items():
+    S[_l].update(_d)
+
 _GAME_OPEN = {
     "en": "CRIMESIGHT is already open. Close it and press the button again: the launcher opens it for you, already connected.",
     "es": "CRIMESIGHT ya está abierto. Ciérralo y vuelve a pulsar el botón: el lanzador lo abre por ti, ya conectado.",

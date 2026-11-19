@@ -138,6 +138,7 @@ namespace CrimeSightRevival.Mods
             try { ModOffer.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Mods] " + e.Message); }
             try { AiPicker.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[IA] " + e.Message); }
             try { Guide.Frame(false); } catch (Exception e) { Plugin.L.LogWarning("[Guia] " + e.Message); }
+            try { Models.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Modelos] " + e.Message); }
             if (Time.unscaledTime < _next) return;
             _next = Time.unscaledTime + 1f;
             try { Tick(); }

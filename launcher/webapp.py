@@ -480,6 +480,24 @@ class Api:
             return {"error": t("err_unexpected", err=e)}
         return {"ok": True, "msg": t("bep_removed")}
 
+    # ---------------------------------------------------------------- modelos 3D
+    def models_state(self):
+        gd = self._cfg.get("game_dir") or ""
+        names = {"ThreatTypeData_Survivor": t("models_survivor"), "ThreatTypeData_Traitor": t("models_traitor")}
+        slots = [{"id": k, "name": n or names.get(k, k)} for k, n in core.MODEL_SLOTS]
+        targets = slots + [{"id": k, "name": n} for k, n in core.MODEL_EXTRA if core.dev_mode()]
+        return {"slots": slots, "targets": targets, "swaps": core.model_swaps(),
+                "live": bool(gd) and core.live_mode(gd)}
+
+    def models_set(self, slot, target):
+        core.set_model_swap(slot, target)
+        try:
+            core.install_models(self._cfg.get("game_dir") or "")
+        except OSError as e:
+            return {"error": t("err_unexpected", err=e)}
+        self._cfg["model_swaps"] = core.load_config().get("model_swaps") or {}   # que no lo pise otro guardado
+        return self.models_state()
+
     def mods_new(self):
         folder = core.new_mod()
         core.open_folder(folder)

@@ -773,6 +773,66 @@ def install_cursor(game_dir):
     return changed
 
 
+# ---------------------------------------------------------------- modelos 3D (cambiar un personaje por otro)
+# Los huecos que se pueden cambiar y los modelos que se pueden poner (claves del plugin, CrimeSightRevivalModels.cs).
+# Los nombres de los personajes son los del juego (iguales en todos los idiomas); victima y traidor se traducen.
+MODEL_SLOTS = [("PawnTypeData_A", "Agatha"), ("PawnTypeData_B", "Berkeley"), ("PawnTypeData_C", "Catherine"),
+               ("PawnTypeData_D", "Dorothy"), ("PawnTypeData_E", "Ellery"), ("PawnTypeData_F", "Freeman"),
+               ("ThreatTypeData_Survivor", None), ("ThreatTypeData_Traitor", None)]
+# Sherlock y Moriarty se guardan para el modo historia: solo salen en modo desarrollador.
+MODEL_EXTRA = [("sherlock", "Sherlock"), ("moriarty", "Moriarty")]
+
+
+def dev_mode():
+    """Modo desarrollador: "dev": true en config.json (o la variable de entorno CSR_DEV=1)."""
+    return os.environ.get("CSR_DEV") == "1" or bool(load_config().get("dev"))
+
+
+def model_targets():
+    """Los modelos que se pueden poner: los personajes y, en modo desarrollador, Sherlock y Moriarty."""
+    return list(MODEL_SLOTS) + (list(MODEL_EXTRA) if dev_mode() else [])
+
+
+def model_swaps():
+    """{hueco: modelo} elegidos en el lanzador (solo los que cambian algo y estan disponibles)."""
+    sw = load_config().get("model_swaps") or {}
+    valid = {k for k, _ in MODEL_SLOTS} | {k for k, _ in model_targets()}
+    return {k: v for k, v in sw.items() if k in valid and v in valid and k != v}
+
+
+def set_model_swap(slot, target):
+    cfg = load_config()
+    sw = dict(cfg.get("model_swaps") or {})
+    if not target or target == slot:
+        sw.pop(slot, None)
+    else:
+        sw[slot] = target
+    cfg["model_swaps"] = sw
+    save_config(cfg)
+    return model_swaps()
+
+
+def install_models(game_dir):
+    """Escribe en la carpeta del plugin que personaje se ve con que modelo. True si cambio algo."""
+    if not game_dir or not live_mode(game_dir):
+        return False
+    d = live_dir(game_dir)
+    os.makedirs(d, exist_ok=True)
+    path = os.path.join(d, "models.json")
+    data = json.dumps({"swaps": model_swaps()}, ensure_ascii=False, indent=1)
+    try:
+        with open(path, encoding="utf-8") as f:
+            if f.read() == data:
+                return False
+    except OSError:
+        pass
+    tmp = path + ".part"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(data)
+    os.replace(tmp, path)
+    return True
+
+
 def live_dir(game_dir):
     """Carpeta que vigila el plugin: dentro de BepInEx, en la carpeta del juego. Asi sirve igual en
     Windows y con Proton (donde el juego ve otra carpeta de usuario, la de Wine)."""
