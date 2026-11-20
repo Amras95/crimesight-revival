@@ -5,6 +5,8 @@ El cliente pide user.GetStats (perfil y nivel) y match.GetStats (puntos de la ul
 Ambos devuelven {"stats": [{id, role, category, text_id, count, point}, ...]}:
 - category "count": partidas ganadas/perdidas/empatadas por rol (el nivel sale de la suma).
 - category "points": puntos totales de cada bando.
+- category "result": filas de "Puntos por resultado de la partida". En el perfil, como en el juego original, dos
+  por rol: cuantas veces se consiguio cada resultado y los puntos que dio (RESULT_ROWS).
 - cualquier otra categoria: filas de "Puntos de accion" (texto traducido por el propio juego).
 
 Los ids salen de PlayerPointManager en el cliente.
@@ -28,8 +30,16 @@ POINT_IDS = {DETECTIVE: 10, CRIMINAL: 20, IRENE: 30, WATSON: 40}
 WIN_POINTS = {"easy": 200, "normal": 400, "hard": 800, "expert": 1000, "nightmare": 1200, "online": 1000}
 LEVELS = tuple(WIN_POINTS)
 RESULT_POINTS = {"win": 400, "draw": 250, "lose": 250, "abandon": 0}   # tabla antigua (partidas viejas)
-RECORD_VERSION = 2
+RECORD_VERSION = 3
 RESULT_TEXT = "ctg_name_result_match_result_point"            # "Puntos por resultado de la partida"
+
+# Filas de "Puntos por resultado de la partida" del perfil (las mismas que mostraba el juego original):
+# resultado de la partida -> texto del juego. Las derrotas no tienen fila.
+SIDE_SHERLOCK = (("win", "ctg_name_result_arrest_succeed"),                # "Villain identified and Moriarty's..."
+                 ("draw", "ctg_name_result_pattern_sherlock_arrest_failed"))  # "Foiled Moriarty's plan, but failed..."
+SIDE_MORIARTY = (("win", "ctg_name_result_kill_succeed"),                 # "Killed a target."
+                 ("draw", "ctg_name_result_pattern_moriarty_arrest_failed"))  # "Failure. But Sherlock failed..."
+RESULT_ROWS = {DETECTIVE: SIDE_SHERLOCK, WATSON: SIDE_SHERLOCK, CRIMINAL: SIDE_MORIARTY, IRENE: SIDE_MORIARTY}
 
 
 def result_points(outcome, level=None):
@@ -58,12 +68,44 @@ ACTIONS = {
     "ctg_name_result_pattern_arrest_success": (103, 50),
 }
 
+# Lista de "Puntos de accion" del perfil: como en el juego original, salen todas, tambien las que van a 0.
+# El juego las ordena por id, de mayor a menor; estos ids reproducen el orden del juego original (las
+# cuatro primeras de cada bando salen en un video de entonces). Las que el servidor aun no detecta
+# siempre van a 0. Texto -> id en el perfil.
+PROFILE_ACTIONS_SHERLOCK = {
+    "ctg_name_result_action_activateSecretPassage": 150,         # "Activated a secret passage."
+    "ctg_name_result_action_exterminateWildDog": 149,            # "Defeated a wild dog..."
+    "ctg_name_result_action_repair_gasPipe": 148,                # "Repaired a gas leak."
+    "ctg_name_result_action_treated_pawnForInjuries": 147,       # "Treated a pawn's injury."
+    "ctg_name_result_action_proven_pawnNotKiller": 146,
+    "ctg_name_result_action_proven_pawnNotTarget": 145,
+    "ctg_name_result_action_foundSwitchboard": 144,
+    "ctg_name_result_repair_switchboard": 143,
+    "ctg_name_result_action_obtainFoodFromFoodPoint": 142,
+    "ctg_name_result_apply_tearSpray_to_killer": 141,
+    "ctg_name_result_arrest_succeed": 140,
+    "ctg_name_result_identified_killer_by_deduction": 139,
+}
+PROFILE_ACTIONS_MORIARTY = {
+    "ctg_name_result_action_beCriticalNoKiller": 160,            # "A pawn other than the villain was in..."
+    "ctg_name_result_action_activateSecretPassage": 150,         # "Activated a secret passage."
+    "ctg_name_result_action_injured_noKillerWithGasLeak": 130,   # "Injured a pawn other than the villain..."
+    "ctg_name_result_action_treated_killerForInjuries": 129,     # "Treated the villain's injury."
+    "ctg_name_result_action_wildDogAttackedEveryoneButKiller": 128,
+    "ctg_name_result_action_foundSwitchboardBeforeSherlock": 127,
+    "ctg_name_result_blackOut_by_switchboard": 126,
+    "ctg_name_result_action_blockedSherlockWithSpray": 125,
+    "ctg_name_result_action_targetKilledByAssail": 124,
+}
+PROFILE_ACTIONS = {DETECTIVE: PROFILE_ACTIONS_SHERLOCK, WATSON: PROFILE_ACTIONS_SHERLOCK,
+                   CRIMINAL: PROFILE_ACTIONS_MORIARTY, IRENE: PROFILE_ACTIONS_MORIARTY}
+
 
 def _record(user):
     rec = user.get("record")
-    if not isinstance(rec, dict) or rec.get("v") != RECORD_VERSION:
+    if not isinstance(rec, dict) or rec.get("v") != RECORD_VERSION or "outcomes" not in rec:
         # (Re)calcular con la tabla de puntos actual a partir del historial de partidas
-        rec = {"v": RECORD_VERSION, "counts": {}, "points": {}, "actions": {}}
+        rec = {"v": RECORD_VERSION, "counts": {}, "points": {}, "outcomes": {}, "actions": {}}
         for h in user.get("history", []) or []:
             role = int(h.get("role", 0))
             if role not in COUNT_IDS:
@@ -72,14 +114,15 @@ def _record(user):
             if outcome not in RESULT_POINTS:
                 continue
             if "base" in h:      # partidas nuevas: cada una guarda sus propios puntos
-                h["points"] = _add(rec, role, outcome, h.get("actions") or [], h.get("base"), h.get("acts"))
+                h["points"] = _add(rec, role, outcome, h.get("actions") or [], h.get("base"), h.get("acts"),
+                                   h.get("finish"))
             else:
                 h["points"] = _add(rec, role, outcome, h.get("actions") or [])
         user["record"] = rec
     return rec
 
 
-def _add(rec, role, outcome, actions, base=None, acts=None):
+def _add(rec, role, outcome, actions, base=None, acts=None, finish=None):
     if outcome == "abandon":                     # cuenta como derrota, sin puntos ni extras
         actions, base, acts = [], 0, {}
     cid = str(COUNT_IDS[role]["lose" if outcome == "abandon" else outcome])
@@ -91,6 +134,11 @@ def _add(rec, role, outcome, actions, base=None, acts=None):
     pts = int(base) + sum(int(acts.get(a, 0)) for a in actions)
     pid = str(POINT_IDS[role])
     rec["points"][pid] = rec["points"].get(pid, 0) + pts
+    # Victoria o empate de verdad (no porque el otro bando se rindiera): cuenta en "Puntos por resultado"
+    if outcome in ("win", "draw") and finish != "abandon":
+        o = rec.setdefault("outcomes", {}).setdefault(f"{role}:{outcome}", [0, 0])
+        o[0] += 1
+        o[1] += int(base)
     for a in actions:
         if a in ACTIONS:
             k = f"{role}:{a}"
@@ -101,10 +149,11 @@ def _add(rec, role, outcome, actions, base=None, acts=None):
 HISTORY_MAX = 20000          # unas cuantas vidas de partidas; el registro se recalcula desde aqui
 
 
-def record_match(user, role, outcome, actions=(), stage="", match_id=None, level=None):
+def record_match(user, role, outcome, actions=(), stage="", match_id=None, level=None, finish=None):
     """Anota una partida terminada. Devuelve los puntos ganados.
     match_id identifica la partida en cualquier servidor: al juntar perfiles no se duplica.
-    level: "easy"/"normal"/"hard"/"expert"/"nightmare" (contra la IA) u "online" (contra personas)."""
+    level: "easy"/"normal"/"hard"/"expert"/"nightmare" (contra la IA) u "online" (contra personas).
+    finish: como acabo la partida: "kill", "deduction" o "abandon" (alguien se rindio o se fue)."""
     if role not in COUNT_IDS or outcome not in RESULT_POINTS:
         return 0
     hist = user.setdefault("history", [])
@@ -116,9 +165,10 @@ def record_match(user, role, outcome, actions=(), stage="", match_id=None, level
     actions = [] if outcome == "abandon" else list(dict.fromkeys(a for a in actions if a in ACTIONS))
     base = result_points(outcome, level)
     acts = {a: ACTIONS[a][1] for a in actions}
-    pts = _add(rec, role, outcome, actions, base, acts)
+    pts = _add(rec, role, outcome, actions, base, acts, finish)
     hist.append({"mid": mid, "time": now, "role": role, "outcome": outcome, "win": outcome == "win",
-                 "points": pts, "actions": actions, "stage": stage, "level": level, "base": base, "acts": acts})
+                 "points": pts, "actions": actions, "stage": stage, "level": level, "base": base, "acts": acts,
+                 "finish": finish})
     del hist[:-HISTORY_MAX]
     user["match_count"] = int(user.get("match_count", 0)) + 1
     # Lo que se ve en la pantalla de resultados
@@ -142,12 +192,24 @@ def user_stats(user):
         pid = POINT_IDS[role]
         out.append({"id": pid, "role": role, "category": "points", "text_id": "",
                     "count": played, "point": int(rec["points"].get(str(pid), 0))})
+        # "Puntos por resultado de la partida": veces que se consiguio cada resultado y sus puntos
+        for i, (outcome, text) in enumerate(RESULT_ROWS[role]):
+            n, p = rec["outcomes"].get(f"{role}:{outcome}", (0, 0))
+            out.append({"id": (120 + i) * 10 + role, "role": role, "category": "result", "text_id": text,
+                        "count": int(n), "point": int(p)})
+    # "Puntos de accion": la lista entera de cada rol (veces y puntos ganados con cada accion)
+    for role, actions in PROFILE_ACTIONS.items():
+        for text, aid in actions.items():
+            n = int(rec["actions"].get(f"{role}:{text}", 0))
+            out.append({"id": aid * 10 + role, "role": role, "category": "action", "text_id": text,
+                        "count": n, "point": n * ACTIONS.get(text, (0, 0))[1]})
+    # Acciones de partidas antiguas que ya no estan en la lista: siguen saliendo, al final
     for key, n in sorted(rec["actions"].items()):
         role, text = key.split(":", 1)
         aid, p = ACTIONS.get(text, (0, 0))
-        if aid:
+        if aid and text not in PROFILE_ACTIONS.get(int(role), {}):
             out.append({"id": aid * 10 + int(role), "role": int(role), "category": "action", "text_id": text,
-                        "count": int(n), "point": p})
+                        "count": int(n), "point": int(n) * p})
     return out
 
 
