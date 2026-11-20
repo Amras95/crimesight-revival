@@ -300,12 +300,6 @@ def clean_text(text):
     return re.sub(r"\s+", " ", text).strip()[:MAX_TEXT]
 
 
-def text_from_name(stem):
-    t = re.sub(r"^\d+[\s._-]*", "", stem)                 # "01_" sirve para ordenar, no se ensena
-    t = clean_text(t.replace("_", " "))
-    return t[:1].upper() + t[1:] if t else ""
-
-
 def text_value(v):
     """Texto de mod.json: una cadena, o un diccionario por idioma. Devuelve str o dict limpio."""
     if isinstance(v, dict):
@@ -381,13 +375,12 @@ def load_mod(folder, owner=""):
                 it = {"file": piece + ".png", "png": png}
                 if kind == "stickers":
                     it["key"] = piece
-                    it["default"] = text_from_name(orig_stem) or None
                     t = None
                     for key in (piece, orig_stem if len(pngs) == 1 else None, fname):
                         if key and key in texts:
                             t = text_value(texts[key])
                             break
-                    it["text"] = t or text_from_name(orig_stem) or None
+                    it["text"] = t               # sin mensaje puesto, el sticker no saca ninguno
                 items[kind].append(it)
     base = os.path.basename(folder.rstrip("/\\"))
     if temp:                                 # mod temporal descargado: conserva su id original
@@ -402,8 +395,8 @@ def load_mod(folder, owner=""):
 
 
 def set_text(folder, key, text):
-    """Guarda el mensaje de un sticker en el mod.json de su carpeta (vacio = el del nombre del
-    archivo). Desde el lanzador se pueden poner signos que Windows no deja en los nombres (? : " *)."""
+    """Guarda el mensaje de un sticker en el mod.json de su carpeta (vacio = sin
+    mensaje). Desde el lanzador se pueden poner signos que Windows no deja en los nombres (? : " *)."""
     path = os.path.join(folder, "mod.json")
     meta = _read_meta(folder)
     texts = meta.get("texts") if isinstance(meta.get("texts"), dict) else {}

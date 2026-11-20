@@ -77,6 +77,14 @@ namespace CrimeSightRevival.Mods
 
         [HarmonyPrefix, HarmonyPatch(typeof(CursorAvatarManager), nameof(CursorAvatarManager.GetMyCursorAvatarData))]
         static void BeforeMyAvatar() => LiveMods.Instance?.Sync();
+
+        // Un sticker de mod sin mensaje no escribe nada en el registro de la partida: ni "Jugador: ..."
+        // al mandarlo, ni la linea de responder a un ping con el.
+        [HarmonyPrefix, HarmonyPatch(typeof(StampManager), nameof(StampManager.CallStampInGameLog))]
+        static bool BeforeStampLog(ref StampParam param) => !LiveMods.Silent(param?.logMsgId);
+
+        [HarmonyPrefix, HarmonyPatch(typeof(StampManager), nameof(StampManager.StampFromPingButtonInGameLog))]
+        static bool BeforePingStampLog(ref StampParam stampParam) => !LiveMods.Silent(stampParam?.responseMsgId);
     }
 
     // ---------------------------------------------------------------- formato de live.json
@@ -136,6 +144,10 @@ namespace CrimeSightRevival.Mods
         readonly Dictionary<string, string[]> _texts = new();
         readonly HashSet<int> _types = new();
         readonly HashSet<string> _avatarIds = new();
+        static readonly HashSet<string> _silent = new();   // textos de los stickers sin mensaje
+
+        [HideFromIl2Cpp]
+        internal static bool Silent(string msgId) => msgId != null && _silent.Contains(msgId);
 
         void Update()
         {
@@ -220,7 +232,7 @@ namespace CrimeSightRevival.Mods
         void Rebuild(LiveState st)
         {
             var next = new Dictionary<string, Entry>();
-            _stamps.Clear(); _avatars.Clear(); _texts.Clear(); _types.Clear(); _avatarIds.Clear();
+            _stamps.Clear(); _avatars.Clear(); _texts.Clear(); _types.Clear(); _avatarIds.Clear(); _silent.Clear();
 
             foreach (var s in st.stickers)
             {
@@ -251,6 +263,12 @@ namespace CrimeSightRevival.Mods
                 _types.Add(s.type);
                 if (s.log != null) _texts[sd.LogMsgId] = s.log;
                 if (s.doc != null) _texts[sd.DocMsgId] = s.doc;
+                if (s.log == null)
+                {
+                    // sin mensaje: texto vacio (para que no salga el id) y no se escribe en el registro
+                    _texts[sd.LogMsgId] = _texts[sd.DocMsgId] = new[] { "" };
+                    _silent.Add(sd.LogMsgId); _silent.Add(sd.DocMsgId);
+                }
             }
             foreach (var a in st.avatars)
             {

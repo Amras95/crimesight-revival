@@ -585,7 +585,7 @@ async function openTexts(folder){
   const r=await api('mods_stickers',folder);if(!r)return;TXT_FOLDER=folder;
   $('#modtextsname').textContent=r.name;
   $('#modtextsl').innerHTML=r.stickers.map(s=>`<div class="stxt"><img src="${s.thumb}">
-    <input maxlength="40" value="${esc(s.text)}" placeholder="${esc(s.default)}" data-key="${esc(s.key)}"
+    <input maxlength="40" value="${esc(s.text)}" data-key="${esc(s.key)}"
       onchange="saveText(this)" onkeydown="if(event.key==='Enter')this.blur()"></div>`).join('');
   $('#modtexts').classList.add('on');
 }
