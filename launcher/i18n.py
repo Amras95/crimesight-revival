@@ -793,17 +793,17 @@ for _l, (_new, _ex, _readme) in _MODS2.items():
     S[_l].update(mods_new=_new, mods_example=_ex, mods_readme=_readme)
 
 _TEXT_HINT = {
-    "en": "The file name is the sticker's message in the match: “Good night!.png” → “Amras: Good night!”. A number at the start (01_) only sets the order.",
-    "es": "El nombre del archivo es el mensaje del sticker en la partida: “¡Buenas noches!.png” → “Amras: ¡Buenas noches!”. Un número delante (01_) solo sirve para ordenar.",
-    "fr": "Le nom du fichier est le message du sticker en partie : « Bonne nuit !.png » → « Amras : Bonne nuit ! ». Un numéro au début (01_) sert seulement à l'ordre.",
-    "it": "Il nome del file è il messaggio dello sticker in partita: “Buonanotte!.png” → “Amras: Buonanotte!”. Un numero all'inizio (01_) serve solo per l'ordine.",
-    "de": "Der Dateiname ist die Nachricht des Stickers im Spiel: „Gute Nacht!.png“ → „Amras: Gute Nacht!“. Eine Zahl am Anfang (01_) legt nur die Reihenfolge fest.",
-    "pt": "O nome do arquivo é a mensagem do sticker na partida: “Boa noite!.png” → “Amras: Boa noite!”. Um número no início (01_) só serve para ordenar.",
-    "ru": "Имя файла — это сообщение стикера в матче: «Спокойной ночи!.png» → «Amras: Спокойной ночи!». Число в начале (01_) нужно только для порядка.",
-    "ja": "ファイル名が試合中のスタンプのメッセージになります：「おやすみ！.png」→「Amras: おやすみ！」。先頭の番号（01_）は並び順にだけ使われます。",
-    "ko": "파일 이름이 게임 중 스탬프 메시지가 됩니다: “잘 자!.png” → “Amras: 잘 자!”. 앞의 숫자(01_)는 순서에만 쓰입니다.",
-    "zh-CN": "文件名就是贴图在对局中的消息：“晚安！.png” → “Amras：晚安！”。开头的数字（01_）只用于排序。",
-    "zh-TW": "檔名就是貼圖在對局中的訊息：「晚安！.png」→「Amras：晚安！」。開頭的數字（01_）只用於排序。",
+    "en": "Stickers show no message in the match unless you give them one with the “Messages” button (“Amras: Good night!”). A number at the start of the file name (01_) only sets the order.",
+    "es": "Los stickers no muestran ningún mensaje en la partida salvo que les pongas uno con el botón “Mensajes” (“Amras: ¡Buenas noches!”). Un número al principio del nombre del archivo (01_) solo sirve para ordenar.",
+    "fr": "Les stickers n'affichent aucun message en partie, sauf si vous leur en donnez un avec le bouton « Messages » (« Amras : Bonne nuit ! »). Un numéro au début du nom du fichier (01_) sert seulement à l'ordre.",
+    "it": "Gli sticker non mostrano nessun messaggio in partita, a meno che tu non gliene dia uno con il pulsante “Messaggi” (“Amras: Buonanotte!”). Un numero all'inizio del nome del file (01_) serve solo per l'ordine.",
+    "de": "Sticker zeigen im Spiel keine Nachricht, außer du gibst ihnen eine über die Schaltfläche „Nachrichten“ („Amras: Gute Nacht!“). Eine Zahl am Anfang des Dateinamens (01_) legt nur die Reihenfolge fest.",
+    "pt": "Os stickers não mostram nenhuma mensagem na partida, a menos que você dê uma a eles com o botão “Mensagens” (“Amras: Boa noite!”). Um número no início do nome do arquivo (01_) só serve para ordenar.",
+    "ru": "Стикеры не показывают сообщение в матче, если вы не зададите его кнопкой «Сообщения» («Amras: Спокойной ночи!»). Число в начале имени файла (01_) нужно только для порядка.",
+    "ja": "「メッセージ」ボタンで設定しない限り、スタンプは試合中にメッセージを表示しません（「Amras: おやすみ！」）。ファイル名の先頭の番号（01_）は並び順にだけ使われます。",
+    "ko": "“메시지” 버튼으로 정하지 않으면 스탬프는 게임 중에 메시지를 표시하지 않습니다(“Amras: 잘 자!”). 파일 이름 앞의 숫자(01_)는 순서에만 쓰입니다.",
+    "zh-CN": "除非用“消息”按钮设置，贴图在对局中不会显示消息（“Amras：晚安！”）。文件名开头的数字（01_）只用于排序。",
+    "zh-TW": "除非用「訊息」按鈕設定，貼圖在對局中不會顯示訊息（「Amras：晚安！」）。檔名開頭的數字（01_）只用於排序。",
 }
 for _l, _v in _TEXT_HINT.items():
     S[_l]["mods_text_hint"] = _v
@@ -892,17 +892,17 @@ for _l, _d in _BEP.items():
     S[_l].update(_d)
 
 _TXT = {
-    "en": ("Messages", "Sticker messages", "What appears in the match when you send each sticker. You can use any character: ¿?¡!:\"*… Leave it empty to use the file name.", "Saved"),
-    "es": ("Mensajes", "Mensajes de los stickers", "Lo que sale en la partida al mandar cada sticker. Puedes usar cualquier carácter: ¿?¡!:\"*… Si lo dejas vacío, se usa el nombre del archivo.", "Guardado"),
-    "fr": ("Messages", "Messages des stickers", "Ce qui s'affiche en partie quand vous envoyez chaque sticker. Tous les caractères sont permis : ¿?¡!:\"*… Laissez vide pour utiliser le nom du fichier.", "Enregistré"),
-    "it": ("Messaggi", "Messaggi degli sticker", "Ciò che compare in partita quando invii ogni sticker. Puoi usare qualsiasi carattere: ¿?¡!:\"*… Se lo lasci vuoto, si usa il nome del file.", "Salvato"),
-    "de": ("Nachrichten", "Sticker-Nachrichten", "Was im Spiel erscheint, wenn du den Sticker sendest. Alle Zeichen sind erlaubt: ¿?¡!:\"*… Leer lassen, um den Dateinamen zu verwenden.", "Gespeichert"),
-    "pt": ("Mensagens", "Mensagens dos stickers", "O que aparece na partida ao enviar cada sticker. Você pode usar qualquer caractere: ¿?¡!:\"*… Deixe vazio para usar o nome do arquivo.", "Salvo"),
-    "ru": ("Сообщения", "Сообщения стикеров", "Что появляется в матче, когда вы отправляете стикер. Можно использовать любые символы: ¿?¡!:\"*… Оставьте пустым, чтобы использовать имя файла.", "Сохранено"),
-    "ja": ("メッセージ", "スタンプのメッセージ", "スタンプを送ったときに試合中に表示される文です。どんな文字でも使えます：？！：\"*… 空欄にするとファイル名が使われます。", "保存しました"),
-    "ko": ("메시지", "스탬프 메시지", "스탬프를 보낼 때 게임에 표시되는 문구입니다. 어떤 문자든 쓸 수 있습니다: ?!:\"*… 비워 두면 파일 이름이 쓰입니다.", "저장했습니다"),
-    "zh-CN": ("消息", "贴图消息", "发送每个贴图时在对局中显示的文字。可以使用任何字符：？！：\"*… 留空则使用文件名。", "已保存"),
-    "zh-TW": ("訊息", "貼圖訊息", "傳送每個貼圖時在對局中顯示的文字。可以使用任何字元：？！：\"*… 留空則使用檔名。", "已儲存"),
+    "en": ("Messages", "Sticker messages", "What appears in the match when you send each sticker. You can use any character: ¿?¡!:\"*… Leave it empty for no message.", "Saved"),
+    "es": ("Mensajes", "Mensajes de los stickers", "Lo que sale en la partida al mandar cada sticker. Puedes usar cualquier carácter: ¿?¡!:\"*… Si lo dejas vacío, no sale ningún mensaje.", "Guardado"),
+    "fr": ("Messages", "Messages des stickers", "Ce qui s'affiche en partie quand vous envoyez chaque sticker. Tous les caractères sont permis : ¿?¡!:\"*… Laissez vide pour n'afficher aucun message.", "Enregistré"),
+    "it": ("Messaggi", "Messaggi degli sticker", "Ciò che compare in partita quando invii ogni sticker. Puoi usare qualsiasi carattere: ¿?¡!:\"*… Se lo lasci vuoto, non compare nessun messaggio.", "Salvato"),
+    "de": ("Nachrichten", "Sticker-Nachrichten", "Was im Spiel erscheint, wenn du den Sticker sendest. Alle Zeichen sind erlaubt: ¿?¡!:\"*… Leer lassen, damit keine Nachricht erscheint.", "Gespeichert"),
+    "pt": ("Mensagens", "Mensagens dos stickers", "O que aparece na partida ao enviar cada sticker. Você pode usar qualquer caractere: ¿?¡!:\"*… Deixe vazio para não mostrar nenhuma mensagem.", "Salvo"),
+    "ru": ("Сообщения", "Сообщения стикеров", "Что появляется в матче, когда вы отправляете стикер. Можно использовать любые символы: ¿?¡!:\"*… Оставьте пустым, чтобы сообщения не было.", "Сохранено"),
+    "ja": ("メッセージ", "スタンプのメッセージ", "スタンプを送ったときに試合中に表示される文です。どんな文字でも使えます：？！：\"*… 空欄にするとメッセージは表示されません。", "保存しました"),
+    "ko": ("메시지", "스탬프 메시지", "스탬프를 보낼 때 게임에 표시되는 문구입니다. 어떤 문자든 쓸 수 있습니다: ?!:\"*… 비워 두면 메시지가 표시되지 않습니다.", "저장했습니다"),
+    "zh-CN": ("消息", "贴图消息", "发送每个贴图时在对局中显示的文字。可以使用任何字符：？！：\"*… 留空则不显示消息。", "已保存"),
+    "zh-TW": ("訊息", "貼圖訊息", "傳送每個貼圖時在對局中顯示的文字。可以使用任何字元：？！：\"*… 留空則不顯示訊息。", "已儲存"),
 }
 for _l, (_b, _ti, _d, _s) in _TXT.items():
     S[_l].update(mods_texts_btn=_b, mods_texts_title=_ti, mods_texts_desc=_d, mods_text_saved=_s)

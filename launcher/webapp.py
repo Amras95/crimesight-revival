@@ -374,8 +374,7 @@ class Api:
             cur = it.get("text") or ""
             if isinstance(cur, dict):            # textos por idioma puestos a mano en mod.json
                 cur = cur.get(i18n.get_lang()) or next(iter(cur.values()), "")
-            out.append({"key": it["key"], "default": it.get("default") or "",
-                        "text": "" if cur == it.get("default") else cur,
+            out.append({"key": it["key"], "text": cur,
                         "thumb": "data:image/png;base64," + base64.b64encode(it["png"]).decode()})
         return {"name": m["name"], "stickers": out}
 
