@@ -424,13 +424,61 @@ def launch_game():
 _last_running = False
 
 
+def _win_process_names():
+    """Nombres (en minusculas) de los procesos abiertos, preguntando directamente a Windows con la misma
+    funcion que usa el Administrador de tareas, sin tasklist. None si Windows no contesta."""
+    import ctypes
+    from ctypes import wintypes
+
+    class PROCESSENTRY32W(ctypes.Structure):
+        _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD), ("th32ProcessID", wintypes.DWORD),
+                    ("th32DefaultHeapID", ctypes.c_size_t), ("th32ModuleID", wintypes.DWORD),
+                    ("cntThreads", wintypes.DWORD), ("th32ParentProcessID", wintypes.DWORD),
+                    ("pcPriClassBase", wintypes.LONG), ("dwFlags", wintypes.DWORD),
+                    ("szExeFile", ctypes.c_wchar * 260)]
+
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    k32.Process32FirstW.argtypes = k32.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(PROCESSENTRY32W)]
+    k32.Process32FirstW.restype = k32.Process32NextW.restype = wintypes.BOOL
+    k32.CloseHandle.argtypes = [wintypes.HANDLE]
+    snap = k32.CreateToolhelp32Snapshot(0x2, 0)          # TH32CS_SNAPPROCESS
+    if not snap or snap == ctypes.c_void_p(-1).value:    # INVALID_HANDLE_VALUE
+        return None
+    names = set()
+    try:
+        entry = PROCESSENTRY32W()
+        entry.dwSize = ctypes.sizeof(entry)
+        ok = k32.Process32FirstW(snap, ctypes.byref(entry))
+        while ok:
+            names.add(entry.szExeFile.lower())
+            ok = k32.Process32NextW(snap, ctypes.byref(entry))
+        if ctypes.get_last_error() != 18:                # ERROR_NO_MORE_FILES: ha llegado al final
+            return None
+    finally:
+        k32.CloseHandle(snap)
+    # Comprobacion: el propio lanzador tiene que salir en la lista; si no, la respuesta no es de fiar
+    if os.path.basename(sys.executable).lower() not in names:
+        return None
+    return names
+
+
 def game_running():
-    """Si CrimeSight.exe esta abierto. Si tasklist falla o tarda (pasa con el PC muy cargado, p. ej. al
-    cargar el final de la partida), no se sabe: se devuelve lo ultimo que se vio, en vez de dar el juego
-    por cerrado y terminar la sesion."""
+    """Si CrimeSight.exe esta abierto. Se pregunta directamente a Windows; tasklist queda solo por si eso
+    falla. Si tasklist tambien falla o tarda (pasa con el PC muy cargado, p. ej. al cargar el final de la
+    partida), no se sabe: se devuelve lo ultimo que se vio, en vez de dar el juego por cerrado y terminar
+    la sesion."""
     global _last_running
     if not IS_WINDOWS:
         return _linux_game_running()
+    try:
+        names = _win_process_names()
+    except Exception:  # noqa: BLE001 - si falla, se mira con tasklist como antes
+        names = None
+    if names is not None:
+        _last_running = "crimesight.exe" in names
+        return _last_running
     try:
         r = subprocess.run(["tasklist", "/FI", "IMAGENAME eq CrimeSight.exe", "/NH"], capture_output=True,
                            timeout=20, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
@@ -554,8 +602,9 @@ def wait_game(log, start_timeout=180, stop_flag=lambda: False):
 
     Al abrir CrimeSight.exe directamente (no desde Steam), el juego suele cerrarse al momento para que
     Steam lo vuelva a abrir. Si eso se tomara por "el jugador ha cerrado el juego", la sesion terminaria
-    y el juego reabierto no encontraria el servidor (error 100010). Por eso, si desaparece poco despues
-    de abrirse, se espera a que vuelva; y si se cierra mas tarde, se da un margen de unos segundos."""
+    y el juego reabierto no encontraria el servidor (error 100010). Por eso, si desaparece nada mas
+    abrirse (Steam lo cierra en cuanto arranca), se espera a que vuelva; y si se cierra mas tarde, se da
+    un margen de unos segundos."""
     if not _wait_start(start_timeout, stop_flag):
         log(t("game_not_seen"))
         return False
@@ -563,9 +612,9 @@ def wait_game(log, start_timeout=180, stop_flag=lambda: False):
     opened, restarted = time.time(), False
     while not stop_flag():
         if game_running():
-            time.sleep(2)
+            time.sleep(1)
             continue
-        if not restarted and time.time() - opened < 60:
+        if not restarted and time.time() - opened < 20:
             # Steam lo esta reabriendo: solo pasa una vez, nada mas arrancar
             restarted = True
             if not _wait_start(45, stop_flag):

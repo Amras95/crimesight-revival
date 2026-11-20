@@ -59,6 +59,11 @@ namespace CrimeSightRevival.Mods
         [HarmonyPrefix, HarmonyPatch(typeof(PingStampMenuBase), nameof(PingStampMenuBase.RefreshMenuStampReferenceSaveData))]
         static void BeforeStampMenu() => LiveMods.Instance?.Sync();
 
+        // Al crearse una rueda (al cargar cada escena) el juego pone el primer sticker de la lista en los huecos
+        // cuyo sticker guardado no esta: se rehace igual que al cambiar la lista, con el de por defecto.
+        [HarmonyPostfix, HarmonyPatch(typeof(PingStampMenuBase), "Start")]
+        static void AfterMenuStart(PingStampMenuBase __instance) => LiveMods.RefreshMenu(__instance);
+
         [HarmonyPostfix, HarmonyPatch(typeof(PingStampMenuBase), nameof(PingStampMenuBase.SetActive))]
         static void AfterMenuActive(PingStampMenuBase __instance, bool isActive)
         {
@@ -335,16 +340,54 @@ namespace CrimeSightRevival.Mods
         {
             try
             {
+                // Igual que PingStampMenuBase.Start: primero las ruedas por defecto y, solo si el jugador ha
+                // personalizado la suya (ConfigSystem.isUseStampCustomize), encima la guardada. Sin ajustes
+                // guardados, cargar "la guardada" dejaba todos los huecos con el mismo sticker.
+                var defaults = new List<StampReference>[4];
                 for (int p = 0; p < 4; p++)
                 {
+                    int first = 0;
                     var preset = (StampManager.PresetType)p;
-                    menu.RefreshMenuStampReferenceSaveData(ref preset);
+                    menu.RefreshMenuStampReferenceDefault(ref first, ref preset);
+                    defaults[p] = new List<StampReference>();
+                    var refs = PresetRefs(menu, p);
+                    if (refs != null)
+                        for (int i = 0; i < refs.Count; i++) defaults[p].Add(refs[i]);
                 }
+                if (ConfigSystem.isUseStampCustomize)
+                    for (int p = 0; p < 4; p++)
+                    {
+                        var preset = (StampManager.PresetType)p;
+                        menu.RefreshMenuStampReferenceSaveData(ref preset);
+                        // Un sticker guardado que ahora no esta (un mod desactivado, o de alguien que no esta en
+                        // la sala) el juego lo cambia por el primero de la lista. Ese hueco lleva su sticker por
+                        // defecto; cuando vuelva el mod, la siguiente vez que se rehaga la rueda vuelve el suyo.
+                        var refs = PresetRefs(menu, p);
+                        if (refs == null) continue;
+                        for (int i = 0; i < refs.Count && i < defaults[p].Count; i++)
+                        {
+                            int slot = i;
+                            var pr = (StampManager.PresetType)p;
+                            int saved = ConfigSystem.GetStampTypeMenu(ref slot, ref pr);
+                            var r = refs[i];
+                            if (r != null && (int)r.StampType != saved) refs[i] = defaults[p][i];
+                        }
+                    }
                 menu.RefreshMenuStampReferenceCustom();
                 _menuGen[menu.Pointer] = _stampGen;
             }
             catch (Exception e) { Plugin.L.LogWarning("No pude refrescar la rueda: " + e.Message); }
         }
+
+        // Las listas de cada pagina de la rueda (como en RefreshMenuStampReferenceDefault)
+        [HideFromIl2Cpp]
+        static Il2CppSystem.Collections.Generic.List<StampReference> PresetRefs(PingStampMenuBase menu, int p) => p switch
+        {
+            1 => menu.MenuStampReferenceCustomPreset2,
+            2 => menu.MenuStampReferenceCustomPreset3,
+            3 => menu.MenuStampReferenceCustomPreset4,
+            _ => menu.MenuStampReferenceCustom,
+        };
 
         [HideFromIl2Cpp]
         internal static void MenuOpened(PingStampMenuBase menu)
