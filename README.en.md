@@ -137,19 +137,21 @@ mods\
   messages or the launcher updates. A sticker is only removed if you delete or rename its image (the game
   puts "Hello!" in its slot).
 
-### Hot reload (optional, with BepInEx)
+### Hot reload (with BepInEx, on by default)
 
-By default, changing mods needs a game restart. If you want changes to appear **while the game is open**,
-click **Mods → Hot reload → Turn on**:
+Mod changes appear **while the game is open**, without restarting it. This, the custom cursor, models and
+custom scenarios work through BepInEx:
 
-- The launcher downloads [BepInEx](https://github.com/BepInEx/BepInEx) (the official mod loader for Unity
-  games, 34 MB) **from its GitHub, and only if you turn it on**: it's not bundled. It installs it in the game
-  folder together with the project's plugin. The first game start takes about a minute while BepInEx sets up.
+- When it opens, the launcher downloads [BepInEx](https://github.com/BepInEx/BepInEx) (the official mod
+  loader for Unity games, 34 MB) **from its GitHub**: it's not bundled. It installs it in the game folder
+  together with the project's plugin. The first game start takes about a minute while BepInEx sets up. If
+  the download fails, you can still play without it and the launcher tries again next time.
 - While you play, the launcher watches your mods folder: if you add an image, change a message or turn a mod
   on/off, it shows up in the game within seconds. If you're the host, your room gets it too; if you're in
   someone else's room, you get their changes.
 - Changes are never applied mid-match (they wait for the menu), so everyone keeps the same list.
-- **Remove BepInEx** (or "Restore original game") deletes everything and the game is back to normal.
+- **Mods → Hot reload → Remove BepInEx** (or "Restore original game") deletes everything and the game is back
+  to normal. After removing it, the launcher doesn't reinstall it until you click **Turn on**.
 
 ## Scenario creator
 
@@ -184,7 +186,7 @@ new one. The original scenarios are never changed. Playing them needs hot reload
 - Point and level rewards as in the original. The Project Winter event stays open with its avatar
   unlocked. Deluxe content still depends on owning it on Steam.
 - Steam achievements can still be earned (the game itself handles them with Steam).
-- New sticker and avatar mods, shared with the room, with optional hot reload.
+- New sticker and avatar mods, shared with the room, with hot reload.
 - Scenario creator, with scenarios shared with the room.
 - The AI players answer your stickers with a random one.
 - Controller support (Xbox, PlayStation, Switch, Steam Deck) with hot reload turned on. The button layout

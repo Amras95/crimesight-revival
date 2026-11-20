@@ -33,6 +33,9 @@ AVATAR_TEMPLATE = "CursorAvatarDataIcon_WolfMan"
 QUAD_AVATAR_NAME = "CursorAvatarIcon_SecretSherlock"
 ICON_SETS = {"level3": (11627, "sharedassets3.assets"), "level4": (814, "sharedassets3.assets")}
 DEFAULT_STAMP = 28            # "hello": sustituye a un sticker de mod que ya no esta
+# Version de como se meten los mods: al cambiarla, los archivos se rehacen aunque los mods sean los mismos
+# (2: los stickers sin mensaje llevan textos vacios en vez de los de "Hola")
+BUILD = 2
 TEXT_KEY = b"ctg_name_log_stamp_hello"   # el archivo de textos (TextAsset "ctg_name") que lo contiene
 
 
@@ -137,14 +140,18 @@ def _build_stickers(src, dst, stickers):
 
 def _add_texts(sf, stickers):
     """Anade al archivo de textos del juego el mensaje de cada sticker ("{player}: <texto>") y su
-    nombre, en los 11 idiomas. Devuelve {tipo: (id del mensaje, id del nombre)}."""
+    nombre, en los 11 idiomas. Devuelve {tipo: (id del mensaje, id del nombre)}.
+    Un sticker sin mensaje lleva textos vacios: si no, se quedaria con los del sticker que se copia
+    ("Hola"). Sin el plugin de BepInEx no se puede evitar la linea del registro, que sale vacia."""
     entries, ids = [], {}
     for s in stickers:
-        if not s.get("text"):
-            continue
-        g = modpack.text_for_game(s["text"])
         log_id, doc_id = f"ctg_name_log_stamp_csr_{s['type']}", f"ctg_name_stamp_csr_{s['type']}"
-        entries.append({"msg_id": log_id, **{k: "{player}: " + v for k, v in g.items()}})
+        if s.get("text"):
+            g = modpack.text_for_game(s["text"])
+            entries.append({"msg_id": log_id, **{k: "{player}: " + v for k, v in g.items()}})
+        else:
+            g = {lang: "" for lang in modpack.LANGS.values()}
+            entries.append({"msg_id": log_id, **g})
         entries.append({"msg_id": doc_id, **g})
         ids[s["type"]] = (log_id, doc_id)
     if not entries:
@@ -276,7 +283,7 @@ def apply(game_dir, rs, log=None):
     want = rs["hash"] if rs else ""
     if not want:
         return restore(game_dir)
-    if st.get("hash", "") == want and all(
+    if st.get("hash", "") == want and st.get("build") == BUILD and all(
             os.path.isfile(os.path.join(dd, f)) and os.path.getsize(os.path.join(dd, f)) == n
             for f, n in st.get("sizes", {}).items()):
         return False                       # ya estaban puestos (y nadie ha cambiado los archivos)
@@ -296,7 +303,7 @@ def apply(game_dir, rs, log=None):
         for f in ("sharedassets3.assets", "level3", "level4"):
             if os.path.isfile(orig(f)):
                 shutil.copy2(orig(f), os.path.join(dd, f))
-    _save_state(dd, {"hash": want, "sizes": {f: os.path.getsize(os.path.join(dd, f)) for f in FILES},
+    _save_state(dd, {"hash": want, "build": BUILD, "sizes": {f: os.path.getsize(os.path.join(dd, f)) for f in FILES},
                      "stickers": [s["type"] for s in rs["stickers"]],
                      "avatars": [a["data_id"] for a in rs["avatars"]]})
     return True

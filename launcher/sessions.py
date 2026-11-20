@@ -62,7 +62,7 @@ def _play(ctx, game_dir, url, rs=None, watch=None, every=3):
                     log.exception("Fallo vigilando los mods")
         threading.Thread(target=loop, daemon=True).start()
     try:
-        core.wait_game(ctx.log, stop_flag=ctx.cancelled)
+        core.wait_game(ctx.log, stop_flag=ctx.cancelled, game_dir=game_dir)
     finally:
         stop.set()
 

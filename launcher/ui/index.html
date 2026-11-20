@@ -114,6 +114,13 @@ footer .updpill.on{display:inline-block}
 .toast{position:fixed;left:50%;bottom:26px;z-index:6;max-width:80vw;transform:translateX(-50%) translateY(20px);opacity:0;background:#1d1f4a;border:1px solid var(--line);
   padding:10px 16px;border-radius:10px;transition:.25s;pointer-events:none}
 .toast.on{opacity:1;transform:translateX(-50%)}
+.bepbar{position:fixed;left:16px;bottom:16px;z-index:6;display:none;width:320px;max-width:calc(100vw - 32px);padding:10px 14px;
+  background:var(--panel2);border:1px solid var(--line);border-radius:12px;font-size:13px;box-shadow:0 14px 40px -10px #000}
+.bepbar.on{display:block}
+.bepbar .bar{height:4px;margin-top:8px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden}
+.bepbar .bar i{display:block;height:100%;width:30%;border-radius:2px;background:var(--accent);transition:width .3s}
+.bepbar.wait .bar i{animation:bepwait 1.2s ease-in-out infinite}
+@keyframes bepwait{0%{margin-left:-30%}100%{margin-left:100%}}
 .loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:var(--bg);z-index:5;transition:opacity .4s}
 .loading.off{opacity:0;pointer-events:none}
 .spinner{width:42px;height:42px;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:var(--accent);animation:s 1s linear infinite}
@@ -389,6 +396,7 @@ footer .updpill.on{display:inline-block}
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="bepbar" id="bepbar"><span id="bepbartxt"></span><div class="bar"><i id="bepbarfill"></i></div></div>
 
 <div class="modal" id="stage">
   <div class="box stagebox">
@@ -668,8 +676,12 @@ window.ui={
   state(s){render(s)},
   loading(msg){if(msg){$('#loadmsg').textContent=msg;$('#loading').classList.remove('off')}else $('#loading').classList.add('off')},
   error(t){toast(t)},
-  bepProgress(t){$('#bepstatus').textContent=t},
-  bepDone(t,err){toast(t);loadBep()},
+  bepProgress(t,pct){
+    $('#bepstatus').textContent=t;$('#bepbartxt').textContent=t;
+    const b=$('#bepbar'),f=$('#bepbarfill');b.classList.add('on');b.classList.toggle('wait',pct==null);
+    f.style.width=pct==null?'30%':pct+'%';
+  },
+  bepDone(t,err){$('#bepbar').classList.remove('on');toast(t);loadBep()},
   closeOffer(){$('#modoffer').classList.remove('on')},
   confirmOffer(info){
     $('#modoffert').textContent=T('mods_offer_title',{player:info.player});

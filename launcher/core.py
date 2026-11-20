@@ -597,7 +597,20 @@ def _wait_start(timeout, stop_flag):
     return True
 
 
-def wait_game(log, start_timeout=180, stop_flag=lambda: False):
+def bepinex_loaded(game_dir, since):
+    """BepInEx ya ha terminado de cargar en esta apertura del juego (su registro, reescrito en cada
+    arranque, llega a "Chainloader startup complete")."""
+    path = os.path.join(game_dir, "BepInEx", "LogOutput.log")
+    try:
+        if os.path.getmtime(path) < since:
+            return False
+        with open(path, encoding="utf-8", errors="ignore") as f:
+            return "Chainloader startup complete" in f.read()
+    except OSError:
+        return False
+
+
+def wait_game(log, start_timeout=180, stop_flag=lambda: False, game_dir=None):
     """Espera a que el juego se abra y despues a que se cierre.
 
     Al abrir CrimeSight.exe directamente (no desde Steam), el juego suele cerrarse al momento para que
@@ -605,10 +618,20 @@ def wait_game(log, start_timeout=180, stop_flag=lambda: False):
     y el juego reabierto no encontraria el servidor (error 100010). Por eso, si desaparece nada mas
     abrirse (Steam lo cierra en cuanto arranca), se espera a que vuelva; y si se cierra mas tarde, se da
     un margen de unos segundos."""
+    first = bool(game_dir) and bepinex_state(game_dir)["installed"] and not bepinex_state(game_dir)["ready"]
     if not _wait_start(start_timeout, stop_flag):
         log(t("game_not_seen"))
         return False
-    log(t("game_open"))
+    if first:
+        # La primera vez, BepInEx se prepara (alrededor de un minuto) antes de que salga el juego
+        log(t("bep_setup"))
+        since = time.time() - 5
+        while not stop_flag() and not bepinex_loaded(game_dir, since) and time.time() - since < 300:
+            if not game_running() and not _wait_start(45, stop_flag):
+                break
+            time.sleep(1)
+    if game_running():
+        log(t("game_open"))
     opened, restarted = time.time(), False
     while not stop_flag():
         if game_running():
@@ -748,7 +771,7 @@ def install_mods(game_dir, rs, log=None):
     return modinject.apply(game_dir, rs, log=log)
 
 
-# ------------------------------------------------------------------ recarga en caliente (BepInEx, opcional)
+# ------------------------------------------------------------------ recarga en caliente (BepInEx, activada por defecto)
 BEPINEX_URL = ("https://github.com/BepInEx/BepInEx/releases/download/v6.0.0-pre.2/"
                "BepInEx-Unity.IL2CPP-win-x64-6.0.0-pre.2.zip")
 BEPINEX_SHA256 = "616ec7eb06cf11b2a0000e8fcef04d1b12bb58e84a2e0bdac9523234fc193ceb"
@@ -993,7 +1016,8 @@ def _plugin_source():
 
 def install_bepinex(game_dir, progress=None):
     """Descarga BepInEx (el cargador de mods oficial, desde su GitHub) y lo pone en la carpeta del
-    juego junto a nuestro plugin. No se incluye con el lanzador: solo si el jugador lo activa."""
+    juego junto a nuestro plugin. No va dentro del lanzador: este lo instala solo al arrancar (salvo
+    que el jugador lo haya quitado)."""
     import zipfile
     if not is_game_dir(game_dir):
         raise ValueError(t("err_no_game"))
