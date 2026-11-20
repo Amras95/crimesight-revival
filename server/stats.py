@@ -63,6 +63,17 @@ ACTIONS = {
     "ctg_name_result_blackOut_by_switchboard": (109, 50),               # romper el cuadro (apagon)
     "ctg_name_result_action_blockedSherlockWithSpray": (110, 50),       # gasear a alguien
     "ctg_name_result_action_beCriticalNoKiller": (111, 100),            # atacar a la victima y dejarla K.O.
+    "ctg_name_result_action_activateSecretPassage": (112, 50),        # usar un pasadizo secreto
+    "ctg_name_result_action_repair_gasPipe": (113, 50),               # arreglar un escape de gas
+    "ctg_name_result_action_exterminateWildDog": (114, 50),           # matar a un perro (o un traidor)
+    "ctg_name_result_action_foundSwitchboard": (115, 50),             # encontrar un plano del cuadro
+    "ctg_name_result_action_obtainFoodFromFoodPoint": (116, 50),      # encontrar comida
+    "ctg_name_result_action_proven_pawnNotKiller": (117, 50),         # descartar a alguien como asesino
+    "ctg_name_result_action_proven_pawnNotTarget": (118, 50),         # descartar a alguien como victima
+    "ctg_name_result_action_foundSwitchboardBeforeSherlock": (119, 50),   # plano del cuadro antes que Sherlock
+    "ctg_name_result_action_treated_killerForInjuries": (120, 50),    # curar al asesino
+    "ctg_name_result_action_wildDogAttackedEveryoneButKiller": (121, 50),  # un perro hiere a otro que no es el asesino
+    "ctg_name_result_action_injured_noKillerWithGasLeak": (122, 50),  # el gas hiere a otro que no es el asesino
     # Antiguas (solo para recalcular partidas viejas)
     "ctg_name_result_action_kill_succeed_not_identified_killer": (102, 30),
     "ctg_name_result_pattern_arrest_success": (103, 50),
@@ -96,6 +107,9 @@ PROFILE_ACTIONS_MORIARTY = {
     "ctg_name_result_blackOut_by_switchboard": 126,
     "ctg_name_result_action_blockedSherlockWithSpray": 125,
     "ctg_name_result_action_targetKilledByAssail": 124,
+    "ctg_name_result_action_exterminateWildDog": 123,            # los dos bandos pueden matar perros
+    "ctg_name_result_action_repair_gasPipe": 122,                # y arreglar escapes de gas
+    "ctg_name_result_action_treated_pawnForInjuries": 121,       # y curar a cualquiera
 }
 PROFILE_ACTIONS = {DETECTIVE: PROFILE_ACTIONS_SHERLOCK, WATSON: PROFILE_ACTIONS_SHERLOCK,
                    CRIMINAL: PROFILE_ACTIONS_MORIARTY, IRENE: PROFILE_ACTIONS_MORIARTY}
@@ -195,7 +209,7 @@ def user_stats(user):
         # "Puntos por resultado de la partida": veces que se consiguio cada resultado y sus puntos
         for i, (outcome, text) in enumerate(RESULT_ROWS[role]):
             n, p = rec["outcomes"].get(f"{role}:{outcome}", (0, 0))
-            out.append({"id": (120 + i) * 10 + role, "role": role, "category": "result", "text_id": text,
+            out.append({"id": 9000 + i * 10 + role, "role": role, "category": "result", "text_id": text,
                         "count": int(n), "point": int(p)})
     # "Puntos de accion": la lista entera de cada rol (veces y puntos ganados con cada accion)
     for role, actions in PROFILE_ACTIONS.items():
