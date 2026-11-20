@@ -58,6 +58,18 @@ namespace CrimeSightRevival.Mods
         static string _uiWhere = "";
         static bool _uiPicker;                                   // la ventana de dificultad de una IA (AiPicker)
         static float _uiNext;
+
+        // La sala de espera detras de una ventana (ajustes, confirmaciones...): sus iconos se quedan, mas claros y sin
+        // hacer nada, para que no desaparezcan de golpe al abrirla. El mando sigue yendo solo a la ventana de encima.
+        static bool _bgRoom;
+        static Button _bgB, _bgStart, _bgBack, _bgKick, _bgPlus, _bgMinus;
+        const float Faded = 0.35f;
+        static readonly HashSet<string> _overRoom = new()
+        {
+            "aviso", "dificultad de la IA", "expulsar (confirmar)", "aviso de plazas", "confirmacion",
+            "ajustes del sistema", "ajustes del sistema (confirmar)", "opciones", "abandonar sala",
+            "ajustes del juego", "ajustes (confirmar)", "cuenta atras", "sala (ventana encima)",
+        };
         static bool _bConsumed, _gearHeld, _xTaken, _yTaken, _arrowHeld;
         static bool _uiWarned;
 
@@ -71,6 +83,60 @@ namespace CrimeSightRevival.Mods
             if (!Active) return "";
             string n = btn.StartsWith("dpad") || btn.EndsWith("stick") ? btn : _style + "_" + btn;
             return $"<sprite name=\"csr_{n}\"> ";
+        }
+
+        /// <summary>El mismo icono, mas claro: el de un boton de la sala que queda detras de una ventana.</summary>
+        static string FadedTag(string btn)
+        {
+            if (!Active) return "";
+            string n = btn.StartsWith("dpad") || btn.EndsWith("stick") ? btn : _style + "_" + btn;
+            return $"<sprite name=\"csr_{n}\" color=#FFFFFF{(int)(Faded * 255):X2}> ";
+        }
+
+        /// <summary>Se ve, aunque no se pueda pulsar (activo y sin un CanvasGroup que lo oculte).</summary>
+        static bool Visible(Button b)
+        {
+            if (b == null || !b.gameObject.activeInHierarchy) return false;
+            for (var t = b.transform; t != null; t = t.parent)
+            {
+                var cg = t.GetComponent<CanvasGroup>();
+                if (cg != null && cg.alpha < 0.05f) return false;
+                if (cg != null && cg.ignoreParentGroups) break;
+            }
+            return true;
+        }
+
+        /// <summary>La sala de espera que se ve detras de la ventana de encima (si la hay): sus botones con icono.</summary>
+        static void RoomBehind(string where)
+        {
+            if (_uiRoom || _inGame || !_overRoom.Contains(where)) return;
+            foreach (var o in UnityEngine.Object.FindObjectsOfType(Il2CppInterop.Runtime.Il2CppType.Of<OutGameRoomWaitingMenuVer2>()))
+            {
+                var room = o?.TryCast<OutGameRoomWaitingMenuVer2>();
+                if (room == null || !room.gameObject.activeInHierarchy) continue;
+                Button back = Btn(room.HostBackTButton);
+                if (!Visible(back)) back = Btn(room.GuestBackTButton);
+                var start = Btn(room.HostStartTButton);
+                if (!Visible(back) && !Visible(start)) continue;
+                if (Visible(back)) _bgB = back;
+                if (Visible(start)) _bgStart = start;
+                if (Visible(room.ChangeRoomSettingButton)) _bgBack = room.ChangeRoomSettingButton;
+                _bgKick = KickButton(room, true);
+                _bgPlus = PlusButton(true);
+                _bgMinus = MinusButton(true);
+                _bgRoom = true;
+                return;
+            }
+        }
+
+        /// <summary>Un icono suelto, normal o mas claro.</summary>
+        static void Fade(GameObject go, bool faded)
+        {
+            if (go == null) return;
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg == null) { if (!faded) return; cg = go.AddComponent<CanvasGroup>(); cg.blocksRaycasts = false; cg.interactable = false; }
+            float a = faded ? Faded : 1f;
+            if (cg.alpha != a) cg.alpha = a;
         }
 
         // ------------------------------------------------------------ que hace cada boton aqui
@@ -91,8 +157,11 @@ namespace CrimeSightRevival.Mods
             _tagOnly.Clear();
             _uiTalkClose = null;
             _uiPicker = false;
+            _bgRoom = false;
+            _bgB = _bgStart = _bgBack = _bgKick = _bgPlus = _bgMinus = null;
             string where = "";
             try { where = Contexts(); } catch (Exception e) { Warn("sala: " + e.Message); }
+            try { RoomBehind(where); } catch (Exception e) { Warn("sala detras: " + e.Message); }
             try { if (!_uiPicker && _uiB == null) _uiTalkClose = TalkClose(); } catch { }
             if (where != _uiWhere) { _uiWhere = where; if (where != "") Log("pantalla: " + where); }
             try { _uiGear = Gear(); } catch { }
@@ -316,13 +385,13 @@ namespace CrimeSightRevival.Mods
         }
 
         /// <summary>El boton de expulsar del jugador elegido con Y (de arriba abajo; al principio, el primero).</summary>
-        static Button KickButton(OutGameRoomWaitingMenuVer2 room)
+        static Button KickButton(OutGameRoomWaitingMenuVer2 room, bool behind = false)
         {
             var list = room.playerKickButtonList;
             _kickCount = 0;
             if (list == null) return null;
             var shown = new List<Button>();
-            for (int i = 0; i < list.Count; i++) if (Shown(list[i])) shown.Add(list[i]);
+            for (int i = 0; i < list.Count; i++) if (behind ? Visible(list[i]) : Shown(list[i])) shown.Add(list[i]);
             if (shown.Count == 0) return null;
             shown.Sort((a, b) => ScreenPos(b).y.CompareTo(ScreenPos(a).y));       // de arriba abajo
             _kickCount = shown.Count;
@@ -332,28 +401,28 @@ namespace CrimeSightRevival.Mods
         }
 
         /// <summary>El "-" de un hueco vacio (el de mas abajo).</summary>
-        static Button MinusButton()
+        static Button MinusButton(bool behind = false)
         {
             Button best = null;
             foreach (var o in UnityEngine.Object.FindObjectsOfType(Il2CppInterop.Runtime.Il2CppType.Of<RoomPlayerList>()))
             {
                 var r = o?.TryCast<RoomPlayerList>();
                 var b = r?.PlayerMinusButton;
-                if (!Shown(b)) continue;
+                if (behind ? !Visible(b) : !Shown(b)) continue;
                 if (best == null || ScreenPos(b).y < ScreenPos(best).y) best = b;
             }
             return best;
         }
 
         /// <summary>El "+" para anadir jugadores (el primero, de arriba abajo).</summary>
-        static Button PlusButton()
+        static Button PlusButton(bool behind = false)
         {
             Button best = null;
             foreach (var o in UnityEngine.Object.FindObjectsOfType(Il2CppInterop.Runtime.Il2CppType.Of<RoomPlayerList>()))
             {
                 var r = o?.TryCast<RoomPlayerList>();
                 var b = r?.PlayerPlusButton;
-                if (!Shown(b)) continue;
+                if (behind ? !Visible(b) : !Shown(b)) continue;
                 if (best == null || ScreenPos(b).y > ScreenPos(best).y) best = b;
             }
             return best;
@@ -640,6 +709,7 @@ namespace CrimeSightRevival.Mods
         {
             var want = new Dictionary<int, (TMP_Text tmp, string btn)>();
             var noText = new Dictionary<int, (Button b, string btn)>();
+            var faded = new HashSet<int>();
             if (Active)
             {
                 void Add(Button b, string btn)
@@ -652,6 +722,19 @@ namespace CrimeSightRevival.Mods
                 Add(_uiB, "b"); Add(_uiStart, "start"); Add(_uiBack, "back");
                 foreach (var (b, btn) in _tagOnly) Add(b, btn);
                 foreach (var (t, btn) in _tagText) if (t != null) want[t.GetInstanceID()] = (t, btn);
+                // la sala detras de la ventana: sus iconos, mas claros (solo se ven; no hacen nada)
+                if (_bgRoom)
+                {
+                    void AddBg(Button b, string btn)
+                    {
+                        if (b == null || !Visible(b)) return;
+                        var t = Label(b);
+                        if (t == null || want.ContainsKey(t.GetInstanceID())) return;
+                        want[t.GetInstanceID()] = (t, btn);
+                        faded.Add(t.GetInstanceID());
+                    }
+                    AddBg(_bgB, "b"); AddBg(_bgStart, "start"); AddBg(_bgBack, "back");
+                }
 
             }
             var drop = new List<int>();
@@ -663,7 +746,7 @@ namespace CrimeSightRevival.Mods
                 try
                 {
                     var tmp = kv.Value.tmp;
-                    string tag = Tag(kv.Value.btn);
+                    string tag = faded.Contains(kv.Key) ? FadedTag(kv.Value.btn) : Tag(kv.Value.btn);
                     if (_tagged.TryGetValue(kv.Key, out var old) && old.tag != tag) Untag(old.tmp, old.tag);
                     if (KeyIcons != null && tmp.spriteAsset != KeyIcons) tmp.spriteAsset = KeyIcons;
                     var text = tmp.text ?? "";
@@ -694,9 +777,10 @@ namespace CrimeSightRevival.Mods
             try
             {
                 bool room = Active && !_uiPicker;
-                SideHint(ref _kickHint, room ? _uiLB : null, _kickCount > 1 ? new[] { "y", "dpad_left" } : new[] { "dpad_left" });
-                SideHint(ref _plusHint, room ? _uiRB : null, new[] { "dpad_right" });
-                SideHint(ref _downHint, room ? _uiDown : null, new[] { "dpad_down" });
+                bool bg = Active && _bgRoom;                                 // la sala detras: mas claros
+                SideHint(ref _kickHint, room && _uiLB != null ? _uiLB : bg ? _bgKick : null, _kickCount > 1 ? new[] { "y", "dpad_left" } : new[] { "dpad_left" }, bg && !(room && _uiLB != null));
+                SideHint(ref _plusHint, room && _uiRB != null ? _uiRB : bg ? _bgPlus : null, new[] { "dpad_right" }, bg && !(room && _uiRB != null));
+                SideHint(ref _downHint, room && _uiDown != null ? _uiDown : bg ? _bgMinus : null, new[] { "dpad_down" }, bg && !(room && _uiDown != null));
                 SideHint(ref _yHint, room ? _uiY : null, new[] { "y" });
             }
             catch (Exception e) { Warn("iconos de expulsar/anadir: " + e.Message); }
@@ -942,9 +1026,9 @@ namespace CrimeSightRevival.Mods
         static string _errTag;
 
         /// <summary>Un icono pequeno a la izquierda de un boton sin texto (se mueve al boton que toque en cada momento).</summary>
-        static void SideHint(ref GameObject hint, Button b, string[] icons)
+        static void SideHint(ref GameObject hint, Button b, string[] icons, bool faded = false)
         {
-            if (b == null || !Shown(b)) { if (hint != null && hint.activeSelf) hint.SetActive(false); return; }
+            if (b == null || (faded ? !Visible(b) : !Shown(b))) { if (hint != null && hint.activeSelf) hint.SetActive(false); return; }
             string key = string.Join(",", icons);
             if (hint == null || hint.transform.parent != b.transform || hint.name != "CSR_PadHint:" + key)
             {
@@ -953,6 +1037,7 @@ namespace CrimeSightRevival.Mods
                 if (hint != null) hint.name = "CSR_PadHint:" + key;
             }
             if (hint != null && !hint.activeSelf) hint.SetActive(true);
+            Fade(hint, faded);
         }
 
         static TextMeshProUGUI Label(Button b)
