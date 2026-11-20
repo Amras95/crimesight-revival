@@ -295,6 +295,18 @@ LANGS = {"ja": "Japanese", "en": "English", "fr": "French", "it": "Italian", "de
 MAX_TEXT = 40
 
 
+# A que sticker del juego equivale cada sticker de un mod (opcional): las IA le contestan como a ese.
+# En mod.json: "means": {"01_saludo": "hello"}. Nombre -> tipo de sticker del juego (Stamp.Type).
+MEANS = {"hello": 28, "good": 8, "roger": 0, "why": 1, "no_way": 2, "relieved": 4, "frightened": 5,
+         "scream": 32, "worried": 31, "please": 34, "hold_on": 37, "smirk": 29, "suspicious": 30,
+         "killer_no_suspicion": 24, "killer_suspicion": 25, "target_no_suspicion": 26, "target_suspicion": 27}
+
+
+def means_value(v):
+    v = str(v or "").strip().lower()
+    return v if v in MEANS else None
+
+
 def clean_text(text):
     text = re.sub(r"[\x00-\x1f{}<>]", "", str(text or ""))   # sin llaves: el juego usa {player}
     return re.sub(r"\s+", " ", text).strip()[:MAX_TEXT]
@@ -343,6 +355,7 @@ def load_mod(folder, owner=""):
     jugadores distintos no choca cuando sus mods se juntan en una sala."""
     meta = _read_meta(folder)
     texts = meta.get("texts") if isinstance(meta.get("texts"), dict) else {}
+    means = meta.get("means") if isinstance(meta.get("means"), dict) else {}
     name = str(meta.get("name") or os.path.basename(folder.rstrip("/\\")))[:60]
     author = str(meta.get("author") or "")[:40]
     items = {k: [] for k in KINDS}
@@ -381,6 +394,8 @@ def load_mod(folder, owner=""):
                             t = text_value(texts[key])
                             break
                     it["text"] = t               # sin mensaje puesto, el sticker no saca ninguno
+                    keys = [k for k in (piece, orig_stem if len(pngs) == 1 else None, fname) if k and k in means]
+                    it["means"] = means_value(means[keys[0]]) if keys else None
                 items[kind].append(it)
     base = os.path.basename(folder.rstrip("/\\"))
     if temp:                                 # mod temporal descargado: conserva su id original
@@ -406,6 +421,26 @@ def set_text(folder, key, text):
     else:
         texts.pop(str(key), None)
     meta["texts"] = texts
+    meta.setdefault("name", "")
+    meta.setdefault("author", "")
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
+    return value
+
+
+def set_means(folder, key, value):
+    """Guarda a que sticker del juego equivale un sticker (vacio = a ninguno: las IA no le contestan)."""
+    path = os.path.join(folder, "mod.json")
+    meta = _read_meta(folder)
+    means = meta.get("means") if isinstance(meta.get("means"), dict) else {}
+    value = means_value(value)
+    if value:
+        means[str(key)[:40]] = value
+    else:
+        means.pop(str(key), None)
+    meta["means"] = means
     meta.setdefault("name", "")
     meta.setdefault("author", "")
     tmp = path + ".tmp"
@@ -463,7 +498,8 @@ def room_set(mods):
                 t = FIRST_TYPE + (t - FIRST_TYPE + 1) % span
             used.add(t)
             stickers.append({"mod": m["uid"], "file": it["file"], "type": t, "png": it["png"],
-                             "text": it.get("text"), "name": f"CSR_{m['uid']}_{it['file'][:-4]}"})
+                             "text": it.get("text"), "means": it.get("means"),
+                             "name": f"CSR_{m['uid']}_{it['file'][:-4]}"})
         for it in m["avatars"]:
             if len(avatars) >= MAX_AVATARS:
                 break
@@ -474,7 +510,8 @@ def room_set(mods):
     digest = hashlib.sha1()
     for s in stickers:
         digest.update(f"s{s['type']}:".encode() + hashlib.sha1(s["png"]).digest() +
-                      json.dumps(s.get("text"), ensure_ascii=False, sort_keys=True).encode())
+                      json.dumps(s.get("text"), ensure_ascii=False, sort_keys=True).encode() +
+                      (b"=" + s["means"].encode() if s.get("means") else b""))
     for a in avatars:
         digest.update(f"a{a['data_id']}:".encode() + hashlib.sha1(a["png"]).digest())
     return {"mods": uniq, "stickers": stickers, "avatars": avatars,
@@ -496,7 +533,8 @@ def pack(rs):
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as z:
         for m in rs["mods"]:
             entry = {"uid": m["uid"], "name": m["name"], "author": m["author"], "stickers": [], "avatars": [],
-                     "texts": {it["file"][:-4]: it["text"] for it in m["stickers"] if it.get("text")}}
+                     "texts": {it["file"][:-4]: it["text"] for it in m["stickers"] if it.get("text")},
+                     "means": {it["file"][:-4]: it["means"] for it in m["stickers"] if it.get("means")}}
             for kind in KINDS:
                 for it in m[kind]:
                     z.writestr(f"{m['uid']}/{kind}/{it['file']}", it["png"])
@@ -545,8 +583,10 @@ def unpack(data, dest_dir):
         with open(os.path.join(folder, "mod.json"), "w", encoding="utf-8") as f:
             texts = m.get("texts") if isinstance(m.get("texts"), dict) else {}
             texts = {str(k)[:40]: text_value(v) for k, v in list(texts.items())[:MAX_STICKERS] if text_value(v)}
+            means = m.get("means") if isinstance(m.get("means"), dict) else {}
+            means = {str(k)[:40]: means_value(v) for k, v in list(means.items())[:MAX_STICKERS] if means_value(v)}
             json.dump({"name": str(m.get("name", uid))[:60], "author": str(m.get("author", ""))[:40],
-                       "texts": texts}, f,
+                       "texts": texts, "means": means}, f,
                       ensure_ascii=False)
         made.append(folder)
     return made

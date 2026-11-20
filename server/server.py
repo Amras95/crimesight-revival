@@ -462,6 +462,7 @@ def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", 
     app["room"] = modroom.ModRoom(mods, mods_dir, owner=owner,
                                   offers_dir=None if player_mods == "ignore" else os.path.join(data_dir, "mods_offers"),
                                   auto_accept=player_mods == "accept", names=mod_names)
+    api.hub.mod_room = app["room"]      # las IA miran a que sticker del juego equivale cada sticker de mod
     return app
 
 

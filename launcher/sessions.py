@@ -67,9 +67,10 @@ def _play(ctx, game_dir, url, rs=None, watch=None, every=3):
         stop.set()
 
 
-def _own_watcher(ctx, cfg, rs):
+def _own_watcher(ctx, cfg, rs, srv=None):
     """Recarga en caliente de TUS mods mientras juegas solo (con el plugin de BepInEx): si cambias
-    imagenes o activas/desactivas un mod, el juego lo recibe."""
+    imagenes o activas/desactivas un mod, el juego lo recibe (y el servidor, para que las IA sepan
+    a que sticker del juego equivale cada uno)."""
     gd = cfg["game_dir"]
     state = {"hash": rs["hash"]}
 
@@ -81,6 +82,8 @@ def _own_watcher(ctx, cfg, rs):
             return
         state["hash"] = new["hash"]
         core.write_live(new, gd)
+        if srv is not None:
+            srv.room.set_base([m["folder"] for m in new["mods"]], {m["folder"]: m["name"] for m in new["mods"]})
         ctx.log(t("mods_live_updated"))
     return check
 
@@ -237,14 +240,16 @@ def _first(ctx, check):
 def solo(ctx, cfg):
     gd = cfg["game_dir"]
     port = int(cfg.get("port", core.DEFAULT_PORT))
-    srv = core.LocalServer(public=False, port=port).start()
+    rs = core.my_room_set(cfg)
+    # el servidor tambien tiene tus mods: las IA miran a que sticker del juego equivale cada uno
+    srv = core.LocalServer(public=False, port=port, mods=[m["folder"] for m in rs["mods"]],
+                           names={m["folder"]: m["name"] for m in rs["mods"]}).start()
     ctx.log(t("srv_local_on"))
     try:
-        rs = core.my_room_set(cfg)
         url = f"http://127.0.0.1:{port}"
         stages = _stages(ctx, cfg, url, "", core.steam_account()[0], srv=srv)
         _first(ctx, stages)
-        _play(ctx, gd, url, rs, watch=_both(_own_watcher(ctx, cfg, rs), stages))
+        _play(ctx, gd, url, rs, watch=_both(_own_watcher(ctx, cfg, rs, srv), stages))
     finally:
         srv.stop()
         ctx.log(t("srv_stopped"))

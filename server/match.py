@@ -13,6 +13,7 @@ import asyncio, json, logging, random, secrets, time
 import os
 
 import ai
+import modpack
 import matchlog
 import profiles
 import stats
@@ -129,6 +130,27 @@ STAGE_WAIT = {
 BOT_STAMPS = [(28, 0, "hello"), (8, 1, "goodJob"), (37, 2, "justMoment"), (29, 3, "smirk"), (1, 8, "why"),
               (31, 10, "worried"), (2, 11, "noWay"), (4, 12, "relieved"), (5, 13, "frightened"), (32, 14, "scream"),
               (34, 15, "please"), (0, 16, "roger")]
+_BOT_STAMP = {st[0]: st for st in BOT_STAMPS}
+# Con que contesta una IA a cada sticker (por tipo: vale para todas sus versiones, la normal, la de cada
+# personaje y las de pago). Si hay dos, elige una al azar.
+BOT_REPLIES = {28: (28,),        # Hola -> Hola
+               8: (8,),          # Bien -> Bien
+               0: (8,),          # Entendido -> Bien (no se contesta "Entendido" a un "Entendido")
+               1: (37,),         # ¿Por que? -> Un momento
+               2: (2, 5),        # ¡No puede ser! -> ¡No puede ser! o Asustado
+               4: (4, 8),        # Aliviado -> Aliviado o Bien
+               5: (31, 5),       # Asustado -> Preocupado o Asustado
+               32: (5, 32),      # Grito -> Asustado o Grito
+               31: (31, 34),     # Preocupado -> Preocupado o Por favor
+               34: (0, 37),      # Por favor -> Entendido o Un momento
+               37: (0,),         # Un momento -> Entendido
+               29: (29, 1),      # Sonrisa picara -> Sonrisa picara o ¿Por que?
+               30: (1,)}         # Sospechoso -> ¿Por que?
+# A un sticker de mod solo se le contesta si su mod dice a que sticker del juego equivale ("means" en mod.json);
+# si no, nadie: no se sabe que dice y cualquier respuesta podria no pegar.
+# Sospecha de asesino/victima (24-27) y "Aqui tienes a tu asesino!" de Irene (38): solo contesta "Entendido"
+# una IA del bando de quien lo manda (que la del otro bando reaccione pareceria una pista)
+TEAM_ROGER_STAMPS = {24, 25, 26, 27, 38}
 BOT_STAMP_CHANCE = 0.7          # probabilidad de que alguna IA conteste a un sticker
 BOT_STAMP_QUIET = 2.5           # segundos sin contestar despues de hacerlo (para no llenar la pantalla)
 ROOM_STAMP_ROW = 92.5           # en la sala, lo que baja el sticker por cada fila de la lista de jugadores
@@ -144,6 +166,10 @@ IRENE_PICK_PINGS = {27, 28, 29}   # pings de Irene sobre un personaje ("Aqui tie
                                   # registrar): Moriarty IA lo movera este turno
 IRENE_PLACE_PINGS = {26, 27, 28, 30}   # despues, un ping de Irene en el suelo: a donde lo lleva
 IRENE_KILLER_STAMP = 38         # el sticker de Irene "Aqui tienes a tu asesino!" (es un sticker, no un ping)
+# Canal privado de Irene y Moriarty: los pings de Irene (26-30), los stickers que responden a ellos y su sticker
+# solo los ve el bando de Moriarty (Stamp.IsShowCheck). NO_PING: pingType de un sticker que no responde a un ping.
+IRENE_PINGS = range(26, 31)
+NO_PING = 34
 IRENE_MAX_PICKS = 2
 # Watson: "Sospecho que es el asesino" (ping 9 o su sticker) o "Peligro" (ping 2) sobre alguien -> Sherlock IA
 # lo vigila y al final lo acusa; "No creo que sea el asesino" (ping 10 o su sticker) -> lo olvida. Watson casi
@@ -586,8 +612,18 @@ class Room:
 
     async def bot_stamp(self, sess, kw, eligible=None):
         """Un jugador manda un sticker: a veces una IA (rara vez dos) contesta, para que no parezca que
-        juegas solo. Si es uno de los gratuitos del juego contesta con el mismo ("Hola" -> "Hola"); si no
-        (de pago o de un mod), con uno gratuito al azar. Lo ve quien vio el del jugador."""
+        juegas solo, con lo que pega segun BOT_REPLIES (siempre un sticker gratuito). Lo ve quien vio el
+        del jugador. Un sticker de mod cuenta como el sticker del juego al que equivale; si no equivale a
+        ninguno, no se contesta."""
+        try:
+            stamp, ping = int(kw.get("type", -1)), int(kw.get("pingType", NO_PING))
+        except (TypeError, ValueError):
+            return
+        if ping != NO_PING:          # contesta a un ping (p. ej. "Entendido" a "Yo controlare a X"): no se mete nadie
+            return
+        stamp = self.mod_means(stamp)
+        if stamp not in BOT_REPLIES and stamp not in TEAM_ROGER_STAMPS:
+            return
         now = time.time()
         if now < self.stamp_quiet or random.random() > BOT_STAMP_CHANCE or sess.player_id not in self.members:
             return
@@ -597,14 +633,19 @@ class Room:
             base_y = int(kw.get("posposY", 0))
         except (TypeError, ValueError):
             return
-        try:
-            same = next((st for st in BOT_STAMPS if st[0] == int(kw.get("type", -1))
-                         and int(kw.get("setIndex", 0) or 0) == 0), None)
-        except (TypeError, ValueError):
-            same = None
         bots = self.bots()
         if eligible and any(b in eligible for b in bots):     # mensaje privado de un bando: contesta ese bando
             bots = [b for b in bots if b in eligible]
+        team = self.private_team(sess, kw)
+        if team:                     # privado: solo contesta ese bando, y solo lo ven ellos
+            bots = [b for b in bots if self.side(b) == team]
+            eligible = self.team_members(team, eligible)
+        if stamp in TEAM_ROGER_STAMPS:
+            replies = (0,)
+            if self.phase in IN_MATCH:
+                bots = [b for b in bots if self.side(b) == self.side(sess.player_id)]
+        else:
+            replies = BOT_REPLIES[stamp]
         if not bots:
             return
         for n, pid in enumerate(random.sample(bots, 2 if len(bots) > 1 and random.random() < 0.2 else 1)):
@@ -612,7 +653,7 @@ class Room:
             if self.hub.rooms.get(self.id) is not self or pid not in self.members:
                 return
             idx = self.member_index(pid)
-            typ, data_index, text = same or random.choice(BOT_STAMPS)
+            typ, data_index, text = _BOT_STAMP[random.choice(replies)]
             msg = dict(kw, id=idx, type=typ, setIndex=0, dataIndex=data_index)
             if "createId" in kw:            # en partida: el sticker sale junto al del jugador y en el registro
                 self.stamp_seq += 1
@@ -623,6 +664,32 @@ class Room:
                 msg["posposY"] = round(base_y - ROOM_STAMP_ROW * (idx - sender))
             targets = None if eligible is None else set(eligible) | {sess.player_id}
             await self.hub.emit(self.topic, msg, var=self.vars, eligible=targets)
+
+    def mod_means(self, stamp):
+        """Tipo del sticker del juego al que equivale un sticker de mod (el propio tipo si no es de un mod o
+        no equivale a ninguno)."""
+        room = getattr(self.hub, "mod_room", None)
+        if room is None or stamp in BOT_REPLIES or stamp in TEAM_ROGER_STAMPS:
+            return stamp
+        means = next((s.get("means") for s in room.rs.get("stickers", []) if s.get("type") == stamp), None)
+        return modpack.MEANS.get(means, stamp)
+
+    def private_team(self, sess, kw):
+        """Bando que puede ver un mensaje privado, o None si lo ve todo el mundo. Como en el juego
+        (Stamp.IsShowCheck), solo son privados del bando de Moriarty el sticker de Irene "Aqui tienes a tu
+        asesino!", sus pings y los stickers que responden a sus pings; el resto de stickers los ve todo el mundo."""
+        try:
+            typ, ping = int(kw.get("type", -1)), int(kw.get("pingType", NO_PING))
+        except (TypeError, ValueError):
+            return None
+        tag = kw.get("tag")
+        if (tag == "stamp" and (typ == IRENE_KILLER_STAMP or ping in IRENE_PINGS)) or \
+                (tag == "ping" and typ in IRENE_PINGS):
+            return "moriarty"
+        return None
+
+    def team_members(self, team, eligible=None):
+        return {p for p in self.members if self.side(p) == team and (eligible is None or p in eligible)}
 
     async def bot_claim(self, sess, kw, eligible=None):
         """Un humano senala un personaje con un ping ("Yo controlare a X", "Movere a X"... o el que manda
@@ -794,10 +861,13 @@ class Room:
             x, y, z = (int(kw.get(k, 0)) for k in ("posposX", "posposY", "posposZ"))
         except (TypeError, ValueError):
             x = y = z = 0
+        team = self.private_team(sess, kw)
+        if team:                     # contesta a algo privado de su bando: solo lo ven ellos
+            eligible = self.team_members(team, eligible)
         msg = {"tag": "stamp", "createId": (4000 + self.stamp_seq) * 16 + idx, "id": idx, "type": typ_s,
                "setIndex": 0, "dataIndex": data_index, "posposX": x + 14, "posposY": y, "posposZ": z,
                "isClick": 1, "liveTime": 0, "parentCreateId": 0, "name": self.members[pid]["name"],
-               "logMsgId": "ctg_name_log_stamp_" + text, "pingType": 34, "responseMsgId": "", "pingName": "",
+               "logMsgId": "ctg_name_log_stamp_" + text, "pingType": NO_PING, "responseMsgId": "", "pingName": "",
                "pingPlayerName": "", "pingPlayerId": 0, "ignore": 0, "isCutScene": 0}
         targets = None if eligible is None else set(eligible) | {sess.player_id}
         await self.hub.emit(self.topic, msg, var=self.vars, eligible=targets)
