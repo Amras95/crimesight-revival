@@ -1852,7 +1852,7 @@ class Room:
             acts = list(extra.get(role, [])) + list(extra.get(pid, [])) + sorted(self.events.get(pid, ()))
             u = self.hub.api.s.user(pid)
             pts = stats.record_match(u, role, outcome, acts, self.current_stage or self.settings.get("stage", ""),
-                                     match_id=getattr(self, "match_id", None), level=self.level())
+                                     match_id=getattr(self, "match_id", None), level=self.level(), finish=reason)
             log.info("Sala %s: %s (%s) %s, +%s puntos -> %s", self.id, m["name"], ROLE_KEY.get(role, role),
                      {"win": "GANA", "lose": "PIERDE", "draw": "EMPATA", "abandon": "ABANDONA"}[outcome],
                      pts, stats.summary(u))
