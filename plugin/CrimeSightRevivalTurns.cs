@@ -73,6 +73,40 @@ namespace CrimeSightRevival.Mods
         }
         static bool _timeLogged;
         static int _chosen;          // turnos elegidos en la ventana (0 = no se ha tocado)
+        static OutGameRoomPopupRoomSetting _win;   // la ventana de ajustes abierta
+
+        // Escribir los turnos en la casilla: el juego nunca conecto esa casilla (el ajuste estaba escondido),
+        // asi que el numero se pasa a la barra, como si se hubiera movido (y se activa "Aplicar").
+        static void TypedTurns(OutGameRoomPopupRoomSetting win, string text)
+        {
+            try
+            {
+                if (win == null || win.TurnSlider == null || win.TurnInputField == null) return;
+                int now = Mathf.RoundToInt(win.TurnSlider.value);
+                if (!int.TryParse((text ?? "").Trim(), out int v))
+                {
+                    win.TurnInputField.text = now.ToString();     // no es un numero: se deja el de la barra
+                    return;
+                }
+                v = Mathf.Clamp(v, MIN, MAX);
+                win.TurnInputField.text = v.ToString();
+                if (v != now) win.TurnSlider.value = v;           // avisa a la barra -> AfterSlider
+                else AfterSlider(win, v);
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Turnos] casilla: " + e.Message); }
+        }
+
+        // Lo que pone la casilla al pulsar "Aplicar" (por si se pulsa sin haber salido de ella)
+        static void ReadTypedTurns()
+        {
+            try
+            {
+                var win = _win;
+                if (win == null || win.TurnInputField == null || !win.gameObject.activeInHierarchy) return;
+                if (int.TryParse((win.TurnInputField.text ?? "").Trim(), out int v)) _chosen = Mathf.Clamp(v, MIN, MAX);
+            }
+            catch { }
+        }
 
         // el juego nunca llego a activar "Aplicar" al mover esta barra (el ajuste estaba escondido):
         // se activa aqui cuando los turnos elegidos no son los que ya tiene la sala
@@ -91,6 +125,7 @@ namespace CrimeSightRevival.Mods
         {
             try
             {
+                ReadTypedTurns();
                 if (_chosen <= 0 || __result == null) return;
                 var boxed = new Il2CppSystem.Int32 { m_value = _chosen }.BoxIl2CppObject();
                 if (__result.ContainsKey("max_turn")) __result["max_turn"] = boxed;
@@ -108,10 +143,28 @@ namespace CrimeSightRevival.Mods
                 {
                     __instance.MIN_TURN = MIN; __instance.MAX_TURN = MAX;
                     if (__instance.TurnSlider != null) { __instance.TurnSlider.minValue = MIN; __instance.TurnSlider.maxValue = MAX; }
-                    if (__instance.TurnInputField != null) __instance.TurnInputField.characterLimit = 2;
+                    if (__instance.TurnInputField != null)
+                    {
+                        __instance.TurnInputField.characterLimit = 2;
+                        // solo numeros, igual que la casilla del tiempo: el juego le pone su propio filtro (Val)
+                        // al abrir la ventana; la de los turnos usa el mismo
+                        if (__instance.SecondsInputField != null)
+                            __instance.TurnInputField.onValidateInput = __instance.SecondsInputField.onValidateInput;
+                    }
                     __instance.SetText();
                 }
                 catch (Exception e) { Plugin.L.LogWarning("[Turnos] rango: " + e.Message); }
+                // la casilla de los turnos tambien vale para escribirlos
+                try
+                {
+                    _win = __instance;
+                    var win = __instance;
+                    if (__instance.TurnInputField != null)
+                        __instance.TurnInputField.onEndEdit.AddListener(
+                            Il2CppInterop.Runtime.DelegateSupport.ConvertDelegate<UnityEngine.Events.UnityAction<string>>(
+                                new Action<string>(t => TypedTurns(win, t))));
+                }
+                catch (Exception e) { Plugin.L.LogWarning("[Turnos] casilla: " + e.Message); }
                 // la barra empieza en los turnos que tiene la sala ahora
                 try
                 {

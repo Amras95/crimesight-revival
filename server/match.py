@@ -70,6 +70,38 @@ ACT_NOT_TARGET = "ctg_name_result_action_proven_pawnNotTarget"
 ACT_DOG_HIT = "ctg_name_result_action_wildDogAttackedEveryoneButKiller"
 ACT_GAS_HIT = "ctg_name_result_action_injured_noKillerWithGasLeak"
 DEFAULT_PAWNS = 6            # personajes por partida (la mansion tiene 6 sospechosos)
+DEFAULT_TURNS = 10           # turnos de una partida normal (para los que estan hechos los perros y el gas)
+
+
+def hazard_window(start, end, base, max_turn):
+    """Perros y gas con otro numero de turnos. Los turnos en que pueden salir (los del escenario, pensados
+    para 10 turnos) se estiran o encogen en proporcion: de 4 a 8 en 10 turnos es de 2 a 5 en 6 y de 8 a 16
+    en 20. Y la probabilidad, que empieza en `base` y se dobla en cada fallo, crece mas despacio o mas
+    deprisa para que la de que salgan en todo el tramo sea la misma que con 10 turnos.
+    Devuelve (inicio, fin, cuanto se multiplica la probabilidad en cada fallo)."""
+    if max_turn == DEFAULT_TURNS or end < start:
+        return start, end, 2.0
+    f = max_turn / DEFAULT_TURNS
+    s = max(1, int(start * f + 0.5))
+    e = min(max_turn, max(s, int(end * f + 0.5)))
+    n0, n = end - start + 1, e - s + 1
+
+    def chance(g, rolls):
+        miss, p = 1.0, float(base)
+        for _ in range(rolls):
+            miss *= 1 - min(p, 100.0) / 100
+            p *= g
+        return 1 - miss
+
+    target = chance(2.0, n0)
+    lo, hi = 0.25, 64.0
+    for _ in range(60):                       # busqueda binaria de la g que da la misma probabilidad
+        mid = (lo + hi) / 2
+        if chance(mid, n) < target:
+            lo = mid
+        else:
+            hi = mid
+    return s, e, (lo + hi) / 2
 COUNTDOWN_SECONDS = 3
 DEFAULT_AI_DIFFICULTY = "normal"   # se puede cambiar con --ai-difficulty
 STAGES = ["Stage_Yokn", "Stage_Yokn_v1030", "Stage_Yokn_v1040", "Stage_Yokn_v1050", "Stage_Yokn_v1060"]
@@ -1824,12 +1856,13 @@ class Room:
             base = int(md.get("gaspipeSpawnProb", 6)); maxc = int(self.settings.get("gaspipe_count", 1) or 0)
             locates = int(ref.get("gaspipeLocateCount", 0) or 0)
             active = alive = [g for g in ref.get("gaspipeList") or [] if isinstance(g, dict)]
+        start, end, growth = hazard_window(start, end, base, int(self.settings.get("max_turn") or DEFAULT_TURNS))
         if not (start <= turn <= end) or maxc <= 0 or locates < maxc or len(alive) >= maxc:
             return -1
         if turn == start or kind not in self.hazard_prob:
             self.hazard_prob[kind] = base
         if random.randrange(100) >= self.hazard_prob[kind]:
-            self.hazard_prob[kind] *= 2
+            self.hazard_prob[kind] *= growth
             return -1
         self.hazard_prob[kind] = base
         used = {int(x.get("spawnLocateIndex", -1)) for x in active}
