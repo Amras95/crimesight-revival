@@ -137,19 +137,21 @@ mods\
   cambies mensajes o se actualice el lanzador. Solo se quita un sticker si borras o renombras su imagen (el
   juego pone «Hola» en su hueco).
 
-### Recarga en caliente (opcional, con BepInEx)
+### Recarga en caliente (con BepInEx, activada por defecto)
 
-Sin nada más, cambiar de mods necesita volver a abrir el juego. Si quieres que los cambios aparezcan **con el
-juego abierto**, pulsa **Mods → Recarga en caliente → Activar**:
+Los cambios de mods aparecen **con el juego abierto**, sin reiniciarlo. Esto, el cursor propio, los modelos y
+los escenarios personalizados funcionan gracias a BepInEx:
 
-- El lanzador descarga [BepInEx](https://github.com/BepInEx/BepInEx) (el cargador de mods oficial de los
-  juegos de Unity, 34 MB) **de su GitHub y solo si lo activas**: no viene incluido. Lo instala en la carpeta
-  del juego junto al plugin del proyecto. El primer arranque tarda un minuto mientras BepInEx se prepara.
+- Al abrirse, el lanzador descarga [BepInEx](https://github.com/BepInEx/BepInEx) (el cargador de mods oficial
+  de los juegos de Unity, 34 MB) **de su GitHub**: no viene incluido. Lo instala en la carpeta del juego junto
+  al plugin del proyecto. El primer arranque tarda un minuto mientras BepInEx se prepara. Si la descarga
+  falla, puedes jugar igualmente sin él y el lanzador lo vuelve a intentar la próxima vez.
 - Mientras juegas, el lanzador vigila tu carpeta de mods: si añades una imagen, cambias un mensaje o
   activas/desactivas un mod, aparece en el juego en unos segundos. Si eres anfitrión, también le llega a tu
   sala; si estás en la sala de otro, recibes sus cambios.
 - Los cambios nunca se aplican a mitad de partida (se esperan al menú), para que todos tengan la misma lista.
-- **Quitar BepInEx** (o «Dejar el juego original») lo borra todo y el juego vuelve a estar como siempre.
+- **Mods → Recarga en caliente → Quitar BepInEx** (o «Dejar el juego original») lo borra todo y el juego vuelve
+  a estar como siempre. Si lo quitas, el lanzador no lo vuelve a instalar hasta que pulses **Activar**.
 
 ## Creador de escenarios
 
@@ -184,7 +186,7 @@ como uno nuevo. Los escenarios originales no se tocan. Para jugarlos hace falta 
 - Recompensas por puntos y nivel como en el original. El evento Project Winter queda abierto con su
   avatar desbloqueado. El contenido Deluxe sigue dependiendo de tenerlo en Steam.
 - Los logros de Steam se siguen consiguiendo (los gestiona el propio juego con Steam).
-- Mods de stickers y avatares nuevos, compartidos con la sala, con recarga en caliente opcional.
+- Mods de stickers y avatares nuevos, compartidos con la sala, con recarga en caliente.
 - Creador de escenarios, con escenarios compartidos con la sala.
 - Las IA contestan a tus stickers con otro al azar.
 - Controles con mando (Xbox, PlayStation, Switch, Steam Deck), con la recarga en caliente activada. Los

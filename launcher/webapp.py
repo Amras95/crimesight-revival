@@ -54,6 +54,8 @@ class Api:
         self._mods_answer = None
         self._mods_event = threading.Event()
         self._update = None
+        self._bep_lock = threading.Lock()
+        self._bep_thread = None
 
     # ---------------------------------------------------------------- estado
     def init(self):
@@ -92,6 +94,7 @@ class Api:
             state["update"] = self._update_info()
         if _browser:        # los avisos de "cargando" llegan por otro camino y pueden adelantar a esta respuesta
             js("loading", None)
+        self._bep_auto()
         return state
 
     def _check_update(self):
@@ -202,6 +205,7 @@ class Api:
         self._mode = mode
         try:
             core.ensure_keys(self._cfg["game_dir"])
+            self._bep_ready()
             if mode == "solo":
                 sessions.solo(self, self._cfg)
             elif mode == "host":
@@ -268,6 +272,7 @@ class Api:
                 art.extract(self._cfg["game_dir"], core.app_dir())
             except Exception:  # noqa: BLE001
                 pass
+        self._bep_auto()
         return self._state()
 
     def restore(self):
@@ -445,7 +450,53 @@ class Api:
         core.cursor_remove()
         return self._cursor_apply()
 
-    # recarga en caliente (BepInEx, opcional)
+    # recarga en caliente (BepInEx): activada por defecto. El lanzador la instala sola al arrancar, salvo
+    # que el jugador la haya quitado (bep_removed en la configuracion, hasta que la vuelva a activar).
+    def _bep_wanted(self):
+        gd = self._cfg.get("game_dir")
+        return core.is_game_dir(gd) and not self._cfg.get("bep_removed") and not core.live_mode(gd)
+
+    def _bep_auto(self):
+        """Al abrir el lanzador (o al elegir la carpeta del juego) instala BepInEx si falta, sin esperar.
+        Con el juego abierto no: se intenta al empezar a jugar."""
+        if not self._bep_wanted() or core.game_running():
+            return
+        if self._bep_thread is not None and self._bep_thread.is_alive():
+            return
+        self._bep_thread = threading.Thread(target=self._bep_install, args=(self._cfg["game_dir"],), daemon=True)
+        self._bep_thread.start()
+
+    def _bep_install(self, gd):
+        """Instala BepInEx y lo cuenta en el registro. Si falla, se juega sin el y se reintenta otra vez."""
+        with self._bep_lock:
+            if core.live_mode(gd):
+                return
+            self.log(t("bep_installing_log"))
+            js("bepProgress", t("bep_installing_log"), None)      # aviso con barra en la ventana principal
+            try:
+                core.install_bepinex(gd, progress=lambda pct: js("bepProgress", t("bep_installing", pct=pct), pct))
+                self.log(t("bep_ready_log"), "ok")
+                js("bepDone", t("bep_installed"))
+            except ValueError as e:
+                self.log(t("bep_failed_log", err=e), "err")
+                js("bepDone", str(e), True)
+            except Exception as e:  # noqa: BLE001
+                logging.getLogger("crimesight").exception("No pude instalar BepInEx")
+                self.log(t("bep_failed_log", err=t("err_unexpected", err=e)), "err")
+                js("bepDone", t("err_unexpected", err=e), True)
+
+    def _bep_ready(self):
+        """Antes de abrir el juego: espera a la instalacion en marcha o la vuelve a intentar."""
+        th = self._bep_thread
+        if th is not None and th.is_alive():
+            self.log(t("bep_wait"))
+            th.join()
+        elif self._bep_wanted() and not core.game_running():
+            self._bep_install(self._cfg["game_dir"])
+        gd = self._cfg.get("game_dir")
+        if not core.IS_WINDOWS and core.live_mode(gd) and core.linux_launch_option_ok() is not True:
+            self.log(t("bep_linux_note", opt=core.LINUX_LAUNCH_OPTION), "err")
+
     def bep_state(self):
         st = core.bepinex_state(self._cfg.get("game_dir"))
         st["busy"] = self._busy
@@ -459,32 +510,28 @@ class Api:
         gd = self._cfg.get("game_dir")
         if not gd:
             return {"error": t("err_no_game")}
+        if self._bep_thread is not None and self._bep_thread.is_alive():
+            return {"ok": True}                  # ya se esta instalando: el aviso llega al terminar
         if self._busy or core.game_running():
             return {"error": t("bep_busy")}
-        self._busy = True
-
-        def work():
-            try:
-                core.install_bepinex(gd, progress=lambda pct: js("bepProgress", t("bep_installing", pct=pct)))
-                js("bepDone", t("bep_installed"))
-            except ValueError as e:
-                js("bepDone", str(e), True)
-            except Exception as e:  # noqa: BLE001
-                logging.getLogger("crimesight").exception("No pude instalar BepInEx")
-                js("bepDone", t("err_unexpected", err=e), True)
-            finally:
-                self._busy = False
-        threading.Thread(target=work, daemon=True).start()
+        self._cfg.pop("bep_removed", None)   # vuelve a instalarse sola
+        core.save_config(self._cfg)
+        self._bep_thread = threading.Thread(target=self._bep_install, args=(gd,), daemon=True)
+        self._bep_thread.start()
         return {"ok": True}
 
     def bep_uninstall(self):
         gd = self._cfg.get("game_dir")
         if self._busy or core.game_running():
             return {"error": t("bep_busy")}
+        if self._bep_thread is not None and self._bep_thread.is_alive():
+            return {"error": t("bep_wait")}
         try:
             core.uninstall_bepinex(gd)
         except OSError as e:
             return {"error": t("err_unexpected", err=e)}
+        self._cfg["bep_removed"] = True      # no se vuelve a instalar sola hasta que la activen
+        core.save_config(self._cfg)
         return {"ok": True, "msg": t("bep_removed")}
 
     # ---------------------------------------------------------------- modelos 3D
