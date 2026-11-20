@@ -15,6 +15,8 @@
 //   Stick der.: mover la camara              LB / RB: girar la camara   LT / RT: alejar / acercar
 //   X: indicadores y stickers                Y: ver sospechosos         Cruceta: flechas
 //   Start: Finalizar turno / Omitir accion   Back: Registro
+//   Crear sala, sala de espera y sus ventanas: B / Start / Back (y LB / RB, X / Y) pulsan su boton; cruceta
+//   arriba: la rueda de ajustes (ver CrimeSightRevivalPadUi.cs)
 //
 // Vibracion: un toque al elegir un personaje y otro al confirmarle una orden; un latido cuando dos
 // personajes se quedan a solas con un arma (escena de comprobacion del asesinato) hasta que empieza el
@@ -32,7 +34,7 @@ using UnityEngine.TextCore;
 
 namespace CrimeSightRevival.Mods
 {
-    static class Pad
+    static partial class Pad
     {
         // ------------------------------------------------------------ XInput
         [StructLayout(LayoutKind.Sequential)]
@@ -86,7 +88,7 @@ namespace CrimeSightRevival.Mods
         static bool _rotating, _connected, _announced;
         static readonly Dictionary<string, ushort> Buttons = new()
         {
-            ["PingStampMenu"] = X, ["ViewHint"] = Y,
+            ["PingStampMenu"] = X, ["ViewHint"] = Y, ["Cancel"] = B,          // Cancel (Esc): solo en la partida
             ["UpArrow"] = DUP, ["DownArrow"] = DDOWN, ["LeftArrow"] = DLEFT, ["RightArrow"] = DRIGHT,
         };
 
@@ -312,7 +314,7 @@ namespace CrimeSightRevival.Mods
         {
             if (!Read(out var s))
             {
-                if (_connected) { Release(); _connected = false; }
+                if (_connected) { Release(); _connected = false; HideHints(); }
                 return;
             }
             if (!_connected)
@@ -359,13 +361,17 @@ namespace CrimeSightRevival.Mods
             if (_rotating) { _cursorHeld = false; }                // mientras gira, el cursor es de la camara
             else MoveCursor(dt);
 
+            // sala de espera y sus ventanas: B / Start / Back pulsan su boton (CrimeSightRevivalPadUi.cs)
+            UiButtons(out bool startDone, out bool backDone);
+
             if (Pressed(A)) Mouse(LDOWN);
             if (Released(A)) Mouse(LUP);
-            if (Pressed(B)) Mouse(RDOWN);
-            if (Released(B)) Mouse(RUP);
+            // B: en la partida es "Cancelar" (Esc) y no el clic derecho, que abre la ventana de stickers
+            if (Pressed(B) && !_bConsumed) { if (_inGame) _bCancel = true; else Mouse(RDOWN); }
+            if (Released(B)) { if (!_bConsumed && !_bCancel) Mouse(RUP); _bConsumed = false; _bCancel = false; }
 
             // girar la camara: el juego gira mientras "CameraRotate" esta activo, segun lo que se mueva el cursor
-            bool rot = Held(LB) ^ Held(RB);
+            bool rot = !ScrollMode() && !_uiTabs && (Held(LB) ^ Held(RB));      // fuera de la partida LB/RB no hacen nada
             if (rot)
             {
                 _rotating = true;
@@ -378,14 +384,14 @@ namespace CrimeSightRevival.Mods
                 if (_rotDone != 0) { Mouse(MOVE, -_rotDone, 0); _rotDone = 0; }   // el cursor vuelve a su sitio
             }
 
-            if (Pressed(START)) TurnButton();
-            if (Pressed(BACK)) ToggleLog();
+            if (Pressed(START) && !startDone && _inGame) TurnButton();
+            if (Pressed(BACK) && !backDone && _inGame) ToggleLog();
             UpdateRumble();
             UpdateMode(s);
         }
 
         static float _wheel, _modeNext;
-        static bool _scrollMode;
+        static bool _scrollMode, _inGame, _bCancel;
 
         static void Wheel(int delta)
         {
@@ -409,6 +415,7 @@ namespace CrimeSightRevival.Mods
             }
             catch { }
             _scrollMode = !inGame || log;
+            _inGame = inGame;
             return _scrollMode;
         }
 
@@ -459,7 +466,8 @@ namespace CrimeSightRevival.Mods
         {
             StopRumble();
             if ((_now & A) != 0) Mouse(LUP);
-            if ((_now & B) != 0) Mouse(RUP);
+            if ((_now & B) != 0 && !_bConsumed && !_bCancel) Mouse(RUP);
+            _bConsumed = _bCancel = _gearHeld = _xTaken = _yTaken = false;
             if (_rotDone != 0) { Mouse(MOVE, -_rotDone, 0); _rotDone = 0; }
             _prev = _now = 0; _rotating = false;
             _lx = _ly = _rx = _ry = _lt = _rt = 0;
@@ -495,16 +503,20 @@ namespace CrimeSightRevival.Mods
         [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
         [DllImport("user32.dll")] static extern IntPtr GetActiveWindow();
         [DllImport("user32.dll")] static extern bool ClientToScreen(IntPtr h, ref Point p);
-        static int _clickStage;
+        static int _clickStage, _clickHover = 2;          // fotogramas con el cursor encima antes de pulsar
         static Point _clickBack;
 
         static bool ClickAt(UnityEngine.UI.Button b)
         {
             if (b == null || !b.gameObject.activeInHierarchy || !b.IsInteractable()) return false;
-            var rt = b.GetComponent<RectTransform>();
-            if (rt == null) return false;
+            return ClickAt(b.GetComponent<RectTransform>());
+        }
+
+        static bool ClickAt(RectTransform rt)
+        {
+            if (rt == null || !rt.gameObject.activeInHierarchy) return false;
             Camera cam = null;
-            var canvas = b.GetComponentInParent<Canvas>();
+            var canvas = rt.GetComponentInParent<Canvas>();
             if (canvas != null) { canvas = canvas.rootCanvas; if (canvas.renderMode != RenderMode.ScreenSpaceOverlay) cam = canvas.worldCamera; }
             var sp = RectTransformUtility.WorldToScreenPoint(cam, rt.TransformPoint(rt.rect.center));
             var p = new Point { x = (int)sp.x, y = Screen.height - (int)sp.y };
@@ -521,13 +533,14 @@ namespace CrimeSightRevival.Mods
         {
             if (_clickStage == 0) return;
             _lastInjected = Time.unscaledTime;
-            switch (_clickStage++)
+            int st = _clickStage++;
+            if (st <= _clickHover) return;                   // que el juego vea el cursor encima del boton
+            switch (st - _clickHover)
             {
-                case 1: case 2: break;                       // que el juego vea el cursor encima del boton
-                case 3: Mouse(LDOWN); break;
-                case 4: break;
-                case 5: Mouse(LUP); break;
-                default: SetCursorPos(_clickBack.x, _clickBack.y); _clickStage = 0; break;
+                case 1: Mouse(LDOWN); break;
+                case 2: break;
+                case 3: Mouse(LUP); break;
+                default: SetCursorPos(_clickBack.x, _clickBack.y); _clickStage = 0; _clickHover = 2; break;
             }
         }
 
@@ -564,7 +577,7 @@ namespace CrimeSightRevival.Mods
             "ps_a", "ps_b", "ps_x", "ps_y", "ps_lb", "ps_rb", "ps_lt", "ps_rt",
             "sw_a", "sw_b", "sw_x", "sw_y", "sw_lb", "sw_rb", "sw_lt", "sw_rt",
             "lstick", "rstick", "dpad", "xbox_start", "xbox_back", "ps_start", "ps_back", "sw_start",
-            "sw_back" };
+            "sw_back", "dpad_up", "dpad_down", "dpad_left", "dpad_right" };
         static readonly string[] Combos = { "xbox_lbrb", "xbox_ltrt", "ps_lbrb", "ps_ltrt", "sw_lbrb", "sw_ltrt" };
         static readonly Dictionary<string, TMP_SpriteGlyph> _glyphs = new();
         static TMP_SpriteAsset _src, _mine;
@@ -1048,11 +1061,11 @@ namespace CrimeSightRevival.Mods
             {
                 case "CameraRotate": return _rotating;
             }
-            return Buttons.TryGetValue(id, out var b) && Held(b);
+            return !Taken(id) && Buttons.TryGetValue(id, out var b) && Held(b);
         }
 
-        static bool Down(string id) => _connected && id != null && Buttons.TryGetValue(id, out var b) && Pressed(b);
-        static bool Up(string id) => _connected && id != null && Buttons.TryGetValue(id, out var b) && Released(b);
+        static bool Down(string id) => _connected && id != null && !Taken(id) && Buttons.TryGetValue(id, out var b) && Pressed(b);
+        static bool Up(string id) => _connected && id != null && !Taken(id) && Buttons.TryGetValue(id, out var b) && Released(b);
 
         static void AfterIsDown(ref bool __result, ref string id) { if (!__result && Down(id)) __result = true; }
         static void AfterIsUp(ref bool __result, ref string id) { if (!__result && Up(id)) __result = true; }

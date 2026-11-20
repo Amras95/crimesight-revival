@@ -37,6 +37,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="pad_icons.png" LogicalName="CrimeSightRevival.PadIcons.png" />
+    <EmbeddedResource Include="guide_controller.png" LogicalName="CrimeSightRevival.GuideController.png" />
     <GameRef Include="$(GameDir)\dotnet\*.dll" />
     <GameRef Include="$(GameDir)\BepInEx\core\*.dll" />
     <GameRef Include="$(GameDir)\BepInEx\interop\*.dll" />

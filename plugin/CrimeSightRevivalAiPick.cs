@@ -83,7 +83,7 @@ namespace CrimeSightRevival.Mods
         static readonly Image[] _diffImgs = new Image[5];
         static RectTransform _allRect, _freeRect, _cancelRect;
         static Image _allImg, _freeImg, _cancelImg;
-        static TextMeshProUGUI _desc, _allLabel;
+        static TextMeshProUGUI _desc, _allLabel, _freeLabel, _cancelLabel;
         static int _hover = -2;
 
         public static void Init(Harmony h)
@@ -173,8 +173,8 @@ namespace CrimeSightRevival.Mods
                 _desc = _sk.MakeText(panel, "", 26, new Vector2(0, -28), new Vector2(1020, 70), false);
                 var bs = new Vector2(300, 64);
                 _allImg = _sk.MakeButton(panel, OnlyThis[_lang], false, new Vector2(-330, -165), bs, 26, out _allRect, out _allLabel);
-                _freeImg = _sk.MakeButton(panel, Free[_lang], false, new Vector2(0, -165), bs, 26, out _freeRect, out _);
-                _cancelImg = _sk.MakeButton(panel, Cancel[_lang], false, new Vector2(330, -165), bs, 26, out _cancelRect, out _);
+                _freeImg = _sk.MakeButton(panel, Free[_lang], false, new Vector2(0, -165), bs, 26, out _freeRect, out _freeLabel);
+                _cancelImg = _sk.MakeButton(panel, Cancel[_lang], false, new Vector2(330, -165), bs, 26, out _cancelRect, out _cancelLabel);
                 _allBase = _allImg.color; _freeBase = _freeImg.color; _cancelBase = _cancelImg.color;
                 UpdateDesc(_current >= 0 ? _current : 1);
                 Plugin.L.LogInfo("[IA] elegir dificultad de " + botId + " (ahora " + (_current >= 0 ? Keys[_current] : "?") + ")");
@@ -220,8 +220,8 @@ namespace CrimeSightRevival.Mods
             gw.Body.fontSizeMin = Math.Min(14f, gw.Body.fontSize);
             _desc = gw.Body;
             _allImg = gw.AddBottomButton(OnlyThis[_lang], false, 0, 3, null, out _allRect, out _allLabel);
-            _freeImg = gw.AddBottomButton(Free[_lang], false, 1, 3, null, out _freeRect, out _);
-            _cancelImg = gw.AddBottomButton(Cancel[_lang], false, 2, 3, null, out _cancelRect, out _);
+            _freeImg = gw.AddBottomButton(Free[_lang], false, 1, 3, null, out _freeRect, out _freeLabel);
+            _cancelImg = gw.AddBottomButton(Cancel[_lang], false, 2, 3, null, out _cancelRect, out _cancelLabel);
             _allBase = _allImg != null ? _allImg.color : Color.white;
             _freeBase = _freeImg != null ? _freeImg.color : Color.white;
             _cancelBase = _cancelImg != null ? _cancelImg.color : Color.white;
@@ -230,9 +230,12 @@ namespace CrimeSightRevival.Mods
 
         static bool Over(RectTransform r, Vector2 m) => r != null && RectTransformUtility.RectangleContainsScreenPoint(r, m, null);
 
+        static bool _tagged, _taggedPad;
+
         public static void Frame()
         {
-            if (_root == null) return;
+            if (_root == null) { _tagged = false; return; }
+            if (!_tagged || _taggedPad != Pad.Active) { _tagged = true; _taggedPad = Pad.Active; try { PadTags(); } catch { } }
             Vector2 mouse = Input.mousePosition;
             int over = -1;
             for (int k = 0; k < 5; k++)
@@ -253,24 +256,46 @@ namespace CrimeSightRevival.Mods
             if (Input.GetKeyDown(KeyCode.Escape)) { Close(); return; }
             if (!Input.GetMouseButtonDown(0)) return;
             if (over >= 0) Send(Keys[over] + (_all ? "#all" : ""));
-            else if (oAll)
-            {
-                _all = !_all;
-                string lbl = _all ? AllAis[_lang] : OnlyThis[_lang];
-                if (_gw != null)
-                {
-                    _gw.SetText(_allLabel, lbl);
-                    if (_allImg != null) _allImg.color = _all ? GameWindow.Amber : Color.white;   // marcado en ambar
-                }
-                else
-                {
-                    if (_allLabel != null) _allLabel.text = lbl;
-                    _sk?.Style(_allImg, _allLabel, _all);      // "Todas las IA" se ve marcado
-                    if (_allImg != null) _allBase = _allImg.color;
-                }
-            }
+            else if (oAll) ToggleAll();
             else if (oFree) Send("free");
             else if (oCancel) Close();
+        }
+
+        static void ToggleAll()
+        {
+            _all = !_all;
+            string lbl = Pad.Tag("y") + (_all ? AllAis[_lang] : OnlyThis[_lang]);
+            if (_gw != null)
+            {
+                _gw.SetText(_allLabel, lbl);
+                if (_allImg != null) _allImg.color = _all ? GameWindow.Amber : Color.white;   // marcado en ambar
+            }
+            else
+            {
+                if (_allLabel != null) _allLabel.text = lbl;
+                _sk?.Style(_allImg, _allLabel, _all);      // "Todas las IA" se ve marcado
+                if (_allImg != null) _allBase = _allImg.color;
+            }
+        }
+
+        // ---- mando (CrimeSightRevivalPadUi.cs): B cerrar, Y "Solo esta IA / Todas", X "Dejar el hueco libre"
+        internal static bool IsOpen => _root != null;
+        internal static void PadCancel() { if (_root != null) Close(); }
+        internal static void PadAll() { if (_root != null) ToggleAll(); }
+        internal static void PadFree() { if (_root != null) Send("free"); }
+
+        /// <summary>Con mando, el icono de su boton delante del texto de los tres botones de abajo.</summary>
+        static void PadTags()
+        {
+            void Put(TextMeshProUGUI t, string btn, string text)
+            {
+                if (t == null) return;
+                if (Pad.KeyIcons != null) t.spriteAsset = Pad.KeyIcons;
+                if (_gw != null) _gw.SetText(t, Pad.Tag(btn) + text); else t.text = Pad.Tag(btn) + text;
+            }
+            Put(_allLabel, "y", _all ? AllAis[_lang] : OnlyThis[_lang]);
+            Put(_freeLabel, "x", Free[_lang]);
+            Put(_cancelLabel, "b", Cancel[_lang]);
         }
 
         static void Send(string choice)
@@ -301,7 +326,7 @@ namespace CrimeSightRevival.Mods
                 catch (Exception e) { Plugin.L.LogWarning("[IA] no pude liberar la sala: " + e.Message); }
             }
             _root = null; _allRect = _freeRect = _cancelRect = null; _allImg = _freeImg = _cancelImg = null;
-            _desc = _allLabel = null;
+            _desc = _allLabel = _freeLabel = _cancelLabel = null;
             _gw = null;
             for (int k = 0; k < 5; k++) { _diffRects[k] = null; _diffImgs[k] = null; }
         }

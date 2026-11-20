@@ -3,7 +3,7 @@ Genera plugin/pad_icons.png: los iconos de botones de mando que el plugin ensena
 del juego cuando juegas con mando (el juego solo trae iconos de teclado y raton). Dibujos propios.
   python tools/pad_icons.py
 Celdas de 64x64 en una hoja de 512x512; el orden de NAMES y COMBOS es el que usa el plugin
-(CrimeSightRevivalPad.cs). La ultima celda (abajo a la derecha) queda vacia: es el icono "nada".
+(CrimeSightRevivalPad.cs). dpad_up/down/left/right: la cruceta con esa direccion marcada. La ultima celda (abajo a la derecha) queda vacia: es el icono "nada".
 """
 import os
 from PIL import Image, ImageDraw, ImageFont
@@ -14,7 +14,7 @@ NAMES = [
     "ps_a", "ps_b", "ps_x", "ps_y", "ps_lb", "ps_rb", "ps_lt", "ps_rt",
     "sw_a", "sw_b", "sw_x", "sw_y", "sw_lb", "sw_rb", "sw_lt", "sw_rt",
     "lstick", "rstick", "dpad", "xbox_start", "xbox_back", "ps_start", "ps_back", "sw_start",
-    "sw_back",
+    "sw_back", "dpad_up", "dpad_down", "dpad_left", "dpad_right",
 ]
 # Botones dobles (girar: LB+RB; zoom: LT+RT), en celdas de 128x64 desde la fila 5, cuatro por fila
 COMBOS = [("xbox", "lb", "rb"), ("xbox", "lt", "rt"), ("ps", "lb", "rb"), ("ps", "lt", "rt"),
@@ -110,6 +110,19 @@ def dpad(S):
     return im
 
 
+def dpad_dir(S, way):
+    """La cruceta con una direccion marcada (una flecha oscura en ese brazo)."""
+    im = dpad(S)
+    d = ImageDraw.Draw(im)
+    c, a, h = S / 2, S * .11, S * .30          # centro, media anchura de la flecha, distancia de su punta
+    pts = {"up": [(c, c - h - a), (c - a, c - h + a * .6), (c + a, c - h + a * .6)],
+           "down": [(c, c + h + a), (c - a, c + h - a * .6), (c + a, c + h - a * .6)],
+           "left": [(c - h - a, c), (c - h + a * .6, c - a), (c - h + a * .6, c + a)],
+           "right": [(c + h + a, c), (c + h - a * .6, c - a), (c + h - a * .6, c + a)]}[way]
+    d.polygon(pts, fill=DARK)
+    return im
+
+
 def main():
     S = CELL * SS
     sheet = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
@@ -120,6 +133,8 @@ def main():
             im = stick("R", S)
         elif n == "dpad":
             im = dpad(S)
+        elif n.startswith("dpad_"):
+            im = dpad_dir(S, n[5:])
         else:
             im = face(n, S)
         im = im.resize((CELL, CELL), Image.LANCZOS)

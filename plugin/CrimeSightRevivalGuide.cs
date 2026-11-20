@@ -44,6 +44,7 @@ namespace CrimeSightRevival.Mods
         const float PicMinShare = 0.6f;                                    // si el texto no cabe, la captura se encoge hasta esta parte de la altura
         static OutGameTips _tips;                                          // la pantalla donde se ve
         static int _topic = -1;
+        static int _pageNo;                                                // pagina del tema (los temas largos tienen varias)
         static string _shown;                                              // lo que tiene puesto _page
         static int _lang = 1;
 
@@ -61,6 +62,8 @@ namespace CrimeSightRevival.Mods
                 Patch(h, typeof(OutGameManager), "SetRootPhase", post: nameof(AfterRootPhase));
                 Patch(h, typeof(TipsDataManager), "GetRegistTipsData", post: nameof(AfterGetTips));
                 Patch(h, typeof(OutGameTips), "SetTipsDisplay", post: nameof(AfterTipsDisplay));
+                foreach (var m in new[] { "PrevTipsPageButton", "PrevTipsPage" }) Patch(h, typeof(OutGameTips), m, pre: nameof(BeforePrevPage));
+                foreach (var m in new[] { "NextTipsPageButton", "NextTipsPage" }) Patch(h, typeof(OutGameTips), m, pre: nameof(BeforeNextPage));
                 Patch(h, typeof(OutGameTips), "CallTipsTalk", pre: nameof(BeforeTipsTalk));
                 Patch(h, typeof(OutGameTips), "RefreshTutorialList", pre: nameof(OnlyGuide));   // con la guia, solo la guia
                 Patch(h, typeof(OutGameTips), "RefreshSoloRoomList", pre: nameof(OnlyGuide));
@@ -615,6 +618,7 @@ namespace CrimeSightRevival.Mods
                 HideTutorialStart(__instance, true);
                 _page.gameObject.SetActive(true);
                 _tips = __instance;
+                if (topic != _topic) _pageNo = 0;
                 _topic = topic;
                 _shown = null;
                 SetPicture(img.transform, topic);
@@ -627,11 +631,12 @@ namespace CrimeSightRevival.Mods
         static void SetPicture(Transform parent, int topic)
         {
             var name = GuideText.Image(topic);
-            var tex = name == null ? null : PictureTexture(name);
+            var tex = _pageNo > 0 ? null : topic == PadTopic ? ControllerTexture() : name == null ? null : PictureTexture(name);
             _laidOut = null;
             if (tex == null)
             {
                 if (_pic != null) _pic.gameObject.SetActive(false);
+                PadDiagram(topic);
                 return;
             }
             if (_pic == null || _pic.transform.parent != parent)
@@ -645,6 +650,7 @@ namespace CrimeSightRevival.Mods
             }
             _pic.texture = tex;
             _pic.gameObject.SetActive(true);
+            PadDiagram(topic);
         }
 
         /// <summary>Coloca la pagina: la captura arriba, de lado a lado; el texto debajo, siempre a BodySize (las
@@ -668,12 +674,14 @@ namespace CrimeSightRevival.Mods
             float picH = 0;
             if (pic)
             {
-                float aspect = _pic.texture.width / (float)Math.Max(1, _pic.texture.height);
+                float texAspect = _pic.texture.width / (float)Math.Max(1, _pic.texture.height);
+                float aspect = _topic == PadTopic ? texAspect * PadDiagramWidth : texAspect;   // el mando lleva nombres a los lados
                 float full = w / aspect;                                 // de lado a lado (el texto va en lo que sobra)
                 float left = h - textH - Gap;                            // lo que deja libre el texto
                 picH = full <= left ? full : Math.Min(full, Math.Max(left, h * PicMinShare));
                 _pic.rectTransform.anchoredPosition = new Vector2(0, -Top);
-                _pic.rectTransform.sizeDelta = new Vector2(Math.Min(w, picH * aspect), picH);
+                _pic.rectTransform.sizeDelta = new Vector2(Math.Min(w, picH * texAspect), picH);
+                if (_topic == PadTopic) PadDiagramSize(picH);
             }
             var prt = _page.rectTransform;
             prt.anchorMin = Vector2.zero; prt.anchorMax = Vector2.one;
@@ -713,22 +721,175 @@ namespace CrimeSightRevival.Mods
         {
             if (_page == null || _topic < 0) return;
             if (Pad.KeyIcons != null && _page.spriteAsset != Pad.KeyIcons) { _page.spriteAsset = Pad.KeyIcons; _shown = null; }
-            var text = Icons(GuideText.Page(_topic, _lang));
+            var text = Icons(PageText());
+            PadDiagram(_topic);                                          // el mando de la pagina del mando (si cambia el tipo)
             if (text == _shown) { Layout(); return; }
             _page.text = text;
             _shown = text;
             Layout();
         }
 
-        /// <summary>Cada fotograma con la guia abierta: iconos, stickers, texto y sin flechas de pagina.</summary>
+        // ------------------------------------------------------------ dibujo del mando (pagina "Mando")
+        // La pagina del mando lleva arriba un mando dibujado (plugin/guide_controller.png, incrustado en la DLL; ver
+        // tools/guide_controller.py). Encima de sus botones van los iconos del mando que se usa, y al final de cada
+        // linea lo que hace ese boton (GuideText.PadLabels). Todo cuelga de la imagen y se escala con ella.
+        const int PadTopic = 2;
+        const float PadLabelCol = 0.34f;                                   // ancho de cada columna de nombres (en anchos del dibujo)
+        const float PadDiagramWidth = 1f + 2 * (PadLabelCol + 0.012f);   // ancho total (dibujo + nombres) / ancho del dibujo
+        const float PadImgW = 928f, PadCrop = 48f;                         // el dibujo esta recortado 48 px por lado (de 1024)
+        static Texture2D _padTex;
+        static bool _padTexTried;
+        static string _padKey;
+        static readonly List<(TextMeshProUGUI t, float size)> _padIcons = new();   // tamano en pixeles del dibujo (768 de alto)
+        static readonly List<TextMeshProUGUI> _padLabels = new();
+
+        // boton -> centro y tamano en la plantilla original (1024x768; al dibujo recortado se le resta PadCrop)
+        static readonly (string btn, float x, float y, float s)[] PadButtons =
+        {
+            ("lt", 290, 95, 58), ("rt", 730, 95, 58), ("lb", 272, 192, 46), ("rb", 752, 192, 46),
+            ("back", 440, 325, 46), ("start", 572, 325, 46),
+            ("y", 765, 290, 44), ("x", 700, 345, 44), ("b", 822, 347, 44), ("a", 765, 405, 44),
+            ("lstick", 393, 458, 56), ("rstick", 632, 458, 56),
+        };
+        // altura (en el dibujo) de cada linea, en el orden de GuideText.PadLabels: 8 a la izquierda y 8 a la derecha
+        static readonly float[] PadLines = { 58, 140, 240, 290, 342, 393, 445, 598 };
+
+        static void PadDiagram(int topic)
+        {
+            try
+            {
+                string st = Pad.PadStyle ?? "xbox";
+                string key = topic == PadTopic && _pic != null ? st + "|" + _lang + "|" + _pic.GetInstanceID() : null;
+                if (key == _padKey) return;
+                _padKey = key;
+                foreach (var (t, _) in _padIcons) if (t != null) UnityEngine.Object.Destroy(t.gameObject);
+                foreach (var t in _padLabels) if (t != null) UnityEngine.Object.Destroy(t.gameObject);
+                _padIcons.Clear(); _padLabels.Clear();
+                if (key == null) return;
+                var font = _page != null ? _page.font : null;
+                TextMeshProUGUI Make(string name, float x0, float y0, float x1, float y1)
+                {
+                    var go = new GameObject(name);
+                    var rt = go.AddComponent<RectTransform>();
+                    rt.SetParent(_pic.transform, false);
+                    rt.anchorMin = new Vector2(x0, y0); rt.anchorMax = new Vector2(x1, y1);
+                    rt.offsetMin = rt.offsetMax = Vector2.zero;
+                    var t = go.AddComponent<TextMeshProUGUI>();
+                    if (font != null) t.font = font;
+                    t.enableWordWrapping = false;
+                    t.raycastTarget = false;
+                    return t;
+                }
+                foreach (var (btn, x, y, sz) in PadButtons)
+                {
+                    float h = sz / 768f, w = sz / PadImgW, cx = (x - PadCrop) / PadImgW;
+                    var t = Make("CSR_PadIcon_" + btn, cx - w, 1 - y / 768f - h, cx + w, 1 - y / 768f + h);
+                    if (Pad.KeyIcons != null) t.spriteAsset = Pad.KeyIcons;
+                    string n = btn.EndsWith("stick") ? btn : st + "_" + btn;
+                    t.text = $"<sprite name=\"csr_{n}\">";
+                    t.alignment = TextAlignmentOptions.Center;
+                    _padIcons.Add((t, sz));
+                }
+                var labels = GuideText.PadLabels(_lang);
+                for (int i = 0; i < 16 && i < labels.Length; i++)
+                {
+                    bool left = i < 8;
+                    float y = 1 - PadLines[i % 8] / 768f, half = 25f / 768f;
+                    var t = left ? Make("CSR_PadLabel", -0.012f - PadLabelCol, y - half, -0.012f, y + half)
+                                 : Make("CSR_PadLabel", 1.012f, y - half, 1.012f + PadLabelCol, y + half);
+                    t.text = labels[i];
+                    t.color = new Color32(40, 40, 40, 255);
+                    t.alignment = left ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft;
+                    t.enableWordWrapping = true;                             // los largos pasan a dos lineas
+                    t.lineSpacing = -18;
+                    t.overflowMode = TextOverflowModes.Overflow;
+                    _padLabels.Add(t);
+                }
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Guia] dibujo del mando: " + e.Message); }
+        }
+
+        /// <summary>Tamanos de letra del dibujo del mando, segun lo alto que haya quedado.</summary>
+        static void PadDiagramSize(float picH)
+        {
+            float k = picH / 768f;
+            foreach (var (t, sz) in _padIcons) if (t != null) t.fontSize = sz * k * 0.95f;
+            foreach (var t in _padLabels)
+            {
+                if (t == null) continue;
+                t.enableAutoSizing = true;                               // el mismo para todos, salvo si alguno no cabe
+                t.fontSizeMax = Math.Max(10f, 36f * k);
+                t.fontSizeMin = Math.Max(8f, 20f * k);
+            }
+        }
+
+        static Texture2D ControllerTexture()
+        {
+            if (_padTex != null || _padTexTried) return _padTex;
+            _padTexTried = true;
+            try
+            {
+                using var st = typeof(Guide).Assembly.GetManifestResourceStream("CrimeSightRevival.GuideController.png");
+                if (st == null) { Plugin.L.LogWarning("[Guia] falta el dibujo del mando en la DLL"); return null; }
+                var ms = new System.IO.MemoryStream();
+                st.CopyTo(ms);
+                var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false) { name = "csr_guide_controller", hideFlags = HideFlags.DontUnloadUnusedAsset };
+                if (ImageConversion.LoadImage(tex, ms.ToArray(), false)) _padTex = tex;
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Guia] dibujo del mando: " + e.Message); }
+            return _padTex;
+        }
+
+        // ------------------------------------------------------------ paginas
+        // Un tema largo se parte en paginas con {PAGE} (GuideText). Las flechas del juego (que en sus consejos van
+        // con lo que dice el personaje) aqui pasan las paginas de la guia; el titulo lleva "pagina/total".
+        // La captura (o el dibujo del mando) solo sale en la primera pagina.
+        static string[] Pages() => (GuideText.Page(_topic, _lang) ?? "").Split(new[] { "{PAGE}" }, StringSplitOptions.None);
+
+        static string PageText()
+        {
+            var p = Pages();
+            _pageNo = Math.Max(0, Math.Min(_pageNo, p.Length - 1));
+            return p[_pageNo].TrimStart('\r', '\n');
+        }
+
+        static bool BeforePrevPage() => !Active || !TurnPage(-1);
+        static bool BeforeNextPage() => !Active || !TurnPage(1);
+
+        static bool TurnPage(int dir)
+        {
+            try
+            {
+                if (_tips == null || _topic < 0) return false;
+                int n = Pages().Length, to = Math.Max(0, Math.Min(n - 1, _pageNo + dir));
+                if (to == _pageNo) return true;
+                _pageNo = to;
+                _shown = null;
+                var img = _tips.tipsImage;
+                if (img != null) SetPicture(img.transform, _topic);
+                RefreshPage();
+                return true;
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Guia] pagina: " + e.Message); return true; }
+        }
+
+        /// <summary>Cada fotograma con la guia abierta: iconos, stickers, texto, flechas de pagina y su numero.</summary>
         static void GuideFrame()
         {
             if (!Active || _tips == null) return;
             if (Pad.KeyIcons == null) Pad.EnsureIcons();
             Stickers.Ensure();
             RefreshPage();
-            foreach (var b in new[] { _tips.prevButton, _tips.nextButton })
-                if (b != null && b.gameObject.activeSelf) b.gameObject.SetActive(false);
+            int n = _topic >= 0 ? Pages().Length : 1;
+            void Show(Button b, bool on) { if (b != null && b.gameObject.activeSelf != on) b.gameObject.SetActive(on); }
+            Show(_tips.prevButton, n > 1 && _pageNo > 0);
+            Show(_tips.nextButton, n > 1 && _pageNo < n - 1);
+            var title = _tips.tipsTitleText;
+            if (title != null && _topic >= 0)
+            {
+                string want = GuideText.TopicTitle(_topic, _lang) + $" {_pageNo + 1}/{n}";
+                if (title.text != want) title.text = want;
+            }
         }
 
         static readonly List<GameObject> _hidden = new();
@@ -764,6 +925,7 @@ namespace CrimeSightRevival.Mods
                 .Replace("{LB}", S(st + "_lb")).Replace("{RB}", S(st + "_rb")).Replace("{LT}", S(st + "_lt")).Replace("{RT}", S(st + "_rt"))
                 .Replace("{START}", S(st + "_start")).Replace("{BACK}", S(st + "_back"))
                 .Replace("{LS}", S("lstick")).Replace("{RS}", S("rstick")).Replace("{DPAD}", S("dpad"))
+                .Replace("{DUP}", S("dpad_up")).Replace("{DDOWN}", S("dpad_down")).Replace("{DLEFT}", S("dpad_left")).Replace("{DRIGHT}", S("dpad_right"))
                 .Replace("{ST_IRENE}", Stickers.Tag(38)).Replace("{ST_SUS}", Stickers.Tag(25)).Replace("{ST_NOSUS}", Stickers.Tag(24))
                 .Replace("{H}", "<color=#1f6e57>").Replace("{/H}", "</color>");
         }

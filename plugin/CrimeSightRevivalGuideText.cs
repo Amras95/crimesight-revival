@@ -2,11 +2,12 @@
 //
 // Una pagina por tema (las flechas de pagina del juego van con el dialogo de un personaje, que la guia no usa).
 // En los textos:
-//   {A} {B} {X} {Y} {LB} {RB} {LT} {RT} {LBRB} {LTRT} {START} {BACK} {LS} {RS} {DPAD}: icono del boton del
+//   {A} {B} {X} {Y} {LB} {RB} {LT} {RT} {LBRB} {LTRT} {START} {BACK} {LS} {RS} {DPAD} {DUP} {DDOWN} {DLEFT} {DRIGHT}: icono del boton del
 //   mando que se usa (Xbox, PlayStation o Switch); {ST_IRENE} {ST_SUS} {ST_NOSUS}: la imagen del sticker del juego
 //   ("Aqui tienes a tu asesino", "Sospecho que es el asesino", "No creo que sea el asesino");
 //   {H}...{/H}: resaltado en verde.
 // Espanol para el juego en espanol; ingles para los demas idiomas.
+// {PAGE} parte un tema en varias paginas (se pasan con las flechas de la pantalla).
 // Algunas paginas llevan una captura arriba, de lado a lado, y el texto debajo (ver Images y tools/guide_images.py).
 namespace CrimeSightRevival.Mods
 {
@@ -51,16 +52,10 @@ namespace CrimeSightRevival.Mods
                 "• La sesión termina al cerrar el juego o al pulsar {H}«Terminar sesión»{/H}.\n" +
                 "• Una {H}campana{/H} arriba avisa de una versión nueva: púlsala para actualizar.\n" +
                 "• Tus partidas, victorias y puntos se guardan en tu PC.",
-            "<size=85%><pos=7.5%>Alejar<pos=22.25%>Girar<pos=70.25%>Girar<pos=82.75%>Acercar</size>\n" +
-                "<size=130%><pos=8%>{LT}<pos=22%>{LB}<pos=70%>{RB}<pos=84%>{RT}</size>\n" +
-                "<size=85%><pos=36%>Registro<pos=51.25%>Fin turno<pos=71.75%>Sospechosos</size>\n" +
-                "<size=130%><pos=38%>{BACK}<pos=54%>{START}<pos=76%>{Y}</size>\n" +
-                "<size=85%><pos=7.5%>Cursor<pos=66%>Stickers<pos=81%>Clic derecho</size>\n" +
-                "<size=130%><pos=8%>{LS}<pos=68%>{X}<pos=84%>{B}</size>\n" +
-                "<size=85%><pos=20.75%>Flechas<pos=59.5%>Cámara<pos=77%>Clic</size>\n" +
-                "<size=130%><pos=22%>{DPAD}<pos=60%>{RS}<pos=76%>{A}</size>\n\n\n" +
-                "• Pulsa {LS} para cambiar la velocidad del cursor, o {RS} para la de la cámara: lenta, media o rápida (el mando vibra 1, 2 o 3 veces).\n" +
-                "• Funciona con mandos de Xbox, PlayStation, Switch y Steam Deck a través de Steam Input. Los iconos de los botones se adaptan al tuyo.",
+            "{PAGE}• Mientras usas el mando, cada botón que puede pulsar lleva su icono al lado. En los menús, {START} acepta, {B} vuelve o cierra y {BACK} hace lo secundario.\n" +
+                "• En la sala, {Y} elige jugador, {DLEFT} lo expulsa (o cambia la dificultad de la IA), {DRIGHT} añade jugadores y {DDOWN} quita los huecos vacíos.\n" +
+                "• En los ajustes, {LB} y {RB} cambian de pestaña; en el perfil, {Y} cambia el avatar. En la partida, {B} omite los diálogos.\n" +
+                "• Pulsa {LS} o {RS} para cambiar la velocidad del cursor o de la cámara (el mando vibra 1, 2 o 3 veces). Funciona con mandos de Xbox, PlayStation, Switch y Steam Deck a través de Steam Input.",
             "En la sala, pulsa {H}«Expulsar»{/H} sobre una IA para elegir su dificultad, aplicarla a {H}todas las IA{/H} o {H}dejar el hueco libre{/H} para otro jugador.\n\n" +
                 "• {H}Fácil{/H}: comete errores; ideal para aprender.\n" +
                 "• {H}Normal{/H}: juega con cabeza, sin pasarse.\n" +
@@ -109,16 +104,10 @@ namespace CrimeSightRevival.Mods
                 "• The session ends when you close the game or click {H}\"End session\"{/H}.\n" +
                 "• A {H}bell{/H} at the top means a new version is out: click it to update.\n" +
                 "• Your matches, wins and points are saved on your PC.",
-            "<size=85%><pos=6%>Zoom out<pos=21.5%>Rotate<pos=69.5%>Rotate<pos=82.75%>Zoom in</size>\n" +
-                "<size=130%><pos=8%>{LT}<pos=22%>{LB}<pos=70%>{RB}<pos=84%>{RT}</size>\n" +
-                "<size=85%><pos=39.75%>Log<pos=52%>End turn<pos=74%>Suspects</size>\n" +
-                "<size=130%><pos=38%>{BACK}<pos=54%>{START}<pos=76%>{Y}</size>\n" +
-                "<size=85%><pos=7.5%>Cursor<pos=66.75%>Stamps<pos=81.5%>Right-click</size>\n" +
-                "<size=130%><pos=8%>{LS}<pos=68%>{X}<pos=84%>{B}</size>\n" +
-                "<size=85%><pos=21.5%>Arrows<pos=59.5%>Camera<pos=76.25%>Click</size>\n" +
-                "<size=130%><pos=22%>{DPAD}<pos=60%>{RS}<pos=76%>{A}</size>\n\n\n" +
-                "• Press {LS} to change the cursor speed, or {RS} to change the camera speed: slow, medium or fast (the controller vibrates 1, 2 or 3 times).\n" +
-                "• It works with Xbox, PlayStation, Switch and Steam Deck controllers through Steam Input. The button icons match yours.",
+            "{PAGE}• While you use the controller, every button it can press shows its icon next to it. In the menus, {START} accepts, {B} goes back or closes and {BACK} does the secondary action.\n" +
+                "• In the room, {Y} picks a player, {DLEFT} kicks them (or changes the AI's difficulty), {DRIGHT} adds players and {DDOWN} removes the empty seats.\n" +
+                "• In the settings, {LB} and {RB} switch tabs; in your profile, {Y} changes your avatar. In a match, {B} skips dialogue.\n" +
+                "• Press {LS} or {RS} to change the cursor or camera speed (the controller vibrates 1, 2 or 3 times). It works with Xbox, PlayStation, Switch and Steam Deck controllers through Steam Input.",
             "In the room, click {H}\"Kick\"{/H} on an AI to pick its difficulty, apply it to {H}every AI{/H}, or {H}free the seat{/H} for another player.\n\n" +
                 "• {H}Easy{/H}: makes mistakes; good for learning.\n" +
                 "• {H}Normal{/H}: plays sensibly, without going overboard.\n" +
@@ -166,6 +155,26 @@ namespace CrimeSightRevival.Mods
         {
             [1] = "launcher",         // El lanzador
         };
+
+        // Lo que hace cada boton, al final de su linea en el dibujo del mando (pagina "Mando"): primero los 8 de la
+        // izquierda (LT, LB, Back, cruceta arriba / derecha / izquierda / abajo, stick izquierdo) y luego los 8 de la
+        // derecha (RT, RB, Start, Y, X, B, A, stick derecho). Cortos para que se lean bien; lo de la sala y los menus va
+        // en la segunda pagina.
+        static readonly string[] PadEs =
+        {
+            "Alejar", "Girar · Pestaña", "Registro", "Ajustes",
+            "Personaje siguiente", "Personaje anterior", "Quitar huecos", "Cursor",
+            "Acercar", "Girar · Pestaña", "Fin turno · Aceptar", "Sospechosos",
+            "Stickers", "Cancelar · Atrás", "Clic", "Cámara",
+        };
+        static readonly string[] PadEn =
+        {
+            "Zoom out", "Rotate · Tab", "Log", "Settings",
+            "Next character", "Previous character", "Remove seats", "Cursor",
+            "Zoom in", "Rotate · Tab", "End turn · Accept", "Suspects",
+            "Stamps", "Cancel · Back", "Click", "Camera",
+        };
+        public static string[] PadLabels(int lang) => lang == 5 ? PadEs : PadEn;
 
         /// <summary>La captura de la pagina, o null si no tiene.</summary>
         public static string Image(int t) => Images.TryGetValue(t, out var n) ? n : null;

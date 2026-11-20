@@ -84,8 +84,16 @@ jobs:
           mv dist/CrimeSightRevival dist/CrimeSightRevival-linux
           chmod +x dist/CrimeSightRevival-linux
 
+      # Con gh y reintentos: la subida a veces se corta ("other side closed") y no hace falta recompilar.
       - name: Añadir a la release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.release.outputs.version }}
-          files: dist/CrimeSightRevival-linux
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ needs.release.outputs.version }}
+        run: |
+          for i in 1 2 3 4 5; do
+            gh release upload "$TAG" dist/CrimeSightRevival-linux --clobber && exit 0
+            echo "La subida ha fallado (intento $i de 5); reintento en 20 s"
+            sleep 20
+          done
+          exit 1
