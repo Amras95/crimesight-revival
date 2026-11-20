@@ -52,10 +52,17 @@ namespace CrimeSightRevival.Mods
                 "• La sesión termina al cerrar el juego o al pulsar {H}«Terminar sesión»{/H}.\n" +
                 "• Una {H}campana{/H} arriba avisa de una versión nueva: púlsala para actualizar.\n" +
                 "• Tus partidas, victorias y puntos se guardan en tu PC.",
-            "{PAGE}• Mientras usas el mando, cada botón que puede pulsar lleva su icono al lado. En los menús, {START} acepta, {B} vuelve o cierra y {BACK} hace lo secundario.\n" +
-                "• En la sala, {Y} elige jugador, {DLEFT} lo expulsa (o cambia la dificultad de la IA), {DRIGHT} añade jugadores y {DDOWN} quita los huecos vacíos.\n" +
-                "• En los ajustes, {LB} y {RB} cambian de pestaña; en el perfil, {Y} cambia el avatar. En la partida, {B} omite los diálogos.\n" +
-                "• Pulsa {LS} o {RS} para cambiar la velocidad del cursor o de la cámara (el mando vibra 1, 2 o 3 veces). Funciona con mandos de Xbox, PlayStation, Switch y Steam Deck a través de Steam Input.",
+            "{PAGE}Cada botón que puedes usar muestra su icono al lado en la pantalla.\n\n" +
+                "• {H}Menús{/H}: {START} acepta y {B} vuelve o cierra.\n\n" +
+                "• {H}Sala{/H}:\n" +
+                "<indent=3.3em>{Y} elige jugador.\n<size=40%>\n</size>" +
+                "{DLEFT} lo expulsa (en una IA, cambia su dificultad).\n<size=40%>\n</size>" +
+                "{DRIGHT} añade jugadores.\n<size=40%>\n</size>" +
+                "{DDOWN} quita los huecos vacíos.</indent>\n\n" +
+                "• {H}Ajustes y perfil{/H}: {LB} y {RB} cambian de pestaña; {Y} cambia el avatar.\n\n" +
+                "• {H}Partida{/H}: {B} omite los diálogos.\n\n" +
+                "• {H}Velocidad{/H}: pulsa {LS} (stick izquierdo) para cambiar la velocidad del cursor, o {RS} (stick derecho) para la de la cámara: lenta, media o rápida (el mando vibra 1, 2 o 3 veces).\n\n" +
+                "Funciona con mandos de Xbox, PlayStation, Switch y Steam Deck a través de Steam Input. Los iconos de los botones coinciden con los de tu mando.",
             "En la sala, pulsa {H}«Expulsar»{/H} sobre una IA para elegir su dificultad, aplicarla a {H}todas las IA{/H} o {H}dejar el hueco libre{/H} para otro jugador.\n\n" +
                 "• {H}Fácil{/H}: comete errores; ideal para aprender.\n" +
                 "• {H}Normal{/H}: juega con cabeza, sin pasarse.\n" +
@@ -104,10 +111,17 @@ namespace CrimeSightRevival.Mods
                 "• The session ends when you close the game or click {H}\"End session\"{/H}.\n" +
                 "• A {H}bell{/H} at the top means a new version is out: click it to update.\n" +
                 "• Your matches, wins and points are saved on your PC.",
-            "{PAGE}• While you use the controller, every button it can press shows its icon next to it. In the menus, {START} accepts, {B} goes back or closes and {BACK} does the secondary action.\n" +
-                "• In the room, {Y} picks a player, {DLEFT} kicks them (or changes the AI's difficulty), {DRIGHT} adds players and {DDOWN} removes the empty seats.\n" +
-                "• In the settings, {LB} and {RB} switch tabs; in your profile, {Y} changes your avatar. In a match, {B} skips dialogue.\n" +
-                "• Press {LS} or {RS} to change the cursor or camera speed (the controller vibrates 1, 2 or 3 times). It works with Xbox, PlayStation, Switch and Steam Deck controllers through Steam Input.",
+            "{PAGE}Every button you can use shows its icon next to it on screen.\n\n" +
+                "• {H}Menus{/H}: {START} accepts and {B} goes back or closes.\n\n" +
+                "• {H}Room{/H}:\n" +
+                "<indent=4.1em>{Y} picks a player.\n<size=40%>\n</size>" +
+                "{DLEFT} kicks them (on an AI, it changes the difficulty).\n<size=40%>\n</size>" +
+                "{DRIGHT} adds players.\n<size=40%>\n</size>" +
+                "{DDOWN} removes empty seats.</indent>\n\n" +
+                "• {H}Settings and profile{/H}: {LB} and {RB} switch tabs; {Y} changes your avatar.\n\n" +
+                "• {H}Match{/H}: {B} skips dialogue.\n\n" +
+                "• {H}Speed{/H}: press {LS} (left stick) to change the cursor speed, or {RS} (right stick) for the camera: slow, medium or fast (the controller vibrates 1, 2 or 3 times).\n\n" +
+                "It works with Xbox, PlayStation, Switch and Steam Deck controllers through Steam Input. The button icons match yours.",
             "In the room, click {H}\"Kick\"{/H} on an AI to pick its difficulty, apply it to {H}every AI{/H}, or {H}free the seat{/H} for another player.\n\n" +
                 "• {H}Easy{/H}: makes mistakes; good for learning.\n" +
                 "• {H}Normal{/H}: plays sensibly, without going overboard.\n" +
