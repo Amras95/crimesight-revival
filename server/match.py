@@ -47,6 +47,7 @@ INSTRUCT_PICK = 7            # recoger un objeto del suelo
 FOOD_OPEN_COUNT = 2          # MatchSettings.foodOpenCount: comida que ven los que no son Moriarty
 # Pawn.InstructData.InstructType
 INSTRUCT_ATTACK, INSTRUCT_POTION, INSTRUCT_SPRAY, INSTRUCT_REPAIR = 4, 6, 9, 11
+INSTRUCT_BOARD, INSTRUCT_GASPIPE, INSTRUCT_BYWAY = 10, 12, 13    # romper el cuadro, arreglar el gas, pasadizo
 # Acciones con puntos (textos del propio juego, ver stats.ACTIONS)
 ACT_REPAIR = "ctg_name_result_repair_switchboard"
 ACT_TREAT = "ctg_name_result_action_treated_pawnForInjuries"
@@ -57,6 +58,17 @@ ACT_ASSAIL_KILL = "ctg_name_result_action_targetKilledByAssail"
 ACT_BLACKOUT = "ctg_name_result_blackOut_by_switchboard"
 ACT_SPRAY_OTHER = "ctg_name_result_action_blockedSherlockWithSpray"
 ACT_KNOCKOUT = "ctg_name_result_action_beCriticalNoKiller"
+ACT_BYWAY = "ctg_name_result_action_activateSecretPassage"
+ACT_GAS_REPAIR = "ctg_name_result_action_repair_gasPipe"
+ACT_DOG_KILL = "ctg_name_result_action_exterminateWildDog"          # perros y otras amenazas (traidores)
+ACT_FOUND_SWITCH = "ctg_name_result_action_foundSwitchboard"
+ACT_FOUND_SWITCH_FIRST = "ctg_name_result_action_foundSwitchboardBeforeSherlock"
+ACT_FOOD = "ctg_name_result_action_obtainFoodFromFoodPoint"
+ACT_TREAT_KILLER = "ctg_name_result_action_treated_killerForInjuries"
+ACT_NOT_KILLER = "ctg_name_result_action_proven_pawnNotKiller"
+ACT_NOT_TARGET = "ctg_name_result_action_proven_pawnNotTarget"
+ACT_DOG_HIT = "ctg_name_result_action_wildDogAttackedEveryoneButKiller"
+ACT_GAS_HIT = "ctg_name_result_action_injured_noKillerWithGasLeak"
 DEFAULT_PAWNS = 6            # personajes por partida (la mansion tiene 6 sospechosos)
 COUNTDOWN_SECONDS = 3
 DEFAULT_AI_DIFFICULTY = "normal"   # se puede cambiar con --ai-difficulty
@@ -437,6 +449,10 @@ class Room:
         self.object_items = {}     # mueble (cottage id) -> objeto que contiene (se reparte al empezar)
         self.food_items, self.weapon_items, self.switch_items = set(), set(), set()
         self.events = {}           # jugador -> acciones con puntos conseguidas en la partida
+        self.switch_found = set()  # bandos que ya han encontrado un plano del cuadro electrico
+        self.turn_attacks = {}     # uniqId atacado este turno -> jugador que dio la orden
+        self.turn_potions = set()  # jugadores del bando de Moriarty que han dado una orden de curar este turno
+        self.turn_spray_rooms = set()  # habitaciones gaseadas con el spray este turno (tambien hiere)
         self.searched = {}         # mueble (cottage id) -> objeto que salio
         self.drops = {}            # objeto en el suelo (cottage id) -> indice de objeto
         self.disabled_objects = set()
@@ -1232,6 +1248,10 @@ class Room:
         sw = int(self.settings.get("switchboard_count", 0) or 0)
         self.switch_items = set(range(max(0, n - sw), n))
         self.events = {}
+        self.switch_found = set()
+        self.turn_attacks = {}
+        self.turn_potions = set()
+        self.turn_spray_rooms = set()
         log.info("Sala %s: %s objetos repartidos (%s comida, %s armas)", self.id, n, food, weapons)
 
     def objects_with(self, items):
@@ -1377,6 +1397,10 @@ class Room:
             self.pending.pop("turnend")
             ref = next(iter(self.reference.values()), {})
             ref = ref if isinstance(ref, dict) else {}
+            try:
+                self.score_turn_end(ref)
+            except Exception:  # noqa: BLE001 - los puntos de accion nunca deben parar la partida
+                log.exception("Sala %s turno %s: fallo mirando las acciones del final del turno", self.id, self.turn)
             if self.detect_kill(ref):
                 # En linea el servidor decide el asesinato (el cliente no lo comprueba por su cuenta)
                 await self.end_by_kill()
@@ -1535,7 +1559,10 @@ class Room:
             if c["isBatting"]:
                 log.info("Sala %s turno %s: Moriarty pisa la orden de Sherlock sobre %s", self.id, self.turn, k)
             commands.append(c)
-        self.score_actions(commands, owner)
+        try:
+            self.score_actions(commands, owner)
+        except Exception:  # noqa: BLE001 - los puntos de accion nunca deben parar la partida
+            log.exception("Sala %s turno %s: fallo mirando las acciones del turno", self.id, self.turn)
         commands += self.npc_orders(by_pawn)
         self.remember(commands, set(from_detective))
         sides = {p: ("M" if o == GHOST_CRIMINAL or self.side(o) == "moriarty" else "S") for p, o in owner.items()}
@@ -1573,18 +1600,45 @@ class Room:
             for g in r.get("gridList") or []:
                 room_of_grid[g.get("gridId")] = r.get("roomId")
         target_uid = int(pawns.get(self.target, {}).get("uniqId", -2))
-        for c in commands:
+        self.turn_attacks, self.turn_potions, self.turn_spray_rooms = {}, set(), set()
+
+        def injured(x):
+            try:
+                return bool(int(x.get("injureCount", 0) or 0) or int(x.get("isInjure", 0) or 0))
+            except (TypeError, ValueError):
+                return False
+        # A donde va cada personaje este turno, con cualquier orden (la de curar apunta a esa casilla)
+        dest = {int(c["pawnId"]): c.get("grid") for c in commands if c.get("grid") is not None}
+        # Planos del cuadro: primero el bando de Sherlock, para "antes que Sherlock" en el mismo turno
+        for c in sorted(commands, key=lambda c: self.side(owner.get(int(c["pawnId"]), "")) != "sherlock"):
             pid = owner.get(int(c["pawnId"]))
             if pid is None:
                 continue
             kind, side = int(c.get("type", 0)), self.side(pid)
+            item = c.get("itemId", -1)
+            if kind == INSTRUCT_BYWAY:
+                self.note(pid, ACT_BYWAY)
+            elif kind == INSTRUCT_GASPIPE:
+                self.note(pid, ACT_GAS_REPAIR)
+            elif kind == INSTRUCT_ATTACK:
+                self.turn_attacks[int(c.get("targetId", -1))] = pid     # perros: se mira al final del turno
+            elif kind == INSTRUCT_SEARCH and item in self.switch_items:
+                if side == "sherlock":
+                    self.note(pid, ACT_FOUND_SWITCH)
+                elif "sherlock" not in self.switch_found:
+                    self.note(pid, ACT_FOUND_SWITCH_FIRST)
+                self.switch_found.add(side)
             if side == "sherlock":
                 if kind == INSTRUCT_REPAIR:
                     self.note(pid, ACT_REPAIR)
                 elif kind == INSTRUCT_POTION:
                     self.note(pid, ACT_TREAT)
+                elif kind == INSTRUCT_SEARCH and item in self.food_items:
+                    self.note(pid, ACT_FOOD)
             if kind == INSTRUCT_SPRAY:
                 room = room_of_grid.get(c.get("grid"))
+                if room is not None:
+                    self.turn_spray_rooms.add(room)
                 inside = [q for q, x in pawns.items() if room is not None and x.get("roomId") == room]
                 if side == "sherlock" and self.killer in inside:
                     self.note(pid, ACT_SPRAY_KILLER)
@@ -1593,8 +1647,87 @@ class Room:
             if side == "moriarty":
                 if kind == INSTRUCT_ATTACK and int(c.get("targetId", -1)) == target_uid:
                     self.note(pid, ACT_KNOCKOUT)
-                elif kind == INSTRUCT_SEARCH and c.get("itemId", -1) in self.switch_items:
+                elif kind == INSTRUCT_BOARD:
                     self.note(pid, ACT_BLACKOUT)
+                elif kind == INSTRUCT_POTION:
+                    # La orden va a una casilla (donde esta o a donde llega el herido), no a un personaje
+                    patients = [q for q, x in pawns.items() if injured(x)
+                                and c.get("grid") is not None and dest.get(q, x.get("gridId")) == c.get("grid")]
+                    # Si el asesino es uno de ellos, la medicina es para el (asi paso en una partida de prueba)
+                    if self.killer in patients:
+                        self.note(pid, ACT_TREAT_KILLER)
+                    elif patients:
+                        self.note(pid, ACT_TREAT)
+                    self.turn_potions.add(pid)     # y por si acaso, al final del turno: si alguien se ha curado
+
+    def score_turn_end(self, end):
+        """Acciones con puntos que solo se ven comparando la foto del principio del turno con la del final
+        (reference_data, GameManager.CreateServerReferenceData): personajes descartados como asesino o
+        victima, perros (y otras amenazas) que mueren, y heridos por un perro o por un escape de gas."""
+        start = self.turn_ref or {}
+
+        def by(ref, key, ident):
+            return {int(x[ident]): x for x in ref.get(key) or [] if isinstance(x, dict) and ident in x}
+
+        def flag(x, key, default=0):
+            try:
+                return int(x.get(key, default) or 0)
+            except (TypeError, ValueError):
+                return default
+
+        humans = [p for p, m in self.members.items() if not m.get("bot")]
+        sherlocks = [p for p in humans if self.side(p) == "sherlock"]
+        moriartys = [p for p in humans if self.side(p) == "moriarty"]
+        s_pawns, e_pawns = by(start, "pawns", "pawnId"), by(end, "pawns", "pawnId")
+        s_threats, e_threats = by(start, "threatList", "uniqId"), by(end, "threatList", "uniqId")
+
+        def injuries(x):
+            return flag(x, "injureCount") or flag(x, "isInjure")
+
+        # El asesino estaba herido y ya no (o menos), y el bando de Moriarty ha dado una orden de curar
+        k0, k1 = s_pawns.get(self.killer), e_pawns.get(self.killer)
+        if k0 is not None and k1 is not None and injuries(k1) < injuries(k0):
+            for pid in self.turn_potions:
+                self.note(pid, ACT_TREAT_KILLER)
+        # Lo mismo con cualquier otro personaje: "Curar a un personaje" tambien para el bando de Moriarty
+        if any(q != self.killer and q in s_pawns and injuries(p) < injuries(s_pawns[q]) for q, p in e_pawns.items()):
+            for pid in self.turn_potions:
+                self.note(pid, ACT_TREAT)
+        for q, p in e_pawns.items():
+            before = s_pawns.get(q)
+            if before is None:
+                continue
+            if flag(before, "isKillerCandidate", 1) and not flag(p, "isKillerCandidate", 1):
+                for pid in sherlocks:
+                    self.note(pid, ACT_NOT_KILLER)
+            if flag(before, "isTargetCandidate", 1) and not flag(p, "isTargetCandidate", 1):
+                for pid in sherlocks:
+                    self.note(pid, ACT_NOT_TARGET)
+        # Perro (o traidor) que muere este turno: para quien ordeno atacarlo
+        for uid, t in e_threats.items():
+            if flag(t, "isDie") and not flag(s_threats.get(uid, {}), "isDie") and uid in self.turn_attacks:
+                self.note(self.turn_attacks[uid], ACT_DOG_KILL)
+        # Heridos sin que nadie les atacara ni les gaseara con el spray: en la habitacion de un perro vivo
+        # o de un escape de gas
+        dog_rooms = {t.get("roomId") for t in list(s_threats.values()) + list(e_threats.values())
+                     if not flag(s_threats.get(int(t.get("uniqId", -1)), t), "isDie")}
+        gas_rooms = {g.get("roomId") for g in (start.get("gaspipeList") or []) + (end.get("gaspipeList") or [])
+                     if isinstance(g, dict)}
+        for q, p in e_pawns.items():
+            before = s_pawns.get(q, {})
+            hurt = flag(p, "injureCount") > flag(before, "injureCount") or (flag(p, "isInjure")
+                                                                           and not flag(before, "isInjure"))
+            if q == self.killer or not hurt or int(p.get("uniqId", -1)) in self.turn_attacks:
+                continue
+            rooms = {p.get("roomId"), before.get("roomId")} - {None}
+            if rooms & self.turn_spray_rooms:
+                continue
+            if rooms & dog_rooms:
+                for pid in moriartys:
+                    self.note(pid, ACT_DOG_HIT)
+            elif rooms & gas_rooms:
+                for pid in moriartys:
+                    self.note(pid, ACT_GAS_HIT)
 
     def level(self):
         """Nivel de la partida para los puntos: contra personas "online"; si no, el de la IA."""
