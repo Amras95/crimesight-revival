@@ -374,7 +374,7 @@ class Api:
             cur = it.get("text") or ""
             if isinstance(cur, dict):            # textos por idioma puestos a mano en mod.json
                 cur = cur.get(i18n.get_lang()) or next(iter(cur.values()), "")
-            out.append({"key": it["key"], "text": cur,
+            out.append({"key": it["key"], "text": cur, "means": it.get("means") or "",
                         "thumb": "data:image/png;base64," + base64.b64encode(it["png"]).decode()})
         return {"name": m["name"], "stickers": out}
 
@@ -382,6 +382,14 @@ class Api:
         import modpack
         try:
             return {"ok": True, "text": modpack.set_text(core.mod_folder(folder), key, text)}
+        except (OSError, ValueError) as e:
+            return {"error": str(e)}
+
+    def mods_set_means(self, folder, key, value):
+        """A que sticker del juego equivale un sticker (para que las IA le contesten)."""
+        import modpack
+        try:
+            return {"ok": True, "means": modpack.set_means(core.mod_folder(folder), key, value) or ""}
         except (OSError, ValueError) as e:
             return {"error": str(e)}
 

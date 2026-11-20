@@ -165,6 +165,18 @@ footer .updpill.on{display:inline-block}
 .stxt{display:flex;align-items:center;gap:12px;background:rgba(5,6,20,.6);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
 .stxt img{width:48px;height:48px;object-fit:contain;flex-shrink:0}
 .stxt input{flex:1;min-width:0}
+.stxt .means{width:52px;height:52px;flex-shrink:0;padding:2px;border-radius:10px;border:1px dashed var(--line);background:rgba(5,6,20,.6);
+  color:var(--dim);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.stxt .means.set{border-style:solid;border-color:var(--accent)}
+.stxt .means img{width:46px;height:46px}
+#meanspick{position:fixed;display:none;z-index:6;width:300px;padding:8px;gap:4px;grid-template-columns:repeat(5,1fr);
+  background:var(--panel2);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 40px -10px #000}
+#meanspick.on{display:grid}
+#meanspick button{aspect-ratio:1;border:1px solid transparent;border-radius:8px;background:rgba(5,6,20,.6);cursor:pointer;
+  padding:2px;color:var(--dim);font-size:12px;display:flex;align-items:center;justify-content:center}
+#meanspick button:hover{border-color:var(--accent)}
+#meanspick button.cur{border-color:var(--accent);background:rgba(111,123,255,.18)}
+#meanspick img{width:100%;height:100%;object-fit:contain}
 .modlist{background:rgba(5,6,20,.6);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:14px;font-size:13px;line-height:1.7}
 </style>
 <link rel="stylesheet" href="stage.css">
@@ -333,10 +345,12 @@ footer .updpill.on{display:inline-block}
   <div class="box wide">
     <h3 data-t="mods_texts_title"></h3>
     <p><b id="modtextsname"></b> · <span data-t="mods_texts_desc"></span></p>
+    <p data-t="mods_means_desc"></p>
     <div class="mods" id="modtextsl"></div>
     <div class="actions"><button class="btn ghost small" onclick="closeTexts()" data-t="close"></button></div>
   </div>
 </div>
+<div id="meanspick"></div>
 <div class="modal" id="modoffer">
   <div class="box">
     <h3 id="modoffert"></h3>
@@ -581,20 +595,46 @@ async function toggleBep(){
   if(r.msg){toast(r.msg);loadBep()} else $('#bepbtn').disabled=true;
 }
 let TXT_FOLDER=null;
+// stickers del juego a los que puede equivaler uno de un mod (imagenes en ui/stickers/). Sin "roger": su emoticono
+// es el mismo que el de "good" y las IA contestan igual a los dos (mod.json lo sigue aceptando)
+const MEANS=['hello','good','why','no_way','relieved','frightened','scream','worried','please','hold_on','smirk',
+  'suspicious','killer_no_suspicion','killer_suspicion','target_no_suspicion','target_suspicion'];
+function meansFace(v){return v?`<img src="stickers/${v}.png" alt="">`:'—'}
 async function openTexts(folder){
   const r=await api('mods_stickers',folder);if(!r)return;TXT_FOLDER=folder;
   $('#modtextsname').textContent=r.name;
   $('#modtextsl').innerHTML=r.stickers.map(s=>`<div class="stxt"><img src="${s.thumb}">
     <input maxlength="40" value="${esc(s.text)}" data-key="${esc(s.key)}"
-      onchange="saveText(this)" onkeydown="if(event.key==='Enter')this.blur()"></div>`).join('');
+      onchange="saveText(this)" onkeydown="if(event.key==='Enter')this.blur()">
+    <button class="means${s.means?' set':''}" data-key="${esc(s.key)}" data-means="${esc(s.means)}" title="${esc(T('mods_means_tip'))}"
+      onclick="openMeans(this,event)">${meansFace(s.means)}</button></div>`).join('');
   $('#modtexts').classList.add('on');
 }
+let MEANS_BTN=null;
+function openMeans(btn,ev){
+  ev.stopPropagation();
+  const pick=$('#meanspick'),cur=btn.dataset.means;MEANS_BTN=btn;
+  pick.innerHTML=[''].concat(MEANS).map(v=>`<button class="${v===cur?'cur':''}" title="${esc(v?'':T('mods_means_none'))}"
+    onclick="pickMeans('${v}',event)">${meansFace(v)}</button>`).join('');
+  pick.classList.add('on');
+  const b=btn.getBoundingClientRect(),w=pick.offsetWidth,h=pick.offsetHeight;
+  pick.style.left=Math.max(8,Math.min(b.right-w,innerWidth-w-8))+'px';
+  pick.style.top=(b.bottom+6+h<innerHeight?b.bottom+6:Math.max(8,b.top-6-h))+'px';
+}
+function closeMeans(){$('#meanspick').classList.remove('on');MEANS_BTN=null}
+async function pickMeans(v,ev){
+  ev.stopPropagation();const btn=MEANS_BTN;closeMeans();if(!btn)return;
+  const r=await api('mods_set_means',TXT_FOLDER,btn.dataset.key,v);
+  if(r&&r.error){toast(r.error);return}
+  if(r){btn.dataset.means=r.means;btn.classList.toggle('set',!!r.means);btn.innerHTML=meansFace(r.means);toast(T('mods_text_saved'))}
+}
+document.addEventListener('click',e=>{if(!e.target.closest('#meanspick'))closeMeans()});
 async function saveText(el){
   const r=await api('mods_set_text',TXT_FOLDER,el.dataset.key,el.value);
   if(r&&r.error){toast(r.error);return}
   if(r){el.value=r.text;toast(T('mods_text_saved'))}
 }
-function closeTexts(){$('#modtexts').classList.remove('on')}
+function closeTexts(){closeMeans();$('#modtexts').classList.remove('on')}
 function openMods(){modTab(MODTAB);$('#mods').classList.add('on');loadMods();loadBep();loadCursor();loadGuest();loadModels()}
 async function loadGuest(){const r=await api('guest_mods');if(r)$('#guestmods').value=r.mode}
 async function guestMods(v){const r=await api('guest_mods',v);if(r)$('#guestmods').value=r.mode}

@@ -907,6 +907,23 @@ _TXT = {
 for _l, (_b, _ti, _d, _s) in _TXT.items():
     S[_l].update(mods_texts_btn=_b, mods_texts_title=_ti, mods_texts_desc=_d, mods_text_saved=_s)
 
+# A que sticker del juego equivale cada sticker de un mod (para que las IA le contesten)
+_MEANS = {
+    "en": ("The picture on the right of each sticker says which game sticker it counts as, so the AIs can reply to it. Leave it empty and they won't reply.", "Counts as…", "None"),
+    "es": ("La imagen a la derecha de cada sticker dice a qué sticker del juego equivale, para que las IA puedan contestarle. Si la dejas vacía, no le contestan.", "Equivale a…", "Ninguno"),
+    "fr": ("L'image à droite de chaque sticker indique à quel sticker du jeu il correspond, pour que les IA puissent y répondre. Laissez-la vide et elles n'y répondront pas.", "Correspond à…", "Aucun"),
+    "it": ("L'immagine a destra di ogni sticker indica a quale sticker del gioco corrisponde, così le IA possono rispondergli. Se la lasci vuota, non rispondono.", "Corrisponde a…", "Nessuno"),
+    "de": ("Das Bild rechts neben jedem Sticker gibt an, welchem Sticker des Spiels er entspricht, damit die KIs darauf antworten können. Bleibt es leer, antworten sie nicht.", "Entspricht…", "Keinem"),
+    "pt": ("A imagem à direita de cada sticker diz a qual sticker do jogo ele equivale, para que as IAs possam responder. Se ficar vazia, elas não respondem.", "Equivale a…", "Nenhum"),
+    "ru": ("Картинка справа от стикера показывает, какому стикеру игры он соответствует, чтобы ИИ могли на него ответить. Если оставить её пустой, ИИ не ответят.", "Соответствует…", "Ничему"),
+    "ja": ("各スタンプの右の画像は、それがゲームのどのスタンプに当たるかを示します。AIが返事できるようになります。空欄のままだとAIは返事をしません。", "相当するスタンプ…", "なし"),
+    "ko": ("각 스탬프 오른쪽 그림은 그 스탬프가 게임의 어떤 스탬프에 해당하는지 나타냅니다. 그래야 AI가 답할 수 있습니다. 비워 두면 AI는 답하지 않습니다.", "해당 스탬프…", "없음"),
+    "zh-CN": ("每个贴图右边的图片表示它相当于游戏中的哪个贴图，这样AI才能回应。留空的话，AI不会回应。", "相当于…", "无"),
+    "zh-TW": ("每個貼圖右邊的圖片表示它相當於遊戲中的哪個貼圖，這樣AI才能回應。留空的話，AI不會回應。", "相當於…", "無"),
+}
+for _l, (_d, _tip, _none) in _MEANS.items():
+    S[_l].update(mods_means_desc=_d, mods_means_tip=_tip, mods_means_none=_none)
+
 _MANUAL = {
     "en": "You can download it yourself from {url} and put the file in {folder}; then press “Turn on” again.",
     "es": "Puedes descargarlo tú desde {url} y poner el archivo en {folder}; después pulsa «Activar» otra vez.",
