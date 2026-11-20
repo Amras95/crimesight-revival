@@ -185,6 +185,7 @@ GHOST_CRIMINAL = "csr-moriarty"   # Moriarty IA de las salas de entrenamiento (n
 # cambiaba por uno real al empezar. Si le llega "Random", el juego intenta cargar una escena que no
 # existe y se queda en negro.
 SELECTION_SECONDS = 60
+SELECTION_WAIT = 20             # segundos que se espera a que todos lleguen a la deduccion final
 
 SETTING_KEYS = {  # parametro de CreateRoom -> (variable de sala, tipo)
     "stage": ("setting_stage", str), "capacity": ("setting_capacity", int),
@@ -1519,6 +1520,8 @@ class Room:
                     self.conclude("sherlock", {ROLE_DETECTIVE: [ACT_DEDUCED]})
                 else:
                     await self.control("StartTransitionPhase", {"Turn": self.turn, "Data": {"isDanger": self.is_danger()}})
+        if "selection" in self.pending and self._complete("selection"):
+            await self.start_selection()
         if "answer" in self.pending and self._complete("answer"):
             await self.finish_answers()
 
@@ -1972,16 +1975,40 @@ class Room:
         return False
 
     async def p_SetSelectionPhase(self, sess, p):
-        if self.phase != "selection":
-            self.phase = "selection"
-            self.pending["answer"] = {}
-            await self.control("StartSelectionPhase", {"CountDownTimer": SELECTION_SECONDS})
-            if not any(self.members[x]["role"] in (ROLE_DETECTIVE, ROLE_WATSON) for x in self.humans()):
-                # Sherlock lo lleva la IA: "piensa" unos segundos y acusa
-                self.selection_task = asyncio.ensure_future(self._ai_answer())
-            else:
-                self.selection_task = asyncio.ensure_future(self._selection_timeout())
+        """Cada juego avisa cuando llega a la deduccion final. Se espera a todos antes de empezarla: si
+        se empezaba con el primero, el juego que aun no habia llegado no la recibia y no le salia la
+        pantalla para votar (en un 1 contra 1, el Sherlock que iba unos segundos por detras)."""
+        if self.phase in ("selection", "ended"):
+            return rc({})
+        self.pending.setdefault("selection", {})[sess.player_id] = True
+        if self._complete("selection"):
+            await self.start_selection()
+        elif getattr(self, "selection_wait", None) is None or self.selection_wait.done():
+            self.selection_wait = asyncio.ensure_future(self._selection_wait())
         return rc({})
+
+    async def _selection_wait(self):
+        """Si algun juego no llega (se ha colgado o se ha ido), la deduccion empieza igual."""
+        await asyncio.sleep(SELECTION_WAIT)
+        if "selection" in self.pending and self.phase not in ("selection", "ended"):
+            log.info("Sala %s: no todos han llegado a la deduccion final; empieza igual", self.id)
+            await self.start_selection()
+
+    async def start_selection(self):
+        self.pending.pop("selection", None)
+        wait, self.selection_wait = getattr(self, "selection_wait", None), None
+        if wait and wait is not asyncio.current_task():
+            wait.cancel()
+        if self.phase in ("selection", "ended"):
+            return
+        self.phase = "selection"
+        self.pending["answer"] = {}
+        await self.control("StartSelectionPhase", {"CountDownTimer": SELECTION_SECONDS})
+        if not any(self.members[x]["role"] in (ROLE_DETECTIVE, ROLE_WATSON) for x in self.humans()):
+            # Sherlock lo lleva la IA: "piensa" unos segundos y acusa
+            self.selection_task = asyncio.ensure_future(self._ai_answer())
+        else:
+            self.selection_task = asyncio.ensure_future(self._selection_timeout())
 
     async def _ai_answer(self):
         await asyncio.sleep(4)
