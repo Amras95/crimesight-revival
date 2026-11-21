@@ -537,11 +537,36 @@ class Api:
     # ---------------------------------------------------------------- modelos 3D
     def models_state(self):
         gd = self._cfg.get("game_dir") or ""
+        try:                                   # un .glb que se ha vuelto a exportar llega al juego al refrescar
+            core.install_models(gd)
+        except OSError:
+            pass
         names = {"ThreatTypeData_Survivor": t("models_survivor"), "ThreatTypeData_Traitor": t("models_traitor")}
         slots = [{"id": k, "name": n or names.get(k, k)} for k, n in core.MODEL_SLOTS]
-        targets = slots + [{"id": k, "name": n} for k, n in core.MODEL_EXTRA if core.dev_mode()]
-        return {"slots": slots, "targets": targets, "swaps": core.model_swaps(),
-                "live": bool(gd) and core.live_mode(gd)}
+        custom = [{"id": core.CUSTOM_PREFIX + n, "name": t("models_custom_tag", name=n), "custom": True}
+                  for n in core.custom_models()]
+        targets = slots + custom + [{"id": k, "name": n} for k, n in core.MODEL_EXTRA if core.dev_mode()]
+        issues = {core.CUSTOM_PREFIX + k: v for k, v in core.model_issues.items() if v}
+        return {"slots": slots, "targets": targets, "swaps": core.model_swaps(), "issues": issues,
+                "live": bool(gd) and core.live_mode(gd), "skeletons": core.sync_skeletons(gd),
+                "anims": core.custom_anims(), "anim_swaps": core.anim_swaps(), "anim_kinds": list(core.ANIM_KINDS),
+                "anim_issues": {k: v for k, v in core.anim_issues.items() if v}}
+
+    def models_anim_set(self, slot, kind, name):
+        core.set_anim_swap(slot, kind, name)
+        try:
+            core.install_models(self._cfg.get("game_dir") or "")
+        except OSError as e:
+            return {"error": t("err_unexpected", err=e)}
+        self._cfg["anim_swaps"] = core.load_config().get("anim_swaps") or {}
+        return self.models_state()
+
+    def models_anims_open(self):
+        core.open_folder(core.anims_dir())
+
+    def models_open(self):
+        core.sync_skeletons(self._cfg.get("game_dir") or "")
+        core.open_folder(core.models_dir())
 
     def models_set(self, slot, target):
         core.set_model_swap(slot, target)

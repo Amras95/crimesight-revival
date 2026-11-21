@@ -940,8 +940,10 @@ def dev_mode():
 
 
 def model_targets():
-    """Los modelos que se pueden poner: los personajes y, en modo desarrollador, Sherlock y Moriarty."""
-    return list(MODEL_SLOTS) + (list(MODEL_EXTRA) if dev_mode() else [])
+    """Los modelos que se pueden poner: los personajes, tus modelos propios (.glb) y, en modo desarrollador,
+    Sherlock y Moriarty."""
+    custom = [(CUSTOM_PREFIX + n, n) for n in custom_models()]
+    return list(MODEL_SLOTS) + custom + (list(MODEL_EXTRA) if dev_mode() else [])
 
 
 def model_swaps():
@@ -949,6 +951,217 @@ def model_swaps():
     sw = load_config().get("model_swaps") or {}
     valid = {k for k, _ in MODEL_SLOTS} | {k for k, _ in model_targets()}
     return {k: v for k, v in sw.items() if k in valid and v in valid and k != v}
+
+
+# ---------------------------------------------------------------- modelos propios (.glb)
+# Cada .glb de la carpeta de modelos es un modelo que se puede poner a un personaje ("custom:<nombre>"). El plugin
+# escribe en csr_live/skeletons el esqueleto de cada personaje (solo huesos) y aqui se copia a models/esqueletos
+# para hacer el modelo encima en Blender.
+CUSTOM_PREFIX = "custom:"
+SKELETON_DIR = "esqueletos"
+
+
+def models_dir():
+    """Tus modelos 3D: un .glb por modelo. La primera vez se crea con unas instrucciones y la carpeta de esqueletos."""
+    d = os.path.join(app_dir(), "models")
+    os.makedirs(os.path.join(d, SKELETON_DIR), exist_ok=True)
+    readme = os.path.join(d, "README.txt")
+    text = t("models_readme") + "\n"
+    try:
+        with open(readme, encoding="utf-8-sig") as f:
+            same = f.read() == text
+    except OSError:
+        same = False
+    if not same:
+        try:
+            with open(readme, "w", encoding="utf-8-sig") as f:
+                f.write(text)
+        except OSError:
+            pass
+    return d
+
+
+MODEL_EXTS = (".glb", ".fbx")
+
+
+def custom_sources():
+    """{nombre: archivo} de tus modelos: cada .glb o .fbx de la carpeta de modelos, y cada subcarpeta con un modelo
+    dentro (asi un .fbx puede ir con sus texturas al lado; si hay varios, el mas grande)."""
+    out = {}
+    try:
+        d = models_dir()
+        for f in os.listdir(d):
+            p = os.path.join(d, f)
+            stem, ext = os.path.splitext(f)
+            if os.path.isfile(p) and ext.lower() in MODEL_EXTS:
+                if stem not in out or ext.lower() == ".fbx":        # mismo nombre en .glb y .fbx: el .fbx
+                    out[stem] = p
+            elif os.path.isdir(p) and f.lower() not in (SKELETON_DIR, ANIM_DIR):
+                best = None
+                for dp, _dn, fs in os.walk(p):
+                    if dp.count(os.sep) - p.count(os.sep) > 3:
+                        continue
+                    for x in fs:
+                        if os.path.splitext(x)[1].lower() in MODEL_EXTS:
+                            q = os.path.join(dp, x)
+                            if best is None or os.path.getsize(q) > os.path.getsize(best):
+                                best = q
+                if best:
+                    out.setdefault(f, best)
+    except OSError:
+        pass
+    return out
+
+
+def custom_models():
+    """Nombres de tus modelos propios, en orden."""
+    return sorted(custom_sources(), key=str.lower)
+
+
+# avisos del ultimo paso de cada modelo al juego: {nombre: texto} (no se pudo convertir, faltan texturas...)
+model_issues = {}
+
+
+def sync_skeletons(game_dir):
+    """Copia los esqueletos que escribio el plugin a la carpeta de modelos (esqueletos). Devuelve cuantos hay."""
+    if not game_dir:
+        return 0
+    src = os.path.join(live_dir(game_dir), "skeletons")
+    dst = os.path.join(models_dir(), SKELETON_DIR)
+    n = 0
+    try:
+        for f in os.listdir(src):
+            if not f.lower().endswith(".glb"):
+                continue
+            a, b = os.path.join(src, f), os.path.join(dst, f)
+            n += 1
+            try:
+                if os.path.isfile(b) and os.path.getsize(a) == os.path.getsize(b) and os.path.getmtime(b) >= os.path.getmtime(a):
+                    continue
+                shutil.copy2(a, b)
+            except OSError as e:
+                logging.getLogger("crimesight").warning("No pude copiar el esqueleto %s: %s", f, e)
+    except OSError:
+        pass
+    return n
+
+
+def _install_custom_models(game_dir, swaps):
+    """Copia al juego (csr_live/models) los modelos propios elegidos y quita los que ya no se usan."""
+    want = {v[len(CUSTOM_PREFIX):] for v in swaps.values() if v.startswith(CUSTOM_PREFIX)}
+    return _sync_files(os.path.join(live_dir(game_dir), "models"), want, custom_sources(), model_issues)
+
+
+def _sync_files(d, want, sources, issues):
+    """Deja en d un .glb por cada nombre de want (copiado, o convertido si es .fbx) y quita los demas."""
+    if not want and not os.path.isdir(d):
+        return False
+    os.makedirs(d, exist_ok=True)
+    changed = False
+    for name in want:
+        a, b = sources.get(name), os.path.join(d, name + ".glb")
+        if not a or not os.path.isfile(a):
+            continue
+        st = os.stat(a)
+        sig = "%s|%d|%d" % (os.path.basename(a), st.st_size, int(st.st_mtime))
+        try:
+            with open(b + ".src", encoding="utf-8") as f:
+                same = f.read() == sig and os.path.isfile(b)
+        except OSError:
+            same = False
+        if same:
+            continue
+        try:
+            if a.lower().endswith(".fbx"):
+                import fbx2glb
+                notes = []
+                data = fbx2glb.convert(a, notes)
+                with open(b + ".part", "wb") as f:
+                    f.write(data)
+                issues[name] = "; ".join(t("models_" + k, **kw) for k, kw in notes) or None
+            else:
+                shutil.copy2(a, b + ".part")
+                issues[name] = None
+            os.replace(b + ".part", b)
+            with open(b + ".src", "w", encoding="utf-8") as f:
+                f.write(sig)
+            changed = True
+        except Exception as e:                                       # noqa: BLE001 (un archivo raro no tumba nada)
+            logging.getLogger("crimesight").warning("No pude preparar el modelo %s: %s", name, e)
+            key = getattr(e, "key", None)
+            issues[name] = t("models_convert_error", err=t("models_" + key) if key else e)
+            try:
+                os.remove(b + ".part")
+            except OSError:
+                pass
+    for f in os.listdir(d):
+        stem = f[:-8] if f.lower().endswith(".glb.src") else os.path.splitext(f)[0]
+        if (f.lower().endswith(".glb") or f.lower().endswith(".glb.src")) and stem not in want:
+            try:
+                os.remove(os.path.join(d, f))
+                changed = True
+            except OSError:
+                pass
+    return changed
+
+
+# ---------------------------------------------------------------- animaciones propias
+# Cada .fbx/.glb de models/animaciones es una animacion (la primera que tenga) que puede sustituir el reposo, el
+# andar o el correr de un personaje. El plugin la adapta a su esqueleto (CrimeSightRevivalAnims.cs).
+ANIM_DIR = "animaciones"
+ANIM_KINDS = ("idle", "walk", "run")
+anim_issues = {}
+
+
+def anims_dir():
+    d = os.path.join(models_dir(), ANIM_DIR)
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def anim_sources():
+    out = {}
+    try:
+        d = anims_dir()
+        for f in os.listdir(d):
+            stem, ext = os.path.splitext(f)
+            if os.path.isfile(os.path.join(d, f)) and ext.lower() in MODEL_EXTS and (stem not in out or ext.lower() == ".fbx"):
+                out[stem] = os.path.join(d, f)
+    except OSError:
+        pass
+    return out
+
+
+def custom_anims():
+    return sorted(anim_sources(), key=str.lower)
+
+
+def anim_swaps():
+    """{hueco: {idle|walk|run: animacion}} (solo las que existen)."""
+    have = set(custom_anims())
+    slots = {k for k, _ in MODEL_SLOTS}
+    out = {}
+    for slot, kinds in (load_config().get("anim_swaps") or {}).items():
+        if slot not in slots or not isinstance(kinds, dict):
+            continue
+        k = {kind: name for kind, name in kinds.items() if kind in ANIM_KINDS and name in have}
+        if k:
+            out[slot] = k
+    return out
+
+
+def set_anim_swap(slot, kind, name):
+    cfg = load_config()
+    sw = {k: dict(v) for k, v in (cfg.get("anim_swaps") or {}).items() if isinstance(v, dict)}
+    cur = sw.setdefault(slot, {})
+    if name:
+        cur[kind] = name
+    else:
+        cur.pop(kind, None)
+    if not cur:
+        sw.pop(slot, None)
+    cfg["anim_swaps"] = sw
+    save_config(cfg)
 
 
 def set_model_swap(slot, target):
@@ -969,12 +1182,17 @@ def install_models(game_dir):
         return False
     d = live_dir(game_dir)
     os.makedirs(d, exist_ok=True)
+    swaps = model_swaps()
+    anims = anim_swaps()
+    copied = _install_custom_models(game_dir, swaps)    # antes que models.json: el plugin lee el archivo al verlo
+    want = {n for kinds in anims.values() for n in kinds.values()}
+    copied = _sync_files(os.path.join(d, "anims"), want, anim_sources(), anim_issues) or copied
     path = os.path.join(d, "models.json")
-    data = json.dumps({"swaps": model_swaps()}, ensure_ascii=False, indent=1)
+    data = json.dumps({"swaps": swaps, "anims": anims}, ensure_ascii=False, indent=1)
     try:
         with open(path, encoding="utf-8") as f:
             if f.read() == data:
-                return False
+                return copied
     except OSError:
         pass
     tmp = path + ".part"

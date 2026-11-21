@@ -14,7 +14,7 @@ permissions:
 # Serie de versiones: para pasar a la siguiente (1.3, 2.0...) basta con cambiar esto. El ultimo numero cuenta
 # las releases ya publicadas de la serie: la primera es X.Y.0, luego X.Y.1, X.Y.2...
 env:
-  SERIES: "1.2"
+  SERIES: "1.3"
 
 jobs:
   release:

@@ -1256,6 +1256,240 @@ _MODELS = {
 for _l, _d in _MODELS.items():
     S[_l].update(_d)
 
+# Modelos 3D propios (.glb): carpeta, esqueletos e instrucciones (README.txt de la carpeta de modelos)
+_MODELS_CUSTOM = {
+    "en": dict(models_custom_title="Your own 3D models",
+               models_custom_desc="Put a .glb file in the models folder and it appears in the lists above with its file name. To make one, open a character's skeleton (\"esqueletos\" folder) in Blender, fit your model to it and export it as glTF Binary (.glb). The README in the folder explains the steps.",
+               models_open="Open models folder", models_custom_tag="{name} (yours)",
+               models_skel_ok="{n} skeletons ready in the \"esqueletos\" folder.",
+               models_skel_wait="The skeletons appear after opening the game once with hot reload (BepInEx).",
+               models_readme="""CRIMESIGHT Revival - your own 3D models
+=========================================
+
+Each .glb file in this folder is a model you can give to a character in the launcher (Mods > Models).
+Only you see it. The game's animations still play, on top of your model.
+
+How to make one (Blender 3.6 or later):
+ 1. Open the game once with hot reload (BepInEx). The "esqueletos" folder then gets a skeleton per character
+    (Agatha.glb, Berkeley.glb...). They only contain bones, made from your own copy of the game.
+ 2. In Blender: File > Import > glTF 2.0, and pick the skeleton of the character you want to replace.
+    Delete the tiny mesh called "CSR_borra_esta_malla".
+ 3. Import or make your model and fit it over the bones (same height and pose, arms like the skeleton).
+ 4. Select your model, then the armature (Shift+click), and press Ctrl+P > With Automatic Weights.
+    Do not rename the bones: the game finds them by name.
+ 5. File > Export > glTF 2.0, format "glTF Binary (.glb)", with the textures included, into this folder.
+ 6. In the launcher, choose your model in the character's list. If the game is open, it changes at once.
+
+Tips: one color texture per material (the game's shading is applied on top). Keep it under ~60,000 triangles.
+If something looks wrong, BepInEx/LogOutput.log has lines starting with [Modelos]."""),
+    "es": dict(models_custom_title="Tus propios modelos 3D",
+               models_custom_desc="Pon un archivo .glb en la carpeta de modelos y aparece en las listas de arriba con su nombre de archivo. Para hacer uno, abre en Blender el esqueleto de un personaje (carpeta \"esqueletos\"), ajusta tu modelo a él y expórtalo como glTF Binary (.glb). El README de la carpeta explica los pasos.",
+               models_open="Abrir carpeta de modelos", models_custom_tag="{name} (tuyo)",
+               models_skel_ok="{n} esqueletos listos en la carpeta \"esqueletos\".",
+               models_skel_wait="Los esqueletos aparecen después de abrir el juego una vez con la recarga en caliente (BepInEx).",
+               models_readme="""CRIMESIGHT Revival - tus propios modelos 3D
+=============================================
+
+Cada archivo .glb de esta carpeta es un modelo que puedes ponerle a un personaje en el lanzador (Mods > Modelos).
+Solo lo ves tú. Las animaciones del juego se siguen viendo, sobre tu modelo.
+
+Cómo hacer uno (Blender 3.6 o posterior):
+ 1. Abre el juego una vez con la recarga en caliente (BepInEx). Entonces la carpeta "esqueletos" tendrá un
+    esqueleto por personaje (Agatha.glb, Berkeley.glb...). Solo tienen huesos, sacados de tu propia copia del juego.
+ 2. En Blender: Archivo > Importar > glTF 2.0, y elige el esqueleto del personaje que quieres sustituir.
+    Borra la malla diminuta llamada "CSR_borra_esta_malla".
+ 3. Importa o haz tu modelo y ajústalo a los huesos (misma altura y postura, los brazos como el esqueleto).
+ 4. Selecciona tu modelo, luego la armadura (Mayús+clic), y pulsa Ctrl+P > Con pesos automáticos.
+    No cambies el nombre de los huesos: el juego los busca por su nombre.
+ 5. Archivo > Exportar > glTF 2.0, formato "glTF Binary (.glb)", con las texturas incluidas, en esta carpeta.
+ 6. En el lanzador, elige tu modelo en la lista del personaje. Si el juego está abierto, cambia al momento.
+
+Consejos: una textura de color por material (encima se pone el sombreado del juego). Mejor por debajo de
+~60.000 triángulos. Si algo se ve mal, BepInEx/LogOutput.log tiene líneas que empiezan por [Modelos]."""),
+    "fr": dict(models_custom_title="Vos propres modèles 3D",
+               models_custom_desc="Placez un fichier .glb dans le dossier des modèles et il apparaît dans les listes ci-dessus avec son nom de fichier. Pour en créer un, ouvrez le squelette d'un personnage (dossier « esqueletos ») dans Blender, ajustez-y votre modèle et exportez-le en glTF Binary (.glb). Le README du dossier explique les étapes.",
+               models_open="Ouvrir le dossier des modèles", models_custom_tag="{name} (le vôtre)",
+               models_skel_ok="{n} squelettes prêts dans le dossier « esqueletos ».",
+               models_skel_wait="Les squelettes apparaissent après avoir lancé le jeu une fois avec le rechargement à chaud (BepInEx)."),
+    "it": dict(models_custom_title="I tuoi modelli 3D",
+               models_custom_desc="Metti un file .glb nella cartella dei modelli e comparirà negli elenchi qui sopra con il nome del file. Per crearne uno, apri in Blender lo scheletro di un personaggio (cartella \"esqueletos\"), adattaci il tuo modello ed esportalo come glTF Binary (.glb). Il README della cartella spiega i passaggi.",
+               models_open="Apri cartella dei modelli", models_custom_tag="{name} (tuo)",
+               models_skel_ok="{n} scheletri pronti nella cartella \"esqueletos\".",
+               models_skel_wait="Gli scheletri compaiono dopo aver aperto il gioco una volta con il ricaricamento a caldo (BepInEx)."),
+    "de": dict(models_custom_title="Eigene 3D-Modelle",
+               models_custom_desc="Lege eine .glb-Datei in den Modellordner, dann erscheint sie mit ihrem Dateinamen in den Listen oben. Um eins zu machen, öffne das Skelett einer Figur (Ordner „esqueletos“) in Blender, passe dein Modell daran an und exportiere es als glTF Binary (.glb). Die README im Ordner erklärt die Schritte.",
+               models_open="Modellordner öffnen", models_custom_tag="{name} (deins)",
+               models_skel_ok="{n} Skelette bereit im Ordner „esqueletos“.",
+               models_skel_wait="Die Skelette erscheinen, nachdem du das Spiel einmal mit Hot Reload (BepInEx) geöffnet hast."),
+    "pt": dict(models_custom_title="Seus próprios modelos 3D",
+               models_custom_desc="Coloque um arquivo .glb na pasta de modelos e ele aparece nas listas acima com o nome do arquivo. Para fazer um, abra no Blender o esqueleto de um personagem (pasta \"esqueletos\"), ajuste seu modelo a ele e exporte como glTF Binary (.glb). O README da pasta explica os passos.",
+               models_open="Abrir pasta de modelos", models_custom_tag="{name} (seu)",
+               models_skel_ok="{n} esqueletos prontos na pasta \"esqueletos\".",
+               models_skel_wait="Os esqueletos aparecem depois de abrir o jogo uma vez com a recarga a quente (BepInEx)."),
+    "ru": dict(models_custom_title="Свои 3D-модели",
+               models_custom_desc="Положите файл .glb в папку моделей, и он появится в списках выше под своим именем. Чтобы сделать модель, откройте в Blender скелет персонажа (папка «esqueletos»), подгоните под него свою модель и экспортируйте как glTF Binary (.glb). Шаги описаны в README в папке.",
+               models_open="Открыть папку моделей", models_custom_tag="{name} (ваша)",
+               models_skel_ok="{n} скелетов готово в папке «esqueletos».",
+               models_skel_wait="Скелеты появятся, когда вы один раз откроете игру с горячей перезагрузкой (BepInEx)."),
+    "ja": dict(models_custom_title="自作の3Dモデル",
+               models_custom_desc="モデルフォルダーに .glb ファイルを置くと、ファイル名で上のリストに表示されます。作るには、Blenderでキャラクターの骨格（「esqueletos」フォルダー）を開き、モデルを合わせて glTF Binary (.glb) で書き出します。手順はフォルダー内の README にあります。",
+               models_open="モデルフォルダーを開く", models_custom_tag="{name}（自作）",
+               models_skel_ok="「esqueletos」フォルダーに骨格が {n} 個あります。",
+               models_skel_wait="骨格は、ホットリロード（BepInEx）でゲームを一度起動すると作られます。"),
+    "ko": dict(models_custom_title="나만의 3D 모델",
+               models_custom_desc="모델 폴더에 .glb 파일을 넣으면 위 목록에 파일 이름으로 나타납니다. 만들려면 Blender에서 캐릭터의 뼈대(\"esqueletos\" 폴더)를 열고 모델을 맞춘 뒤 glTF Binary(.glb)로 내보내세요. 단계는 폴더의 README에 있습니다.",
+               models_open="모델 폴더 열기", models_custom_tag="{name} (내 모델)",
+               models_skel_ok="\"esqueletos\" 폴더에 뼈대 {n}개가 준비되었습니다.",
+               models_skel_wait="뼈대는 핫 리로드(BepInEx)로 게임을 한 번 실행하면 생깁니다."),
+    "zh-CN": dict(models_custom_title="你自己的3D模型",
+               models_custom_desc="把 .glb 文件放进模型文件夹，它就会以文件名出现在上面的列表里。制作方法：在 Blender 中打开角色的骨架（“esqueletos”文件夹），把你的模型对齐到骨架上，再导出为 glTF Binary (.glb)。文件夹里的 README 有详细步骤。",
+               models_open="打开模型文件夹", models_custom_tag="{name}（自制）",
+               models_skel_ok="“esqueletos”文件夹中已有 {n} 个骨架。",
+               models_skel_wait="用热重载（BepInEx）启动一次游戏后就会生成骨架。"),
+    "zh-TW": dict(models_custom_title="你自己的3D模型",
+               models_custom_desc="把 .glb 檔案放進模型資料夾，它就會以檔名出現在上面的清單裡。製作方法：在 Blender 中開啟角色的骨架（「esqueletos」資料夾），把你的模型對齊到骨架上，再匯出為 glTF Binary (.glb)。資料夾裡的 README 有詳細步驟。",
+               models_open="開啟模型資料夾", models_custom_tag="{name}（自製）",
+               models_skel_ok="「esqueletos」資料夾中已有 {n} 個骨架。",
+               models_skel_wait="用熱重載（BepInEx）啟動一次遊戲後就會產生骨架。"),
+}
+for _l, _d in _MODELS_CUSTOM.items():
+    S[_l].update(_d)
+
+# Modelos en .fbx (se convierten solos) y modelos con otro esqueleto (se adaptan solos)
+_MODELS_FBX = {
+    "en": dict(models_custom_desc="Put a .fbx or .glb file in the models folder (or a subfolder with the model and its textures) and it appears in the lists above. Humanoid models from Mixamo, VRChat, VRoid, Blender, 3ds Max or MMD are fitted to the character's skeleton automatically. For a perfect fit, make it on one of the skeletons in the \"esqueletos\" folder. The README in the folder explains everything.",
+               models_convert_error="Couldn't read this model: {err}"),
+    "es": dict(models_custom_desc="Pon un archivo .fbx o .glb en la carpeta de modelos (o una subcarpeta con el modelo y sus texturas) y aparece en las listas de arriba. Los modelos humanoides de Mixamo, VRChat, VRoid, Blender, 3ds Max o MMD se adaptan solos al esqueleto del personaje. Para que encaje perfecto, hazlo sobre uno de los esqueletos de la carpeta \"esqueletos\". El README de la carpeta lo explica todo.",
+               models_convert_error="No he podido leer este modelo: {err}"),
+    "fr": dict(models_custom_desc="Placez un fichier .fbx ou .glb dans le dossier des modèles (ou un sous-dossier avec le modèle et ses textures) et il apparaît dans les listes ci-dessus. Les modèles humanoïdes de Mixamo, VRChat, VRoid, Blender, 3ds Max ou MMD s'adaptent automatiquement au squelette du personnage. Pour un ajustement parfait, créez-le sur l'un des squelettes du dossier « esqueletos ». Le README du dossier explique tout.",
+               models_convert_error="Impossible de lire ce modèle : {err}"),
+    "it": dict(models_custom_desc="Metti un file .fbx o .glb nella cartella dei modelli (o una sottocartella con il modello e le sue texture) e comparirà negli elenchi qui sopra. I modelli umanoidi di Mixamo, VRChat, VRoid, Blender, 3ds Max o MMD si adattano da soli allo scheletro del personaggio. Per un adattamento perfetto, crealo su uno degli scheletri della cartella \"esqueletos\". Il README della cartella spiega tutto.",
+               models_convert_error="Non riesco a leggere questo modello: {err}"),
+    "de": dict(models_custom_desc="Lege eine .fbx- oder .glb-Datei in den Modellordner (oder einen Unterordner mit dem Modell und seinen Texturen), dann erscheint sie in den Listen oben. Humanoide Modelle aus Mixamo, VRChat, VRoid, Blender, 3ds Max oder MMD werden automatisch an das Skelett der Figur angepasst. Für eine perfekte Passform baue es auf einem der Skelette im Ordner „esqueletos“. Die README im Ordner erklärt alles.",
+               models_convert_error="Dieses Modell konnte nicht gelesen werden: {err}"),
+    "pt": dict(models_custom_desc="Coloque um arquivo .fbx ou .glb na pasta de modelos (ou uma subpasta com o modelo e suas texturas) e ele aparece nas listas acima. Modelos humanoides do Mixamo, VRChat, VRoid, Blender, 3ds Max ou MMD se ajustam sozinhos ao esqueleto do personagem. Para um encaixe perfeito, faça-o sobre um dos esqueletos da pasta \"esqueletos\". O README da pasta explica tudo.",
+               models_convert_error="Não consegui ler este modelo: {err}"),
+    "ru": dict(models_custom_desc="Положите файл .fbx или .glb в папку моделей (или подпапку с моделью и её текстурами), и он появится в списках выше. Человекоподобные модели из Mixamo, VRChat, VRoid, Blender, 3ds Max или MMD сами подгоняются под скелет персонажа. Для идеальной посадки делайте модель на одном из скелетов из папки «esqueletos». Всё описано в README в папке.",
+               models_convert_error="Не удалось прочитать эту модель: {err}"),
+    "ja": dict(models_custom_desc="モデルフォルダーに .fbx か .glb ファイル（またはモデルとテクスチャを入れたサブフォルダー）を置くと、上のリストに表示されます。Mixamo、VRChat、VRoid、Blender、3ds Max、MMD の人型モデルは、キャラクターの骨格に自動で合わせられます。ぴったり合わせるには「esqueletos」フォルダーの骨格を使って作ってください。詳しくはフォルダー内の README を見てください。",
+               models_convert_error="このモデルを読み込めませんでした: {err}"),
+    "ko": dict(models_custom_desc="모델 폴더에 .fbx 또는 .glb 파일(또는 모델과 텍스처가 든 하위 폴더)을 넣으면 위 목록에 나타납니다. Mixamo, VRChat, VRoid, Blender, 3ds Max, MMD의 인간형 모델은 캐릭터 뼈대에 자동으로 맞춰집니다. 완벽하게 맞추려면 \"esqueletos\" 폴더의 뼈대 위에서 만드세요. 자세한 내용은 폴더의 README에 있습니다.",
+               models_convert_error="이 모델을 읽을 수 없습니다: {err}"),
+    "zh-CN": dict(models_custom_desc="把 .fbx 或 .glb 文件（或装有模型及其贴图的子文件夹）放进模型文件夹，它就会出现在上面的列表里。来自 Mixamo、VRChat、VRoid、Blender、3ds Max 或 MMD 的人形模型会自动适配角色的骨架。想要完美贴合，请在“esqueletos”文件夹中的骨架上制作。文件夹里的 README 有详细说明。",
+               models_convert_error="无法读取这个模型：{err}"),
+    "zh-TW": dict(models_custom_desc="把 .fbx 或 .glb 檔案（或裝有模型及其貼圖的子資料夾）放進模型資料夾，它就會出現在上面的清單裡。來自 Mixamo、VRChat、VRoid、Blender、3ds Max 或 MMD 的人形模型會自動配合角色的骨架。想要完美貼合，請在「esqueletos」資料夾中的骨架上製作。資料夾裡的 README 有詳細說明。",
+               models_convert_error="無法讀取這個模型：{err}"),
+}
+_MODELS_FBX["en"]["models_readme"] = """CRIMESIGHT Revival - your own 3D models
+=========================================
+
+Each model in this folder can be given to a character in the launcher (Mods > Models). Only you see it.
+The game's animations play on your model.
+
+What you can put here
+ - A .fbx or .glb file, or a subfolder with the model and its textures (handy for downloads: unzip them here).
+   The subfolder's name is the model's name.
+ - Humanoid models (Mixamo, VRChat/Unity, VRoid, Blender, 3ds Max Biped, DAZ, MMD...) are fitted automatically:
+   their bones are recognised by name, the model is turned upright, scaled to the character and put in the
+   game's T pose. Hair, skirts and other extra bones follow the nearest body bone (they won't swing).
+ - Textures: the colour texture of each material, inside the .fbx or next to it (PNG, JPG, TGA, BMP, PSD...).
+
+For a perfect fit (optional, Blender 3.6 or later)
+ 1. Open the game once with hot reload (BepInEx). The "esqueletos" folder then gets a skeleton per character
+    (Agatha.glb, Berkeley.glb...). They only contain bones, made from your own copy of the game.
+ 2. In Blender: File > Import > glTF 2.0, pick the skeleton and delete the tiny mesh "CSR_borra_esta_malla".
+ 3. Fit your model over the bones, select it, then the armature (Shift+click), and Ctrl+P > With Automatic Weights.
+    Do not rename the bones.
+ 4. File > Export > glTF 2.0 (.glb) or FBX, into this folder.
+
+Then choose it in the character's list. If the game is open, it changes at once (press the refresh button after
+re-exporting). Keep it under ~60,000 triangles. If something looks wrong, BepInEx/LogOutput.log has lines
+starting with [Modelos] that say which bones were recognised."""
+_MODELS_FBX["es"]["models_readme"] = """CRIMESIGHT Revival - tus propios modelos 3D
+=============================================
+
+Cada modelo de esta carpeta se le puede poner a un personaje en el lanzador (Mods > Modelos). Solo lo ves tú.
+Las animaciones del juego se ven en tu modelo.
+
+Qué puedes poner aquí
+ - Un archivo .fbx o .glb, o una subcarpeta con el modelo y sus texturas (útil para descargas: descomprímelas
+   aquí). El nombre de la subcarpeta es el nombre del modelo.
+ - Los modelos humanoides (Mixamo, VRChat/Unity, VRoid, Blender, Biped de 3ds Max, DAZ, MMD...) se adaptan solos:
+   se reconocen sus huesos por el nombre, se pone de pie, se escala al personaje y se coloca en la postura T del
+   juego. El pelo, las faldas y otros huesos de más siguen al hueso del cuerpo más cercano (no se balancean).
+ - Texturas: la de color de cada material, dentro del .fbx o junto a él (PNG, JPG, TGA, BMP, PSD...).
+
+Para que encaje perfecto (opcional, Blender 3.6 o posterior)
+ 1. Abre el juego una vez con la recarga en caliente (BepInEx). Entonces la carpeta "esqueletos" tendrá un
+    esqueleto por personaje (Agatha.glb, Berkeley.glb...). Solo tienen huesos, sacados de tu propia copia del juego.
+ 2. En Blender: Archivo > Importar > glTF 2.0, elige el esqueleto y borra la malla diminuta "CSR_borra_esta_malla".
+ 3. Ajusta tu modelo a los huesos, selecciónalo, luego la armadura (Mayús+clic), y Ctrl+P > Con pesos automáticos.
+    No cambies el nombre de los huesos.
+ 4. Archivo > Exportar > glTF 2.0 (.glb) o FBX, en esta carpeta.
+
+Luego elígelo en la lista del personaje. Si el juego está abierto, cambia al momento (pulsa el botón de refrescar
+después de volver a exportar). Mejor por debajo de ~60.000 triángulos. Si algo se ve mal, BepInEx/LogOutput.log
+tiene líneas que empiezan por [Modelos] que dicen qué huesos se han reconocido."""
+for _l, _d in _MODELS_FBX.items():
+    S[_l].update(_d)
+
+# avisos del paso de .fbx a .glb (fbx2glb.py)
+_MODELS_FBX_NOTES = {
+    'en': dict(models_tex_missing='Texture not found: {name} (put it next to the model)', models_tex_bad="Couldn't read the texture {name}: save it as PNG", models_mesh_static="The part {name} has no bones, so it won't move",
+               models_fbx_old="it's a very old FBX: export it again as FBX 2014 or later", models_fbx_empty="there's no 3D model inside"),
+    'es': dict(models_tex_missing='No encuentro la textura {name} (ponla junto al modelo)', models_tex_bad='No puedo leer la textura {name}: guárdala como PNG', models_mesh_static='La pieza {name} no tiene huesos, así que no se moverá',
+               models_fbx_old='es un FBX muy antiguo: vuelve a exportarlo como FBX 2014 o posterior', models_fbx_empty='no hay ningún modelo 3D dentro'),
+    'fr': dict(models_tex_missing='Texture introuvable : {name} (placez-la à côté du modèle)', models_tex_bad='Impossible de lire la texture {name} : enregistrez-la en PNG', models_mesh_static="La pièce {name} n'a pas d'os, elle ne bougera pas",
+               models_fbx_old="c'est un FBX très ancien : réexportez-le en FBX 2014 ou plus récent", models_fbx_empty="il n'y a aucun modèle 3D dedans"),
+    'it': dict(models_tex_missing='Texture non trovata: {name} (mettila accanto al modello)', models_tex_bad='Non riesco a leggere la texture {name}: salvala come PNG', models_mesh_static='Il pezzo {name} non ha ossa, quindi non si muoverà',
+               models_fbx_old='è un FBX molto vecchio: esportalo di nuovo come FBX 2014 o successivo', models_fbx_empty='non contiene nessun modello 3D'),
+    'de': dict(models_tex_missing='Textur nicht gefunden: {name} (lege sie neben das Modell)', models_tex_bad='Die Textur {name} kann nicht gelesen werden: speichere sie als PNG', models_mesh_static='Das Teil {name} hat keine Knochen und bewegt sich daher nicht',
+               models_fbx_old='das ist ein sehr altes FBX: exportiere es erneut als FBX 2014 oder neuer', models_fbx_empty='es enthält kein 3D-Modell'),
+    'pt': dict(models_tex_missing='Textura não encontrada: {name} (coloque-a junto ao modelo)', models_tex_bad='Não consigo ler a textura {name}: salve-a como PNG', models_mesh_static='A peça {name} não tem ossos, então não vai se mexer',
+               models_fbx_old='é um FBX muito antigo: exporte de novo como FBX 2014 ou posterior', models_fbx_empty='não há nenhum modelo 3D dentro'),
+    'ru': dict(models_tex_missing='Текстура не найдена: {name} (положите её рядом с моделью)', models_tex_bad='Не удалось прочитать текстуру {name}: сохраните её в PNG', models_mesh_static='У части {name} нет костей, она не будет двигаться',
+               models_fbx_old='это очень старый FBX: экспортируйте его заново как FBX 2014 или новее', models_fbx_empty='внутри нет 3D-модели'),
+    'ja': dict(models_tex_missing='テクスチャ {name} が見つかりません（モデルと同じ場所に置いてください）', models_tex_bad='テクスチャ {name} を読み込めません：PNG で保存してください', models_mesh_static='パーツ {name} にはボーンがないので動きません',
+               models_fbx_old='とても古い FBX です：FBX 2014 以降で書き出し直してください', models_fbx_empty='3Dモデルが入っていません'),
+    'ko': dict(models_tex_missing='텍스처를 찾을 수 없습니다: {name} (모델 옆에 두세요)', models_tex_bad='텍스처 {name}을(를) 읽을 수 없습니다: PNG로 저장하세요', models_mesh_static='{name} 부분에는 뼈가 없어 움직이지 않습니다',
+               models_fbx_old='아주 오래된 FBX입니다: FBX 2014 이상으로 다시 내보내세요', models_fbx_empty='3D 모델이 들어 있지 않습니다'),
+    'zh-CN': dict(models_tex_missing='找不到贴图 {name}（请放在模型旁边）', models_tex_bad='无法读取贴图 {name}：请另存为 PNG', models_mesh_static='部件 {name} 没有骨骼，所以不会动',
+               models_fbx_old='这是很旧的 FBX：请重新导出为 FBX 2014 或更新版本', models_fbx_empty='里面没有3D模型'),
+    'zh-TW': dict(models_tex_missing='找不到貼圖 {name}（請放在模型旁邊）', models_tex_bad='無法讀取貼圖 {name}：請另存為 PNG', models_mesh_static='部件 {name} 沒有骨骼，所以不會動',
+               models_fbx_old='這是很舊的 FBX：請重新匯出為 FBX 2014 或更新版本', models_fbx_empty='裡面沒有3D模型'),
+}
+for _l, _d in _MODELS_FBX_NOTES.items():
+    S[_l].update(_d)
+
+# animaciones propias (reposo, andar, correr) por personaje
+_MODELS_ANIMS = {
+    "en": dict(models_anims_title="Animations", models_anims_desc="Replace a character's idle, walk or run with your own animation (.fbx or .glb, e.g. from Mixamo) from the \"animaciones\" folder. Any humanoid animation works: it's fitted to the character's skeleton. Works with the game's models and with yours.", models_anims_open="Open animations folder", models_anims_none="There are no animations yet: put .fbx or .glb files in the \"animaciones\" folder and press refresh.", models_anim_idle="Idle", models_anim_walk="Walk", models_anim_run="Run", models_anim_game="Game's"),
+    "es": dict(models_anims_title="Animaciones", models_anims_desc="Cambia el reposo, el andar o el correr de un personaje por una animación tuya (.fbx o .glb, por ejemplo de Mixamo) de la carpeta \"animaciones\". Vale cualquier animación humanoide: se adapta al esqueleto del personaje. Funciona con los modelos del juego y con los tuyos.", models_anims_open="Abrir carpeta de animaciones", models_anims_none="Aún no hay animaciones: pon archivos .fbx o .glb en la carpeta \"animaciones\" y pulsa refrescar.", models_anim_idle="Reposo", models_anim_walk="Andar", models_anim_run="Correr", models_anim_game="La del juego"),
+    "fr": dict(models_anims_title="Animations", models_anims_desc="Remplacez la pose de repos, la marche ou la course d'un personnage par votre propre animation (.fbx ou .glb, par ex. de Mixamo) du dossier « animaciones ». Toute animation humanoïde convient : elle s'adapte au squelette du personnage. Fonctionne avec les modèles du jeu et les vôtres.", models_anims_open="Ouvrir le dossier des animations", models_anims_none="Aucune animation pour l'instant : placez des fichiers .fbx ou .glb dans le dossier « animaciones » et actualisez.", models_anim_idle="Repos", models_anim_walk="Marche", models_anim_run="Course", models_anim_game="Celle du jeu"),
+    "it": dict(models_anims_title="Animazioni", models_anims_desc="Sostituisci la posa di riposo, la camminata o la corsa di un personaggio con una tua animazione (.fbx o .glb, ad es. da Mixamo) della cartella \"animaciones\". Va bene qualsiasi animazione umanoide: si adatta allo scheletro del personaggio. Funziona con i modelli del gioco e con i tuoi.", models_anims_open="Apri cartella delle animazioni", models_anims_none="Non ci sono ancora animazioni: metti file .fbx o .glb nella cartella \"animaciones\" e aggiorna.", models_anim_idle="Riposo", models_anim_walk="Camminata", models_anim_run="Corsa", models_anim_game="Quella del gioco"),
+    "de": dict(models_anims_title="Animationen", models_anims_desc="Ersetze das Stehen, Gehen oder Laufen einer Figur durch eine eigene Animation (.fbx oder .glb, z. B. von Mixamo) aus dem Ordner „animaciones“. Jede humanoide Animation geht: Sie wird an das Skelett der Figur angepasst. Funktioniert mit den Modellen des Spiels und mit deinen.", models_anims_open="Animationsordner öffnen", models_anims_none="Noch keine Animationen: Lege .fbx- oder .glb-Dateien in den Ordner „animaciones“ und aktualisiere.", models_anim_idle="Stehen", models_anim_walk="Gehen", models_anim_run="Laufen", models_anim_game="Die des Spiels"),
+    "pt": dict(models_anims_title="Animações", models_anims_desc="Troque o repouso, o andar ou o correr de um personagem por uma animação sua (.fbx ou .glb, por exemplo do Mixamo) da pasta \"animaciones\". Qualquer animação humanoide serve: ela se ajusta ao esqueleto do personagem. Funciona com os modelos do jogo e com os seus.", models_anims_open="Abrir pasta de animações", models_anims_none="Ainda não há animações: coloque arquivos .fbx ou .glb na pasta \"animaciones\" e atualize.", models_anim_idle="Repouso", models_anim_walk="Andar", models_anim_run="Correr", models_anim_game="A do jogo"),
+    "ru": dict(models_anims_title="Анимации", models_anims_desc="Замените стойку, ходьбу или бег персонажа своей анимацией (.fbx или .glb, например из Mixamo) из папки «animaciones». Подойдёт любая человекоподобная анимация: она подгоняется под скелет персонажа. Работает и с моделями игры, и с вашими.", models_anims_open="Открыть папку анимаций", models_anims_none="Анимаций пока нет: положите файлы .fbx или .glb в папку «animaciones» и обновите.", models_anim_idle="Стойка", models_anim_walk="Ходьба", models_anim_run="Бег", models_anim_game="Из игры"),
+    "ja": dict(models_anims_title="アニメーション", models_anims_desc="キャラクターの待機・歩き・走りを、「animaciones」フォルダーにある自分のアニメーション（.fbx か .glb、例えば Mixamo のもの）に置き換えます。人型のアニメーションならどれでも、キャラクターの骨格に合わせられます。ゲームのモデルにも自作モデルにも使えます。", models_anims_open="アニメーションフォルダーを開く", models_anims_none="まだアニメーションがありません。「animaciones」フォルダーに .fbx か .glb を置いて更新してください。", models_anim_idle="待機", models_anim_walk="歩き", models_anim_run="走り", models_anim_game="ゲームのもの"),
+    "ko": dict(models_anims_title="애니메이션", models_anims_desc="캐릭터의 대기, 걷기, 달리기를 \"animaciones\" 폴더에 있는 나만의 애니메이션(.fbx 또는 .glb, 예: Mixamo)으로 바꿉니다. 인간형 애니메이션이면 무엇이든 캐릭터 뼈대에 맞춰집니다. 게임 모델과 내 모델 모두에서 작동합니다.", models_anims_open="애니메이션 폴더 열기", models_anims_none="아직 애니메이션이 없습니다. \"animaciones\" 폴더에 .fbx 또는 .glb 파일을 넣고 새로 고치세요.", models_anim_idle="대기", models_anim_walk="걷기", models_anim_run="달리기", models_anim_game="게임 기본"),
+    "zh-CN": dict(models_anims_title="动画", models_anims_desc="用“animaciones”文件夹里你自己的动画（.fbx 或 .glb，例如来自 Mixamo）替换角色的待机、行走或奔跑。任何人形动画都可以，会自动适配角色的骨架。游戏模型和你的模型都适用。", models_anims_open="打开动画文件夹", models_anims_none="还没有动画：把 .fbx 或 .glb 文件放进“animaciones”文件夹，然后刷新。", models_anim_idle="待机", models_anim_walk="行走", models_anim_run="奔跑", models_anim_game="游戏原版"),
+    "zh-TW": dict(models_anims_title="動畫", models_anims_desc="用「animaciones」資料夾裡你自己的動畫（.fbx 或 .glb，例如來自 Mixamo）替換角色的待機、行走或奔跑。任何人形動畫都可以，會自動配合角色的骨架。遊戲模型和你的模型都適用。", models_anims_open="開啟動畫資料夾", models_anims_none="還沒有動畫：把 .fbx 或 .glb 檔案放進「animaciones」資料夾，然後重新整理。", models_anim_idle="待機", models_anim_walk="行走", models_anim_run="奔跑", models_anim_game="遊戲原版"),
+}
+for _l, _d in _MODELS_ANIMS.items():
+    S[_l].update(_d)
+S["en"]["models_readme"] += """
+
+Animations (folder "animaciones")
+ - Put .fbx or .glb animations there (from Mixamo: choose "FBX Binary", "Without Skin" and "In Place" for walks
+   and runs). In the launcher (Mods > Models > Animations) choose, for each character, which one replaces its
+   idle, walk or run. The first animation in each file is used; the game still decides when each one plays."""
+S["es"]["models_readme"] += """
+
+Animaciones (carpeta "animaciones")
+ - Pon ahí animaciones .fbx o .glb (de Mixamo: elige "FBX Binary", "Without Skin" e "In Place" para andar y
+   correr). En el lanzador (Mods > Modelos > Animaciones) elige, para cada personaje, cuál sustituye a su reposo,
+   su andar o su correr. Se usa la primera animación de cada archivo; el juego sigue decidiendo cuándo suena cada una."""
+
 _GAME_OPEN = {
     "en": "CRIMESIGHT is already open. Close it and press the button again: the launcher opens it for you, already connected.",
     "es": "CRIMESIGHT ya está abierto. Ciérralo y vuelve a pulsar el botón: el lanzador lo abre por ti, ya conectado.",

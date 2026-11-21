@@ -7,6 +7,30 @@ mensaje del commit.
 
 The first block (from the first `## ` to the next one) is what the launcher shows when it offers an update.
 
+## 1.3 · Modelos 3D y animaciones propios / Your own 3D models and animations
+
+### Español
+
+- **Pon tus propios modelos 3D a los personajes** (Mods > Modelos, con la recarga en caliente de BepInEx). Mete un archivo `.fbx` o `.glb` en la carpeta de modelos (o una subcarpeta con el modelo y sus texturas) y elígelo en la lista del personaje. Solo lo ves tú.
+  - **Vale casi cualquier humanoide**: Mixamo, Ready Player Me, VRoid/VRM, VRChat/Unity, Blender, Biped de 3ds Max, DAZ, Unreal o MMD. Sus huesos se reconocen por el nombre y el modelo se pone de pie, a la altura del personaje y en su postura, aunque venga en otra escala, con otros ejes o en postura A.
+  - **Conserva sus proporciones**: lleva su propio esqueleto, que copia en cada fotograma las animaciones del personaje, así que no se deforma aunque tenga los brazos o las piernas más largos. Los hombros acompañan a los brazos para que no queden cuadrados.
+  - **Texturas**: la de color de cada material, dentro del `.fbx` o junto a él (PNG, JPG, TGA, BMP, PSD…).
+  - Lee FBX binarios y de texto, también los antiguos 6.1 que da Mixamo con «FBX for Unity».
+  - Para que encaje perfecto, el juego deja en la carpeta `esqueletos` el esqueleto de cada personaje (solo los huesos) para hacer el modelo encima en Blender. El `README.txt` de la carpeta lo explica.
+  - Los animales, los bustos y los modelos sin esqueleto no se pueden poner (a una malla sin esqueleto se le puede poner gratis en Mixamo). El pelo y las faldas van rígidos.
+- **Animaciones propias**: en la misma pestaña, cambia el reposo, el andar o el correr de cada personaje por una animación tuya (`.fbx` o `.glb`, por ejemplo de Mixamo con «Without Skin» e «In Place») de la carpeta `animaciones`. Se adapta sola a su esqueleto y funciona con los modelos del juego y con los tuyos.
+
+### English
+
+- **Give the characters your own 3D models** (Mods > Models, with BepInEx hot reload). Put a `.fbx` or `.glb` file in the models folder (or a subfolder with the model and its textures) and pick it in the character's list. Only you see it.
+  - **Almost any humanoid works**: Mixamo, Ready Player Me, VRoid/VRM, VRChat/Unity, Blender, 3ds Max Biped, DAZ, Unreal or MMD. Its bones are recognised by name and the model is stood up, scaled to the character and put in its pose, even with another scale, other axes or an A pose.
+  - **It keeps its proportions**: it gets its own skeleton, which copies the character's animations every frame, so it doesn't get distorted even with longer arms or legs. The shoulders follow the arms so they don't look square.
+  - **Textures**: each material's colour texture, inside the `.fbx` or next to it (PNG, JPG, TGA, BMP, PSD…).
+  - Reads binary and text FBX, including the old 6.1 ones Mixamo gives with "FBX for Unity".
+  - For a perfect fit, the game leaves each character's skeleton (bones only) in the `esqueletos` folder to build the model on in Blender. The folder's `README.txt` explains it.
+  - Animals, busts and models without a skeleton can't be used (Mixamo rigs a mesh for free). Hair and skirts are rigid.
+- **Your own animations**: in the same tab, replace each character's idle, walk or run with your own animation (`.fbx` or `.glb`, e.g. from Mixamo with "Without Skin" and "In Place") from the `animaciones` folder. It fits itself to the skeleton and works with the game's models and with yours.
+
 ## 1.2 · IA Experto y Pesadilla / Expert and Nightmare AI
 
 ### Español

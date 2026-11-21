@@ -5,7 +5,8 @@
 // Claves (lo que se cambia): PawnTypeData_A..F (Agatha, Berkeley, Catherine, Dorothy, Ellery, Freeman),
 //   ThreatTypeData_Survivor / ThreatTypeData_Traitor (victima y traidor).
 // Valores (el modelo que se pone): las mismas claves, o "sherlock" / "moriarty" (los modelos de la escena
-//   del asesinato, KillCutPrefab, que el juego carga con Addressables).
+//   del asesinato, KillCutPrefab, que el juego carga con Addressables), o "custom:<nombre>" (un modelo propio en
+//   csr_live/models/<nombre>.glb: ver CrimeSightRevivalModelsGlb.cs).
 //
 // Como se hace: el personaje se queda como esta (su esqueleto, sus animaciones, su IA); solo se cambian las
 // mallas y los materiales de sus SkinnedMeshRenderer por los del otro modelo, enganchadas a sus huesos por el
@@ -26,9 +27,13 @@ using Il2CppInterop.Runtime;
 
 namespace CrimeSightRevival.Mods
 {
-    static class Models
+    static partial class Models
     {
-        class Config { public Dictionary<string, string> swaps { get; set; } }
+        class Config
+        {
+            public Dictionary<string, string> swaps { get; set; }
+            public Dictionary<string, Dictionary<string, string>> anims { get; set; }
+        }
 
         class Saved
         {
@@ -39,6 +44,8 @@ namespace CrimeSightRevival.Mods
         class Applied
         {
             public GameObject root; public string target;
+            public List<Link> links;                                     // esqueleto propio (modelo adaptado) o null
+            public List<Shoulder> shoulders;                             // sus hombros, que acompanan a los brazos
             public readonly List<Saved> saved = new();
             public readonly List<(Renderer r, bool enabled)> hidden = new();
             public readonly List<GameObject> created = new();
@@ -49,6 +56,7 @@ namespace CrimeSightRevival.Mods
         static string _sig = "";
         static float _next;
         static readonly Dictionary<int, Applied> _applied = new();          // por id del objeto del personaje
+        static readonly Dictionary<int, string> _customTried = new();       // modelos propios que no se pudieron poner
         static readonly HashSet<string> _warned = new();
         static GameObject _killCut;                                          // plantilla de Sherlock y Moriarty
         static bool _killCutAsked;
@@ -61,6 +69,7 @@ namespace CrimeSightRevival.Mods
             try
             {
                 ReadConfig();
+                ExportSkeletons();
                 Scan();
             }
             catch (Exception e) { Warn("frame", "[Modelos] " + e.Message); }
@@ -71,22 +80,44 @@ namespace CrimeSightRevival.Mods
         {
             string sig = "";
             try { var fi = new FileInfo(File_); if (fi.Exists) sig = fi.Length + ":" + fi.LastWriteTimeUtc.Ticks; } catch { }
+            string json = sig;
+            sig += CustomSigs(_swaps) + AnimSigs(_anims);  // un .glb que se cambia con el juego abierto tambien se recarga
             if (sig == _sig) return;
-            _sig = sig;
             var swaps = new Dictionary<string, string>();
-            if (sig != "")
+            var anims = new Dictionary<string, Dictionary<string, string>>();
+            if (json != "")
                 try
                 {
                     var c = JsonSerializer.Deserialize<Config>(File.ReadAllText(File_));
                     if (c?.swaps != null)
                         foreach (var kv in c.swaps)
                             if (!string.IsNullOrEmpty(kv.Value) && kv.Value != kv.Key) swaps[kv.Key] = kv.Value;
+                    if (c?.anims != null)
+                        foreach (var kv in c.anims)
+                        {
+                            var set = new Dictionary<string, string>();
+                            if (kv.Value != null) foreach (var a in kv.Value) if (!string.IsNullOrEmpty(a.Value)) set[a.Key] = a.Value;
+                            if (set.Count > 0) anims[kv.Key] = set;
+                        }
                 }
                 catch (Exception e) { Plugin.L.LogWarning("[Modelos] models.json: " + e.Message); }
             _swaps = swaps;
+            _anims = anims;
+            _animMaps.Clear();
+            foreach (var d in _drivers.Values) { d.map = null; d.fading = null; }
+            _sig = json + CustomSigs(swaps) + AnimSigs(anims);
+            _customTried.Clear();
             RevertAll();                                   // con la nueva configuracion se vuelve a aplicar todo
             Plugin.L.LogInfo("[Modelos] " + (swaps.Count == 0 ? "sin cambios de modelo"
                 : swaps.Count + " cambio(s): " + string.Join(", ", Pairs(swaps))));
+            foreach (var kv in anims) Plugin.L.LogInfo("[Animaciones] " + kv.Key + ": " + string.Join(", ", Pairs(kv.Value)));
+        }
+
+        static string CustomSigs(Dictionary<string, string> swaps)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var v in swaps.Values) if (v.StartsWith(CustomPrefix)) sb.Append('|').Append(v).Append('=').Append(CustomSig(v));
+            return sb.ToString();
         }
 
         static IEnumerable<string> Pairs(Dictionary<string, string> d) { foreach (var kv in d) yield return kv.Key + " -> " + kv.Value; }
@@ -98,7 +129,7 @@ namespace CrimeSightRevival.Mods
             var gone = new List<int>();
             foreach (var kv in _applied) if (kv.Value.root == null) gone.Add(kv.Key);
             foreach (var id in gone) _applied.Remove(id);
-            if (_swaps.Count == 0) return;
+            if (_swaps.Count == 0 && _anims.Count == 0) return;
             if (_swaps.ContainsValue("sherlock") || _swaps.ContainsValue("moriarty")) AskKillCut();
 
             foreach (var o in UnityEngine.Object.FindObjectsOfType(Il2CppType.Of<Pawn>()))
@@ -107,6 +138,7 @@ namespace CrimeSightRevival.Mods
                 var data = p?.pawnTypeData;
                 if (data == null) continue;
                 Handle(p.gameObject, data.name);
+                HandleAnim(p.gameObject, data.name);
             }
             foreach (var o in UnityEngine.Object.FindObjectsOfType(Il2CppType.Of<Threat>()))
             {
@@ -114,6 +146,7 @@ namespace CrimeSightRevival.Mods
                 var data = t?.threatTypeData;
                 if (data == null) continue;
                 Handle(t.gameObject, data.name);
+                HandleAnim(t.gameObject, data.name);
             }
         }
 
@@ -124,6 +157,15 @@ namespace CrimeSightRevival.Mods
             if (root == null) return;
             int id = root.GetInstanceID();
             if (_applied.TryGetValue(id, out var a) && a.target == target) return;
+            if (target.StartsWith(CustomPrefix))
+            {
+                if (_customTried.TryGetValue(id, out var tried) && tried == target + "|" + CustomSig(target)) return;   // ya fallo
+                if (a != null) { Revert(a); _applied.Remove(id); }
+                var ac = ApplyCustom(root, target, key);
+                if (ac != null) { _applied[id] = ac; _customTried.Remove(id); }
+                else _customTried[id] = target + "|" + CustomSig(target);
+                return;
+            }
             var tpl = Template(target);
             if (tpl == null) return;                        // aun no esta (Sherlock/Moriarty cargando) o no existe
             if (a != null) { Revert(a); _applied.Remove(id); }

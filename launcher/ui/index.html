@@ -161,6 +161,8 @@ footer .updpill.on{display:inline-block}
 .mod .thumbs{display:flex;gap:4px;flex-shrink:0}
 .mod .thumbs img{width:40px;height:40px;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.05)}
 .mod .info{flex:1;min-width:0}
+.animsel{display:flex;gap:6px;flex-wrap:wrap}.animsel .animk{display:flex;flex-direction:column;gap:2px}.animsel .animk small{color:var(--dim);font-size:11px}
+.animsel select{max-width:130px}
 .mod .info b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mod .info small{color:var(--dim);font-size:12px}
 .mod .info .warn{color:#ffb37a}
@@ -324,6 +326,22 @@ footer .updpill.on{display:inline-block}
         <p data-t="models_desc"></p>
         <p class="note" id="modelsbep" data-t="models_need_bep" style="display:none"></p>
         <div class="mods" id="modelslist"></div>
+        <div class="sub" data-t="models_custom_title"></div>
+        <div class="bep cur">
+          <div class="currow"><div class="info"><small data-t="models_custom_desc"></small>
+            <small id="modelsskel"></small></div></div>
+          <div class="curctl">
+            <button class="btn ghost small" onclick="api('models_open')" data-t="models_open"></button>
+            <button class="btn ghost small" onclick="loadModels()">&#x21bb;</button>
+          </div>
+        </div>
+        <div class="sub" data-t="models_anims_title"></div>
+        <p class="note" data-t="models_anims_desc"></p>
+        <div class="mods" id="animslist"></div>
+        <div class="bep cur"><div class="curctl">
+          <button class="btn ghost small" onclick="api('models_anims_open')" data-t="models_anims_open"></button>
+          <button class="btn ghost small" onclick="loadModels()">&#x21bb;</button>
+        </div></div>
       </div>
       <div class="pane" data-pane="cursor">
         <div class="bep cur" id="cursorbox">
@@ -572,19 +590,31 @@ let MODELS=null;
 async function loadModels(){
   const r=await api('models_state');if(!r)return;MODELS=r;
   $('#modelsbep').style.display=r.live?'none':'block';
+  $('#modelsskel').textContent=r.skeletons?T('models_skel_ok',{n:r.skeletons}):T('models_skel_wait');
+  const kinds=r.anim_kinds||[],names=r.anims||[];
+  $('#animslist').innerHTML=!names.length?`<p class="note">${esc(T('models_anims_none'))}</p>`:r.slots.map(s=>{
+    const cur=(r.anim_swaps||{})[s.id]||{};
+    const warn=Object.values(cur).map(n=>(r.anim_issues||{})[n]).filter(x=>x).map(x=>`<small class="warn">${esc(x)}</small>`).join('');
+    const sels=kinds.map(k=>`<label class="animk"><small>${esc(T('models_anim_'+k))}</small><select class="small" onchange="setAnim(${esc(JSON.stringify(s.id))},'${k}',this.value)">
+      <option value="">${esc(T('models_anim_game'))}</option>${names.map(n=>`<option value="${esc(n)}"${cur[k]===n?' selected':''}>${esc(n)}</option>`).join('')}</select></label>`).join('');
+    return `<div class="mod${Object.keys(cur).length?'':' plain'}"><div class="info"><b>${esc(s.name)}</b>${warn}</div><div class="animsel">${sels}</div></div>`;
+  }).join('');
   $('#modelslist').innerHTML=r.slots.map(s=>{
     const cur=r.swaps[s.id]||'';
     const opts=[`<option value="">${esc(T('models_original'))}</option>`].concat(
       r.targets.filter(x=>x.id!==s.id).map(x=>`<option value="${esc(x.id)}"${x.id===cur?' selected':''}>${esc(x.name)}</option>`)).join('');
     return `<div class="mod${cur?'':' plain'}"><div class="info"><b>${esc(s.name)}</b>
-      <small>${esc(cur?T('models_now',{name:(r.targets.find(x=>x.id===cur)||{}).name||cur}):T('models_original'))}</small></div>
+      <small>${esc(cur?T('models_now',{name:(r.targets.find(x=>x.id===cur)||{}).name||cur}):T('models_original'))}</small>
+      ${cur&&r.issues&&r.issues[cur]?`<small class="warn">${esc(r.issues[cur])}</small>`:''}</div>
       <select class="small" onchange="setModel(${esc(JSON.stringify(s.id))},this.value)">${opts}</select></div>`;
   }).join('');
 }
+async function setAnim(slot,kind,name){const r=await api('models_anim_set',slot,kind,name);if(r&&r.error){toast(r.error);return}loadModels()}
 async function setModel(slot,target){const r=await api('models_set',slot,target);if(r&&r.error){toast(r.error);return}loadModels()}
 let MODTAB='general';
 function modTab(t){
   MODTAB=t;
+  if(t==='models')loadModels();
   document.querySelectorAll('#modtabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
   document.querySelectorAll('#mods .pane').forEach(p=>p.classList.toggle('on',p.dataset.pane===t));
   $('#mods .tabbody').scrollTop=0;

@@ -23,7 +23,7 @@ using UnityEngine;
 
 namespace CrimeSightRevival.Mods
 {
-    [BepInPlugin("com.amras95.crimesightrevival.mods", "CRIMESIGHT Revival - Mods", "1.0.0")]
+    [BepInPlugin("com.amras95.crimesightrevival.mods", "CRIMESIGHT Revival - Mods", "1.3.0")]
     public class Plugin : BasePlugin
     {
         internal static ManualLogSource L;
@@ -171,6 +171,7 @@ namespace CrimeSightRevival.Mods
         {
             try { Guide.Frame(true); } catch { }
             try { RevivalCredits.Late(); } catch { }
+            try { Models.Late(); } catch { }
         }
 
         void Tick()
