@@ -163,6 +163,11 @@ footer .updpill.on{display:inline-block}
 .mod .info{flex:1;min-width:0}
 .animsel{display:flex;gap:6px;flex-wrap:wrap}.animsel .animk{display:flex;flex-direction:column;gap:2px}.animsel .animk small{color:var(--dim);font-size:11px}
 .animsel select{max-width:130px}
+.charedit{background:rgba(5,6,20,.75);border:1px solid var(--line);border-radius:12px;padding:12px;margin:8px 0;display:flex;flex-direction:column;gap:10px}
+.charedit label{display:flex;flex-direction:column;gap:3px}.charedit small{color:var(--dim)}
+.charedit input,.charedit textarea{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;color:inherit;padding:6px 8px;font:inherit}
+.charedit .row2{display:flex;gap:10px;flex-wrap:wrap}.charedit .talks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.charedit textarea{resize:vertical;min-height:38px}.charedit summary{cursor:pointer;color:#c9ccff}
 .mod .info b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mod .info small{color:var(--dim);font-size:12px}
 .mod .info .warn{color:#ffb37a}
@@ -335,6 +340,14 @@ footer .updpill.on{display:inline-block}
             <button class="btn ghost small" onclick="loadModels()">&#x21bb;</button>
           </div>
         </div>
+        <div class="sub" data-t="chars_title"></div>
+        <p class="note" data-t="chars_desc"></p>
+        <div class="mods" id="charslist"></div>
+        <div id="charedit" class="charedit" style="display:none"></div>
+        <div class="bep cur"><div class="curctl">
+          <button class="btn small" onclick="charEdit('')" data-t="chars_add"></button>
+          <button class="btn ghost small" onclick="api('chars_images_open')" data-t="chars_images_open"></button>
+        </div></div>
         <div class="sub" data-t="models_anims_title"></div>
         <p class="note" data-t="models_anims_desc"></p>
         <div class="mods" id="animslist"></div>
@@ -565,7 +578,7 @@ async function pickBackup(){done(await api('pick_backup'))}
 async function clearBackup(){done(await api('clear_backup'))}
 
 /* mods de apariencia */
-function modCount(m){return T('mods_count',{stickers:m.stickers,avatars:m.avatars})}
+function modCount(m){return m.text||T('mods_count',{stickers:m.stickers,avatars:m.avatars})}
 function modRow(m,kind){
   const th=(kind==='avatars'?m.avatar_thumbs:m.sticker_thumbs)||m.thumbs||[];
   return `<div class="mod${m.enabled?'':' off'}">
@@ -609,12 +622,53 @@ async function loadModels(){
       <select class="small" onchange="setModel(${esc(JSON.stringify(s.id))},this.value)">${opts}</select></div>`;
   }).join('');
 }
+/* ---- personajes nuevos: entran en el sorteo de cada partida (Selector de personajes) ---- */
+let CHARS=null;
+const CHAR_ORIG=['Agatha','Berkeley','Catherine','Dorothy','Ellery','Freeman'];
+async function loadChars(){
+  CHARS=await api('chars_state');if(!CHARS)return;
+  $('#charslist').innerHTML=!CHARS.chars.length?`<p class="note">${esc(T('chars_none'))}</p>`:CHARS.chars.map(c=>{
+    const what=[T('chars_anim_from_short',{n:CHAR_ORIG['ABCDEF'.indexOf((c.anim_from||'PawnTypeData_A').slice(-1))]||'Agatha'}),c.model,
+      Object.keys(c.anims||{}).length?T('chars_has_anims'):'',Object.keys(c.talk||{}).length?T('chars_has_talk',{n:Object.keys(c.talk).length}):'',
+      c.image?T('chars_has_image'):''].filter(x=>x).join(' · ');
+    const miss=CHARS.models.indexOf(c.model)<0?`<small class="warn">${esc(T('chars_need_model'))}</small>`:'';
+    return `<div class="mod"><div class="info"><b>${esc(c.name||c.model||'?')}</b><small>${esc(what)}</small>${miss}</div>
+      <button class="btn ghost small" onclick="charEdit(${esc(JSON.stringify(c.id))})">${esc(T('chars_edit'))}</button>
+      <button class="btn ghost small" onclick="charDel(${esc(JSON.stringify(c.id))})">${esc(T('chars_delete'))}</button></div>`;
+  }).join('');
+}
+function charSel(id,list,cur,none){return `<select class="small" id="${id}"><option value="">${esc(none)}</option>${list.map(n=>`<option value="${esc(n)}"${n===cur?' selected':''}>${esc(n)}</option>`).join('')}</select>`}
+function charEdit(cid){
+  if(!CHARS)return;
+  const c=CHARS.chars.find(x=>x.id===cid)||{id:'',name:'',role:'pawn',model:'',image:'',anims:{},talk:{}};
+  const anims=CHARS.kinds.map(k=>`<label class="animk"><small>${esc(T('models_anim_'+k))}</small>${charSel('ce_an_'+k,CHARS.anims,(c.anims||{})[k]||'',T('models_anim_game'))}</label>`).join('');
+  const talk=CHARS.talk_keys.map(k=>`<label class="talk"><small>${esc(T('talk_'+k))}</small><textarea id="ce_tk_${k}" rows="2" maxlength="240" placeholder="${esc(T('chars_talk_keep'))}">${esc((c.talk||{})[k]||'')}</textarea></label>`).join('');
+  const e=$('#charedit');
+  e.innerHTML=`<input type="hidden" id="ce_id" value="${esc(c.id)}">
+    <label><small>${esc(T('chars_name'))}</small><input id="ce_name" maxlength="24" value="${esc(c.name)}" placeholder="${esc(T('chars_name_keep'))}"></label>
+    <div class="row2"><label><small>${esc(T('chars_model'))}</small>${charSel('ce_model',CHARS.models,c.model,'—')}</label>
+      <label><small>${esc(T('chars_anim_from'))}</small><select class="small" id="ce_from">${CHAR_ORIG.map((n,i)=>`<option value="PawnTypeData_${'ABCDEF'[i]}"${(c.anim_from||'PawnTypeData_A')==='PawnTypeData_'+'ABCDEF'[i]?' selected':''}>${esc(n)}</option>`).join('')}</select></label>
+      <label><small>${esc(T('chars_image'))}</small>${charSel('ce_image',CHARS.images,c.image,T('chars_image_none'))}</label></div>
+    <div><small>${esc(T('chars_anims'))}</small><div class="animsel">${anims}</div><p class="note">${esc(T('chars_anims_hint'))}</p></div>
+    <details><summary>${esc(T('chars_talk'))}</summary><p class="note">${esc(T('chars_talk_hint'))}</p><div class="talks">${talk}</div></details>
+    <div class="curctl"><button class="btn small" onclick="charSave()">${esc(T('chars_save'))}</button><button class="btn ghost small" onclick="charClose()">${esc(T('chars_cancel'))}</button></div>`;
+  e.style.display='block';e.scrollIntoView({block:'nearest'});
+}
+function charClose(){$('#charedit').style.display='none';$('#charedit').innerHTML=''}
+async function charSave(){
+  const c={id:$('#ce_id').value,name:$('#ce_name').value,role:'pawn',anim_from:$('#ce_from').value,model:$('#ce_model').value,image:$('#ce_image').value,anims:{},talk:{}};
+  CHARS.kinds.forEach(k=>{const v=$('#ce_an_'+k).value;if(v)c.anims[k]=v});
+  CHARS.talk_keys.forEach(k=>{const v=$('#ce_tk_'+k).value.trim();if(v)c.talk[k]=v});
+  const r=await api('chars_save',c);if(r&&r.error){toast(r.error);return}
+  charClose();loadChars();
+}
+async function charDel(cid){await api('chars_delete',cid);loadChars()}
 async function setAnim(slot,kind,name){const r=await api('models_anim_set',slot,kind,name);if(r&&r.error){toast(r.error);return}loadModels()}
 async function setModel(slot,target){const r=await api('models_set',slot,target);if(r&&r.error){toast(r.error);return}loadModels()}
 let MODTAB='general';
 function modTab(t){
   MODTAB=t;
-  if(t==='models')loadModels();
+  if(t==='models'){loadModels();loadChars()}
   document.querySelectorAll('#modtabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
   document.querySelectorAll('#mods .pane').forEach(p=>p.classList.toggle('on',p.dataset.pane===t));
   $('#mods .tabbody').scrollTop=0;
@@ -719,7 +773,7 @@ window.ui={
   closeOffer(){$('#modoffer').classList.remove('on')},
   confirmOffer(info){
     $('#modoffert').textContent=T('mods_offer_title',{player:info.player});
-    $('#modofferp').textContent=T('mods_offer_text',{player:info.player});
+    $('#modofferp').textContent=info.text||T('mods_offer_text',{player:info.player});
     $('#modofferl').innerHTML=(info.mods||[]).map(m=>`<div><b>${esc(m.name)}</b> — ${esc(modCount(m))}</div>`).join('');
     $('#modoffer').classList.add('on')},
   confirmMods(info){

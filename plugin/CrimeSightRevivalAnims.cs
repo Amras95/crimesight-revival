@@ -3,7 +3,7 @@
 // En models.json: "anims": { "PawnTypeData_A": { "idle": "<nombre>", "walk": "<nombre>", "run": "<nombre>" } }, con
 // cada animacion en csr_live/anims/<nombre>.glb (el lanzador la copia, o la convierte si es .fbx). Sirve cualquier
 // animacion humanoide (Mixamo, VRChat, Blender...): se adapta al esqueleto del juego con Humanoid.PrepareAnim.
-// El juego sigue decidiendo que hace cada personaje (SimpleAnimation); cuando lo que suena es un reposo, un paso o
+// El juego sigue decidiendo que hace cada personaje (ControllerMixerPlayable, un Animator por Playables); cuando lo que suena es un reposo, un paso o
 // una carrera, despues de sus animaciones (LateUpdate) se ponen los giros de la propia, con un fundido corto.
 // Va sobre los huesos del juego, o sobre el esqueleto propio si el personaje lleva un modelo adaptado.
 using System;
@@ -25,7 +25,7 @@ namespace CrimeSightRevival.Mods
 
         class Driver
         {
-            public GameObject root; public string key; public SimpleAnimation sa;
+            public GameObject root; public string key; public ControllerMixerPlayable cmp;
             public Applied applied; public bool built;
             public readonly Dictionary<string, Transform> targets = new();
             public readonly Dictionary<string, Quaternion> restRot = new();       // reposo de cada hueso del juego (espacio del modelo)
@@ -105,25 +105,15 @@ namespace CrimeSightRevival.Mods
             if (root == null) return;
             int id = root.GetInstanceID();
             if (_drivers.ContainsKey(id)) return;
-            var sa = owner.GetComponentInChildren<SimpleAnimation>(true);
-            if (sa == null) { Warn("nosa" + key, "[Animaciones] " + key + " no tiene SimpleAnimation"); return; }
-            _drivers[id] = new Driver { root = root, key = key, sa = sa };
+            var cmp = owner.GetComponentInChildren<ControllerMixerPlayable>(true);
+            if (cmp == null) { Warn("nocmp" + key, "[Animaciones] " + key + " no tiene ControllerMixerPlayable"); return; }
+            _drivers[id] = new Driver { root = root, key = key, cmp = cmp };
         }
 
         /// <summary>Lo que hace ahora el personaje: la animacion del juego con mas peso -> idle / walk / run (o null).</summary>
         static string Kind(Driver d)
         {
-            string best = null; float bw = 0;
-            var it = d.sa.GetStates().GetEnumerator();
-            var en = it.Cast<Il2CppSystem.Collections.IEnumerator>();
-            while (en.MoveNext())
-            {
-                var st = it.Current;
-                if (st == null || !st.enabled || st.weight <= bw) continue;
-                bw = st.weight;
-                var clip = st.clip;
-                best = clip != null ? clip.name : st.name;
-            }
+            string best = CurrentClip(d.cmp, out _)?.name;
             if (best != d.lastClip) { d.lastClip = best; if (_clipLogs++ < 40) Plugin.L.LogInfo("[Animaciones] " + d.key + " hace " + best); }
             if (best == null) return null;
             best = best.ToLowerInvariant();
@@ -164,7 +154,7 @@ namespace CrimeSightRevival.Mods
             foreach (var kv in _drivers)
             {
                 var d = kv.Value;
-                if (d.root == null || d.sa == null) { (gone ??= new List<int>()).Add(kv.Key); continue; }
+                if (d.root == null || d.cmp == null) { (gone ??= new List<int>()).Add(kv.Key); continue; }
                 try { Drive(d, kv.Key); }
                 catch (Exception e) { Warn("drive" + d.key, "[Animaciones] " + d.key + ": " + e.Message); }
             }

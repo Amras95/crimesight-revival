@@ -14,6 +14,8 @@ from aiohttp import web, WSMsgType
 
 import cscrypto
 import match
+import modelpack
+import modelroom
 import modpack
 import modroom
 import stageroom
@@ -354,11 +356,24 @@ async def handle_match(request):
     return web.json_response({"match": request.app["hub"].match_state(pid, request.remote or "")})
 
 
+async def handle_roster(request):
+    """GET /revival/roster?platform_id=... -> reparto de personajes de la partida de ese jugador (o null)."""
+    platform_id = str(request.query.get("platform_id", ""))
+    if not platform_id.isdigit():
+        return web.json_response({"error": "platform_id"}, status=400)
+    pid, _ = derived_ids(3, platform_id)
+    return web.json_response({"roster": request.app["hub"].roster_for(pid, request.remote or ""),
+                              "disabled": sorted(request.app["models"].disabled)})
+
+
 async def handle_info(request):
     info = {"server": "crimesight-revival", "version": 1, "password": bool(request.app.get("password"))}
     rs = request.app["room"].rs
     if rs["hash"]:
         info["mods"] = modpack.summary(rs)
+    ms = request.app["models"].ms
+    if ms["hash"]:
+        info["models"] = modelpack.summary(ms)
     stages = request.app["stages"].summary()
     if stages:
         info["stages"] = stages
@@ -396,6 +411,80 @@ async def handle_mods_offer(request):
     except modpack.ModError as e:
         return web.json_response({"error": str(e)}, status=400)
     return web.json_response({"status": status})
+
+
+# ------------------------------------------------------------ modelos 3D y animaciones de la sala
+async def handle_models(request):
+    """Lista de los modelos de la sala (que personaje lleva cada uno y el sha256 de cada archivo)."""
+    if not _password_ok(request):
+        return web.json_response({"error": "password"}, status=403)
+    return web.json_response(request.app["models"].manifest())
+
+
+async def handle_model_file(request):
+    """Un .glb de la sala, por su sha256 (solo los que esten en uso)."""
+    if not _password_ok(request):
+        return web.json_response({"error": "password"}, status=403)
+    path = request.app["models"].path_of(request.match_info["sha"])
+    if not path or not os.path.isfile(path):
+        return web.json_response({"error": "not_found"}, status=404)
+    return web.FileResponse(path, headers={"Content-Type": "model/gltf-binary"})
+
+
+async def handle_models_offer(request):
+    """Un jugador ofrece sus modelos (solo la lista; los archivos se suben si el anfitrion acepta)."""
+    if not _password_ok(request):
+        return web.json_response({"error": "password"}, status=403)
+    try:
+        meta = await request.json()
+        from urllib.parse import unquote
+        status, oid, need = request.app["models"].offer(meta, unquote(request.headers.get("X-CSR-Player", ""))[:40])
+    except (ValueError, TypeError) as e:
+        return web.json_response({"error": str(e)[:200]}, status=400)
+    return web.json_response({"status": status, "id": oid, "need": need})
+
+
+async def handle_models_offer_state(request):
+    if not _password_ok(request):
+        return web.json_response({"error": "password"}, status=403)
+    status, need = request.app["models"].state(request.match_info["oid"])
+    return web.json_response({"status": status, "need": need})
+
+
+async def handle_models_upload(request):
+    """El invitado sube un archivo de su oferta aceptada. Se guarda poco a poco y se comprueba antes de usarlo."""
+    if not _password_ok(request):
+        return web.json_response({"error": "password"}, status=403)
+    room = request.app["models"]
+    oid, sha = request.match_info["oid"], request.match_info["sha"]
+    want = room.expect(oid, sha)
+    if want is None:
+        return web.json_response({"error": "not_expected"}, status=409)
+    size, kind = want
+    path = room.upload_path(sha)
+    h, n = hashlib.sha256(), 0
+    try:
+        with open(path + ".part", "wb") as f:
+            async for chunk in request.content.iter_chunked(1 << 16):
+                n += len(chunk)
+                if n > size:
+                    raise modelpack.ModelError("archivo mas grande de lo anunciado")
+                h.update(chunk)
+                f.write(chunk)
+        if n != size or h.hexdigest() != sha:
+            raise modelpack.ModelError("el archivo no coincide")
+        with open(path + ".part", "rb") as f:
+            data = f.read()
+        await asyncio.get_running_loop().run_in_executor(None, modelpack.check_file, data, kind)
+        os.replace(path + ".part", path)
+    except modelpack.ModelError as e:
+        try:
+            os.remove(path + ".part")
+        except OSError:
+            pass
+        return web.json_response({"error": str(e)}, status=400)
+    room.add_file(oid, sha, path)
+    return web.json_response({"ok": True})
 
 
 async def handle_stages(request):
@@ -454,6 +543,12 @@ def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", 
     app.router.add_get("/revival/match", handle_match)
     app.router.add_get("/revival/mods", handle_mods)
     app.router.add_post("/revival/mods/offer", handle_mods_offer)
+    app.router.add_get("/revival/models", handle_models)
+    app.router.add_get("/revival/roster", handle_roster)
+    app.router.add_get("/revival/models/file/{sha:[0-9a-f]{64}}", handle_model_file)
+    app.router.add_post("/revival/models/offer", handle_models_offer)
+    app.router.add_get("/revival/models/offer/{oid:[0-9a-f]{12}}", handle_models_offer_state)
+    app.router.add_put("/revival/models/upload/{oid:[0-9a-f]{12}}/{sha:[0-9a-f]{64}}", handle_models_upload)
     app.router.add_get("/revival/stages", handle_stages)
     app.router.add_post("/revival/stages/have", handle_stages_have)
     app["stages"] = api.stages = stageroom.StageRoom(list(stages or []) + stageroom.load_dir(stages_dir))
@@ -463,6 +558,10 @@ def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", 
                                   offers_dir=None if player_mods == "ignore" else os.path.join(data_dir, "mods_offers"),
                                   auto_accept=player_mods == "accept", names=mod_names)
     api.hub.mod_room = app["room"]      # las IA miran a que sticker del juego equivale cada sticker de mod
+    app["models"] = modelroom.ModelRoom(
+        offers_dir=None if player_mods == "ignore" else os.path.join(data_dir, "models_offers"),
+        auto_accept=player_mods == "accept")
+    api.hub.model_room = app["models"]  # cada partida sortea que personajes salen
     return app
 
 
@@ -516,6 +615,11 @@ class BackgroundServer:
     def room(self):
         """Los mods de la sala (el lanzador del anfitrion los cambia y contesta a las ofertas)."""
         return self.app["room"]
+
+    @property
+    def models(self):
+        """Los modelos 3D y animaciones de la sala (igual que los mods)."""
+        return self.app["models"]
 
     @property
     def stages(self):

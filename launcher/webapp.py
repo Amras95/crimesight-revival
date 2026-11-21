@@ -552,6 +552,24 @@ class Api:
                 "anims": core.custom_anims(), "anim_swaps": core.anim_swaps(), "anim_kinds": list(core.ANIM_KINDS),
                 "anim_issues": {k: v for k, v in core.anim_issues.items() if v}}
 
+    # ---- personajes nuevos (slots del Selector de personajes)
+    def chars_state(self):
+        return {"chars": core.characters(), "models": core.custom_models(), "anims": core.custom_anims(),
+                "images": list(core.custom_images()), "talk_keys": list(core.TALK_KEYS), "kinds": list(core.ANIM_KINDS)}
+
+    def chars_save(self, c):
+        if not isinstance(c, dict) or not c.get("model"):
+            return {"error": t("chars_need_model")}
+        core.save_character(c)
+        return self.chars_state()
+
+    def chars_delete(self, cid):
+        core.delete_character(str(cid or ""))
+        return self.chars_state()
+
+    def chars_images_open(self):
+        core.open_folder(core.images_dir())
+
     def models_anim_set(self, slot, kind, name):
         core.set_anim_swap(slot, kind, name)
         try:
@@ -804,8 +822,11 @@ class Api:
         oid = str(info.get("id", ""))
         shown = False
         try:
-            body = t("mods_offer_text", player=info.get("player", "?")) + "\n\n" + \
-                t("mods_count", stickers=info.get("stickers", 0), avatars=info.get("avatars", 0))
+            if info.get("text"):                # modelos 3D: el texto y el resumen ya vienen hechos
+                body = info["text"] + "\n\n" + "\n".join(m.get("text", "") for m in info.get("mods", []))
+            else:
+                body = t("mods_offer_text", player=info.get("player", "?")) + "\n\n" + \
+                    t("mods_count", stickers=info.get("stickers", 0), avatars=info.get("avatars", 0))
             shown = bool(gd) and core.offer_prompt(gd, oid, t("mods_offer_title", player=info.get("player", "?")),
                                                    body, t("mods_offer_yes"), t("mods_offer_no"),
                                                    t("mods_offer_always"))

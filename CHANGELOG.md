@@ -7,6 +7,46 @@ mensaje del commit.
 
 The first block (from the first `## ` to the next one) is what the launcher shows when it offers an update.
 
+## 1.3 (actualización) · Personajes nuevos y Selector de personajes / New characters and Character selector
+
+### Español
+
+- **Cada modelo puede ser un personaje nuevo** (Mods > Modelos > Personajes nuevos), en vez de sustituir siempre a uno:
+  - Entra en el sorteo de cada partida con la misma probabilidad que los originales: cada partida salen 6 de los personajes activados, en cualquier combinación. Así varios mods ya no se pisan entre ellos.
+  - Le pones nombre, imagen (para los retratos, dentro de la forma de los del juego; sin imagen, una silueta), frases para cada situación y de qué personaje del juego toma las animaciones («Animaciones de»), o las tuyas propias. Juega como el personaje cuyo sitio ocupa.
+  - Para que un modelo sustituya siempre a un personaje (una skin), sigue estando la lista de siempre.
+- **Selector de personajes**: botón nuevo en la sala de espera del juego. Ves a todos los personajes de la sala con su imagen, su nombre y su modelo 3D girando, y marcas quién puede salir (mínimo 6). Lo decide el anfitrión para su sala y se guarda para la próxima vez; los demás lo ven sin poder cambiarlo.
+- Los personajes nuevos se comparten con la sala igual que los modelos.
+- Al omitir un diálogo de una escena (como las del final de la partida), el resto de la escena pasa al momento en vez de quedarse unos segundos en negro.
+
+### English
+
+- **Every model can be a new character** (Mods > Models > New characters) instead of always replacing one:
+  - It joins the draw of every match with the same chance as the originals: each match picks 6 of the enabled characters, in any combination. So mods no longer clash with each other.
+  - Give it a name, an image (for the portraits, inside the shape of the game's ones; without one, a silhouette), lines for each situation and which game character it takes its animations from ("Animations of"), or your own. It plays like the character whose place it takes.
+  - To have a model always replace a character (a skin), the usual list is still there.
+- **Character selector**: a new button in the game's waiting room. You see every character in the room with its image, its name and its 3D model spinning, and tick who can appear (at least 6). The host decides for their room and it's saved for next time; everyone else sees it without being able to change it.
+- New characters are shared with the room just like models.
+- Skipping a dialogue in a scene (like the end-of-match ones) now plays the rest of the scene at once instead of sitting a few seconds on a black screen.
+
+## 1.3 (actualización) · Modelos 3D compartidos en la sala / Shared 3D models in the room
+
+### Español
+
+- **Los modelos 3D y las animaciones se comparten con la sala, como los stickers**:
+  - **Anfitrión**: lo que tengas puesto en Mods > Modelos lo ve todo el mundo en tu sala, y los cambios llegan en caliente a quien ya esté dentro.
+  - **Invitados**: al unirte se descargan los modelos de la sala (solo los archivos que no tengas) y tus propios modelos se apartan mientras dure; al salir vuelven los tuyos y lo descargado se borra.
+  - **Modelos del invitado**: se ofrecen al anfitrión, al que le sale el aviso dentro del juego (con «Aceptar siempre»). Si acepta, se le envían y los ve toda la sala en los personajes que el anfitrión no haya cambiado (si chocan, manda el anfitrión). Si contesta tarde, aparecen solos con el juego ya abierto.
+  - Cada archivo se comprueba entero antes de usarlo (que sea un modelo de verdad, con todo dentro y sin pasarse de tamaño), así que nadie puede colar un archivo roto o gigante.
+
+### English
+
+- **3D models and animations are shared with the room, like stickers**:
+  - **Host**: whatever you've set in Mods > Models is seen by everyone in your room, and changes reach players already inside without restarting.
+  - **Guests**: when you join, the room's models are downloaded (only the files you don't have) and your own models are set aside meanwhile; when you leave, yours come back and the downloads are deleted.
+  - **Guest models**: they're offered to the host, who gets the prompt inside the game (with "Always accept"). If they accept, the files are sent and the whole room sees them on the characters the host hasn't changed (if they clash, the host wins). If the host answers late, they show up by themselves with the game already open.
+  - Every file is fully checked before use (a real model, everything embedded, within size limits), so nobody can slip in a broken or huge file.
+
 ## 1.3 · Modelos 3D y animaciones propios / Your own 3D models and animations
 
 ### Español

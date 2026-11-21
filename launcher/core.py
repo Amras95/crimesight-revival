@@ -11,7 +11,7 @@ El progreso de cada jugador vive en SU PC (carpeta de datos del lanzador). Los s
 otros solo lo tienen prestado: al entrar se sube, al salir se traen las partidas nuevas, y las
 dos copias se juntan sumando partidas (cada una tiene un id unico, nunca se duplican).
 """
-import json, logging, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
+import hashlib, json, logging, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
 
 from i18n import t
 import netssl
@@ -676,6 +676,10 @@ class LocalServer:
     def stages(self):
         return self.bg.stages
 
+    @property
+    def models(self):
+        return self.bg.models
+
     def stop(self):
         self.bg.stop()
 
@@ -1052,6 +1056,51 @@ def _install_custom_models(game_dir, swaps):
     return _sync_files(os.path.join(live_dir(game_dir), "models"), want, custom_sources(), model_issues)
 
 
+def _file_sig(path):
+    st = os.stat(path)
+    return "%s|%d|%d" % (os.path.basename(path), st.st_size, int(st.st_mtime))
+
+
+def built_glb(name, src, issues):
+    """El .glb de un modelo o animacion tuyo: el mismo archivo si ya es .glb, o el .fbx convertido (se guarda
+    en models_cache y solo se vuelve a convertir si cambia). None si no se pudo."""
+    if not src or not os.path.isfile(src):
+        return None
+    if src.lower().endswith(".glb"):
+        issues[name] = None
+        return src
+    d = os.path.join(app_dir(), "models_cache")
+    os.makedirs(d, exist_ok=True)
+    b = os.path.join(d, hashlib.sha1(os.path.abspath(src).encode("utf-8")).hexdigest()[:10] + ".glb")
+    sig = _file_sig(src)
+    try:
+        with open(b + ".src", encoding="utf-8") as f:
+            if f.read() == sig and os.path.isfile(b):
+                return b
+    except OSError:
+        pass
+    try:
+        import fbx2glb
+        notes = []
+        data = fbx2glb.convert(src, notes)
+        with open(b + ".part", "wb") as f:
+            f.write(data)
+        os.replace(b + ".part", b)
+        with open(b + ".src", "w", encoding="utf-8") as f:
+            f.write(sig)
+        issues[name] = "; ".join(t("models_" + k, **kw) for k, kw in notes) or None
+        return b
+    except Exception as e:                                           # noqa: BLE001 (un archivo raro no tumba nada)
+        logging.getLogger("crimesight").warning("No pude preparar el modelo %s: %s", name, e)
+        key = getattr(e, "key", None)
+        issues[name] = t("models_convert_error", err=t("models_" + key) if key else e)
+        try:
+            os.remove(b + ".part")
+        except OSError:
+            pass
+        return None
+
+
 def _sync_files(d, want, sources, issues):
     """Deja en d un .glb por cada nombre de want (copiado, o convertido si es .fbx) y quita los demas."""
     if not want and not os.path.isdir(d):
@@ -1059,11 +1108,10 @@ def _sync_files(d, want, sources, issues):
     os.makedirs(d, exist_ok=True)
     changed = False
     for name in want:
-        a, b = sources.get(name), os.path.join(d, name + ".glb")
-        if not a or not os.path.isfile(a):
+        a, b = built_glb(name, sources.get(name), issues), os.path.join(d, name + ".glb")
+        if not a:
             continue
-        st = os.stat(a)
-        sig = "%s|%d|%d" % (os.path.basename(a), st.st_size, int(st.st_mtime))
+        sig = _file_sig(a)
         try:
             with open(b + ".src", encoding="utf-8") as f:
                 same = f.read() == sig and os.path.isfile(b)
@@ -1072,24 +1120,13 @@ def _sync_files(d, want, sources, issues):
         if same:
             continue
         try:
-            if a.lower().endswith(".fbx"):
-                import fbx2glb
-                notes = []
-                data = fbx2glb.convert(a, notes)
-                with open(b + ".part", "wb") as f:
-                    f.write(data)
-                issues[name] = "; ".join(t("models_" + k, **kw) for k, kw in notes) or None
-            else:
-                shutil.copy2(a, b + ".part")
-                issues[name] = None
+            shutil.copy2(a, b + ".part")
             os.replace(b + ".part", b)
             with open(b + ".src", "w", encoding="utf-8") as f:
                 f.write(sig)
             changed = True
-        except Exception as e:                                       # noqa: BLE001 (un archivo raro no tumba nada)
-            logging.getLogger("crimesight").warning("No pude preparar el modelo %s: %s", name, e)
-            key = getattr(e, "key", None)
-            issues[name] = t("models_convert_error", err=t("models_" + key) if key else e)
+        except OSError as e:
+            logging.getLogger("crimesight").warning("No pude copiar el modelo %s: %s", name, e)
             try:
                 os.remove(b + ".part")
             except OSError:
@@ -1164,6 +1201,106 @@ def set_anim_swap(slot, kind, name):
     save_config(cfg)
 
 
+# ---------------------------------------------------------------- personajes nuevos (slots)
+# Un personaje nuevo no sustituye a nadie: entra en el sorteo de cada partida (Selector de personajes). Lleva su
+# modelo y, si quieres, sus animaciones, su nombre, su imagen y sus frases; lo que no tenga lo pone el personaje
+# cuyo sitio ocupa (tambien su forma de jugar). Si sale de traidor, solo cuentan el modelo y las animaciones.
+IMAGE_DIR = "imagenes"
+IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".bmp")
+TALK_KEYS = ("cannotGetAnything", "damagedByGasRoom", "dangerHasInvaded", "destroySwitchboard", "discoverBypass",
+             "discoverNote", "discoverSwitchboard", "fullItem", "fullWeapon", "getFood", "getMedicine", "getWeapon",
+             "killCheckKillerEachOther", "killCheckKillerOnlyOne", "killCheckTarget", "pawnGameStart", "raid",
+             "raidFinalDay", "recoveredByOtherUsingMedicine", "repairSwitchboard", "startAction_statusDying",
+             "startAction_statusHunger", "startAction_statusInjury", "stepIntoBlackoutRoom", "useBypass",
+             "useFoodForOther", "useMedicineForMyself", "useMedicineForOther")
+
+
+def images_dir():
+    d = os.path.join(models_dir(), IMAGE_DIR)
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def custom_images():
+    """{nombre: archivo} de las imagenes para los personajes nuevos (carpeta imagenes)."""
+    out = {}
+    try:
+        d = images_dir()
+        for f in sorted(os.listdir(d), key=str.lower):
+            stem, ext = os.path.splitext(f)
+            if ext.lower() in IMAGE_EXTS and os.path.isfile(os.path.join(d, f)):
+                out.setdefault(stem, os.path.join(d, f))
+    except OSError:
+        pass
+    return out
+
+
+CHAR_PAWNS = ("PawnTypeData_A", "PawnTypeData_B", "PawnTypeData_C", "PawnTypeData_D", "PawnTypeData_E", "PawnTypeData_F")
+
+
+def _anim_from(v):
+    """De que personaje del juego saca las animaciones un personaje nuevo (Agatha si no se dice)."""
+    return v if v in CHAR_PAWNS else CHAR_PAWNS[0]
+
+
+def characters():
+    """Tus personajes nuevos (config "characters"), con lo que falte quitado."""
+    out = []
+    for c in load_config().get("characters") or []:
+        if not isinstance(c, dict) or not re.match(r"^[a-z0-9]{10}$", str(c.get("id", ""))):
+            continue
+        out.append({"id": c["id"], "name": str(c.get("name") or "")[:24], "role": "pawn",       # traidores: mas adelante
+                    "anim_from": _anim_from(c.get("anim_from")),
+                    "model": str(c.get("model") or ""), "image": str(c.get("image") or ""),
+                    "anims": {k: v for k, v in (c.get("anims") or {}).items() if k in ANIM_KINDS and v},
+                    "talk": {k: str(v)[:240] for k, v in (c.get("talk") or {}).items() if k in TALK_KEYS and str(v).strip()}})
+    return out
+
+
+def save_character(c):
+    """Crea o cambia un personaje nuevo. Devuelve su id."""
+    import secrets
+    cfg = load_config()
+    lst = [x for x in (cfg.get("characters") or []) if isinstance(x, dict)]
+    cid = str(c.get("id") or "")
+    if not re.match(r"^[a-z0-9]{10}$", cid):
+        cid = secrets.token_hex(5)
+    entry = {"id": cid, "name": str(c.get("name") or "").strip()[:24], "role": "pawn", "anim_from": _anim_from(c.get("anim_from")),
+             "model": str(c.get("model") or ""), "image": str(c.get("image") or ""),
+             "anims": {k: v for k, v in (c.get("anims") or {}).items() if k in ANIM_KINDS and v},
+             "talk": {k: str(v).strip()[:240] for k, v in (c.get("talk") or {}).items() if k in TALK_KEYS and str(v).strip()}}
+    lst = [x for x in lst if x.get("id") != cid] + [entry]
+    cfg["characters"] = lst
+    save_config(cfg)
+    return cid
+
+
+def delete_character(cid):
+    cfg = load_config()
+    cfg["characters"] = [x for x in (cfg.get("characters") or []) if isinstance(x, dict) and x.get("id") != cid]
+    cfg["roster_disabled"] = [x for x in (cfg.get("roster_disabled") or []) if x != cid]
+    save_config(cfg)
+
+
+def _image_file(name, src):
+    """La imagen tal cual si es PNG o JPG; si no, pasada a PNG (en models_cache)."""
+    if not src or not os.path.isfile(src):
+        return None
+    if src.lower().endswith((".png", ".jpg", ".jpeg")):
+        return src
+    d = os.path.join(app_dir(), "models_cache")
+    os.makedirs(d, exist_ok=True)
+    b = os.path.join(d, hashlib.sha1(os.path.abspath(src).encode("utf-8")).hexdigest()[:10] + ".png")
+    if not (os.path.isfile(b) and os.path.getmtime(b) >= os.path.getmtime(src)):
+        try:
+            from PIL import Image
+            Image.open(src).convert("RGBA").save(b, "PNG")
+        except Exception as e:  # noqa: BLE001
+            logging.getLogger("crimesight").warning("No pude leer la imagen %s: %s", name, e)
+            return None
+    return b
+
+
 def set_model_swap(slot, target):
     cfg = load_config()
     sw = dict(cfg.get("model_swaps") or {})
@@ -1182,11 +1319,18 @@ def install_models(game_dir):
         return False
     d = live_dir(game_dir)
     os.makedirs(d, exist_ok=True)
-    swaps = model_swaps()
-    anims = anim_swaps()
-    copied = _install_custom_models(game_dir, swaps)    # antes que models.json: el plugin lee el archivo al verlo
-    want = {n for kinds in anims.values() for n in kinds.values()}
-    copied = _sync_files(os.path.join(d, "anims"), want, anim_sources(), anim_issues) or copied
+    if room_models is not None:                         # en una sala: los de la sala (tuyos apartados un rato)
+        swaps, anims, msrc, asrc = _room_install_set(room_models, room_roster)
+        copied = _sync_files(os.path.join(d, "models"), set(msrc), msrc, model_issues)
+        copied = _sync_files(os.path.join(d, "anims"), set(asrc), asrc, anim_issues) or copied
+        copied = _install_roster(d, room_models, room_roster) or copied
+    else:
+        swaps = model_swaps()
+        anims = anim_swaps()
+        copied = _install_custom_models(game_dir, swaps)    # antes que models.json: el plugin lee el archivo al verlo
+        want = {n for kinds in anims.values() for n in kinds.values()}
+        copied = _sync_files(os.path.join(d, "anims"), want, anim_sources(), anim_issues) or copied
+        copied = _clear_roster(d) or copied
     path = os.path.join(d, "models.json")
     data = json.dumps({"swaps": swaps, "anims": anims}, ensure_ascii=False, indent=1)
     try:
@@ -1200,6 +1344,343 @@ def install_models(game_dir):
         f.write(data)
     os.replace(tmp, path)
     return True
+
+
+# ---------------------------------------------------------------- modelos de la sala (como los stickers)
+# El anfitrion comparte sus modelos y animaciones con su sala, y los de los invitados que acepte rellenan los
+# personajes libres. Quien se une los descarga (solo los archivos que no tiene, por su sha256) a models_room, que
+# se borra al terminar; mientras tanto el juego ve los de la sala y los tuyos vuelven al salir.
+room_models = None          # None: los tuyos. Si no: {"hash", "swaps", "anims", "chars", "files": {sha: {"kind", "path"}}}
+room_roster = None          # reparto de la partida en curso (del servidor) o None
+room_disabled = []          # personajes desactivados en el Selector de personajes de la sala
+room_host = False           # True si este PC decide el Selector (anfitrion o en solitario)
+ROOM_PREFIX = "rm_"
+_sha_cache = {}
+
+
+def temp_models_dir():
+    return os.path.join(app_dir(), "models_room")
+
+
+def clear_temp_models():
+    d = temp_models_dir()
+    if os.path.isdir(d):
+        shutil.rmtree(d, ignore_errors=True)
+        return True
+    return False
+
+
+def _sha256_file(path):
+    key = (os.path.abspath(path), _file_sig(path))
+    if key not in _sha_cache:
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        _sha_cache[key] = h.hexdigest()
+    return _sha_cache[key]
+
+
+def my_model_set():
+    """Tus modelos y animaciones en el formato de sala: los archivos por su sha256 (con su ruta en este PC).
+    Sherlock y Moriarty (modo desarrollador) no se comparten."""
+    import modelpack
+    ms = modelpack.empty()
+    slots = {k for k, _ in MODEL_SLOTS}
+    msrc, asrc = custom_sources(), anim_sources()
+
+    def add(kind, name, src, issues):
+        path = built_glb(name, src, issues)
+        if not path:
+            return None
+        sha = _sha256_file(path)
+        ms["files"][sha] = {"kind": kind, "size": os.path.getsize(path), "name": name, "path": path}
+        return modelpack.FILE_PREFIX + sha
+    for slot, v in model_swaps().items():
+        if v in slots:
+            ms["swaps"][slot] = v
+        elif v.startswith(CUSTOM_PREFIX):
+            ref = add("model", v[len(CUSTOM_PREFIX):], msrc.get(v[len(CUSTOM_PREFIX):]), model_issues)
+            if ref:
+                ms["swaps"][slot] = ref
+    for slot, kinds in anim_swaps().items():
+        for kind, name in kinds.items():
+            ref = add("anim", name, asrc.get(name), anim_issues)
+            if ref:
+                ms["anims"].setdefault(slot, {})[kind] = ref
+    isrc = custom_images()
+    for c in characters():
+        model = add("model", c["model"], msrc.get(c["model"]), model_issues) if c["model"] else None
+        if not model:
+            continue
+        entry = {"name": c["name"], "role": c["role"], "anim_from": c["anim_from"], "model": model, "anims": {}, "talk": dict(c["talk"])}
+        for kind, name in c["anims"].items():
+            ref = add("anim", name, asrc.get(name), anim_issues)
+            if ref:
+                entry["anims"][kind] = ref
+        img = _image_file(c["image"], isrc.get(c["image"])) if c["image"] else None
+        if img and os.path.getsize(img) <= modelpack.MAX_IMAGE_BYTES:
+            sha = _sha256_file(img)
+            ms["files"][sha] = {"kind": "image", "size": os.path.getsize(img), "name": c["image"], "path": img}
+            entry["image"] = modelpack.FILE_PREFIX + sha
+        ms["chars"][c["id"]] = entry
+    ms["hash"] = modelpack.set_hash(ms)
+    return ms
+
+
+def _room_install_set(rm, roster=None):
+    """Lo que se escribe en el juego para un juego de modelos de sala: nombres rm_<sha> para sus archivos. Con el
+    reparto de la partida, cada sitio con un personaje nuevo lleva su modelo y sus animaciones (o las del juego)."""
+    import modelpack
+    msrc, asrc = {}, {}
+
+    def ref(v, kind):
+        if not v.startswith(modelpack.FILE_PREFIX):
+            return v
+        sha = v[len(modelpack.FILE_PREFIX):]
+        f = rm["files"].get(sha)
+        if not f:
+            return None
+        name = ROOM_PREFIX + sha[:16]
+        (msrc if kind == "model" else asrc)[name] = f["path"]
+        return (CUSTOM_PREFIX + name) if kind == "model" else name
+    swaps = {}
+    for slot, v in rm.get("swaps", {}).items():
+        r = ref(v, "model")
+        if r:
+            swaps[slot] = r
+    anims = {}
+    for slot, kinds in rm.get("anims", {}).items():
+        for kind, v in kinds.items():
+            r = ref(v, "anim")
+            if r:
+                anims.setdefault(slot, {})[kind] = r
+    chars = rm.get("chars", {})
+    for c in chars.values():                       # todos sus modelos en el juego (para verlos en el selector)
+        ref(c.get("model", ""), "model")
+    taken = dict((roster or {}).get("positions") or {})
+    if roster and roster.get("traitor"):
+        taken[modelpack.TRAITOR] = roster["traitor"]
+    for slot, cid in taken.items():
+        c = chars.get(cid) if cid else None
+        if not c:
+            continue
+        r = ref(c.get("model", ""), "model")
+        if not r:
+            continue
+        swaps[slot] = r
+        anims.pop(slot, None)                      # sin animaciones propias: las del juego
+        for kind, v in (c.get("anims") or {}).items():
+            ra = ref(v, "anim")
+            if ra:
+                anims.setdefault(slot, {})[kind] = ra
+    return swaps, anims, msrc, asrc
+
+
+def _write_json_if_changed(path, obj):
+    data = json.dumps(obj, ensure_ascii=False, indent=1)
+    try:
+        with open(path, encoding="utf-8") as f:
+            if f.read() == data:
+                return False
+    except OSError:
+        pass
+    with open(path + ".part", "w", encoding="utf-8") as f:
+        f.write(data)
+    os.replace(path + ".part", path)
+    return True
+
+
+def _clear_roster(d):
+    """Fuera de una sala no hay reparto ni Selector de personajes: el juego vuelve a sus personajes."""
+    gone = False
+    for name in ("roster.json", "roster_pool.json"):
+        try:
+            os.remove(os.path.join(d, name))
+            gone = True
+        except OSError:
+            pass
+    shutil.rmtree(os.path.join(d, "images"), ignore_errors=True)
+    return gone
+
+
+def _install_roster(d, rm, roster):
+    """Para el plugin: roster.json (que nombre, frases e imagen lleva cada sitio en esta partida) y
+    roster_pool.json (todos los personajes, para el Selector de personajes). Copia las imagenes."""
+    import modelpack
+    chars = (rm or {}).get("chars", {})
+    files = (rm or {}).get("files", {})
+    idir = os.path.join(d, "images")
+    want = {}
+    for c in chars.values():
+        sha = (c.get("image") or "")[len(modelpack.FILE_PREFIX):]
+        if sha and sha in files:
+            src = files[sha]["path"]
+            want[sha[:16] + (".jpg" if src.lower().endswith((".jpg", ".jpeg")) else ".png")] = src
+    if want or os.path.isdir(idir):
+        os.makedirs(idir, exist_ok=True)
+        for name, src in want.items():
+            dst = os.path.join(idir, name)
+            if not (os.path.isfile(dst) and os.path.getsize(dst) == os.path.getsize(src)):
+                shutil.copy2(src, dst + ".part")
+                os.replace(dst + ".part", dst)
+        for f in os.listdir(idir):
+            if f not in want:
+                try:
+                    os.remove(os.path.join(idir, f))
+                except OSError:
+                    pass
+
+    def image_of(c):
+        sha = (c.get("image") or "")[len(modelpack.FILE_PREFIX):]
+        for name in want:
+            if sha and name.startswith(sha[:16]):
+                return "images/" + name
+        return None
+
+    def model_of(c):
+        sha = (c.get("model") or "")[len(modelpack.FILE_PREFIX):]
+        return ROOM_PREFIX + sha[:16] if sha else None
+
+    def entry(cid):
+        c = chars.get(cid) if cid else None
+        if not c:
+            return None
+        return {"id": cid, "name": c.get("name") or None, "talk": dict(c.get("talk") or {}), "image": image_of(c),
+                "model": model_of(c), "anim_from": _anim_from(c.get("anim_from"))}
+    out = {"id": (roster or {}).get("id", ""), "positions": {}, "traitor": None}
+    if roster:
+        out["positions"] = {k: entry(v) for k, v in (roster.get("positions") or {}).items()}
+        out["traitor"] = entry(roster.get("traitor"))
+    changed = _write_json_if_changed(os.path.join(d, "roster.json"), out)
+    disabled = set(room_disabled or [])
+    items = [{"id": "orig:" + k, "key": k, "role": "pawn", "enabled": "orig:" + k not in disabled} for k in modelpack.PAWNS]
+    for cid, c in sorted(chars.items(), key=lambda kv: (kv[1].get("name") or "").lower()):
+        if c.get("role", "pawn") != "pawn":                     # el traidor no entra en el Selector (aun)
+            continue
+        items.append({"id": cid, "role": "pawn", "name": c.get("name") or "", "image": image_of(c),
+                      "model": model_of(c), "anim_from": _anim_from(c.get("anim_from")), "enabled": cid not in disabled})
+    pool = {"host": bool(room_host), "min": modelpack.MIN_PAWNS, "items": items}
+    return _write_json_if_changed(os.path.join(d, "roster_pool.json"), pool) or changed
+
+
+def _http(url, password, data=None, method=None, headers=None, timeout=60):
+    h = {"X-CSR-Password": password or ""}
+    h.update(headers or {})
+    return urllib.request.urlopen(urllib.request.Request(url, data=data, method=method, headers=h), timeout=timeout)
+
+
+def download_models(url, password, expected_hash, progress=None):
+    """Baja los modelos de la sala (solo los archivos que no tengas ya) y devuelve el juego de modelos local."""
+    import modelpack
+    try:
+        with _http(url + "/revival/models", password, timeout=20) as r:
+            man = json.loads(r.read(4 * 1024 * 1024))
+    except urllib.error.HTTPError as e:
+        raise ValueError(t("need_password") if e.code == 403 else t("models_download_failed", err=e.code))
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        raise ValueError(t("models_download_failed", err=getattr(e, "reason", e)))
+    try:
+        ms = modelpack.clean(man)
+    except modelpack.ModelError as e:
+        raise ValueError(t("models_download_failed", err=e))
+    if expected_hash and ms["hash"] != expected_hash:
+        raise ValueError(t("models_download_failed", err="hash"))
+    d = temp_models_dir()
+    os.makedirs(d, exist_ok=True)
+    missing = [s for s in ms["files"] if not (os.path.isfile(os.path.join(d, s + ".glb")) and
+                                               _sha256_file(os.path.join(d, s + ".glb")) == s)]
+    if missing and progress:
+        progress(sum(ms["files"][s]["size"] for s in missing))
+    for sha in missing:
+        f, path = ms["files"][sha], os.path.join(d, sha + ".glb")
+        try:
+            with _http(url + "/revival/models/file/" + sha, password, timeout=120) as r:
+                data = r.read(f["size"] + 1)
+        except urllib.error.HTTPError as e:
+            raise ValueError(t("models_download_failed", err=e.code))
+        except (urllib.error.URLError, OSError) as e:
+            raise ValueError(t("models_download_failed", err=getattr(e, "reason", e)))
+        if len(data) != f["size"] or modelpack.sha256(data) != sha:
+            raise ValueError(t("models_download_failed", err="sha256"))
+        try:
+            modelpack.check_file(data, f["kind"])
+        except modelpack.ModelError as e:
+            raise ValueError(t("models_download_failed", err=e))
+        with open(path + ".part", "wb") as out:
+            out.write(data)
+        os.replace(path + ".part", path)
+    return {"hash": ms["hash"], "swaps": ms["swaps"], "anims": ms["anims"], "chars": ms.get("chars", {}),
+            "files": {s: {"kind": f["kind"], "path": os.path.join(d, s + ".glb"), "name": f["name"]}
+                      for s, f in ms["files"].items()}}
+
+
+def roster_state(url, steam_id):
+    """Reparto de personajes de tu partida en ese servidor y los personajes desactivados de la sala."""
+    try:
+        with urllib.request.urlopen(url + "/revival/roster?platform_id=" + str(steam_id or ""), timeout=6) as r:
+            a = json.loads(r.read(1 << 20))
+        return a.get("roster"), list(a.get("disabled") or [])
+    except (urllib.error.URLError, OSError, ValueError):
+        return "error", []
+
+
+def roster_answer(game_dir):
+    """Lo que ha marcado el anfitrion en el Selector de personajes del juego: (n, desactivados) o None."""
+    try:
+        with open(os.path.join(live_dir(game_dir), "roster_select.json"), encoding="utf-8") as f:
+            a = json.load(f)
+        return int(a.get("n", 0)), [str(x) for x in (a.get("disabled") or [])]
+    except (OSError, ValueError, TypeError):
+        return None
+
+
+def offer_models(url, password, ms, player):
+    """Ofrece tus modelos al anfitrion (solo la lista). Devuelve (estado, id, archivos que pide)."""
+    import modelpack
+    from urllib.parse import quote
+    if not ms.get("hash"):
+        return "none", "", []
+    body = json.dumps(modelpack.manifest(ms)).encode("utf-8")
+    try:
+        with _http(url + "/revival/models/offer", password, data=body, method="POST", timeout=30,
+                   headers={"Content-Type": "application/json", "X-CSR-Player": quote(player or "?")}) as r:
+            a = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 404:                  # servidor de una version anterior
+            return "ignored", "", []
+        raise ValueError(t("models_download_failed", err=e.code))
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        raise ValueError(t("models_download_failed", err=getattr(e, "reason", e)))
+    return a.get("status", "ignored"), a.get("id", ""), list(a.get("need") or [])
+
+
+def offer_models_state(url, password, oid):
+    try:
+        with _http(url + "/revival/models/offer/" + oid, password, timeout=15) as r:
+            a = json.loads(r.read())
+        return a.get("status", "rejected"), list(a.get("need") or [])
+    except (urllib.error.URLError, OSError, ValueError):
+        return "unknown", []
+
+
+def upload_models(url, password, oid, ms, need):
+    """Sube al anfitrion los archivos que ha pedido de tu oferta aceptada."""
+    for sha in need:
+        f = ms["files"].get(sha)
+        if not f:
+            continue
+        with open(f["path"], "rb") as fh:
+            data = fh.read()
+        try:
+            with _http(url + "/revival/models/upload/%s/%s" % (oid, sha), password, data=data, method="PUT",
+                       timeout=600, headers={"Content-Type": "model/gltf-binary"}):
+                pass
+        except urllib.error.HTTPError as e:
+            if e.code != 409:              # 409: ya lo tenia
+                raise ValueError(t("models_upload_failed", err=e.code))
+        except (urllib.error.URLError, OSError) as e:
+            raise ValueError(t("models_upload_failed", err=getattr(e, "reason", e)))
 
 
 def live_dir(game_dir):
