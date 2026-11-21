@@ -69,6 +69,9 @@ ACT_NOT_KILLER = "ctg_name_result_action_proven_pawnNotKiller"
 ACT_NOT_TARGET = "ctg_name_result_action_proven_pawnNotTarget"
 ACT_DOG_HIT = "ctg_name_result_action_wildDogAttackedEveryoneButKiller"
 ACT_GAS_HIT = "ctg_name_result_action_injured_noKillerWithGasLeak"
+ACT_FOUND_SWITCH_BEFORE_MORIARTY = "ctg_name_result_discover_switchboard_before_moriarty"
+ACT_FIRST_CLASH = "ctg_name_result_first_batting"          # "Initial command conflict detected with each pawn."
+ACT_CLASH_AGAIN = "ctg_name_result_after_the_first_batting"  # "Interfered with Sherlock's command."
 DEFAULT_PAWNS = 6            # personajes por partida (la mansion tiene 6 sospechosos)
 DEFAULT_TURNS = 10           # turnos de una partida normal (para los que estan hechos los perros y el gas)
 
@@ -514,6 +517,7 @@ class Room:
         self.candidates = {}       # personaje -> (puede ser el asesino, puede ser la victima) la ultima vez que se miro
         self.critical = {}         # personaje -> estaba en estado critico (isBlind) la ultima vez que se miro
         self.pending_success = []  # acciones que solo cuentan si salen bien: (jugador, accion, tipo, escape, habitacion, oscuro)
+        self.clashed = set()       # personajes en los que Moriarty ya ha chocado con una orden de Sherlock
         self.searched = {}         # mueble (cottage id) -> objeto que salio
         self.drops = {}            # objeto en el suelo (cottage id) -> indice de objeto
         self.disabled_objects = set()
@@ -1364,6 +1368,7 @@ class Room:
         self.candidates = {}
         self.critical = {}
         self.pending_success = []
+        self.clashed = set()
         log.info("Sala %s: %s objetos repartidos (%s comida, %s armas)", self.id, n, food, weapons)
 
     def bot_knowledge(self, pid):
@@ -1769,6 +1774,8 @@ class Room:
             elif kind == INSTRUCT_SEARCH and item in self.switch_items:
                 if side == "sherlock":
                     self.note(pid, ACT_FOUND_SWITCH)
+                    if "moriarty" not in self.switch_found:
+                        self.note(pid, ACT_FOUND_SWITCH_BEFORE_MORIARTY)
                 elif "sherlock" not in self.switch_found:
                     self.note(pid, ACT_FOUND_SWITCH_FIRST)
                 self.switch_found.add(side)
@@ -1788,6 +1795,10 @@ class Room:
                     self.note(pid, ACT_SPRAY_KILLER)
                 elif side == "moriarty" and any(q != self.killer for q in inside):
                     self.note(pid, ACT_SPRAY_OTHER)
+            if c.get("isBatting"):          # orden de Moriarty que choca con la de Sherlock (solo se ven las suyas)
+                pawn = int(c["pawnId"])
+                self.note(pid, ACT_CLASH_AGAIN if pawn in self.clashed else ACT_FIRST_CLASH)
+                self.clashed.add(pawn)
             if side == "moriarty":
                 if kind == INSTRUCT_BOARD:      # cuenta si se va la luz (al final del turno o al empezar el siguiente)
                     self.pending_success.append((pid, ACT_BLACKOUT, "dark", None, None, dark0))

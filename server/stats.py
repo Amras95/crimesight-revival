@@ -57,11 +57,14 @@ ACTIONS = {
     "ctg_name_result_action_treated_pawnForInjuries": (105, 50),        # curar a alguien
     "ctg_name_result_apply_tearSpray_to_killer": (107, 100),            # gas lacrimogeno al asesino
     "ctg_name_result_identified_killer_by_deduction": (108, 100),       # acusar al asesino correcto
+    "ctg_name_result_discover_switchboard_before_moriarty": (123, 50),  # plano del cuadro antes que Moriarty
     # Bando de Moriarty
     "ctg_name_result_action_targetKilledByAssail": (101, 50),           # ganar matando con el Asalto
     "ctg_name_result_blackOut_by_switchboard": (109, 50),               # romper el cuadro (apagon)
     "ctg_name_result_action_blockedSherlockWithSpray": (110, 50),       # gasear a alguien
-    "ctg_name_result_action_beCriticalNoKiller": (111, 100),            # atacar a la victima y dejarla K.O.
+    "ctg_name_result_action_beCriticalNoKiller": (111, 100),            # otro que no es el asesino queda critico
+    "ctg_name_result_first_batting": (124, 50),                         # primer choque con Sherlock en un personaje
+    "ctg_name_result_after_the_first_batting": (125, 50),               # otro choque en un personaje ya chocado
     "ctg_name_result_action_activateSecretPassage": (112, 50),        # usar un pasadizo secreto
     "ctg_name_result_action_repair_gasPipe": (113, 50),               # arreglar un escape de gas
     "ctg_name_result_action_exterminateWildDog": (114, 50),           # matar a un perro (o un traidor)
@@ -96,6 +99,7 @@ PROFILE_ACTIONS_SHERLOCK = {
     "ctg_name_result_repair_switchboard": 143,
     "ctg_name_result_action_obtainFoodFromFoodPoint": 142,
     "ctg_name_result_apply_tearSpray_to_killer": 141,
+    "ctg_name_result_discover_switchboard_before_moriarty": 140,  # "Found a fuse box before Moriarty."
     "ctg_name_result_identified_killer_by_deduction": 139,
 }
 PROFILE_ACTIONS_MORIARTY = {
@@ -111,12 +115,15 @@ PROFILE_ACTIONS_MORIARTY = {
     "ctg_name_result_action_exterminateWildDog": 123,            # los dos bandos pueden matar perros
     "ctg_name_result_action_repair_gasPipe": 122,                # y arreglar escapes de gas
     "ctg_name_result_action_treated_pawnForInjuries": 121,       # y curar a cualquiera
+    "ctg_name_result_first_batting": 120,                        # "Initial command conflict detected with each pawn."
+    "ctg_name_result_after_the_first_batting": 119,              # "Interfered with Sherlock's command."
 }
 # Irene: lo de Moriarty menos lo que ella no puede hacer. Consejo de Sherlock sobre Irene: "no tiene acceso al
-# 'Asalto' ni puede sabotear la caja de fusibles".
+# 'Asalto' ni puede sabotear la caja de fusibles". Y sus choques con Sherlock no se detectan (son su ventaja).
 PROFILE_ACTIONS_IRENE = {k: v for k, v in PROFILE_ACTIONS_MORIARTY.items()
                          if k not in ("ctg_name_result_action_targetKilledByAssail",
-                                      "ctg_name_result_blackOut_by_switchboard")}
+                                      "ctg_name_result_blackOut_by_switchboard",
+                                      "ctg_name_result_first_batting", "ctg_name_result_after_the_first_batting")}
 PROFILE_ACTIONS = {DETECTIVE: PROFILE_ACTIONS_SHERLOCK, WATSON: PROFILE_ACTIONS_SHERLOCK,
                    CRIMINAL: PROFILE_ACTIONS_MORIARTY, IRENE: PROFILE_ACTIONS_IRENE}
 
