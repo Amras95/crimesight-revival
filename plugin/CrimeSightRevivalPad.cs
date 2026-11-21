@@ -944,8 +944,85 @@ namespace CrimeSightRevival.Mods
 
         static void StopHeartbeat() { _beatUntil = 0; _execution = false; }
 
+        // ------------------------------------------------------------ vibracion al ritmo de las escenas
+        // Las escenas son Timelines del juego; se mira su tiempo cada fotograma y se vibra en el momento justo
+        // (los tiempos salen de los propios Timelines; ver tools o el CLAUDE.md):
+        //   p0220_Demo_Timeline   Sherlock detecta: un pulso con cada onda de la esfera (3.5, 4.333, 4.833) y uno
+        //                         mas fuerte al final (5.5)
+        //   p0100_Demo_Timeline   asesinato (KillCutPrefab): la pantalla se rompe a 13.783 (Glitch_Spider_Effect_Plane)
+        //   p0155_p_Demo_Timeline asesinato detenido por Sherlock: la pantalla se rompe a 14.233 (SS_04_Movie_Texture_Set)
+        //                         y el destello del buho a 16.667
+        // El golpe va 2 fotogramas despues, corta el latido y es muy fuerte.
+        const float Frame2 = 2f / 30f;
+        struct Cue { public string timeline; public float t; public int kind; }    // 0 pulso, 1 pulso fuerte, 2 golpe
+        static readonly Cue[] Cues =
+        {
+            new Cue { timeline = "p0220_Demo_Timeline", t = 3.5f, kind = 0 },
+            new Cue { timeline = "p0220_Demo_Timeline", t = 4.333f, kind = 0 },
+            new Cue { timeline = "p0220_Demo_Timeline", t = 4.833f, kind = 0 },
+            new Cue { timeline = "p0220_Demo_Timeline", t = 5.5f, kind = 1 },
+            new Cue { timeline = "p0100_Demo_Timeline", t = 13.783f + Frame2, kind = 2 },
+            new Cue { timeline = "p0155_p_Demo_Timeline", t = 14.233f + Frame2, kind = 2 },
+            new Cue { timeline = "p0155_p_Demo_Timeline", t = 16.667f, kind = 1 },
+        };
+        static readonly List<(UnityEngine.Playables.PlayableDirector d, string name, double last)> _directors = new();
+        static float _directorScan;
+
+        static void UpdateScenes()
+        {
+            float now = Time.unscaledTime;
+            if (now >= _directorScan)
+            {
+                _directorScan = now + 0.25f;
+                var found = new List<(UnityEngine.Playables.PlayableDirector, string, double)>();
+                foreach (var o in UnityEngine.Object.FindObjectsOfType(Il2CppInterop.Runtime.Il2CppType.Of<UnityEngine.Playables.PlayableDirector>()))
+                {
+                    var d = o?.TryCast<UnityEngine.Playables.PlayableDirector>();
+                    if (d == null || !d.isActiveAndEnabled) continue;
+                    string name = null;
+                    try { name = d.playableAsset != null ? d.playableAsset.name : null; } catch { }
+                    if (name == null || Array.FindIndex(Cues, c => c.timeline == name) < 0) continue;
+                    double last = -1;
+                    foreach (var k in _directors) if (k.d != null && k.d.Pointer == d.Pointer) { last = k.last; break; }
+                    if (last < 0) Log($"escena {name}");
+                    found.Add((d, name, last < 0 ? d.time : last));
+                }
+                _directors.Clear();
+                _directors.AddRange(found);
+            }
+            for (int i = 0; i < _directors.Count; i++)
+            {
+                var (d, name, last) = _directors[i];
+                double t;
+                try { if (d == null || !d.isActiveAndEnabled) continue; t = d.time; } catch { continue; }
+                if (t < last - 0.5) last = -1;                         // vuelve a empezar
+                foreach (var c in Cues)
+                    if (c.timeline == name && last < c.t && t >= c.t) SceneCue(c.kind);
+                _directors[i] = (d, name, t);
+            }
+        }
+
+        static void SceneCue(int kind)
+        {
+            switch (kind)
+            {
+                case 0: Rumble(0f, 0.12f, 0.55f, 0.35f); Rumble(0.12f, 0.15f, 0.2f, 0.1f); break;   // pulso
+                case 1: Rumble(0f, 0.18f, 0.8f, 0.6f); Rumble(0.18f, 0.2f, 0.3f, 0.15f); break;    // pulso fuerte
+                case 2:                                                                             // golpe
+                    StopHeartbeat();
+                    _pulses.Clear();
+                    _hitAt = Time.unscaledTime;
+                    Rumble(0f, 0.55f, 1f, 1f);
+                    Rumble(0.55f, 0.35f, 0.45f, 0.25f);
+                    break;
+            }
+        }
+
+        static float _hitAt = -10f;
+
         static void UpdateRumble()
         {
+            try { UpdateScenes(); } catch { }
             float now = Time.unscaledTime;
             if (now < _beatUntil && now >= _nextBeat)
             {
@@ -994,7 +1071,7 @@ namespace CrimeSightRevival.Mods
             _lastId = id; _lastSound = now;
             if (id == KillCheck || id == KillJingle)
                 Heartbeat(false, 12f);
-            else if (id == Hit && _execution && now < _beatUntil)
+            else if (id == Hit && _execution && now < _beatUntil && now - _hitAt > 2f)
             {
                 StopHeartbeat();
                 Rumble(0f, 0.5f, 1f, 0.8f);                           // el golpe

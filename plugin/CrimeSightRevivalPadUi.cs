@@ -571,31 +571,87 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Warn("inicio: " + e.Message); return false; }
         }
 
+        // La cruceta va por los retratos tal y como se ven (el juego los reordena cada turno), y se salta a quien no se
+        // puede elegir: el objetivo si eres Moriarty o Irene, o cualquiera si ya no quedan ordenes por dar. Asi no
+        // sale el aviso de "no puedes controlar al objetivo" ni se pierde la seleccion.
         static void CyclePawn(int dir)
         {
             var gm = GameManager.instance;
             var pc = gm != null ? gm.pawnController : null;
             if (pc == null) return;
+            var row = PawnRow();
+            int to = RowTarget(row, dir);
+            if (to < 0) return;
+            var p = row[to].pawn;
+            pc.SelectPawnWithFocus(ref p);
+        }
+
+        /// <summary>Los personajes de la fila de retratos, de izquierda a derecha como se ven ahora (con su retrato).</summary>
+        static List<(Pawn pawn, RectTransform card)> PawnRow()
+        {
+            var row = new List<(Pawn pawn, RectTransform card, float x)>();
+            var gm = GameManager.instance;
+            if (gm == null) return new List<(Pawn, RectTransform)>();
             int n = gm.GetPawnCount();
-            if (n <= 0) return;
-            var cur = pc.GetSelectPawn();
-            int ci = -1;
-            for (int i = 0; i < n && cur != null; i++)
+            var pawns = new List<Pawn>();
+            for (int i = 0; i < n; i++) { int k = i; var p = gm.GetPawn(ref k); if (p != null) pawns.Add(p); }
+            foreach (var o in UnityEngine.Object.FindObjectsOfType(Il2CppInterop.Runtime.Il2CppType.Of<ActionPawnUi>()))
             {
-                int k = i;
-                var p = gm.GetPawn(ref k);
-                if (p != null && p.Pointer == cur.Pointer) { ci = i; break; }
+                var ui = o?.TryCast<ActionPawnUi>();
+                if (ui == null || !ui.gameObject.activeInHierarchy || ui.pawnTypeData == null) continue;
+                if (_pawnPanel != null && !ui.transform.IsChildOf(_pawnPanel.transform)) continue;
+                Pawn match = null;
+                foreach (var p in pawns)
+                {
+                    try { if (p.pawnTypeData != null && p.pawnTypeData.Pointer == ui.pawnTypeData.Pointer) { match = p; break; } } catch { }
+                }
+                if (match == null) continue;
+                var rt = ui.GetComponent<RectTransform>();
+                if (rt == null) continue;
+                row.Add((match, rt, ScreenRect(rt).center.x));                    // de izquierda a derecha en pantalla
             }
+            row.Sort((a, b) => a.x.CompareTo(b.x));
+            return row.ConvertAll(r => (r.pawn, r.card));
+        }
+
+        /// <summary>Si ahora se puede elegir a este personaje (lo mismo que mira el juego al pinchar en el).</summary>
+        static bool Selectable(Pawn p)
+        {
+            try
+            {
+                var gm = GameManager.instance;
+                var pc = gm?.pawnController;
+                if (gm == null || pc == null || p == null || !p.gameObject.activeInHierarchy) return false;
+                if (!gm.IsInstructPhase()) return false;
+                if ((gm.IsCurrentPlayerCriminal() || gm.IsCurrentPlayerIrene()) && p.Role == Pawn.RoleType.TARGET) return false;
+                bool given = false;
+                var list = pc.instructTargetPawns;
+                if (list != null) for (int i = 0; i < list.Length; i++) if (list[i] != null && list[i].Pointer == p.Pointer) { given = true; break; }
+                return given || gm.IsEnableInstructIndex();
+            }
+            catch { return false; }
+        }
+
+        /// <summary>A que retrato de la fila se pasaria (1 derecha, -1 izquierda), o -1 si no hay a quien.</summary>
+        static int RowTarget(List<(Pawn pawn, RectTransform card)> row, int dir)
+        {
+            int n = row.Count;
+            if (n == 0) return -1;
+            int ci = -1;
+            try
+            {
+                var cur = GameManager.instance?.pawnController?.GetSelectPawn();
+                if (cur != null) ci = row.FindIndex(r => r.pawn.Pointer == cur.Pointer);
+            }
+            catch { }
             int start = ci >= 0 ? ci : (dir > 0 ? -1 : n);
             for (int step = 1; step <= n; step++)
             {
                 int i = ((start + dir * step) % n + n) % n;
-                var p = gm.GetPawn(ref i);
-                if (p == null || !p.gameObject.activeInHierarchy) continue;
-                pc.SelectPawnWithFocus(ref p);
-                var now = pc.GetSelectPawn();
-                if (now != null && now.Pointer == p.Pointer) return;
+                if (i == ci) continue;
+                if (Selectable(row[i].pawn)) return i;
             }
+            return -1;
         }
 
         static bool _gearMissLogged;
@@ -790,36 +846,29 @@ namespace CrimeSightRevival.Mods
         static GameObject _kickHint, _plusHint, _downHint, _yHint;
         static readonly Dictionary<int, (GameObject go, string btn)> _btnHints = new();
 
-        // Debajo de los retratos A-F: la cruceta derecha bajo el personaje al que se pasaria con ella y la izquierda bajo
-        // el de la izquierda (sin nadie elegido: derecha bajo el primero, izquierda bajo el ultimo).
+        // Debajo de los retratos: la cruceta derecha bajo el personaje al que se pasaria con ella y la izquierda bajo el
+        // de la izquierda (sin nadie elegido: derecha bajo el primero que se pueda elegir, izquierda bajo el ultimo).
+        // Si solo queda uno al que pasar, las dos flechas van bajo el mismo retrato.
         static GameObject _portraitL, _portraitR;
         static bool _portraitLogged;
 
         static void PortraitHints()
         {
-            bool show = Active && _pawnPanel != null && _pawnPanel.activeInHierarchy;
-            List<RectTransform> cards = null;
-            int next = -1, prev = -1;
-            if (show)
+            bool showL = false, showR = false;
+            if (Active && _pawnPanel != null && _pawnPanel.activeInHierarchy)
             {
-                cards = Portraits();
-                next = NextPawn(1); prev = NextPawn(-1);
-                show = cards.Count > 0 && next >= 0 && next < cards.Count && prev >= 0 && prev < cards.Count;
-                if (!_portraitLogged && cards.Count > 0)
+                var row = PawnRow();
+                int next = RowTarget(row, 1), prev = RowTarget(row, -1);
+                if (!_portraitLogged && row.Count > 0)
                 {
                     _portraitLogged = true;
-                    Log($"retratos: {cards.Count} en {_pawnPanel.name} ({string.Join(", ", cards.ConvertAll(c => c.gameObject.name))})");
+                    Log($"retratos: {row.Count} en {_pawnPanel.name} ({string.Join(", ", row.ConvertAll(r => r.card.gameObject.name))})");
                 }
+                if (next >= 0) { if (_portraitR == null) _portraitR = PortraitIcon("dpad_right"); Place(_portraitR, row[next].card); showR = true; }
+                if (prev >= 0) { if (_portraitL == null) _portraitL = PortraitIcon("dpad_left"); Place(_portraitL, row[prev].card); showL = true; }
             }
-            if (show)
-            {
-                if (_portraitL == null) _portraitL = PortraitIcon("dpad_left");
-                if (_portraitR == null) _portraitR = PortraitIcon("dpad_right");
-                Place(_portraitL, cards[prev]);
-                Place(_portraitR, cards[next]);
-            }
-            if (_portraitL != null && _portraitL.activeSelf != show) _portraitL.SetActive(show);
-            if (_portraitR != null && _portraitR.activeSelf != show) _portraitR.SetActive(show);
+            if (_portraitL != null && _portraitL.activeSelf != showL) _portraitL.SetActive(showL);
+            if (_portraitR != null && _portraitR.activeSelf != showR) _portraitR.SetActive(showR);
         }
 
         static void Place(GameObject icon, RectTransform card)
@@ -830,54 +879,6 @@ namespace CrimeSightRevival.Mods
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
             rt.pivot = new Vector2(0.5f, 1f);
             rt.anchoredPosition = new Vector2(0f, -4f);
-        }
-
-        /// <summary>Los retratos de la fila, de izquierda a derecha (uno por personaje).</summary>
-        static List<RectTransform> Portraits()
-        {
-            var list = new List<RectTransform>();
-            var root = _pawnPanel.transform;
-            for (int i = 0; i < root.childCount; i++)
-            {
-                var c = root.GetChild(i);
-                if (c == null || !c.gameObject.activeInHierarchy) continue;
-                var rt = c.GetComponent<RectTransform>();
-                if (rt != null && rt.rect.width > 0) list.Add(rt);
-            }
-            // si la fila tiene una sola pieza que lo agrupa todo, se mira dentro
-            if (list.Count == 1 && list[0].childCount > 1) { var only = list[0]; list.Clear(); for (int i = 0; i < only.childCount; i++) { var c = only.GetChild(i); var rt = c != null ? c.GetComponent<RectTransform>() : null; if (rt != null && c.gameObject.activeInHierarchy && rt.rect.width > 0) list.Add(rt); } }
-            list.Sort((a, b) => a.position.x.CompareTo(b.position.x));
-            return list;
-        }
-
-        /// <summary>El personaje al que se pasaria con la cruceta (1 derecha, -1 izquierda), o -1.</summary>
-        static int NextPawn(int dir)
-        {
-            try
-            {
-                var gm = GameManager.instance;
-                var pc = gm != null ? gm.pawnController : null;
-                if (pc == null) return -1;
-                int n = gm.GetPawnCount();
-                if (n <= 0) return -1;
-                var cur = pc.GetSelectPawn();
-                int ci = -1;
-                for (int i = 0; i < n && cur != null; i++)
-                {
-                    int k = i;
-                    var p = gm.GetPawn(ref k);
-                    if (p != null && p.Pointer == cur.Pointer) { ci = i; break; }
-                }
-                int start = ci >= 0 ? ci : (dir > 0 ? -1 : n);
-                for (int step = 1; step <= n; step++)
-                {
-                    int i = ((start + dir * step) % n + n) % n;
-                    var p = gm.GetPawn(ref i);
-                    if (p != null && p.gameObject.activeInHierarchy) return i;
-                }
-            }
-            catch { }
-            return -1;
         }
 
         static GameObject PortraitIcon(string btn)
