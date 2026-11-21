@@ -201,7 +201,7 @@ def plan_moriarty(view, idx, killer, target, n_orders, difficulty, rng, taken=()
     if difficulty == "expert":
         return plan_moriarty_expert(view, idx, killer, target, n_orders, rng, taken, memory)
     if difficulty == "hard":
-        return plan_moriarty_hard(view, idx, killer, target, n_orders, rng, taken)
+        return plan_moriarty_hard(view, idx, killer, target, n_orders, rng, taken, memory)
     if difficulty == "easy":
         return plan_moriarty_easy(view, idx, killer, target, n_orders, rng, taken)
     return plan_moriarty_normal(view, idx, killer, target, n_orders, rng, taken)
@@ -524,7 +524,50 @@ def search_no_food(view, idx, pid, grids, rng, prefer=None):
 
 
 # ------------------------------------------------------------------ dificil: Moriarty
-def plan_moriarty_hard(view, idx, killer, target, n_orders, rng, taken=()):
+def plan_moriarty_hard(view, idx, killer, target, n_orders, rng, taken=(), memory=None):
+    """Moriarty dificil: lo de abajo (_moriarty_hard_core) y, sin asalto, las ordenes que le sobran no se
+    pierden (fill_free_orders)."""
+    orders, assault = _moriarty_hard_core(view, idx, killer, target, n_orders, rng, taken)
+    if assault:
+        return orders, True
+    pred = predict_sherlock(view, memory or new_memory(), rng)
+    return fill_free_orders(view, idx, killer, target, orders, n_orders, rng, taken, pred), False
+
+
+def fill_free_orders(view, idx, killer, target, orders, n_orders, rng, taken, predicted):
+    """Dificil y superiores: Moriarty no desperdicia ordenes, pero tampoco se arriesga sin motivo. Las que le
+    sobran van a personajes que Sherlock no va a ordenar (predicted: asi no chocan y no le delatan) y siempre
+    andando, como haria el personaje por su cuenta:
+    1. alejar a un posible testigo de la victima (alguien que podria llegar a su habitacion);
+    2. si no, registrar o moverse sin coger comida, sin acercarse a la victima (no estropea su asesinato).
+    Nunca ordena al asesino (lo decide el plan) ni a la victima."""
+    out = list(orders)
+    used = set(taken) | {killer, target} | {o["pawnId"] for o in out}
+    free = [q for q in view.ids() if q not in used and q not in predicted and awake(view, q) and view.grids(q)]
+    troom = view.pawns[target].get("roomId")
+    rooms = {g.get("roomId") for g in view.grids(target)} | {troom}
+    witnesses = sorted([q for q in free if any(g.get("roomId") in rooms for g in view.grids(q))],
+                       key=lambda q: (view.pawns[q].get("roomId") != troom, view.pair_distance(q, target)))
+    for q in witnesses:
+        if len(out) >= n_orders:
+            return out
+        o, g = lure(view, idx, q, target, rng)
+        if g.get("roomId") not in rooms:
+            out.append(o)
+            used.add(q)
+    rest = [q for q in free if q not in used]
+    rng.shuffle(rest)
+    for q in rest:
+        if len(out) >= n_orders:
+            break
+        away = [g for g in walk(view, q) if g.get("roomId") not in rooms]
+        o = search_no_food(view, idx, q, away, rng) if away else None
+        if o:
+            out.append(o)
+    return out
+
+
+def _moriarty_hard_core(view, idx, killer, target, n_orders, rng, taken=()):
     """Moriarty dificil:
     - Asalto solo cuando es seguro: la victima no puede escapar del alcance del asesino y ningun
       testigo puede acabar en su habitacion (calculando hasta donde puede andar cada uno). Con
@@ -855,7 +898,7 @@ def plan_moriarty_expert(view, idx, killer, target, n_orders, rng, taken=(), mem
         kill = _kill_now(view, idx, killer, target, pred, n_orders, rng, set(taken) | {target}, desperate=left <= 0)
         if kill:
             return kill, True
-    orders, assault = plan_moriarty_hard(view, idx, killer, target, n_orders, rng, taken)
+    orders, assault = _moriarty_hard_core(view, idx, killer, target, n_orders, rng, taken)
     if assault:
         return orders, True
     tgrid = view.pawns[target].get("gridId")
@@ -877,7 +920,7 @@ def plan_moriarty_expert(view, idx, killer, target, n_orders, rng, taken=(), mem
         d = frame_decoy(view, idx, killer, target, mem, used, rng)
         if d:
             keep.append(d)
-    return keep[:n_orders], False
+    return fill_free_orders(view, idx, killer, target, keep[:n_orders], n_orders, rng, taken, pred), False
 
 
 def plan_irene_expert(view, idx, killer, target, rng, taken, memory, frame_first=False):
