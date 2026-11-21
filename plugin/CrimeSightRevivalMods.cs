@@ -44,6 +44,7 @@ namespace CrimeSightRevival.Mods
             RevivalCredits.Init(h);
             Manual.Init(h);
             TalkSkip.Init(h);
+            PartnerIcon.Init(h);
             L.LogInfo("Mods en caliente activos. Carpeta: " + LiveMods.LiveDir);
         }
     }
