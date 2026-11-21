@@ -1350,9 +1350,11 @@ class Room:
         self.irene_cmds, self.watson_suspect = [], None
         self.food_items = set(range(food))
         self.weapon_items = set(range(food, food + weapons))
-        # Planos del cuadro electrico: los ultimos de la lista (ItemManager.CreateMatchItemList)
+        # Cuadros electricos (planos): justo despues de las armas, uno por cada cuadro de los ajustes. Comprobado
+        # con las partidas guardadas: cada cuadro que rompio Moriarty estaba en el mueble del objeto 32, 33 o 34
+        # (17 comidas + 15 armas = 32), nunca en los ultimos de la lista
         sw = int(self.settings.get("switchboard_count", 0) or 0)
-        self.switch_items = set(range(max(0, n - sw), n))
+        self.switch_items = set(range(food + weapons, min(n, food + weapons + sw)))
         self.events = {}
         self.switch_found = set()
         self.turn_attacks = {}
