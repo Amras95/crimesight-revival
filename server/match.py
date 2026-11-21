@@ -177,6 +177,7 @@ IRENE_MAX_PICKS = 2
 # lo vigila y al final lo acusa; "No creo que sea el asesino" (ping 10 o su sticker) -> lo olvida. Watson casi
 # nunca tiene los pings de sospecha a mano: lo normal es usar los stickers (Stamp.Type 25/24) o "Peligro".
 WATSON_SUSPECT_PINGS, WATSON_CLEAR_PINGS = {9, 2}, {10}
+PING_SEARCH = 7   # Ping.Type.SEARCH ("Registrar"): la Watson IA lo pone en la comida que descubre
 WATSON_SUSPECT_STAMPS, WATSON_CLEAR_STAMPS = {25}, {24}   # KILLER_SUSPICION / KILLER_NOSUSPICION
 # Durante la partida la sala pasa de "playing" a "command" con la primera orden y ahi se queda: antes
 # solo se miraba "playing" y, desde el primer turno, las IAs dejaban de atender a los pings (ordenes de
@@ -512,11 +513,11 @@ class Room:
         self.events = {}           # jugador -> acciones con puntos conseguidas en la partida
         self.switch_found = set()  # bandos que ya han encontrado un plano del cuadro electrico
         self.turn_attacks = {}     # uniqId atacado este turno -> jugador que dio la orden
-        self.turn_potions = set()  # jugadores del bando de Moriarty que han dado una orden de curar este turno
+        self.turn_potions = set()  # jugadores que han dado una orden de curar este turno
         self.turn_spray_rooms = set()  # habitaciones gaseadas con el spray este turno (tambien hiere)
         self.candidates = {}       # personaje -> (puede ser el asesino, puede ser la victima) la ultima vez que se miro
         self.critical = {}         # personaje -> estaba en estado critico (isBlind) la ultima vez que se miro
-        self.pending_success = []  # acciones que solo cuentan si salen bien: (jugador, accion, tipo, escape, habitacion, oscuro)
+        self.pending_success = []  # acciones que solo cuentan si salen bien: (jugador, accion, tipo, escape/personaje, habitacion/casilla, oscuro)
         self.clashed = set()       # personajes en los que Moriarty ya ha chocado con una orden de Sherlock
         self.searched = {}         # mueble (cottage id) -> objeto que salio
         self.drops = {}            # objeto en el suelo (cottage id) -> indice de objeto
@@ -527,6 +528,9 @@ class Room:
         self.watson_suspect = None # en solitario: personaje del que Watson sospecha (Sherlock IA lo vigila)
         self.watson_food = set()   # muebles con comida que Watson ya conoce
         self.bot_food = {}         # IA -> muebles con comida que conoce (lo mismo que una persona en su papel)
+        self.bot_new_food = {}     # Watson IA -> mueble con comida que acaba de descubrir este turno
+        self.furniture = {}        # mueble -> casilla, de todo el escenario (lo anade el plugin: "searchMap")
+        self.furniture_at = {}     # mueble -> (x, y, z) en el mundo x10, encima del mueble (para los pings)
         self.watson_done = False   # ya se le dijo a Watson que no queda comida por descubrir
         self.ai_mem = ai.new_memory()   # lo que ha visto el bando de Sherlock (IA dificil)
         self.last_view = None
@@ -892,6 +896,24 @@ class Room:
         pinged = getattr(self, "bot_pinged", None)
         if pinged is None:
             pinged = self.bot_pinged = {}
+        # Watson IA: el mueble con comida que acaba de descubrir (su habilidad), con un ping de "Registrar"
+        # (Ping.Type.SEARCH) encima, como haria una persona para que Sherlock vaya a por ella
+        for bot, obj in list((getattr(self, "bot_new_food", None) or {}).items()):
+            mates = [h for h in humans if self.side(h) == self.side(bot)] if bot in self.members else []
+            grid = self.object_grid(obj)
+            if not mates or grid is None:
+                continue
+            x, z = grid_pos(grid)
+            cx, cz = round(x * 10), round(z * 10)
+            # encima del mueble si el plugin lo ha mandado; si no, en el centro de su casilla
+            px, py, pz = self.furniture_at.get(obj, (cx, 10, cz))
+            msg = {"tag": "ping", "id": self.member_index(bot), "type": PING_SEARCH, "call": 2,
+                   "posposX": px, "posposY": py, "posposZ": pz,
+                   "callposposX": cx, "callposposY": 0, "callposposZ": cz,
+                   "name": self.members[bot]["name"], "obj": "", "ignore": 0}
+            await self.hub.emit(self.topic, msg, var=self.vars, eligible=set(mates) | {bot})
+            log.info("Sala %s turno %s: Watson IA senala la comida del mueble %s", self.id, self.turn, obj)
+            await asyncio.sleep(random.uniform(0.4, 0.9))
         for bot, orders in list((self.bot_orders or {}).items()):
             if bot not in self.members:
                 continue
@@ -1352,6 +1374,7 @@ class Room:
         self.ai_mem = ai.new_memory()
         self.watson_food, self.watson_done = set(), False
         self.bot_food = {}
+        self.furniture, self.furniture_at = {}, {}
         self.irene_cmds, self.watson_suspect = [], None
         self.food_items = set(range(food))
         self.weapon_items = set(range(food, food + weapons))
@@ -1385,8 +1408,26 @@ class Room:
         if role == ROLE_WATSON:
             hidden = [o for o in foods if o not in known]
             if hidden:
-                known.add(random.choice(hidden))
+                # mejor uno que se pueda senalar con un ping (que este en una casilla de los datos del turno)
+                o = random.choice([x for x in hidden if self.object_grid(x) is not None] or hidden)
+                known.add(o)
+                self.bot_new_food[pid] = o      # bot_announce se lo dice a Sherlock con un ping de "Registrar"
         return set(), known - set(self.searched)
+
+    def object_grid(self, obj):
+        """Casilla donde esta un mueble: del mapa completo que manda el plugin o, si no lo hay, de los datos del
+        turno (casillas al alcance de los personajes)."""
+        if obj in self.furniture:
+            return self.furniture[obj]
+        ref = self.turn_ref or {}
+        lists = [r.get("gridList") for r in ref.get("roomList") or [] if isinstance(r, dict)]
+        lists += [p.get("gridList") for p in ref.get("pawns") or [] if isinstance(p, dict)]
+        for grids in lists:
+            for g in grids or []:
+                if isinstance(g, dict) and any(isinstance(o, dict) and o.get("id") == obj
+                                               for o in g.get("searchObjects") or []):
+                    return g.get("gridId")
+        return None
 
     def objects_with(self, items):
         """Muebles aun sin registrar que contienen alguno de esos objetos."""
@@ -1414,7 +1455,7 @@ class Room:
             try:
                 ref = json.loads(ref)
             except ValueError:
-                ref = None
+                ref = self.read_reference(ref)
         res = p.get("resumption_data")
         if isinstance(res, str) and res:
             try:
@@ -1433,8 +1474,53 @@ class Room:
                     self.drops.pop(int(d["id"]), None)
         if isinstance(ref, dict):
             self.reference[sess.player_id] = ref
+            # El plugin anade todos los muebles del escenario con su casilla (CrimeSightRevivalSearchMap.cs)
+            for row in ref.get("searchMap") or []:      # [mueble, casilla, x, y, z]
+                try:
+                    self.furniture[int(row[0])] = int(row[1])
+                    if len(row) >= 5:
+                        self.furniture_at[int(row[0])] = (int(row[2]), int(row[3]), int(row[4]))
+                except (TypeError, ValueError, IndexError):
+                    continue
             if isinstance(ref.get("pawns"), list) and ref["pawns"]:
                 self.pawn_count = len(ref["pawns"])
+
+    def read_reference(self, text):
+        """Resumen del turno que no se puede leer: se quita el mapa de muebles que anade el plugin ("searchMap") y se
+        vuelve a probar, para que un mapa mal hecho nunca deje la partida sin datos (la IA dejaria de jugar)."""
+        log.warning("Sala %s: resumen del turno ilegible, se intenta sin el mapa de muebles", self.id)
+        key = text.find('"searchMap"')
+        if key < 0:
+            return None
+        start = text.find("[", key)
+        depth, end = 0, -1
+        for i in range(start, len(text)) if start >= 0 else ():
+            if text[i] == "[":
+                depth += 1
+            elif text[i] == "]":
+                depth -= 1
+                if depth == 0:
+                    end = i + 1
+                    break
+        if end < 0:
+            return None
+        rest = text[:key] + text[end:]
+        for a, b in ((",,", ","), ("{,", "{"), (",}", "}")):
+            rest = rest.replace(a, b, 1)
+        ref = None
+        for cand in (rest, rest.rstrip(", ") + "}"):
+            try:
+                ref = json.JSONDecoder().raw_decode(cand)[0]   # lo que sobre al final no importa
+                break
+            except ValueError:
+                continue
+        if not isinstance(ref, dict):
+            return None
+        try:
+            ref["searchMap"] = json.loads(text[start:end])
+        except ValueError:
+            pass
+        return ref
 
     def _complete(self, phase):
         got = self.pending.get(phase, {})
@@ -1579,6 +1665,7 @@ class Room:
     def plan_bots(self, ref):
         """La IA decide sus ordenes con el estado del turno que manda el cliente."""
         self.bot_orders = {}
+        self.bot_new_food = {}     # Watson IA -> mueble con comida que acaba de descubrir este turno
         bots = self.bots()
         if not bots or not ref.get("pawns"):
             return
@@ -1764,8 +1851,8 @@ class Room:
                 continue
             kind, side = int(c.get("type", 0)), self.side(pid)
             item = c.get("itemId", -1)
-            if kind == INSTRUCT_BYWAY:
-                self.note(pid, ACT_BYWAY)
+            if kind == INSTRUCT_BYWAY:          # cuenta si el personaje llega al pasadizo (para abrirlo)
+                self.pending_success.append((pid, ACT_BYWAY, "byway", int(c["pawnId"]), c.get("grid"), dark0))
             elif kind == INSTRUCT_GASPIPE:      # cuenta si el escape ha desaparecido al final del turno
                 self.pending_success.append((pid, ACT_GAS_REPAIR, "gas", int(c.get("targetId", -1)),
                                              room_of_grid.get(c.get("grid")), dark0))
@@ -1779,11 +1866,20 @@ class Room:
                 elif "sherlock" not in self.switch_found:
                     self.note(pid, ACT_FOUND_SWITCH_FIRST)
                 self.switch_found.add(side)
+            if kind == INSTRUCT_POTION:
+                # La orden va a una casilla (donde esta o a donde llega el herido), no a un personaje. Solo cuenta
+                # si alli hay alguien herido: el hambre no se cura (en una partida, curar a alguien con dos de
+                # hambre no hizo nada)
+                patients = [q for q, x in pawns.items() if injured(x)
+                            and c.get("grid") is not None and dest.get(q, x.get("gridId")) == c.get("grid")]
+                if side == "moriarty" and self.killer in patients:
+                    self.note(pid, ACT_TREAT_KILLER)    # si el asesino es uno de ellos, la medicina es para el
+                elif patients:
+                    self.note(pid, ACT_TREAT)
+                self.turn_potions.add(pid)     # y por si acaso, al final del turno: si alguien se ha curado
             if side == "sherlock":
                 if kind == INSTRUCT_REPAIR:     # cuenta si vuelve la luz (al final del turno o al empezar el siguiente)
                     self.pending_success.append((pid, ACT_REPAIR, "light", None, None, dark0))
-                elif kind == INSTRUCT_POTION:
-                    self.note(pid, ACT_TREAT)
                 elif kind == INSTRUCT_SEARCH and item in self.food_items:
                     self.note(pid, ACT_FOOD)
             if kind == INSTRUCT_SPRAY:
@@ -1799,19 +1895,8 @@ class Room:
                 pawn = int(c["pawnId"])
                 self.note(pid, ACT_CLASH_AGAIN if pawn in self.clashed else ACT_FIRST_CLASH)
                 self.clashed.add(pawn)
-            if side == "moriarty":
-                if kind == INSTRUCT_BOARD:      # cuenta si se va la luz (al final del turno o al empezar el siguiente)
-                    self.pending_success.append((pid, ACT_BLACKOUT, "dark", None, None, dark0))
-                elif kind == INSTRUCT_POTION:
-                    # La orden va a una casilla (donde esta o a donde llega el herido), no a un personaje
-                    patients = [q for q, x in pawns.items() if injured(x)
-                                and c.get("grid") is not None and dest.get(q, x.get("gridId")) == c.get("grid")]
-                    # Si el asesino es uno de ellos, la medicina es para el (asi paso en una partida de prueba)
-                    if self.killer in patients:
-                        self.note(pid, ACT_TREAT_KILLER)
-                    elif patients:
-                        self.note(pid, ACT_TREAT)
-                    self.turn_potions.add(pid)     # y por si acaso, al final del turno: si alguien se ha curado
+            if side == "moriarty" and kind == INSTRUCT_BOARD:  # cuenta si se va la luz (al final del turno o al empezar el siguiente)
+                self.pending_success.append((pid, ACT_BLACKOUT, "dark", None, None, dark0))
 
     def score_turn_end(self, end):
         """Acciones con puntos que solo se ven comparando la foto del principio del turno con la del final
@@ -1836,14 +1921,19 @@ class Room:
         def injuries(x):
             return flag(x, "injureCount") or flag(x, "isInjure")
 
-        # El asesino estaba herido y ya no (o menos), y el bando de Moriarty ha dado una orden de curar
+        # Alguien estaba herido y ya no (o menos), y se ha dado una orden de curar. Para el bando de Moriarty curar
+        # al asesino es su propia accion; para el de Sherlock es "Curar a un personaje" como cualquier otro
         k0, k1 = s_pawns.get(self.killer), e_pawns.get(self.killer)
-        if k0 is not None and k1 is not None and injuries(k1) < injuries(k0):
-            for pid in self.turn_potions:
-                self.note(pid, ACT_TREAT_KILLER)
-        # Lo mismo con cualquier otro personaje: "Curar a un personaje" tambien para el bando de Moriarty
-        if any(q != self.killer and q in s_pawns and injuries(p) < injuries(s_pawns[q]) for q, p in e_pawns.items()):
-            for pid in self.turn_potions:
+        killer_healed = k0 is not None and k1 is not None and injuries(k1) < injuries(k0)
+        other_healed = any(q != self.killer and q in s_pawns and injuries(p) < injuries(s_pawns[q])
+                           for q, p in e_pawns.items())
+        for pid in self.turn_potions:
+            if self.side(pid) == "moriarty":
+                if killer_healed:
+                    self.note(pid, ACT_TREAT_KILLER)
+                if other_healed:
+                    self.note(pid, ACT_TREAT)
+            elif killer_healed or other_healed:
                 self.note(pid, ACT_TREAT)
         self.score_ruled_out(end)
         self.score_critical(end)
@@ -1875,9 +1965,9 @@ class Room:
                     self.note(pid, ACT_GAS_HIT)
 
     def score_success(self, start, end, final=False):
-        """Arreglar un escape de gas, romper el cuadro (apagon) y arreglarlo (vuelve la luz) cuentan solo si salen
-        bien, no al dar la orden. Al final del turno se compara con el principio; lo de la luz que aun no se vea se
-        mira otra vez al empezar el turno siguiente (final=True) y ahi se olvida."""
+        """Arreglar un escape de gas, romper el cuadro (apagon), arreglarlo (vuelve la luz) y abrir un pasadizo
+        cuentan solo si salen bien, no al dar la orden. Al final del turno se compara con el principio; lo que aun no
+        se vea se mira otra vez al empezar el turno siguiente (final=True) y ahi se olvida."""
         def dark(ref):
             try:
                 return bool(int((ref or {}).get("isBlack", 0) or 0))
@@ -1901,6 +1991,15 @@ class Room:
                         sum(g.get("roomId") == room for g in leaks(start))
                 if fixed:
                     self.note(pid, action)
+            elif kind == "byway":
+                # El juego no manda datos de los pasadizos: cuenta si el personaje ha llegado a la casilla del
+                # pasadizo (va hasta alli para abrirlo)
+                at = {int(p["pawnId"]): p.get("gridId") for p in (end or {}).get("pawns") or []
+                      if isinstance(p, dict) and "pawnId" in p}
+                if room is not None and at.get(tid) == room:
+                    self.note(pid, action)
+                elif not final:
+                    keep.append(item)
             elif kind == "dark" and dark(end) and not dark0:
                 self.note(pid, action)
             elif kind == "light" and not dark(end) and dark0:
