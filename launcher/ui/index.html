@@ -95,12 +95,14 @@ input:focus,select:focus{border-color:var(--c,var(--accent))}
   font:12.5px/1.55 Consolas,"Cascadia Mono",monospace;color:#c8cbf0;user-select:text}
 #log .err{color:#ff9a9a}#log .ok{color:#9dffc4}
 
-footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px;color:var(--dim);font-size:12px;gap:12px}
+footer{display:flex;justify-content:flex-start;align-items:center;margin-top:12px;color:var(--dim);font-size:12px;gap:12px}
 footer>span{white-space:nowrap;flex-shrink:0}
-footer .path{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+footer .path{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 footer a{color:#c9ccff;text-decoration:none}
-footer a.kofi{color:#ffb37a}footer a:hover{text-decoration:underline}
+footer a:hover{text-decoration:underline}
 footer .ver{margin-left:8px;opacity:.6}
+footer .buttons{margin-left:12px}footer .credits{display:flex;flex-direction:column;line-height:1.45;flex:1 0 auto;margin-left:12px}footer .credits .row2{display:flex;align-items:baseline}
+footer .credits .row2 .ver{margin-left:auto;padding-left:12px}
 footer .updpill{display:none;margin-left:8px;padding:2px 9px;border-radius:999px;background:var(--accent);color:#fff;font-size:11px;cursor:pointer;text-decoration:none}
 footer .updpill.on{display:inline-block}
 #update .box{display:flex;flex-direction:column;max-height:86vh}
@@ -245,16 +247,18 @@ footer .updpill.on{display:inline-block}
 
   <footer>
     <span class="path" id="gamepath"></span>
-    <span>
+    <span class="buttons">
       <button class="btn ghost small" onclick="pickGame()" data-t="change_folder"></button>
       <button class="btn ghost small" onclick="restoreGame()" data-t="restore_game"></button>
       <button class="btn ghost small" onclick="openProgress()" data-t="progress_btn"></button>
       <button class="btn ghost small" onclick="openMods()" data-t="mods_btn"></button>
     </span>
-    <span><span data-t="revival_by"></span> <a href="#" onclick="api('open_url','https://github.com/Amras95');return false">Amras95</a> ·
-      <a href="#" onclick="api('open_url','https://x.com/AmrasMithandir');return false">@AmrasMithandir</a> ·
-      <a href="#" class="kofi" onclick="api('open_url',STATE.kofi);return false">☕ <span data-t="kofi"></span></a>
-      <span class="ver" id="ver"></span><a href="#" class="updpill" id="updpill" onclick="showUpdate();return false"></a></span>
+    <span class="credits">
+      <span><span data-t="revival_by"></span> <a href="#" onclick="api('open_url','https://github.com/Amras95');return false">Amras95</a> ·
+        <a href="#" onclick="api('open_url','https://x.com/AmrasMithandir');return false">@AmrasMithandir</a></span>
+      <span class="row2"><span><span data-t="contributions_by"></span> <a href="#" onclick="api('open_url','https://github.com/AshenAF92');return false">Ashen</a></span>
+        <span class="ver" id="ver"></span><a href="#" class="updpill" id="updpill" onclick="showUpdate();return false"></a></span>
+    </span>
   </footer>
 </div>
 <div class="modal" id="progress" onclick="if(event.target===this)closeProgress()">

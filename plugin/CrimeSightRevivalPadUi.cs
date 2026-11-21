@@ -67,7 +67,7 @@ namespace CrimeSightRevival.Mods
         static readonly HashSet<string> _overRoom = new()
         {
             "aviso", "dificultad de la IA", "expulsar (confirmar)", "aviso de plazas", "confirmacion",
-            "ajustes del sistema", "ajustes del sistema (confirmar)", "opciones", "abandonar sala",
+            "ajustes del sistema", "ajustes del sistema (confirmar)", "opciones", "creditos revival", "abandonar sala",
             "ajustes del juego", "ajustes (confirmar)", "cuenta atras", "sala (ventana encima)",
         };
         static bool _bConsumed, _gearHeld, _xTaken, _yTaken, _arrowHeld;
@@ -175,6 +175,7 @@ namespace CrimeSightRevival.Mods
             // de la ventana de mas arriba a la de mas abajo: la primera que se vea manda
             try { if (ErrorMessageManager.IsDisplayErrorMessage()) { _uiError = true; return "aviso"; } } catch { }
             if (AiPicker.IsOpen) { _uiPicker = true; return "dificultad de la IA"; }
+            if (RevivalCredits.IsOpen && RevivalCredits.CloseButton != null) { _uiB = RevivalCredits.CloseButton; _uiStart = RevivalCredits.JoinButton; return "creditos revival"; }
             var kick = Find<OutGameRoomPopupKickConfirm>();
             if (kick != null && Shown(kick.BackButton)) { _uiB = kick.BackButton; _uiStart = kick.ConfirmButton; return "expulsar (confirmar)"; }
             foreach (var o in UnityEngine.Object.FindObjectsOfType(Il2CppInterop.Runtime.Il2CppType.Of<OutGameRoomPopupNoticeChangeCapacity>()))

@@ -41,6 +41,7 @@ namespace CrimeSightRevival.Mods
             CustomCursor.Init(h);
             AiPicker.Init(h);
             Guide.Init(h);
+            RevivalCredits.Init(h);
             Manual.Init(h);
             TalkSkip.Init(h);
             L.LogInfo("Mods en caliente activos. Carpeta: " + LiveMods.LiveDir);
@@ -157,6 +158,7 @@ namespace CrimeSightRevival.Mods
             try { ModOffer.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Mods] " + e.Message); }
             try { AiPicker.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[IA] " + e.Message); }
             try { Guide.Frame(false); } catch (Exception e) { Plugin.L.LogWarning("[Guia] " + e.Message); }
+            try { RevivalCredits.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Creditos] " + e.Message); }
             try { Models.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Modelos] " + e.Message); }
             if (Time.unscaledTime < _next) return;
             _next = Time.unscaledTime + 1f;
@@ -167,6 +169,7 @@ namespace CrimeSightRevival.Mods
         void LateUpdate()
         {
             try { Guide.Frame(true); } catch { }
+            try { RevivalCredits.Late(); } catch { }
         }
 
         void Tick()
