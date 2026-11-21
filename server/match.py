@@ -512,6 +512,7 @@ class Room:
         self.turn_attacks = {}     # uniqId atacado este turno -> jugador que dio la orden
         self.turn_potions = set()  # jugadores del bando de Moriarty que han dado una orden de curar este turno
         self.turn_spray_rooms = set()  # habitaciones gaseadas con el spray este turno (tambien hiere)
+        self.candidates = {}       # personaje -> (puede ser el asesino, puede ser la victima) la ultima vez que se miro
         self.searched = {}         # mueble (cottage id) -> objeto que salio
         self.drops = {}            # objeto en el suelo (cottage id) -> indice de objeto
         self.disabled_objects = set()
@@ -1355,6 +1356,7 @@ class Room:
         self.turn_attacks = {}
         self.turn_potions = set()
         self.turn_spray_rooms = set()
+        self.candidates = {}
         log.info("Sala %s: %s objetos repartidos (%s comida, %s armas)", self.id, n, food, weapons)
 
     def objects_with(self, items):
@@ -1483,6 +1485,10 @@ class Room:
             self.vars["random_seed"] = random.randint(1, 2**31 - 1)
             self.turn_ref = ref if isinstance(ref, dict) else {}
             self.log_call("turn_state", self.turn, self.turn_ref)
+            try:
+                self.score_ruled_out(self.turn_ref)   # lo que se descarta entre un turno y el siguiente
+            except Exception:  # noqa: BLE001 - los puntos de accion nunca deben parar la partida
+                log.exception("Sala %s turno %s: fallo mirando los descartes", self.id, self.turn)
             self.claims = {"sherlock": set(), "moriarty": set()}
             self.irene_cmds = []
             self.plan_bots(self.turn_ref)
@@ -1504,6 +1510,7 @@ class Room:
                 self.score_turn_end(ref)
             except Exception:  # noqa: BLE001 - los puntos de accion nunca deben parar la partida
                 log.exception("Sala %s turno %s: fallo mirando las acciones del final del turno", self.id, self.turn)
+            self.log_call("turn_end", self.turn, ref)
             if self.detect_kill(ref):
                 # En linea el servidor decide el asesinato (el cliente no lo comprueba por su cuenta)
                 await self.end_by_kill()
@@ -1517,7 +1524,7 @@ class Room:
                     # victima sigue viva: resultado ARREST_SUCCESS, gana el bando de Sherlock.
                     log.info("Sala %s turno %s: fin del turno final sin asesinato, detenido el asesino", self.id, self.turn)
                     await self.send_result(False)
-                    self.conclude("sherlock", {ROLE_DETECTIVE: [ACT_DEDUCED]})
+                    self.conclude("sherlock", {ROLE_DETECTIVE: [ACT_DEDUCED], ROLE_WATSON: [ACT_DEDUCED]})
                 else:
                     await self.control("StartTransitionPhase", {"Turn": self.turn, "Data": {"isDanger": self.is_danger()}})
         if "selection" in self.pending and self._complete("selection"):
@@ -1694,7 +1701,10 @@ class Room:
 
     def note(self, pid, action):
         if pid in self.members and not self.members[pid].get("bot"):
-            self.events.setdefault(pid, set()).add(action)
+            got = self.events.setdefault(pid, set())
+            if action not in got:
+                got.add(action)
+                self.log_call("action", self.turn, pid, action)
 
     def score_actions(self, commands, owner):
         """Acciones con puntos que se ven en las ordenes de este turno (de quien la dio)."""
@@ -1781,7 +1791,6 @@ class Room:
                 return default
 
         humans = [p for p, m in self.members.items() if not m.get("bot")]
-        sherlocks = [p for p in humans if self.side(p) == "sherlock"]
         moriartys = [p for p in humans if self.side(p) == "moriarty"]
         s_pawns, e_pawns = by(start, "pawns", "pawnId"), by(end, "pawns", "pawnId")
         s_threats, e_threats = by(start, "threatList", "uniqId"), by(end, "threatList", "uniqId")
@@ -1798,16 +1807,7 @@ class Room:
         if any(q != self.killer and q in s_pawns and injuries(p) < injuries(s_pawns[q]) for q, p in e_pawns.items()):
             for pid in self.turn_potions:
                 self.note(pid, ACT_TREAT)
-        for q, p in e_pawns.items():
-            before = s_pawns.get(q)
-            if before is None:
-                continue
-            if flag(before, "isKillerCandidate", 1) and not flag(p, "isKillerCandidate", 1):
-                for pid in sherlocks:
-                    self.note(pid, ACT_NOT_KILLER)
-            if flag(before, "isTargetCandidate", 1) and not flag(p, "isTargetCandidate", 1):
-                for pid in sherlocks:
-                    self.note(pid, ACT_NOT_TARGET)
+        self.score_ruled_out(end)
         # Perro (o traidor) que muere este turno: para quien ordeno atacarlo
         for uid, t in e_threats.items():
             if flag(t, "isDie") and not flag(s_threats.get(uid, {}), "isDie") and uid in self.turn_attacks:
@@ -1833,6 +1833,30 @@ class Room:
             elif rooms & gas_rooms:
                 for pid in moriartys:
                     self.note(pid, ACT_GAS_HIT)
+
+    def score_ruled_out(self, ref):
+        """Personajes descartados como asesino o victima desde la ultima vez que se miro. Se mira al final
+        de cada turno y al empezar el siguiente: a veces se descartan entre los dos (paso en una partida
+        en linea: 6 posibles asesinos al acabar el turno 3 y 4 al empezar el 4)."""
+        def flag(x, key):
+            try:
+                return int(x.get(key, 1) if x.get(key) is not None else 1)
+            except (TypeError, ValueError):
+                return 1
+        now = {int(x["pawnId"]): (flag(x, "isKillerCandidate"), flag(x, "isTargetCandidate"))
+               for x in ref.get("pawns") or [] if isinstance(x, dict) and "pawnId" in x}
+        sherlocks = [p for p, m in self.members.items() if not m.get("bot") and self.side(p) == "sherlock"]
+        for q, (killer, target) in now.items():
+            before = self.candidates.get(q)
+            if before is None:
+                continue
+            if before[0] and not killer:
+                for pid in sherlocks:
+                    self.note(pid, ACT_NOT_KILLER)
+            if before[1] and not target:
+                for pid in sherlocks:
+                    self.note(pid, ACT_NOT_TARGET)
+        self.candidates.update(now)
 
     def level(self):
         """Nivel de la partida para los puntos: contra personas "online"; si no, el de la IA."""
@@ -1956,6 +1980,10 @@ class Room:
                 log.info("Sala %s: mueble %s -> objeto %s (%s)", self.id, target, self.searched[target],
                          "arma" if self.searched[target] in self.weapon_items else
                          "comida" if self.searched[target] in self.food_items else "otro")
+                item = self.searched[target]
+                self.log_call("found", self.turn, target, item,
+                              "weapon" if item in self.weapon_items else "food" if item in self.food_items
+                              else "plan" if item in self.switch_items else "other")
                 c["itemId"] = self.searched[target]
             else:
                 c["itemId"] = -1   # ya registrado: no queda nada
@@ -2092,7 +2120,9 @@ class Room:
         """Fin por deduccion: si Sherlock acierta gana su bando; si no, empate (no hubo asesinato)."""
         right = [s["player_id"] for s in selections if s["killer"] == self.killer
                  and self.members.get(s["player_id"], {}).get("role") == ROLE_DETECTIVE]
-        extra = {pid: [ACT_DEDUCED] for pid in right}
+        # Acusar bien da los puntos a Sherlock y a Watson (gana el bando solo si acierta Sherlock)
+        extra = {s["player_id"]: [ACT_DEDUCED] for s in selections if s["killer"] == self.killer
+                 and self.members.get(s["player_id"], {}).get("role") in (ROLE_DETECTIVE, ROLE_WATSON)}
         self.conclude("sherlock" if right else "draw", extra)
 
     def conclude(self, winner, extra=None, quitter=None):
@@ -2102,8 +2132,13 @@ class Room:
         self.recorded = True
         ml = getattr(self, "mlog", None)
         reason = "abandon" if quitter else ("kill" if ml is not None and ml.rec.get("kill") else "deduction")
-        self.log_call("finish", winner, reason)
-        extra = extra or {}
+        try:
+            self._record_players(winner, extra or {}, quitter, reason)
+        finally:
+            self.log_call("finish", winner, reason)     # se guarda el registro con lo anotado en los perfiles
+        self.hub.api.s.save()
+
+    def _record_players(self, winner, extra, quitter, reason):
         for pid, m in self.members.items():
             if m.get("bot"):
                 continue
@@ -2119,7 +2154,8 @@ class Room:
             log.info("Sala %s: %s (%s) %s, +%s puntos -> %s", self.id, m["name"], ROLE_KEY.get(role, role),
                      {"win": "GANA", "lose": "PIERDE", "draw": "EMPATA", "abandon": "ABANDONA"}[outcome],
                      pts, stats.summary(u))
-        self.hub.api.s.save()
+            given = [] if outcome == "abandon" else list(dict.fromkeys(a for a in acts if a in stats.ACTIONS))
+            self.log_call("awarded", pid, outcome, given, pts)
 
     async def p_Sync(self, sess, p):
         await self.control("Sync", {"Data": p.get("payload") if isinstance(p.get("payload"), dict) else {}})

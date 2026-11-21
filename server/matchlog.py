@@ -4,7 +4,9 @@ CRIMESIGHT Revival - registro detallado de cada partida (base para la IA "Pesadi
 Por cada partida se guarda una linea JSON en <datos>/match_logs/AAAA-MM.jsonl con lo que se ha visto
 en ella: quien jugaba cada papel (y contra que dificultad), donde estaba cada personaje al empezar cada
 turno, todas las ordenes del turno (de que bando venian o si el personaje iba por su cuenta), si alguien
-corrio, las ordenes pisadas, el asesinato y las acusaciones del final. Solo lo que pasa en la partida:
+corrio, las ordenes pisadas, el asesinato y las acusaciones del final. Desde la version 2, tambien lo
+necesario para comprobar los puntos de accion: los ajustes (planos, perros, gas), que salio al registrar
+cada mueble, como acaba cada turno y que acciones con puntos se dieron. Solo lo que pasa en la partida:
 nada del PC ni de la cuenta de nadie, y se queda en el ordenador de quien hace de servidor.
 
 Con esto, mas adelante, la IA puede aprender las costumbres de cada jugador (a quien suele elegir de
@@ -20,13 +22,16 @@ class MatchLog:
     def __init__(self, data_dir, match_id, stage, settings, members, killer, target, role_names):
         self.dir = os.path.join(data_dir, "match_logs") if data_dir else None
         self.rec = {
-            "v": 1, "match_id": match_id, "date": int(time.time()), "stage": stage,
+            "v": 2, "match_id": match_id, "date": int(time.time()), "stage": stage,
             "max_turn": settings.get("max_turn"), "time_limit": settings.get("time_limit"),
             "killer": killer, "target": target,
             "players": [{"id": pid, "name": m.get("name", ""), "role": role_names.get(m.get("role"), m.get("role")),
                          "bot": bool(m.get("bot")), "difficulty": m.get("difficulty") if m.get("bot") else None}
                         for pid, m in members.items()],
             "turns": [], "kill": None, "accusations": [], "winner": None, "end": None,
+            "settings": {k: settings.get(k) for k in ("switchboard_count", "wild_dog_count", "gaspipe_count",
+                                                       "secret_passage", "fast_action")},
+            "actions": [], "awarded": [],
         }
         self.done = False
 
@@ -56,6 +61,36 @@ class MatchLog:
         t["orders"] = out
         if kill:
             t["assault"] = 1
+
+    def found(self, turn, furniture, item, kind):
+        """Lo que sale al registrar un mueble: [mueble, objeto, tipo] (food, weapon, plan u other).
+        Quien lo registro se ve en las ordenes del turno (la orden de buscar en ese mueble)."""
+        self._turn(turn).setdefault("found", []).append([furniture, item, kind])
+
+    def turn_end(self, turn, ref):
+        """Como acaba el turno: personajes [id, habitacion, puede ser asesino, puede ser victima, heridas,
+        herido], amenazas (perros...) [id, habitacion, muerta] y habitaciones con escape de gas."""
+        def num(x, key, default=0):
+            try:
+                return int(x.get(key, default) or 0)
+            except (TypeError, ValueError):
+                return default
+        t = self._turn(turn)
+        t["end"] = [[int(p["pawnId"]), p.get("roomId"), int(bool(p.get("isKillerCandidate", 1))),
+                     int(bool(p.get("isTargetCandidate", 1))), num(p, "injureCount"), num(p, "isInjure")]
+                    for p in ref.get("pawns") or [] if isinstance(p, dict) and "pawnId" in p]
+        t["end_threats"] = [[num(x, "uniqId", -1), x.get("roomId"), num(x, "isDie")]
+                            for x in ref.get("threatList") or [] if isinstance(x, dict)]
+        t["end_gas"] = [g.get("roomId") for g in ref.get("gaspipeList") or [] if isinstance(g, dict)]
+
+    def action(self, turn, player, action):
+        """Una accion con puntos, la primera vez que la consigue un jugador en la partida."""
+        self.rec["actions"].append([turn, player, action.replace("ctg_name_result_", "")])
+
+    def awarded(self, player, outcome, actions, points):
+        """Lo que se anoto en el perfil de cada jugador al acabar (acciones y puntos totales)."""
+        self.rec["awarded"].append({"player": player, "outcome": outcome, "points": points,
+                                    "actions": [a.replace("ctg_name_result_", "") for a in actions]})
 
     def killed(self, turn, assault):
         self.rec["kill"] = {"turn": turn, "assault": bool(assault)}
