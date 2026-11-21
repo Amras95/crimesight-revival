@@ -42,7 +42,8 @@ class MatchLog:
             if not isinstance(p, dict) or "pawnId" not in p:
                 continue
             pawns.append([int(p["pawnId"]), p.get("gridId"), p.get("roomId"), int(bool(p.get("isHaveWeapon"))),
-                          int(bool(p.get("isKillerCandidate", 1))), int(bool(p.get("isTargetCandidate", 1)))])
+                          int(bool(p.get("isKillerCandidate", 1))), int(bool(p.get("isTargetCandidate", 1))),
+                          int(bool(p.get("isBlind")))])        # critico (version 2: al final, no cambia lo anterior)
         self._turn(turn)["pawns"] = pawns
         self._turn(turn)["dark"] = int(bool(int(ref.get("isBlack", 0) or 0)))
 
@@ -73,7 +74,7 @@ class MatchLog:
 
     def turn_end(self, turn, ref):
         """Como acaba el turno: personajes [id, habitacion, puede ser asesino, puede ser victima, heridas,
-        herido], amenazas (perros...) [id, habitacion, muerta] y habitaciones con escape de gas."""
+        herido, critico, hambre], amenazas (perros...) [id, habitacion, muerta] y habitaciones con escape de gas."""
         def num(x, key, default=0):
             try:
                 return int(x.get(key, default) or 0)
@@ -81,11 +82,19 @@ class MatchLog:
                 return default
         t = self._turn(turn)
         t["end"] = [[int(p["pawnId"]), p.get("roomId"), int(bool(p.get("isKillerCandidate", 1))),
-                     int(bool(p.get("isTargetCandidate", 1))), num(p, "injureCount"), num(p, "isInjure")]
+                     int(bool(p.get("isTargetCandidate", 1))), num(p, "injureCount"), num(p, "isInjure"),
+                     int(bool(p.get("isBlind"))), int(bool(p.get("isHungry")))]
                     for p in ref.get("pawns") or [] if isinstance(p, dict) and "pawnId" in p]
         t["end_threats"] = [[num(x, "uniqId", -1), x.get("roomId"), num(x, "isDie")]
                             for x in ref.get("threatList") or [] if isinstance(x, dict)]
         t["end_gas"] = [g.get("roomId") for g in ref.get("gaspipeList") or [] if isinstance(g, dict)]
+        t["end_gas_ids"] = [g.get("uniqId") for g in ref.get("gaspipeList") or [] if isinstance(g, dict)]
+        t["end_dark"] = num(ref, "isBlack")
+        for key in ("bywayList", "byways", "bywayLocateDatas"):          # pasadizos, si el juego los manda
+            if key in ref:
+                t["end_byways"] = ref[key]
+        if "ref_keys" not in self.rec:                                    # que datos manda el juego (una vez)
+            self.rec["ref_keys"] = sorted(ref)
 
     def action(self, turn, player, action):
         """Una accion con puntos, la primera vez que la consigue un jugador en la partida."""

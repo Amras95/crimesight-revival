@@ -112,8 +112,13 @@ PROFILE_ACTIONS_MORIARTY = {
     "ctg_name_result_action_repair_gasPipe": 122,                # y arreglar escapes de gas
     "ctg_name_result_action_treated_pawnForInjuries": 121,       # y curar a cualquiera
 }
+# Irene: lo de Moriarty menos lo que ella no puede hacer. Consejo de Sherlock sobre Irene: "no tiene acceso al
+# 'Asalto' ni puede sabotear la caja de fusibles".
+PROFILE_ACTIONS_IRENE = {k: v for k, v in PROFILE_ACTIONS_MORIARTY.items()
+                         if k not in ("ctg_name_result_action_targetKilledByAssail",
+                                      "ctg_name_result_blackOut_by_switchboard")}
 PROFILE_ACTIONS = {DETECTIVE: PROFILE_ACTIONS_SHERLOCK, WATSON: PROFILE_ACTIONS_SHERLOCK,
-                   CRIMINAL: PROFILE_ACTIONS_MORIARTY, IRENE: PROFILE_ACTIONS_MORIARTY}
+                   CRIMINAL: PROFILE_ACTIONS_MORIARTY, IRENE: PROFILE_ACTIONS_IRENE}
 
 
 def _record(user):
