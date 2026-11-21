@@ -46,17 +46,21 @@ class MatchLog:
         self._turn(turn)["pawns"] = pawns
         self._turn(turn)["dark"] = int(bool(int(ref.get("isBlack", 0) or 0)))
 
-    def turn_orders(self, turn, commands, owner_side, kill):
-        """Las ordenes que se ejecutan: [personaje, tipo, casilla, corre, mueble, bando, pisada].
-        bando: "S" Sherlock/Watson, "M" Moriarty/Irene, "N" nadie (va por su cuenta)."""
+    def turn_orders(self, turn, commands, owner_side, kill, owner_who=None):
+        """Las ordenes que se ejecutan: [personaje, tipo, casilla, corre, mueble, bando, pisada, papel, jugador].
+        bando: "S" Sherlock/Watson, "M" Moriarty/Irene, "N" nadie (va por su cuenta).
+        papel y jugador (desde la version 2): quien dio la orden ("detective", "criminal", "irene" o "watson"
+        y su id); None si nadie. Van al final para que lo que ya lee las 7 primeras no cambie."""
+        owner_who = owner_who or {}
         out = []
         for c in commands:
             try:
                 p = int(c["pawnId"])
             except (KeyError, TypeError, ValueError):
                 continue
+            role, player = owner_who.get(p, (None, None))
             out.append([p, int(c.get("type", 0) or 0), c.get("grid"), int(bool(int(c.get("isRun", 0) or 0))),
-                        c.get("targetId"), owner_side.get(p, "N"), int(bool(c.get("isBatting")))])
+                        c.get("targetId"), owner_side.get(p, "N"), int(bool(c.get("isBatting"))), role, player])
         t = self._turn(turn)
         t["orders"] = out
         if kill:

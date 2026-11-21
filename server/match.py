@@ -521,6 +521,7 @@ class Room:
         self.irene_cmds = []       # en solitario: personajes que Irene le pide a Moriarty IA que mueva (y a donde)
         self.watson_suspect = None # en solitario: personaje del que Watson sospecha (Sherlock IA lo vigila)
         self.watson_food = set()   # muebles con comida que Watson ya conoce
+        self.bot_food = {}         # IA -> muebles con comida que conoce (lo mismo que una persona en su papel)
         self.watson_done = False   # ya se le dijo a Watson que no queda comida por descubrir
         self.ai_mem = ai.new_memory()   # lo que ha visto el bando de Sherlock (IA dificil)
         self.last_view = None
@@ -1345,6 +1346,7 @@ class Room:
         self.object_items = dict(enumerate(items))
         self.ai_mem = ai.new_memory()
         self.watson_food, self.watson_done = set(), False
+        self.bot_food = {}
         self.irene_cmds, self.watson_suspect = [], None
         self.food_items = set(range(food))
         self.weapon_items = set(range(food, food + weapons))
@@ -1359,17 +1361,34 @@ class Room:
         self.candidates = {}
         log.info("Sala %s: %s objetos repartidos (%s comida, %s armas)", self.id, n, food, weapons)
 
+    def bot_knowledge(self, pid):
+        """Donde sabe una IA que hay armas y comida: lo mismo que una persona en su papel (role_data).
+        Moriarty, todo; los demas, ningun arma y FOOD_OPEN_COUNT muebles con comida al azar; Watson,
+        ademas, uno nuevo cada turno (como watson_reveal). Se llama una vez por turno para cada IA."""
+        role = self.members.get(pid, {}).get("role")
+        if role == ROLE_CRIMINAL:
+            return set(self.objects_with(self.weapon_items)), set(self.objects_with(self.food_items))
+        foods = self.objects_with(self.food_items)
+        known = self.bot_food.get(pid)
+        if known is None:
+            known = self.bot_food[pid] = set(random.sample(foods, min(FOOD_OPEN_COUNT, len(foods))))
+        if role == ROLE_WATSON:
+            hidden = [o for o in foods if o not in known]
+            if hidden:
+                known.add(random.choice(hidden))
+        return set(), known - set(self.searched)
+
     def objects_with(self, items):
         """Muebles aun sin registrar que contienen alguno de esos objetos."""
         return sorted(o for o, i in self.object_items.items() if i in items and o not in self.searched)
 
     def role_data(self, pid):
-        """Lo que sabe cada papel al empezar: Moriarty, todas las armas y toda la comida; Irene, toda la
-        comida ("marcare las ubicaciones de los alimentos con una luz verde"); los demas, ninguna arma y
-        solo unos pocos sitios con comida (MatchSettings.foodOpenCount)."""
+        """Lo que sabe cada papel al empezar: Moriarty, todas las armas y toda la comida; los demas (Irene
+        tambien), ninguna arma y solo unos pocos sitios con comida (MatchSettings.foodOpenCount), elegidos
+        al azar para cada jugador. Irene sabe lo mismo que Sherlock: "lo que sabe de lo que pasa en la
+        mansion es lo mismo que nosotros" (consejo de Sherlock sobre Irene); su "luz verde" es la que
+        marca la comida conocida, la misma que ve Sherlock."""
         foods = self.objects_with(self.food_items)
-        if self.members.get(pid, {}).get("role") == ROLE_IRENE:
-            return {"weaponList": [], "foodList": foods}
         if self.members.get(pid, {}).get("role") != ROLE_CRIMINAL:
             foods = sorted(random.sample(foods, min(FOOD_OPEN_COUNT, len(foods))))
             if self.members.get(pid, {}).get("role") == ROLE_WATSON:
@@ -1556,9 +1575,9 @@ class Room:
         if not bots or not ref.get("pawns"):
             return
         gone = set(self.searched) | self.disabled_objects
-        views = {"moriarty": ai.View(ref, gone), "sherlock": ai.View(ref, gone)}   # cada bando, lo suyo
-        views["moriarty"].weapon_objects = set(self.objects_with(self.weapon_items))
-        views["moriarty"].food_objects = set(self.objects_with(self.food_items))
+        # Una vista por bando (asi los companeros no registran el mismo mueble); lo que sabe cada IA de
+        # donde estan las armas y la comida se pone antes de que decida (bot_knowledge)
+        views = {"moriarty": ai.View(ref, gone), "sherlock": ai.View(ref, gone)}
         for v in views.values():
             v.max_turn = int(self.settings.get("max_turn") or 0) or None
         prof = getattr(self, "profiles", None) or {}
@@ -1579,6 +1598,7 @@ class Room:
             team = "moriarty" if role in (ROLE_CRIMINAL, ROLE_IRENE) else "sherlock"
             if self.solo_support(team):
                 diff = self.support_level()  # en solitario, el companero de Irene/Watson juega en serio
+            views[team].weapon_objects, views[team].food_objects = self.bot_knowledge(pid)
             if role == ROLE_CRIMINAL:
                 n = max(1, 2 // max(1, len(cri_players)))
                 own, _ = ai.plan_moriarty(views[team], idx, self.killer, self.target, n, diff, rng, taken[team],
@@ -1678,7 +1698,9 @@ class Room:
         commands += self.npc_orders(by_pawn)
         self.remember(commands, set(from_detective))
         sides = {p: ("M" if o == GHOST_CRIMINAL or self.side(o) == "moriarty" else "S") for p, o in owner.items()}
-        self.log_call("turn_orders", self.turn, commands, sides, kill)
+        who = {p: ("criminal" if o == GHOST_CRIMINAL else ROLE_KEY.get(self.members.get(o, {}).get("role")), o)
+               for p, o in owner.items()}
+        self.log_call("turn_orders", self.turn, commands, sides, kill, who)
         threat_i, gas_i = self.roll_hazard("threat"), self.roll_hazard("gaspipe")
         self.assault = kill
         data = {}
