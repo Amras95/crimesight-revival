@@ -176,14 +176,17 @@ class App:
                     messagebox.showerror(TITLE, val)
                 elif kind == "offer":
                     info, box, ev = val
-                    names = "\n".join(f"· {m['name']} — " + t("mods_count", stickers=m["stickers"], avatars=m["avatars"])
+                    names = "\n".join(f"· {m['name']} — " + (m.get("text") or t("mods_count", stickers=m["stickers"],
+                                                                                     avatars=m["avatars"]))
                                       for m in info.get("mods", []))
                     box.append(messagebox.askyesno(t("mods_offer_title", player=info["player"]),
-                                                   t("mods_offer_text", player=info["player"]) + "\n\n" + names))
+                                                   (info.get("text") or t("mods_offer_text", player=info["player"])) +
+                                                   "\n\n" + names))
                     ev.set()
                 elif kind == "confirm":
                     info, box, ev = val
-                    names = "\n".join(f"· {m['name']} — " + t("mods_count", stickers=m["stickers"], avatars=m["avatars"])
+                    names = "\n".join(f"· {m['name']} — " + (m.get("text") or t("mods_count", stickers=m["stickers"],
+                                                                                     avatars=m["avatars"]))
                                       for m in info.get("mods", []))
                     box.append(messagebox.askyesno(t("mods_confirm_title"),
                                                    t("mods_confirm_text") + "\n\n" + names + "\n\n" +

@@ -129,6 +129,12 @@ namespace CrimeSightRevival.Mods
             var gone = new List<int>();
             foreach (var kv in _applied) if (kv.Value.root == null) gone.Add(kv.Key);
             foreach (var id in gone) _applied.Remove(id);
+            if (_borrowMap.Count > 0)
+                foreach (var o in UnityEngine.Object.FindObjectsOfType(Il2CppType.Of<Pawn>()))
+                {
+                    var p = o.TryCast<Pawn>();
+                    if (p?.pawnTypeData != null) HandleBorrow(p.gameObject, p.pawnTypeData.name);
+                }
             if (_swaps.Count == 0 && _anims.Count == 0) return;
             if (_swaps.ContainsValue("sherlock") || _swaps.ContainsValue("moriarty")) AskKillCut();
 
@@ -160,6 +166,7 @@ namespace CrimeSightRevival.Mods
             if (target.StartsWith(CustomPrefix))
             {
                 if (_customTried.TryGetValue(id, out var tried) && tried == target + "|" + CustomSig(target)) return;   // ya fallo
+                if (!Prefit(target.Substring(CustomPrefix.Length), key)) return;     // lo pesado, en otro hilo: se monta al estar listo
                 if (a != null) { Revert(a); _applied.Remove(id); }
                 var ac = ApplyCustom(root, target, key);
                 if (ac != null) { _applied[id] = ac; _customTried.Remove(id); }

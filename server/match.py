@@ -269,6 +269,13 @@ class Hub:
             sess.subs.pop(sid, None)
         return sid
 
+    def roster_for(self, pid, remote):
+        """Reparto de personajes de la sala de un jugador (None si aun no ha empezado ninguna partida)."""
+        for sess in self.sessions:
+            if sess.player_id == pid and sess.remote == remote and sess.room is not None:
+                return getattr(sess.room, "roster", None)
+        return None
+
     def match_state(self, pid, remote):
         """Partida en curso de un jugador, solo si pregunta desde el mismo sitio que su juego (asi nadie
         puede mirar el papel de otro)."""
@@ -1203,10 +1210,27 @@ class Room:
         self.assign_roles()
         self.boost_support()
         self.current_stage = self.pick_stage()
+        self.draw_roster()
         self.refresh_vars()
         await self.control("StartCountDown", {"CountDownTimer": COUNTDOWN_SECONDS})
         self.countdown_task = asyncio.ensure_future(self._countdown())
         return rc({})
+
+    def draw_roster(self):
+        """Que personaje se ve en cada sitio en esta partida (personajes nuevos de la sala, al azar entre los
+        activados). Lo mira el lanzador de cada jugador (GET /revival/roster) y se lo pasa al plugin."""
+        mr = getattr(self.hub, "model_room", None)
+        if mr is None:
+            return
+        try:
+            r = mr.draw()
+            self.hub.roster_seq = getattr(self.hub, "roster_seq", 0) + 1
+            r["id"] = "%s-%d" % (self.id, self.hub.roster_seq)
+            self.roster = r
+            if any(r["positions"].values()) or r["traitor"]:
+                log.info("Sala %s: reparto de personajes %s, traidor %s", self.id, r["positions"], r["traitor"])
+        except Exception:  # noqa: BLE001  (el reparto nunca debe parar una partida)
+            log.exception("No pude sortear los personajes")
 
     def pick_stage(self):
         """Escenario real de esta partida: el elegido, o uno al azar si es "Random" (o desconocido).

@@ -61,7 +61,7 @@ namespace CrimeSightRevival.Mods
             if (_customFailed.Contains(id + "|" + sig)) return null;
             try
             {
-                var model = Glb.Read(File.ReadAllBytes(path));
+                var model = _parsed.TryRemove(id, out var pre) && pre.sig == sig ? pre.model : Glb.Read(File.ReadAllBytes(path));
                 foreach (var n in model.notes) Plugin.L.LogWarning("[Modelos] " + id + ": " + n);
                 if (model.parts.Count == 0) { _customFailed.Add(id + "|" + sig); return null; }
                 var c = new Custom { sig = sig, model = model, tex = new Texture2D[model.images.Count] };
@@ -298,6 +298,7 @@ namespace CrimeSightRevival.Mods
         /// <summary>Despues de las animaciones: los esqueletos propios copian la postura de los del juego.</summary>
         public static void Late()
         {
+            LateBorrow();
             LateLinks();
             LateAnims();
             LateShoulders();

@@ -153,25 +153,28 @@ namespace CrimeSightRevival.Mods
 
         void Update()
         {
+            Perf.Frame();
             StageLab.Frame();
-            try { Pad.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Mando] " + e.Message); }
-            try { CustomCursor.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Cursor] " + e.Message); }
-            try { ModOffer.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Mods] " + e.Message); }
-            try { AiPicker.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[IA] " + e.Message); }
-            try { Guide.Frame(false); } catch (Exception e) { Plugin.L.LogWarning("[Guia] " + e.Message); }
-            try { RevivalCredits.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Creditos] " + e.Message); }
-            try { Models.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Modelos] " + e.Message); }
+            { long t0 = Perf.T(); try { Pad.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Mando] " + e.Message); } Perf.Done("Pad.Frame", t0); }
+            { long t0 = Perf.T(); try { CustomCursor.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Cursor] " + e.Message); } Perf.Done("CustomCursor.Frame", t0); }
+            { long t0 = Perf.T(); try { ModOffer.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Mods] " + e.Message); } Perf.Done("ModOffer.Frame", t0); }
+            { long t0 = Perf.T(); try { AiPicker.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[IA] " + e.Message); } Perf.Done("AiPicker.Frame", t0); }
+            { long t0 = Perf.T(); try { Guide.Frame(false); } catch (Exception e) { Plugin.L.LogWarning("[Guia] " + e.Message); } Perf.Done("Guide.Frame(false)", t0); }
+            { long t0 = Perf.T(); try { RevivalCredits.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Creditos] " + e.Message); } Perf.Done("RevivalCredits.Frame", t0); }
+            { long t0 = Perf.T(); try { Models.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Modelos] " + e.Message); } Perf.Done("Models.Frame", t0); }
+            { long t0 = Perf.T(); try { Roster.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Personajes] " + e.Message); } Perf.Done("Roster.Frame", t0); }
+            try { TalkSkip.Frame(); } catch { }
+            { long t0 = Perf.T(); try { RosterUi.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Selector] " + e.Message); } Perf.Done("RosterUi.Frame", t0); }
             if (Time.unscaledTime < _next) return;
             _next = Time.unscaledTime + 1f;
-            try { Tick(); }
-            catch (Exception e) { Plugin.L.LogError(e); }
+            { long t0 = Perf.T(); try { Tick(); } catch (Exception e) { Plugin.L.LogError(e); } Perf.Done("Tick", t0); }
         }
 
         void LateUpdate()
         {
-            try { Guide.Frame(true); } catch { }
-            try { RevivalCredits.Late(); } catch { }
-            try { Models.Late(); } catch { }
+            { long t0 = Perf.T(); try { Guide.Frame(true); } catch { } Perf.Done("Guide.Frame(true)", t0); }
+            { long t0 = Perf.T(); try { RevivalCredits.Late(); } catch { } Perf.Done("RevivalCredits.Late", t0); }
+            { long t0 = Perf.T(); try { Models.Late(); } catch { } Perf.Done("Models.Late", t0); }
         }
 
         void Tick()
