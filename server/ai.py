@@ -775,6 +775,19 @@ def plan_sherlock_hard(view, idx, n_orders, rng, taken, memory, sus_fn=None, pro
 
 # ------------------------------------------------------------------ experto
 # Mismas reglas que todos: solo lo que veria una persona en ese papel. Lo que cambia es como se piensa.
+def chase_order(view, idx, killer, target, pred, rng):
+    """Ir a por la victima: lo mas cerca posible de donde estara (si se preve que Sherlock la mueve, de ahi), y
+    mejor en su misma casilla, donde cae al final del turno si nadie lo ve. Corre si hace falta."""
+    goal = pred.get(target)
+
+    def gap(g):
+        if goal is not None:
+            return 0 if g.get("gridId") == goal.get("gridId") else (1 if g.get("roomId") == goal.get("roomId") else 2)
+        return view.dist(g, target)
+    g = min(view.grids(killer), key=lambda g: (gap(g), view.dist(g, target), view.danger(g), rng.random()))
+    return order(view, idx, killer, MOVE, g)
+
+
 def turns_left(view):
     """Turnos que quedan despues de este (None si no se sabe)."""
     if not view.max_turn:
@@ -890,10 +903,16 @@ def plan_moriarty_expert(view, idx, killer, target, n_orders, rng, taken=(), mem
       (chocarian y se notaria su mano);
     - si su asesino ya es el principal sospechoso, se esconde: no lo acerca a la victima y hace correr a
       un inocente hacia otra posible victima para que parezca el;
-    - en los ultimos turnos busca el asesinato contando con lo previsto, y en el ultimo se arriesga."""
+    - en los ultimos turnos busca el asesinato contando con lo previsto, y en el ultimo se arriesga;
+    - en los ultimos kill_window + 2 turnos, si su asesino armado aun puede llegar a la victima en los turnos que
+      quedan, deja de esconderse y va a por ella (corriendo si hace falta). Si no llega, sigue escondido y con
+      senuelos: mejor un empate (Sherlock no acierta) que dejarse ver y perder."""
     mem = memory or new_memory()
     left = turns_left(view)
     pred = predict_sherlock(view, mem, rng)
+    chase = left is not None and left <= kill_window + 2 and bool(view.pawns[killer].get("isHaveWeapon")) \
+        and killer not in taken and bool(view.grids(killer)) \
+        and view.pair_distance(killer, target) <= reach(view, killer) * (left + 1)   # le da tiempo a llegar
     if left is not None and left <= kill_window:
         kill = _kill_now(view, idx, killer, target, pred, n_orders, rng, set(taken) | {target}, desperate=left <= 0)
         if kill:
@@ -910,11 +929,15 @@ def plan_moriarty_expert(view, idx, killer, target, n_orders, rng, taken=(), mem
     keep = []
     for o in orders:
         if o["pawnId"] == killer and not kills(o):
+            if chase:
+                continue                    # al final, la orden del asesino es ir a por la victima (abajo)
             if killer in pred and (left is None or left > 3):
                 continue                    # chocaria con Sherlock y le delataria
             if hot and o["type"] == MOVE:
                 continue                    # perfil bajo: ni acercarse ni acechar
         keep.append(o)
+    if chase and not any(o["pawnId"] == killer for o in keep):
+        keep.insert(0, chase_order(view, idx, killer, target, pred, rng))
     used = set(taken) | {target} | {o["pawnId"] for o in keep}
     if len(keep) < n_orders and ((hot and decoy_when_hot) or rng.random() < frame_p):
         d = frame_decoy(view, idx, killer, target, mem, used, rng)

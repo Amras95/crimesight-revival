@@ -2141,12 +2141,12 @@ class Room:
     def record_result(self, selections):
         self.log_call("accusations", [(s["player_id"], s["killer"], self.members.get(s["player_id"], {}).get("bot"))
                                       for s in selections])
-        """Fin por deduccion: si Sherlock acierta gana su bando; si no, empate (no hubo asesinato)."""
+        """Fin por deduccion: si alguien del bando de Sherlock (Sherlock o Watson) acierta, gana su bando; si no,
+        empate (no hubo asesinato). Asi lo ensena el propio juego: con Watson acertando y Sherlock IA fallando, la
+        pantalla final daba victoria. Acusar bien da ademas los puntos de la accion a quien acerto."""
         right = [s["player_id"] for s in selections if s["killer"] == self.killer
-                 and self.members.get(s["player_id"], {}).get("role") == ROLE_DETECTIVE]
-        # Acusar bien da los puntos a Sherlock y a Watson (gana el bando solo si acierta Sherlock)
-        extra = {s["player_id"]: [ACT_DEDUCED] for s in selections if s["killer"] == self.killer
-                 and self.members.get(s["player_id"], {}).get("role") in (ROLE_DETECTIVE, ROLE_WATSON)}
+                 and self.members.get(s["player_id"], {}).get("role") in (ROLE_DETECTIVE, ROLE_WATSON)]
+        extra = {pid: [ACT_DEDUCED] for pid in right}
         self.conclude("sherlock" if right else "draw", extra)
 
     def conclude(self, winner, extra=None, quitter=None):
