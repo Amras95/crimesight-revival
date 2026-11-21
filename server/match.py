@@ -52,7 +52,6 @@ INSTRUCT_BOARD, INSTRUCT_GASPIPE, INSTRUCT_BYWAY = 10, 12, 13    # romper el cua
 # Acciones con puntos (textos del propio juego, ver stats.ACTIONS)
 ACT_REPAIR = "ctg_name_result_repair_switchboard"
 ACT_TREAT = "ctg_name_result_action_treated_pawnForInjuries"
-ACT_FOILED = "ctg_name_result_arrest_succeed"
 ACT_SPRAY_KILLER = "ctg_name_result_apply_tearSpray_to_killer"
 ACT_DEDUCED = "ctg_name_result_identified_killer_by_deduction"
 ACT_ASSAIL_KILL = "ctg_name_result_action_targetKilledByAssail"
@@ -70,6 +69,9 @@ ACT_NOT_KILLER = "ctg_name_result_action_proven_pawnNotKiller"
 ACT_NOT_TARGET = "ctg_name_result_action_proven_pawnNotTarget"
 ACT_DOG_HIT = "ctg_name_result_action_wildDogAttackedEveryoneButKiller"
 ACT_GAS_HIT = "ctg_name_result_action_injured_noKillerWithGasLeak"
+ACT_FOUND_SWITCH_BEFORE_MORIARTY = "ctg_name_result_discover_switchboard_before_moriarty"
+ACT_FIRST_CLASH = "ctg_name_result_first_batting"          # "Initial command conflict detected with each pawn."
+ACT_CLASH_AGAIN = "ctg_name_result_after_the_first_batting"  # "Interfered with Sherlock's command."
 DEFAULT_PAWNS = 6            # personajes por partida (la mansion tiene 6 sospechosos)
 DEFAULT_TURNS = 10           # turnos de una partida normal (para los que estan hechos los perros y el gas)
 
@@ -513,6 +515,9 @@ class Room:
         self.turn_potions = set()  # jugadores del bando de Moriarty que han dado una orden de curar este turno
         self.turn_spray_rooms = set()  # habitaciones gaseadas con el spray este turno (tambien hiere)
         self.candidates = {}       # personaje -> (puede ser el asesino, puede ser la victima) la ultima vez que se miro
+        self.critical = {}         # personaje -> estaba en estado critico (isBlind) la ultima vez que se miro
+        self.pending_success = []  # acciones que solo cuentan si salen bien: (jugador, accion, tipo, escape, habitacion, oscuro)
+        self.clashed = set()       # personajes en los que Moriarty ya ha chocado con una orden de Sherlock
         self.searched = {}         # mueble (cottage id) -> objeto que salio
         self.drops = {}            # objeto en el suelo (cottage id) -> indice de objeto
         self.disabled_objects = set()
@@ -1350,15 +1355,20 @@ class Room:
         self.irene_cmds, self.watson_suspect = [], None
         self.food_items = set(range(food))
         self.weapon_items = set(range(food, food + weapons))
-        # Planos del cuadro electrico: los ultimos de la lista (ItemManager.CreateMatchItemList)
+        # Cuadros electricos (planos): justo despues de las armas, uno por cada cuadro de los ajustes. Comprobado
+        # con las partidas guardadas: cada cuadro que rompio Moriarty estaba en el mueble del objeto 32, 33 o 34
+        # (17 comidas + 15 armas = 32), nunca en los ultimos de la lista
         sw = int(self.settings.get("switchboard_count", 0) or 0)
-        self.switch_items = set(range(max(0, n - sw), n))
+        self.switch_items = set(range(food + weapons, min(n, food + weapons + sw)))
         self.events = {}
         self.switch_found = set()
         self.turn_attacks = {}
         self.turn_potions = set()
         self.turn_spray_rooms = set()
         self.candidates = {}
+        self.critical = {}
+        self.pending_success = []
+        self.clashed = set()
         log.info("Sala %s: %s objetos repartidos (%s comida, %s armas)", self.id, n, food, weapons)
 
     def bot_knowledge(self, pid):
@@ -1506,6 +1516,8 @@ class Room:
             self.log_call("turn_state", self.turn, self.turn_ref)
             try:
                 self.score_ruled_out(self.turn_ref)   # lo que se descarta entre un turno y el siguiente
+                self.score_critical(self.turn_ref)
+                self.score_success(None, self.turn_ref, final=True)
             except Exception:  # noqa: BLE001 - los puntos de accion nunca deben parar la partida
                 log.exception("Sala %s turno %s: fallo mirando los descartes", self.id, self.turn)
             self.claims = {"sherlock": set(), "moriarty": set()}
@@ -1534,10 +1546,6 @@ class Room:
                 # En linea el servidor decide el asesinato (el cliente no lo comprueba por su cuenta)
                 await self.end_by_kill()
             else:
-                if self.assault:     # hubo Asalto y la victima sigue viva: el bando de Sherlock lo frustro
-                    for pid in self.members:
-                        if self.side(pid) == "sherlock":
-                            self.note(pid, ACT_FOILED)
                 if int(ref.get("isLastTurn", 0) or 0):
                     # Era el turno final tras descubrirse al asesino (Asalto fallido o deduccion) y la
                     # victima sigue viva: resultado ARREST_SUCCESS, gana el bando de Sherlock.
@@ -1736,7 +1744,6 @@ class Room:
         for r in ref.get("roomList") or []:
             for g in r.get("gridList") or []:
                 room_of_grid[g.get("gridId")] = r.get("roomId")
-        target_uid = int(pawns.get(self.target, {}).get("uniqId", -2))
         self.turn_attacks, self.turn_potions, self.turn_spray_rooms = {}, set(), set()
 
         def injured(x):
@@ -1746,6 +1753,10 @@ class Room:
                 return False
         # A donde va cada personaje este turno, con cualquier orden (la de curar apunta a esa casilla)
         dest = {int(c["pawnId"]): c.get("grid") for c in commands if c.get("grid") is not None}
+        try:
+            dark0 = bool(int(ref.get("isBlack", 0) or 0))   # para saber si el apagon (o la luz) es nuevo
+        except (TypeError, ValueError):
+            dark0 = False
         # Planos del cuadro: primero el bando de Sherlock, para "antes que Sherlock" en el mismo turno
         for c in sorted(commands, key=lambda c: self.side(owner.get(int(c["pawnId"]), "")) != "sherlock"):
             pid = owner.get(int(c["pawnId"]))
@@ -1755,19 +1766,22 @@ class Room:
             item = c.get("itemId", -1)
             if kind == INSTRUCT_BYWAY:
                 self.note(pid, ACT_BYWAY)
-            elif kind == INSTRUCT_GASPIPE:
-                self.note(pid, ACT_GAS_REPAIR)
+            elif kind == INSTRUCT_GASPIPE:      # cuenta si el escape ha desaparecido al final del turno
+                self.pending_success.append((pid, ACT_GAS_REPAIR, "gas", int(c.get("targetId", -1)),
+                                             room_of_grid.get(c.get("grid")), dark0))
             elif kind == INSTRUCT_ATTACK:
                 self.turn_attacks[int(c.get("targetId", -1))] = pid     # perros: se mira al final del turno
             elif kind == INSTRUCT_SEARCH and item in self.switch_items:
                 if side == "sherlock":
                     self.note(pid, ACT_FOUND_SWITCH)
+                    if "moriarty" not in self.switch_found:
+                        self.note(pid, ACT_FOUND_SWITCH_BEFORE_MORIARTY)
                 elif "sherlock" not in self.switch_found:
                     self.note(pid, ACT_FOUND_SWITCH_FIRST)
                 self.switch_found.add(side)
             if side == "sherlock":
-                if kind == INSTRUCT_REPAIR:
-                    self.note(pid, ACT_REPAIR)
+                if kind == INSTRUCT_REPAIR:     # cuenta si vuelve la luz (al final del turno o al empezar el siguiente)
+                    self.pending_success.append((pid, ACT_REPAIR, "light", None, None, dark0))
                 elif kind == INSTRUCT_POTION:
                     self.note(pid, ACT_TREAT)
                 elif kind == INSTRUCT_SEARCH and item in self.food_items:
@@ -1781,11 +1795,13 @@ class Room:
                     self.note(pid, ACT_SPRAY_KILLER)
                 elif side == "moriarty" and any(q != self.killer for q in inside):
                     self.note(pid, ACT_SPRAY_OTHER)
+            if c.get("isBatting"):          # orden de Moriarty que choca con la de Sherlock (solo se ven las suyas)
+                pawn = int(c["pawnId"])
+                self.note(pid, ACT_CLASH_AGAIN if pawn in self.clashed else ACT_FIRST_CLASH)
+                self.clashed.add(pawn)
             if side == "moriarty":
-                if kind == INSTRUCT_ATTACK and int(c.get("targetId", -1)) == target_uid:
-                    self.note(pid, ACT_KNOCKOUT)
-                elif kind == INSTRUCT_BOARD:
-                    self.note(pid, ACT_BLACKOUT)
+                if kind == INSTRUCT_BOARD:      # cuenta si se va la luz (al final del turno o al empezar el siguiente)
+                    self.pending_success.append((pid, ACT_BLACKOUT, "dark", None, None, dark0))
                 elif kind == INSTRUCT_POTION:
                     # La orden va a una casilla (donde esta o a donde llega el herido), no a un personaje
                     patients = [q for q, x in pawns.items() if injured(x)
@@ -1830,6 +1846,8 @@ class Room:
             for pid in self.turn_potions:
                 self.note(pid, ACT_TREAT)
         self.score_ruled_out(end)
+        self.score_critical(end)
+        self.score_success(start, end)
         # Perro (o traidor) que muere este turno: para quien ordeno atacarlo
         for uid, t in e_threats.items():
             if flag(t, "isDie") and not flag(s_threats.get(uid, {}), "isDie") and uid in self.turn_attacks:
@@ -1855,6 +1873,54 @@ class Room:
             elif rooms & gas_rooms:
                 for pid in moriartys:
                     self.note(pid, ACT_GAS_HIT)
+
+    def score_success(self, start, end, final=False):
+        """Arreglar un escape de gas, romper el cuadro (apagon) y arreglarlo (vuelve la luz) cuentan solo si salen
+        bien, no al dar la orden. Al final del turno se compara con el principio; lo de la luz que aun no se vea se
+        mira otra vez al empezar el turno siguiente (final=True) y ahi se olvida."""
+        def dark(ref):
+            try:
+                return bool(int((ref or {}).get("isBlack", 0) or 0))
+            except (TypeError, ValueError):
+                return False
+
+        def leaks(ref):
+            return [g for g in (ref or {}).get("gaspipeList") or [] if isinstance(g, dict)]
+
+        keep = []
+        for item in self.pending_success:
+            pid, action, kind, tid, room, dark0 = item
+            if kind == "gas":
+                if final:
+                    continue
+                if any("uniqId" in g for g in leaks(start)):   # el escape que se mando arreglar ya no esta
+                    fixed = any(int(g.get("uniqId", -2)) == tid for g in leaks(start)) and \
+                        not any(int(g.get("uniqId", -2)) == tid for g in leaks(end))
+                else:                                            # sin id: hay menos escapes en esa habitacion
+                    fixed = room is not None and sum(g.get("roomId") == room for g in leaks(end)) < \
+                        sum(g.get("roomId") == room for g in leaks(start))
+                if fixed:
+                    self.note(pid, action)
+            elif kind == "dark" and dark(end) and not dark0:
+                self.note(pid, action)
+            elif kind == "light" and not dark(end) and dark0:
+                self.note(pid, action)
+            elif not final:
+                keep.append(item)
+        self.pending_success = keep
+
+    def score_critical(self, ref):
+        """Accion "Un personaje que no es el asesino entro en estado critico" (para el bando de Moriarty): con 2 o mas
+        males (hambre, heridas...) un personaje queda critico y casi no ve (tutorial de Sherlock); el juego lo marca
+        con isBlind. Se mira al final de cada turno y al empezar el siguiente, como los descartes."""
+        now = {int(x["pawnId"]): bool(x.get("isBlind")) for x in ref.get("pawns") or []
+               if isinstance(x, dict) and "pawnId" in x}
+        moriartys = [p for p, m in self.members.items() if not m.get("bot") and self.side(p) == "moriarty"]
+        for q, crit in now.items():
+            if crit and self.critical.get(q) is False and q != self.killer:
+                for pid in moriartys:
+                    self.note(pid, ACT_KNOCKOUT)
+        self.critical.update(now)
 
     def score_ruled_out(self, ref):
         """Personajes descartados como asesino o victima desde la ultima vez que se miro. Se mira al final
@@ -2139,12 +2205,12 @@ class Room:
     def record_result(self, selections):
         self.log_call("accusations", [(s["player_id"], s["killer"], self.members.get(s["player_id"], {}).get("bot"))
                                       for s in selections])
-        """Fin por deduccion: si Sherlock acierta gana su bando; si no, empate (no hubo asesinato)."""
+        """Fin por deduccion: si alguien del bando de Sherlock (Sherlock o Watson) acierta, gana su bando; si no,
+        empate (no hubo asesinato). Asi lo ensena el propio juego: con Watson acertando y Sherlock IA fallando, la
+        pantalla final daba victoria. Acusar bien da ademas los puntos de la accion a quien acerto."""
         right = [s["player_id"] for s in selections if s["killer"] == self.killer
-                 and self.members.get(s["player_id"], {}).get("role") == ROLE_DETECTIVE]
-        # Acusar bien da los puntos a Sherlock y a Watson (gana el bando solo si acierta Sherlock)
-        extra = {s["player_id"]: [ACT_DEDUCED] for s in selections if s["killer"] == self.killer
-                 and self.members.get(s["player_id"], {}).get("role") in (ROLE_DETECTIVE, ROLE_WATSON)}
+                 and self.members.get(s["player_id"], {}).get("role") in (ROLE_DETECTIVE, ROLE_WATSON)]
+        extra = {pid: [ACT_DEDUCED] for pid in right}
         self.conclude("sherlock" if right else "draw", extra)
 
     def conclude(self, winner, extra=None, quitter=None):

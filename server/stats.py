@@ -55,14 +55,16 @@ ACTIONS = {
     # Bando de Sherlock
     "ctg_name_result_repair_switchboard": (104, 50),                    # arreglar el cuadro electrico
     "ctg_name_result_action_treated_pawnForInjuries": (105, 50),        # curar a alguien
-    "ctg_name_result_arrest_succeed": (106, 100),                       # frustrar el ataque principal
     "ctg_name_result_apply_tearSpray_to_killer": (107, 100),            # gas lacrimogeno al asesino
     "ctg_name_result_identified_killer_by_deduction": (108, 100),       # acusar al asesino correcto
+    "ctg_name_result_discover_switchboard_before_moriarty": (123, 50),  # plano del cuadro antes que Moriarty
     # Bando de Moriarty
     "ctg_name_result_action_targetKilledByAssail": (101, 50),           # ganar matando con el Asalto
     "ctg_name_result_blackOut_by_switchboard": (109, 50),               # romper el cuadro (apagon)
     "ctg_name_result_action_blockedSherlockWithSpray": (110, 50),       # gasear a alguien
-    "ctg_name_result_action_beCriticalNoKiller": (111, 100),            # atacar a la victima y dejarla K.O.
+    "ctg_name_result_action_beCriticalNoKiller": (111, 100),            # otro que no es el asesino queda critico
+    "ctg_name_result_first_batting": (124, 50),                         # primer choque con Sherlock en un personaje
+    "ctg_name_result_after_the_first_batting": (125, 50),               # otro choque en un personaje ya chocado
     "ctg_name_result_action_activateSecretPassage": (112, 50),        # usar un pasadizo secreto
     "ctg_name_result_action_repair_gasPipe": (113, 50),               # arreglar un escape de gas
     "ctg_name_result_action_exterminateWildDog": (114, 50),           # matar a un perro (o un traidor)
@@ -75,6 +77,9 @@ ACTIONS = {
     "ctg_name_result_action_wildDogAttackedEveryoneButKiller": (121, 50),  # un perro hiere a otro que no es el asesino
     "ctg_name_result_action_injured_noKillerWithGasLeak": (122, 50),  # el gas hiere a otro que no es el asesino
     # Antiguas (solo para recalcular partidas viejas)
+    # "Villain identified and Moriarty's devious plot foiled": es el texto del juego para la victoria del bando de
+    # Sherlock (RESULT_ROWS), no una accion. Antes se daba como accion al sobrevivir a un Asalto; ya no.
+    "ctg_name_result_arrest_succeed": (106, 100),
     "ctg_name_result_action_kill_succeed_not_identified_killer": (102, 30),
     "ctg_name_result_pattern_arrest_success": (103, 50),
 }
@@ -94,7 +99,7 @@ PROFILE_ACTIONS_SHERLOCK = {
     "ctg_name_result_repair_switchboard": 143,
     "ctg_name_result_action_obtainFoodFromFoodPoint": 142,
     "ctg_name_result_apply_tearSpray_to_killer": 141,
-    "ctg_name_result_arrest_succeed": 140,
+    "ctg_name_result_discover_switchboard_before_moriarty": 140,  # "Found a fuse box before Moriarty."
     "ctg_name_result_identified_killer_by_deduction": 139,
 }
 PROFILE_ACTIONS_MORIARTY = {
@@ -110,9 +115,17 @@ PROFILE_ACTIONS_MORIARTY = {
     "ctg_name_result_action_exterminateWildDog": 123,            # los dos bandos pueden matar perros
     "ctg_name_result_action_repair_gasPipe": 122,                # y arreglar escapes de gas
     "ctg_name_result_action_treated_pawnForInjuries": 121,       # y curar a cualquiera
+    "ctg_name_result_first_batting": 120,                        # "Initial command conflict detected with each pawn."
+    "ctg_name_result_after_the_first_batting": 119,              # "Interfered with Sherlock's command."
 }
+# Irene: lo de Moriarty menos lo que ella no puede hacer. Consejo de Sherlock sobre Irene: "no tiene acceso al
+# 'Asalto' ni puede sabotear la caja de fusibles". Y sus choques con Sherlock no se detectan (son su ventaja).
+PROFILE_ACTIONS_IRENE = {k: v for k, v in PROFILE_ACTIONS_MORIARTY.items()
+                         if k not in ("ctg_name_result_action_targetKilledByAssail",
+                                      "ctg_name_result_blackOut_by_switchboard",
+                                      "ctg_name_result_first_batting", "ctg_name_result_after_the_first_batting")}
 PROFILE_ACTIONS = {DETECTIVE: PROFILE_ACTIONS_SHERLOCK, WATSON: PROFILE_ACTIONS_SHERLOCK,
-                   CRIMINAL: PROFILE_ACTIONS_MORIARTY, IRENE: PROFILE_ACTIONS_MORIARTY}
+                   CRIMINAL: PROFILE_ACTIONS_MORIARTY, IRENE: PROFILE_ACTIONS_IRENE}
 
 
 def _record(user):
@@ -253,13 +266,16 @@ def export_profile(user):
     return out
 
 
-def merge_into(user, other):
+def merge_into(user, other, prefer_other=False):
     """Junta 'other' (perfil exportado) dentro de 'user'. Solo suma: partidas por id unico,
-    tutorial/progreso el mas avanzado, ajustes y nombre el cambio mas reciente."""
+    tutorial/progreso el mas avanzado, ajustes y nombre el cambio mas reciente.
+    Si una partida esta en los dos, se queda la de 'user'; con prefer_other, la de 'other' (el servidor la usa
+    cuando un jugador sincroniza: su copia de sus propias partidas manda, asi una correccion llega a todas partes)."""
     if not isinstance(other, dict):
         return user
     seen = {}
-    for h in (user.get("history") or []) + (other.get("history") or []):
+    mine, theirs = user.get("history") or [], other.get("history") or []
+    for h in (theirs + mine) if prefer_other else (mine + theirs):
         if isinstance(h, dict):
             seen.setdefault(_mid(h), dict(h, mid=_mid(h)))
     user["history"] = sorted(seen.values(), key=lambda h: (h.get("time", 0), h["mid"]))[-HISTORY_MAX:]
