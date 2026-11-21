@@ -1698,7 +1698,9 @@ class Room:
         commands += self.npc_orders(by_pawn)
         self.remember(commands, set(from_detective))
         sides = {p: ("M" if o == GHOST_CRIMINAL or self.side(o) == "moriarty" else "S") for p, o in owner.items()}
-        self.log_call("turn_orders", self.turn, commands, sides, kill)
+        who = {p: ("criminal" if o == GHOST_CRIMINAL else ROLE_KEY.get(self.members.get(o, {}).get("role")), o)
+               for p, o in owner.items()}
+        self.log_call("turn_orders", self.turn, commands, sides, kill, who)
         threat_i, gas_i = self.roll_hazard("threat"), self.roll_hazard("gaspipe")
         self.assault = kill
         data = {}
