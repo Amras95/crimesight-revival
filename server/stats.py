@@ -254,13 +254,16 @@ def export_profile(user):
     return out
 
 
-def merge_into(user, other):
+def merge_into(user, other, prefer_other=False):
     """Junta 'other' (perfil exportado) dentro de 'user'. Solo suma: partidas por id unico,
-    tutorial/progreso el mas avanzado, ajustes y nombre el cambio mas reciente."""
+    tutorial/progreso el mas avanzado, ajustes y nombre el cambio mas reciente.
+    Si una partida esta en los dos, se queda la de 'user'; con prefer_other, la de 'other' (el servidor la usa
+    cuando un jugador sincroniza: su copia de sus propias partidas manda, asi una correccion llega a todas partes)."""
     if not isinstance(other, dict):
         return user
     seen = {}
-    for h in (user.get("history") or []) + (other.get("history") or []):
+    mine, theirs = user.get("history") or [], other.get("history") or []
+    for h in (theirs + mine) if prefer_other else (mine + theirs):
         if isinstance(h, dict):
             seen.setdefault(_mid(h), dict(h, mid=_mid(h)))
     user["history"] = sorted(seen.values(), key=lambda h: (h.get("time", 0), h["mid"]))[-HISTORY_MAX:]

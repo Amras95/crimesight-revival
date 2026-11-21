@@ -337,7 +337,7 @@ async def handle_sync(request):
         api.s.db["accounts"][key] = {"player_id": pid, "token": token, "platform": platform,
                                      "platform_id": platform_id, "country": ""}
     user = api.s.user(pid)
-    stats.merge_into(user, body.get("profile") or {})
+    stats.merge_into(user, body.get("profile") or {}, prefer_other=True)   # su copia de sus partidas manda
     api.s.save()
     log.info("Perfil sincronizado: %s (%s)", user.get("name") or platform_id, stats.summary(user))
     return web.json_response({"player_id": pid, "profile": stats.export_profile(user)})
