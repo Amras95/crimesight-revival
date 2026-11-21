@@ -90,11 +90,6 @@ class MatchLog:
         t["end_gas"] = [g.get("roomId") for g in ref.get("gaspipeList") or [] if isinstance(g, dict)]
         t["end_gas_ids"] = [g.get("uniqId") for g in ref.get("gaspipeList") or [] if isinstance(g, dict)]
         t["end_dark"] = num(ref, "isBlack")
-        for key in ("bywayList", "byways", "bywayLocateDatas"):          # pasadizos, si el juego los manda
-            if key in ref:
-                t["end_byways"] = ref[key]
-        if "ref_keys" not in self.rec:                                    # que datos manda el juego (una vez)
-            self.rec["ref_keys"] = sorted(ref)
 
     def action(self, turn, player, action):
         """Una accion con puntos, la primera vez que la consigue un jugador en la partida."""
