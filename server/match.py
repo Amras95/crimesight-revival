@@ -52,7 +52,6 @@ INSTRUCT_BOARD, INSTRUCT_GASPIPE, INSTRUCT_BYWAY = 10, 12, 13    # romper el cua
 # Acciones con puntos (textos del propio juego, ver stats.ACTIONS)
 ACT_REPAIR = "ctg_name_result_repair_switchboard"
 ACT_TREAT = "ctg_name_result_action_treated_pawnForInjuries"
-ACT_FOILED = "ctg_name_result_arrest_succeed"
 ACT_SPRAY_KILLER = "ctg_name_result_apply_tearSpray_to_killer"
 ACT_DEDUCED = "ctg_name_result_identified_killer_by_deduction"
 ACT_ASSAIL_KILL = "ctg_name_result_action_targetKilledByAssail"
@@ -1536,10 +1535,6 @@ class Room:
                 # En linea el servidor decide el asesinato (el cliente no lo comprueba por su cuenta)
                 await self.end_by_kill()
             else:
-                if self.assault:     # hubo Asalto y la victima sigue viva: el bando de Sherlock lo frustro
-                    for pid in self.members:
-                        if self.side(pid) == "sherlock":
-                            self.note(pid, ACT_FOILED)
                 if int(ref.get("isLastTurn", 0) or 0):
                     # Era el turno final tras descubrirse al asesino (Asalto fallido o deduccion) y la
                     # victima sigue viva: resultado ARREST_SUCCESS, gana el bando de Sherlock.

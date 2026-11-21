@@ -55,7 +55,6 @@ ACTIONS = {
     # Bando de Sherlock
     "ctg_name_result_repair_switchboard": (104, 50),                    # arreglar el cuadro electrico
     "ctg_name_result_action_treated_pawnForInjuries": (105, 50),        # curar a alguien
-    "ctg_name_result_arrest_succeed": (106, 100),                       # frustrar el ataque principal
     "ctg_name_result_apply_tearSpray_to_killer": (107, 100),            # gas lacrimogeno al asesino
     "ctg_name_result_identified_killer_by_deduction": (108, 100),       # acusar al asesino correcto
     # Bando de Moriarty
@@ -75,6 +74,9 @@ ACTIONS = {
     "ctg_name_result_action_wildDogAttackedEveryoneButKiller": (121, 50),  # un perro hiere a otro que no es el asesino
     "ctg_name_result_action_injured_noKillerWithGasLeak": (122, 50),  # el gas hiere a otro que no es el asesino
     # Antiguas (solo para recalcular partidas viejas)
+    # "Villain identified and Moriarty's devious plot foiled": es el texto del juego para la victoria del bando de
+    # Sherlock (RESULT_ROWS), no una accion. Antes se daba como accion al sobrevivir a un Asalto; ya no.
+    "ctg_name_result_arrest_succeed": (106, 100),
     "ctg_name_result_action_kill_succeed_not_identified_killer": (102, 30),
     "ctg_name_result_pattern_arrest_success": (103, 50),
 }
@@ -94,7 +96,6 @@ PROFILE_ACTIONS_SHERLOCK = {
     "ctg_name_result_repair_switchboard": 143,
     "ctg_name_result_action_obtainFoodFromFoodPoint": 142,
     "ctg_name_result_apply_tearSpray_to_killer": 141,
-    "ctg_name_result_arrest_succeed": 140,
     "ctg_name_result_identified_killer_by_deduction": 139,
 }
 PROFILE_ACTIONS_MORIARTY = {
