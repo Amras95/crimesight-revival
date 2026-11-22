@@ -179,6 +179,7 @@ namespace CrimeSightRevival.Mods
                 _onClick ??= DelegateSupport.ConvertDelegate<UnityEngine.Events.UnityAction>(new Action(OpenFromMenu));
                 b.onClick.AddListener(_onClick);
                 b.interactable = true;
+                try { UIScriptingHelper.SetMouseOverSoundEvent(b); } catch { }     // the copy loses the game's hover sound
             }
             _copyButton = b != null ? b.transform : null;
             var lt = tmp != null ? Find(copy.transform, src, tmp.transform) : null;

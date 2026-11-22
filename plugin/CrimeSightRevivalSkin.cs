@@ -299,6 +299,96 @@ namespace CrimeSightRevival.Mods
             return null;
         }
 
+        /// <summary>The window's parts (title, framed box, buttons) together, in the window's space.</summary>
+        public Rect Bounds()
+        {
+            Canvas.ForceUpdateCanvases();
+            Rect r = RectIn(Root, Title.rectTransform), box = RectIn(Root, BodyBox), btn = RectIn(Root, _light.GetComponent<RectTransform>());
+            return Rect.MinMaxRect(Math.Min(r.xMin, Math.Min(box.xMin, btn.xMin)), Math.Min(r.yMin, Math.Min(box.yMin, btn.yMin)),
+                                   Math.Max(r.xMax, Math.Max(box.xMax, btn.xMax)), Math.Max(r.yMax, Math.Max(box.yMax, btn.yMax)));
+        }
+
+        /// <summary>The whole screen, in the window's space.</summary>
+        public Rect ScreenRect()
+        {
+            var canvas = Root.GetComponentInParent<Canvas>()?.rootCanvas;
+            var crt = canvas != null ? canvas.GetComponent<RectTransform>() : null;
+            return crt != null ? RectIn(Root, crt) : new Rect(-960, -540, 1920, 1080);
+        }
+
+        /// <summary>
+        /// Resizes the window so its framed box gets the given size (in the window's space), keeping the borders, the
+        /// title band and the buttons the same size: what sits near an edge moves with that edge, what is in the
+        /// middle stretches. Then the button row is measured again.
+        /// </summary>
+        public void Resize(Vector2 boxSize)
+        {
+            try
+            {
+                foreach (var c in Root.GetComponentsInChildren(Il2CppType.Of<Behaviour>(), true))
+                {
+                    var bh = c.TryCast<Behaviour>();
+                    string tn = bh != null ? bh.GetIl2CppType().Name : "";
+                    if (tn.EndsWith("LayoutGroup") || tn == "ContentSizeFitter" || tn == "AspectRatioFitter") bh.enabled = false;
+                }
+                Rect F = Bounds(), B = RectIn(Root, BodyBox);
+                float dw = Math.Max(boxSize.x - B.width, -0.4f * F.width), dh = Math.Max(boxSize.y - B.height, -0.4f * F.height);
+                Plugin.L.LogInfo($"[Windows] window {F.width:0}x{F.height:0}, box {B.width:0}x{B.height:0} -> box {B.width + dw:0}x{B.height + dh:0}");
+                if (Math.Abs(dw) < 1f && Math.Abs(dh) < 1f) return;
+                float mx = F.width * 0.25f, my = F.height * 0.25f;
+                float Map(float v, float lo, float hi, float m, float d)
+                {
+                    if (v <= lo + m) return v - d / 2f;
+                    if (v >= hi - m) return v + d / 2f;
+                    float t = (v - (lo + m)) / (hi - lo - 2f * m);
+                    return (lo + m - d / 2f) + t * (hi - lo - 2f * m + d);
+                }
+                // where everything should end up (measured before anything moves), then placed parents first
+                var all = Root.GetComponentsInChildren<RectTransform>(true);
+                var want = new System.Collections.Generic.List<(RectTransform rt, Rect r)>();
+                foreach (var rt in all)
+                {
+                    if (rt == null || rt.Pointer == Root.Pointer) continue;
+                    var r = RectIn(Root, rt);
+                    float x0 = Map(r.xMin, F.xMin, F.xMax, mx, dw), x1 = Map(r.xMax, F.xMin, F.xMax, mx, dw);
+                    float y0 = Map(r.yMin, F.yMin, F.yMax, my, dh), y1 = Map(r.yMax, F.yMin, F.yMax, my, dh);
+                    want.Add((rt, Rect.MinMaxRect(x0, y0, x1, y1)));
+                }
+                foreach (var (rt, r) in want)
+                {
+                    var p = rt.parent != null ? rt.parent.GetComponent<RectTransform>() : null;
+                    if (p == null) continue;
+                    Vector3 a = p.InverseTransformPoint(Root.TransformPoint(new Vector3(r.xMin, r.yMin, 0f)));
+                    Vector3 b = p.InverseTransformPoint(Root.TransformPoint(new Vector3(r.xMax, r.yMax, 0f)));
+                    float w = Math.Abs(b.x - a.x), h = Math.Abs(b.y - a.y);
+                    float sx = Math.Abs(rt.localScale.x) > 0.0001f ? Math.Abs(rt.localScale.x) : 1f;
+                    float sy = Math.Abs(rt.localScale.y) > 0.0001f ? Math.Abs(rt.localScale.y) : 1f;
+                    var pivotAt = new Vector2(Math.Min(a.x, b.x) + rt.pivot.x * w, Math.Min(a.y, b.y) + rt.pivot.y * h);
+                    rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+                    rt.sizeDelta = new Vector2(w / sx, h / sy);
+                    rt.anchoredPosition = pivotAt - p.rect.center;
+                }
+                Canvas.ForceUpdateCanvases();
+                var lrt = _light.GetComponent<RectTransform>();
+                var rrt = _red.GetComponent<RectTransform>();
+                BtnSize = lrt.rect.size;
+                Vector2 cl = CenterIn(ButtonRow, lrt), cr = CenterIn(ButtonRow, rrt);
+                BtnY = (cl.y + cr.y) / 2f;
+                RowCenterX = (cl.x + cr.x) / 2f;
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Windows] could not resize the game window: " + e.Message); }
+        }
+
+        /// <summary>A rect's corners in another rect's space.</summary>
+        internal static Rect RectIn(RectTransform space, RectTransform t)
+        {
+            // (GetWorldCorners can't be used: under Il2Cpp the array it fills is a copy, so it comes back empty)
+            var r = t.rect;
+            Vector3 a = space.InverseTransformPoint(t.TransformPoint(new Vector3(r.xMin, r.yMin, 0f)));
+            Vector3 b = space.InverseTransformPoint(t.TransformPoint(new Vector3(r.xMax, r.yMax, 0f)));
+            return Rect.MinMaxRect(Math.Min(a.x, b.x), Math.Min(a.y, b.y), Math.Max(a.x, b.x), Math.Max(a.y, b.y));
+        }
+
         public void SetText(TextMeshProUGUI t, string s)
         {
             if (t == null) return;

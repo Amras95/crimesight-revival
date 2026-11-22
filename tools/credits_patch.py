@@ -2,7 +2,8 @@
 CRIMESIGHT Revival - linea de creditos en la pantalla de titulo.
 
 Anade a la linea de copyright de la pantalla de titulo ("©2022 Konami Digital Entertainment") el
-texto de CREDITS, en todos los idiomas. El logo y el copyright de Konami no se tocan.
+texto de CREDITS y, detras, "Contributions by Ashen" traducido a cada idioma (como en los creditos de
+Revival del juego y en el lanzador). El logo y el copyright de Konami no se tocan.
 
 Como funciona: los textos del juego son JSON con sangria dentro de resources.assets. Se reescribe
 el JSON afectado sin sangria (ocupa mucho menos), se le anade el credito y se rellena con espacios
@@ -23,6 +24,20 @@ MARK = "CRIMESIGHT REVIVAL"
 GITHUB = "Amras95"
 TWITTER = "AmrasMithandir"
 CREDITS = f"   ·   {MARK}  —  GitHub: {GITHUB}  ·  X: @{TWITTER}"
+CONTRIBUTOR = "Ashen"
+# "Contributions by" in each of the game's languages (same words as the in-game Revival Credits)
+CONTRIBUTIONS = {
+    "Japanese": f"協力: {CONTRIBUTOR}", "English": f"Contributions by {CONTRIBUTOR}",
+    "French": f"Contributions d'{CONTRIBUTOR}", "Italian": f"Contributi di {CONTRIBUTOR}",
+    "German": f"Beiträge von {CONTRIBUTOR}", "Spanish": f"Contribuciones de {CONTRIBUTOR}",
+    "Portuguese": f"Contribuições de {CONTRIBUTOR}", "Russian": f"При участии {CONTRIBUTOR}",
+    "Korean": f"기여: {CONTRIBUTOR}", "Chinese-cn": f"贡献者：{CONTRIBUTOR}", "Chinese-tw": f"貢獻者：{CONTRIBUTOR}",
+}
+
+
+def credits_for(lang):
+    """The whole Revival part of the line for one of the game's languages (English if it isn't known)."""
+    return CREDITS + "  ·  " + CONTRIBUTIONS.get(lang, CONTRIBUTIONS["English"])
 
 
 def _find_blob(d, at):
@@ -50,7 +65,7 @@ def _apply(data, text):
                 for k, v in list(o.items()):
                     if k != "msg_id" and isinstance(v, str):
                         base = v.split("   ·   " + MARK)[0]
-                        o[k] = base + text
+                        o[k] = base + (text if text is not None else credits_for(k))
                         changed += 1
             for v in o.values():
                 walk(v)
@@ -61,7 +76,7 @@ def _apply(data, text):
     return changed
 
 
-def patch(game_dir, text=CREDITS):
+def patch(game_dir, text=None):
     path = os.path.join(game_dir, ASSETS_REL)
     if not os.path.isfile(path):
         raise ValueError(f"No encuentro {path}")
@@ -112,11 +127,13 @@ def patch(game_dir, text=CREDITS):
     return done
 
 
-def is_patched(game_dir, text=CREDITS):
+def is_patched(game_dir, text=None):
     path = os.path.join(game_dir, ASSETS_REL)
+    wanted = [text] if text is not None else [credits_for(k) for k in CONTRIBUTIONS]
     try:
         with open(path, "rb") as f:
-            return text.encode("utf-8") in f.read()
+            d = f.read()
+        return all(w.encode("utf-8") in d for w in wanted)
     except OSError:
         return False
 

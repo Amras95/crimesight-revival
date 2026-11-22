@@ -1559,7 +1559,7 @@ def _install_roster(d, rm, roster):
             continue
         items.append({"id": cid, "role": "pawn", "name": c.get("name") or "", "image": image_of(c),
                       "model": model_of(c), "anim_from": _anim_from(c.get("anim_from")), "enabled": cid not in disabled})
-    pool = {"host": bool(room_host), "min": modelpack.MIN_PAWNS, "items": items}
+    pool = {"host": bool(room_host), "min": modelpack.MIN_PAWNS, "items": modelpack.fill_enabled(items)}
     return _write_json_if_changed(os.path.join(d, "roster_pool.json"), pool) or changed
 
 

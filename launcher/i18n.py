@@ -1598,38 +1598,38 @@ S["es"]["models_readme"] = S["es"]["models_readme"].replace("Solo lo ves tú.", 
 
 # personajes nuevos (slots) y Selector de personajes
 _CHARS = {
-    "en": dict(chars_title="New characters", chars_desc="A new character doesn't replace anyone: it joins the draw of each match, with the same chance as the originals (choose who can appear with the in-game \"Character selector\" in the waiting room). Without a name, animations or lines of its own it uses those of the character whose place it takes, and it always plays like that character. For a skin that always replaces a character, use the list above.",
+    "en": dict(chars_title="New characters", chars_desc="A new character doesn't replace anyone: it joins the draw of each match, with the same chance as the originals (choose who can appear with the in-game \"Character Selection\" in the waiting room). Without a name, animations or lines of its own it uses those of the character whose place it takes, and it always plays like that character. For a skin that always replaces a character, use the list above.",
                chars_add="Add character", chars_edit="Edit", chars_delete="Remove", chars_images_open="Open images folder",
                chars_none="No new characters yet.", chars_name="Name", chars_name_keep="(uses the name of the character whose slot it takes)",
                chars_model="3D model", chars_role="Type", chars_role_pawn="Character", chars_role_traitor="Traitor",
                chars_image="Image (portraits)", chars_image_none="Generate from the model", chars_anims="Animations",
                chars_talk="Lines", chars_talk_hint="Only fill in the ones you want to change; empty ones keep the lines of the character whose slot it takes. Traitors don't speak.",
                chars_talk_keep="(keeps the original line)", chars_save="Save", chars_cancel="Cancel", chars_need_model="Choose a 3D model from the models folder.",
-               chars_has_anims="custom animations", chars_has_talk="{n} lines", chars_has_image="image", roster_saved="Character selector saved."),
-    "es": dict(chars_title="Personajes nuevos", chars_desc="Un personaje nuevo no sustituye a nadie: entra en el sorteo de cada partida con la misma probabilidad que los originales (eliges quién puede salir con el «Selector de personajes» de la sala de espera del juego). Si no tiene nombre, animaciones o frases propias, usa los del personaje cuyo sitio ocupa, y siempre juega como él. Para una skin que sustituya siempre a un personaje, usa la lista de arriba.",
+               chars_has_anims="custom animations", chars_has_talk="{n} lines", chars_has_image="image", roster_saved="Character Selection saved."),
+    "es": dict(chars_title="Personajes nuevos", chars_desc="Un personaje nuevo no sustituye a nadie: entra en el sorteo de cada partida con la misma probabilidad que los originales (eliges quién puede salir con la «Selección de personajes» de la sala de espera del juego). Si no tiene nombre, animaciones o frases propias, usa los del personaje cuyo sitio ocupa, y siempre juega como él. Para una skin que sustituya siempre a un personaje, usa la lista de arriba.",
                chars_add="Añadir personaje", chars_edit="Editar", chars_delete="Quitar", chars_images_open="Abrir carpeta de imágenes",
                chars_none="Aún no hay personajes nuevos.", chars_name="Nombre", chars_name_keep="(se queda el del sitio que ocupe)",
                chars_model="Modelo 3D", chars_role="Tipo", chars_role_pawn="Personaje", chars_role_traitor="Traidor",
                chars_image="Imagen (retratos)", chars_image_none="Sacarla del modelo", chars_anims="Animaciones",
                chars_talk="Frases", chars_talk_hint="Escribe solo las que quieras cambiar; las vacías se quedan con las del personaje cuyo sitio ocupe. Un traidor no habla.",
                chars_talk_keep="(se queda la frase original)", chars_save="Guardar", chars_cancel="Cancelar", chars_need_model="Elige un modelo 3D de la carpeta de modelos.",
-               chars_has_anims="animaciones propias", chars_has_talk="{n} frases", chars_has_image="imagen", roster_saved="Selector de personajes guardado."),
-    "fr": dict(chars_title="Nouveaux personnages", chars_desc="Un nouveau personnage ne remplace personne : il entre dans le tirage de chaque partie, avec la même chance que les originaux (choisissez qui peut apparaître avec le « Sélecteur de personnages » de la salle d'attente). Sans nom, animations ou répliques à lui, il utilise ceux du personnage dont il prend la place, et joue toujours comme lui. Pour un skin qui remplace toujours un personnage, utilisez la liste ci-dessus.",
+               chars_has_anims="animaciones propias", chars_has_talk="{n} frases", chars_has_image="imagen", roster_saved="Selección de personajes guardada."),
+    "fr": dict(chars_title="Nouveaux personnages", chars_desc="Un nouveau personnage ne remplace personne : il entre dans le tirage de chaque partie, avec la même chance que les originaux (choisissez qui peut apparaître avec la « Sélection des personnages » de la salle d'attente). Sans nom, animations ou répliques à lui, il utilise ceux du personnage dont il prend la place, et joue toujours comme lui. Pour un skin qui remplace toujours un personnage, utilisez la liste ci-dessus.",
                chars_add="Ajouter un personnage", chars_edit="Modifier", chars_delete="Retirer", chars_images_open="Ouvrir le dossier des images",
                chars_none="Aucun nouveau personnage pour l'instant.", chars_name="Nom", chars_name_keep="(garde le nom de la place prise)",
                chars_model="Modèle 3D", chars_role="Type", chars_role_pawn="Personnage", chars_role_traitor="Traître",
                chars_image="Image (portraits)", chars_image_none="La tirer du modèle", chars_anims="Animations",
                chars_talk="Répliques", chars_talk_hint="N'écrivez que celles à changer ; les vides gardent celles du personnage dont il prend la place. Un traître ne parle pas.",
                chars_talk_keep="(garde la réplique d'origine)", chars_save="Enregistrer", chars_cancel="Annuler", chars_need_model="Choisissez un modèle 3D du dossier des modèles.",
-               chars_has_anims="animations propres", chars_has_talk="{n} répliques", chars_has_image="image", roster_saved="Sélecteur de personnages enregistré."),
-    "it": dict(chars_title="Nuovi personaggi", chars_desc="Un nuovo personaggio non sostituisce nessuno: entra nel sorteggio di ogni partita, con la stessa probabilità degli originali (scegli chi può comparire con il «Selettore di personaggi» della sala d'attesa). Senza nome, animazioni o battute proprie usa quelli del personaggio di cui prende il posto, e gioca sempre come lui. Per una skin che sostituisce sempre un personaggio, usa l'elenco qui sopra.",
+               chars_has_anims="animations propres", chars_has_talk="{n} répliques", chars_has_image="image", roster_saved="Sélection des personnages enregistrée."),
+    "it": dict(chars_title="Nuovi personaggi", chars_desc="Un nuovo personaggio non sostituisce nessuno: entra nel sorteggio di ogni partita, con la stessa probabilità degli originali (scegli chi può comparire con la «Selezione dei personaggi» della sala d'attesa). Senza nome, animazioni o battute proprie usa quelli del personaggio di cui prende il posto, e gioca sempre come lui. Per una skin che sostituisce sempre un personaggio, usa l'elenco qui sopra.",
                chars_add="Aggiungi personaggio", chars_edit="Modifica", chars_delete="Rimuovi", chars_images_open="Apri cartella delle immagini",
                chars_none="Ancora nessun nuovo personaggio.", chars_name="Nome", chars_name_keep="(resta quello del posto che occupa)",
                chars_model="Modello 3D", chars_role="Tipo", chars_role_pawn="Personaggio", chars_role_traitor="Traditore",
                chars_image="Immagine (ritratti)", chars_image_none="Ricavarla dal modello", chars_anims="Animazioni",
                chars_talk="Battute", chars_talk_hint="Scrivi solo quelle da cambiare; quelle vuote restano quelle del personaggio di cui prende il posto. Un traditore non parla.",
                chars_talk_keep="(resta la battuta originale)", chars_save="Salva", chars_cancel="Annulla", chars_need_model="Scegli un modello 3D dalla cartella dei modelli.",
-               chars_has_anims="animazioni proprie", chars_has_talk="{n} battute", chars_has_image="immagine", roster_saved="Selettore di personaggi salvato."),
+               chars_has_anims="animazioni proprie", chars_has_talk="{n} battute", chars_has_image="immagine", roster_saved="Selezione dei personaggi salvata."),
     "de": dict(chars_title="Neue Figuren", chars_desc="Eine neue Figur ersetzt niemanden: Sie kommt in die Auslosung jeder Partie, mit derselben Chance wie die Originale (wer erscheinen darf, wählst du mit der „Figurenauswahl“ im Warteraum). Ohne eigenen Namen, Animationen oder Sätze nutzt sie die der Figur, deren Platz sie einnimmt, und spielt immer wie diese. Für einen Skin, der eine Figur immer ersetzt, nimm die Liste oben.",
                chars_add="Figur hinzufügen", chars_edit="Bearbeiten", chars_delete="Entfernen", chars_images_open="Bilderordner öffnen",
                chars_none="Noch keine neuen Figuren.", chars_name="Name", chars_name_keep="(behält den Namen des Platzes)",
@@ -1638,14 +1638,14 @@ _CHARS = {
                chars_talk="Sätze", chars_talk_hint="Schreib nur die, die du ändern willst; leere behalten die Sätze der Figur, deren Platz sie einnimmt. Ein Verräter spricht nicht.",
                chars_talk_keep="(behält den Originalsatz)", chars_save="Speichern", chars_cancel="Abbrechen", chars_need_model="Wähle ein 3D-Modell aus dem Modellordner.",
                chars_has_anims="eigene Animationen", chars_has_talk="{n} Sätze", chars_has_image="Bild", roster_saved="Figurenauswahl gespeichert."),
-    "pt": dict(chars_title="Novos personagens", chars_desc="Um novo personagem não substitui ninguém: entra no sorteio de cada partida, com a mesma chance dos originais (escolha quem pode aparecer com o «Seletor de personagens» da sala de espera). Sem nome, animações ou falas próprios, usa os do personagem cujo lugar ocupa, e sempre joga como ele. Para uma skin que substitui sempre um personagem, use a lista acima.",
+    "pt": dict(chars_title="Novos personagens", chars_desc="Um novo personagem não substitui ninguém: entra no sorteio de cada partida, com a mesma chance dos originais (escolha quem pode aparecer com a «Seleção de personagens» da sala de espera). Sem nome, animações ou falas próprios, usa os do personagem cujo lugar ocupa, e sempre joga como ele. Para uma skin que substitui sempre um personagem, use a lista acima.",
                chars_add="Adicionar personagem", chars_edit="Editar", chars_delete="Remover", chars_images_open="Abrir pasta de imagens",
                chars_none="Ainda não há novos personagens.", chars_name="Nome", chars_name_keep="(fica o do lugar que ocupar)",
                chars_model="Modelo 3D", chars_role="Tipo", chars_role_pawn="Personagem", chars_role_traitor="Traidor",
                chars_image="Imagem (retratos)", chars_image_none="Tirar do modelo", chars_anims="Animações",
                chars_talk="Falas", chars_talk_hint="Escreva só as que quer mudar; as vazias ficam com as do personagem cujo lugar ocupa. Um traidor não fala.",
                chars_talk_keep="(fica a fala original)", chars_save="Salvar", chars_cancel="Cancelar", chars_need_model="Escolha um modelo 3D da pasta de modelos.",
-               chars_has_anims="animações próprias", chars_has_talk="{n} falas", chars_has_image="imagem", roster_saved="Seletor de personagens salvo."),
+               chars_has_anims="animações próprias", chars_has_talk="{n} falas", chars_has_image="imagem", roster_saved="Seleção de personagens salva."),
     "ru": dict(chars_title="Новые персонажи", chars_desc="Новый персонаж никого не заменяет: он участвует в жеребьёвке каждого матча с тем же шансом, что и оригиналы (кто может появиться, выбирается в «Выборе персонажей» в зале ожидания). Без своего имени, анимаций или реплик он использует те, что у персонажа, чьё место занимает, и всегда играет как он. Для скина, который всегда заменяет персонажа, используйте список выше.",
                chars_add="Добавить персонажа", chars_edit="Изменить", chars_delete="Убрать", chars_images_open="Открыть папку изображений",
                chars_none="Новых персонажей пока нет.", chars_name="Имя", chars_name_keep="(остаётся имя занятого места)",
@@ -1707,10 +1707,10 @@ _ANIMFROM = {
 for _l, (_a, _b, _c) in _ANIMFROM.items():
     S[_l].update(chars_anim_from=_a, chars_anim_from_short=_b, chars_anims_hint=_c)
 S["es"]["chars_desc"] = ("Un personaje nuevo no sustituye a nadie: entra en el sorteo de cada partida con la misma probabilidad que los "
-                         "originales (eliges quién puede salir con el «Selector de personajes» de la sala de espera del juego). Juega "
+                         "originales (eliges quién puede salir con la «Selección de personajes» de la sala de espera del juego). Juega "
                          "como el personaje cuyo sitio ocupa, pero se mueve como el que elijas en «Animaciones de» (o con tus animaciones). "
                          "Sin nombre o frases propias usa los del sitio que ocupa. Para una skin que sustituya siempre a un personaje, usa la lista de arriba.")
-S["en"]["chars_desc"] = ("A new character doesn't replace anyone: it's added to the pool for each match, with the same chance of appearing as the originals (choose who can appear with the \"Character selector\" in the game's waiting room). It plays like the character whose slot it takes, but moves like the one you pick in \"Animations of\" (or with your own animations). If it has no name or lines of its own, it uses those of the character whose slot it takes. For a skin that always replaces a character, use the list above.")
+S["en"]["chars_desc"] = ("A new character doesn't replace anyone: it's added to the pool for each match, with the same chance of appearing as the originals (choose who can appear with the \"Character Selection\" in the game's waiting room). It plays like the character whose slot it takes, but moves like the one you pick in \"Animations of\" (or with your own animations). If it has no name or lines of its own, it uses those of the character whose slot it takes. For a skin that always replaces a character, use the list above.")
 # las situaciones de las frases (descripcion propia; no es el texto del juego)
 _TALK_LABELS = {
     "en": ["Searches and finds nothing", "Breathes in gas", "Danger enters the room", "Breaks the fuse box", "Finds a secret passage", "Finds a note", "Finds a fuse box", "Can't carry more items", "Can't carry more weapons", "Picks up food", "Picks up medicine", "Picks up a weapon", "Alone with someone (both suspects)", "Alone with the killer", "Alone with the victim", "Match starts", "Gets attacked", "Gets attacked on the last day", "Healed by someone else", "Repairs the fuse box", "Acts while dying", "Acts while hungry", "Acts while injured", "Walks into a dark room", "Uses a secret passage", "Gives food to someone", "Uses medicine on themselves", "Gives medicine to someone"],
@@ -1743,7 +1743,7 @@ S["en"]["models_readme"] += """
 
 New characters (Mods > Models > New characters)
  - A new character joins the draw of every match instead of always replacing someone: each match picks 6 of the
-   enabled characters (originals and new ones, same chance). Choose who can appear with the "Character selector"
+   enabled characters (originals and new ones, same chance). Choose who can appear with the "Character Selection"
    button in the game's waiting room (the host decides for the room; at least 6 characters and 1 traitor).
  - It needs a 3D model; the name, image (folder "images"; without one it's taken from the model), animations
    and lines are optional: what it doesn't have comes from the character whose place it takes, and it always
@@ -1753,7 +1753,7 @@ S["es"]["models_readme"] += """
 Personajes nuevos (Mods > Modelos > Personajes nuevos)
  - Un personaje nuevo entra en el sorteo de cada partida en vez de sustituir siempre a alguien: cada partida salen
    6 de los personajes activados (originales y nuevos, con la misma probabilidad). Elige quién puede salir con el
-   botón «Selector de personajes» de la sala de espera del juego (decide el anfitrión; mínimo 6 personajes y 1 traidor).
+   botón «Selección de personajes» de la sala de espera del juego (decide el anfitrión; mínimo 6 personajes y 1 traidor).
  - Necesita un modelo 3D; el nombre, la imagen (carpeta "images"; sin ella se saca del modelo), las animaciones
    y las frases son opcionales: lo que no tenga lo pone el personaje cuyo sitio ocupa, y siempre juega como él.
    Un traidor solo usa el modelo y las animaciones."""
