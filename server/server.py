@@ -645,7 +645,7 @@ def main():
                     help="contrasena para sincronizar perfiles (servidores abiertos a internet)")
     ap.add_argument("--data-dir", default=None, help="carpeta de datos (por defecto server/data)")
     ap.add_argument("--mods-dir", default=None,
-                    help="carpeta con mods de apariencia (stickers/avatares) que se ofrecen a los jugadores")
+                    help="carpeta con mods de apariencia (stamps/ y avatars/, como la carpeta de mods del lanzador) que se ofrecen a los jugadores")
     ap.add_argument("--accept-player-mods", action="store_true",
                     help="usar en las salas los mods que traigan los jugadores (sin esto se ignoran)")
     ap.add_argument("--stages-dir", default=None,

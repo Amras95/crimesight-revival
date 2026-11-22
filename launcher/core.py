@@ -686,10 +686,10 @@ class LocalServer:
 
 # ------------------------------------------------------------------ mods de apariencia
 def mods_dir():
-    """Tu mod: la propia carpeta de mods, con stickers/, avatars/ y mod.json (se crean si faltan) y unas
+    """Tu mod: la propia carpeta de mods, con stamps/, avatars/ y mod.json (se crean si faltan) y unas
     instrucciones. Dentro van tambien tus modelos (models/), tu cursor (cursor/) y tus escenarios (stages/)."""
     d = os.path.join(app_dir(), "mods")
-    for sub in ("stickers", "avatars"):
+    for sub in ("stamps", "avatars"):
         os.makedirs(os.path.join(d, sub), exist_ok=True)
     meta = os.path.join(d, "mod.json")
     if not os.path.exists(meta):
@@ -697,7 +697,7 @@ def mods_dir():
             # nombre vacio = el de siempre ("Carpeta principal")
             json.dump({"name": "", "author": ""}, f, ensure_ascii=False, indent=2)
     readme = os.path.join(d, "README.txt")
-    text = t("mods_readme") + "\n" + t("mods_text_hint") + "\n"
+    text = t("mods_readme") + "\n"
     try:
         with open(readme, encoding="utf-8-sig") as f:
             same = f.read() == text
@@ -781,38 +781,25 @@ BEPINEX_FILES = ("winhttp.dll", "doorstop_config.ini", ".doorstop_version", "cha
 PLUGIN_NAME = "CrimeSightRevival.Mods.dll"
 
 
-CURSOR_README = """CRIMESIGHT Revival - cursor propio / custom cursor
-
-ES
-Pon aqui tus imagenes PNG (con fondo transparente; mejor de 32x32 o 64x64 pixeles):
-  cursor.png    el cursor normal, en los menus y en la partida.
-  hotspot.txt   opcional: el punto que hace clic en cursor.png, "x,y" en pixeles desde la esquina de
-                arriba a la izquierda (por defecto 0,0, como una flecha). Para una mira centrada de
-                32x32, por ejemplo: 16,16
-  otros .png    opcional: sustituyen un cursor concreto del juego (moverse, correr, atacar...) si se
-                llaman igual que el. Los nombres salen en el registro de BepInEx (LogOutput.log),
-                en las lineas "[Cursor] el juego usa el cursor ...".
-Hace falta el plugin de BepInEx activado. Solo lo ves tu. Para volver al cursor del juego, vacia la carpeta.
-
-EN
-Put your PNG images here (transparent background; 32x32 or 64x64 pixels work best):
-  cursor.png    the normal cursor, in menus and in matches.
-  hotspot.txt   optional: the point of cursor.png that clicks, "x,y" in pixels from the top-left
-                corner (0,0 by default, like an arrow). For a centred 32x32 crosshair, e.g.: 16,16
-  other .png    optional: replace a specific game cursor (move, run, attack...) if they have the same
-                name. The names show up in the BepInEx log (LogOutput.log), in the lines
-                "[Cursor] el juego usa el cursor ...".
-It needs the BepInEx plugin turned on. Only you see it. To go back to the game's cursor, empty the folder.
-"""
 
 
 def cursor_dir():
-    """Tu cursor propio (cursor.png y, si quieres, los demas cursores del juego), en mods/cursor."""
+    """Tu cursor propio (cursor.png y, si quieres, los demas cursores del juego), en mods/cursor. Sus instrucciones
+    (README.txt) van en el idioma del lanzador, como las de las demas carpetas."""
     d = _in_mods("cursor")
     readme = os.path.join(d, "README.txt")
-    if not os.path.exists(readme):
-        with open(readme, "w", encoding="utf-8") as f:
-            f.write(CURSOR_README)
+    text = t("cursor_readme") + "\n"
+    try:
+        with open(readme, encoding="utf-8-sig") as f:
+            same = f.read() == text
+    except (OSError, UnicodeDecodeError):
+        same = False
+    if not same:
+        try:
+            with open(readme, "w", encoding="utf-8-sig") as f:
+                f.write(text)
+        except OSError:
+            pass
     return d
 
 
