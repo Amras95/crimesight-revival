@@ -23,19 +23,19 @@ def _add(lang, **kw):
 
 
 _add("en",
-     progress_btn='Your progress', progress_title='Your progress', progress_desc='Your matches, wins and points are saved on this PC. You can take them to another PC or keep a copy so you never lose them.', export_btn='Export to a file', import_btn='Import a file', backup_label='Automatic backup', backup_off='Off', backup_pick='Choose folder', backup_remove='Turn off', backup_hint='Tip: choose your OneDrive, Google Drive or Dropbox folder. A copy is saved after every session, and on another PC your progress comes back by itself when you choose the same folder.', close='Close', exported='Progress saved to {path}', imported='Done: {n} new matches added to your progress.', import_nothing="That file had no matches you didn't already have.", err_save_bad="That file isn't a CRIMESIGHT Revival progress file.", err_save_other='That file belongs to another Steam account.', err_save_write="Couldn't save the file ({err}).", backup_set='Automatic backup turned on.', backup_removed='Automatic backup turned off.', backup_restored='Progress recovered from your backup: {n} new matches.', backup_saved='Progress backed up.', backup_failed="Couldn't make the backup ({err}).", err_backup_missing='Backup folder not found: {path}',
-     updating='Updating the launcher to version {v}…', update_failed="Couldn't update ({err}); using the current version.", kofi='Support me on Ko-fi',
+     progress_btn='Your progress', progress_title='Your progress', progress_desc="Your matches, wins and points are saved on this PC. You can move them to another PC or keep a backup so you never lose them.", export_btn='Export to a file', import_btn='Import a file', backup_label='Automatic backup', backup_off='Off', backup_pick='Choose folder', backup_remove='Turn off', backup_hint="Tip: pick your OneDrive, Google Drive or Dropbox folder. A copy is saved after every session, and on another PC your progress is restored automatically when you pick the same folder.", close='Close', exported='Progress saved to {path}', imported='Done: {n} new matches added to your progress.', import_nothing="That file had no matches you didn't already have.", err_save_bad="That file isn't a CRIMESIGHT Revival progress file.", err_save_other='That file belongs to another Steam account.', err_save_write="Couldn't save the file ({err}).", backup_set='Automatic backup turned on.', backup_removed='Automatic backup turned off.', backup_restored="Progress restored from your backup: {n} new matches.", backup_saved='Progress backed up.', backup_failed="Couldn't make the backup ({err}).", err_backup_missing='Backup folder not found: {path}',
+     updating='Updating the launcher to version {v}…', update_failed="Couldn't update ({err}). Using the current version for now.", kofi='Support me on Ko-fi',
      loading="Preparing the launcher…",
      tagline="Community server for people who already own the game · no Konami files included",
      steam_account="Steam account", no_steam="Open Steam and sign in",
      wins="Wins", draws="Draws", losses="Losses", points="Points",
-     solo_title="Play solo", solo_desc="Matches against the AI on your PC. Kick an AI from the room to change its difficulty.",
+     solo_title="Play solo", solo_desc="Play against the AI on your PC. Kick an AI from the room to change its difficulty.",
      host_title="Host a game", host_desc="Open your game to your friends. I'll give you the address they need to join.",
-     join_title="Join a friend", join_desc="Connect to a friend's game. Your progress comes with you.",
-     server_title="Own server", server_desc="Join a server someone has set up, with a password if it has one.",
-     solo_hint="A server starts on your PC and the game opens. Create a room: empty seats are filled by AIs. Kick an AI to change its difficulty.",
+     join_title="Join a friend", join_desc="Connect to a friend's game. Your progress carries over.",
+     server_title="Custom server", server_desc="Join a server someone has set up, using its password if it has one.",
+     solo_hint="A server starts on your PC and the game opens. Create a room and the empty seats are filled with AIs. Kick an AI to change its difficulty.",
      play_btn="PLAY", port="Port",
-     host_hint="I'll try to open your router's port automatically. If your friend can't get in, open it manually or use Tailscale, ZeroTier or Radmin VPN.",
+     host_hint="I'll try to open your router's port automatically. If your friend can't connect, open it manually or use Tailscale, ZeroTier or Radmin VPN.",
      host_btn="OPEN GAME", friend_addr="Your friend's address", friend_ph="e.g. 83.45.120.7:18080", join_btn="JOIN",
      saved="Saved", name="Name", address="Address", server_ph="server.example.com:18080", password="Password",
      save="Save", delete="Delete", connect_btn="CONNECT",
@@ -50,22 +50,22 @@ _add("en",
      stopping="Ending the session…", err_unexpected="Unexpected error: {err}",
      err_bad_folder="That file doesn't look like CRIMESIGHT's executable (CrimeSight.exe).",
      err_finish_first="End the session first.", restored="Game restored to its original state.",
-     already_original="The game was already in its original state.", err_need_address="Enter at least the address.",
+     already_original="The game was already in its original state.", err_need_address="The address is required.",
      loading_art="Preparing the artwork from your copy of the game (first time only)…",
      notice_imported="Your matches from the previous version have been imported.",
-     srv_local_on="Local server running.", pointing="Pointing the game to {url}",
+     srv_local_on="Local server running.", pointing="Connecting the game to {url}",
      opening="Opening CRIMESIGHT…", srv_stopped="Server stopped. See you next time!",
-     host_upnp="Server open. Trying to open the router port (UPnP)…", port_opened="Port {port} opened on the router.",
-     port_failed="The router didn't let me open port {port} automatically. Open it manually (forward TCP to this PC) or use a private network (Tailscale, ZeroTier or Radmin VPN) and share that network's IP.",
-     give_address="Give your friend this address: {addr}   (same home network: {lan})",
-     host_closed="Game closed to friends and server stopped.", checking="Checking {url}…",
-     need_password="That server needs a password: use “Own server”.", syncing="Syncing your progress with the server…",
-     record="Your record: {w}W {d}D {l}L · {p} points", fetching="Bringing back your new matches…",
-     sync_later="Couldn't bring them back now ({err}). They'll be merged next time you connect.",
-     game_not_seen="I didn't see the game open; launching it yourself from Steam works too.",
+     host_upnp="Server started. Trying to open the port on your router (UPnP)…", port_opened="Port {port} is open on your router.",
+     port_failed="Your router didn't let me open port {port} automatically. Open it manually (forward TCP to this PC), or use a private network (Tailscale, ZeroTier or Radmin VPN) and share that network's IP.",
+     give_address="Give your friend this address: {addr}   (on the same home network: {lan})",
+     host_closed="Your game is no longer open to friends, and the server has stopped.", checking="Checking {url}…",
+     need_password="That server needs a password: use “Custom server”.", syncing="Syncing your progress with the server…",
+     record="Your record: {w}W {d}D {l}L · {p} points", fetching="Downloading your new matches…",
+     sync_later="Couldn't download them right now ({err}). They'll be added next time you connect.",
+     game_not_seen="The game didn't seem to open. You can also start it yourself from Steam.",
      game_open="The game is running. Close it to end the session.",
-     err_empty_addr="Enter an address.", err_not_revival="Something answers there, but it isn't a CRIMESIGHT Revival server.",
-     err_unreachable="Can't reach {url} ({reason}). Is the server on and the port open?",
+     err_empty_addr="Enter an address.", err_not_revival="Something is answering at that address, but it isn't a CRIMESIGHT Revival server.",
+     err_unreachable="Can't reach {url} ({reason}). Is the server running and the port open?",
      err_password="Wrong password for that server.", err_sync_rejected="The server rejected the sync ({code}).",
      err_sync_failed="Couldn't sync with {url} ({reason}).",
      ev_start="Match started", ev_win="{name} wins (+{pts} points)", ev_lose="{name} loses (+{pts} points)",
@@ -582,27 +582,27 @@ _add("zh-TW",
 # --- mods de apariencia (stickers y avatares nuevos) ------------------------------------------
 _MODS = {
     "en": dict(
-        mods_btn="Mods", mods_title="Stickers and avatars (mods)",
-        mods_desc="Add your own stickers and avatars. They're new slots: the game's own ones are never changed.",
-        mods_how="Inside the mods folder, make one folder per mod with a “stickers” and/or “avatars” folder full of images (PNG, JPG…). Any size works: they're adjusted automatically.",
-        cursor_none="No custom cursor", cursor_on="Custom cursor on", cursor_off="Custom cursor off", cursor_desc_on="{size} · it's applied when you open the game from the launcher (or within seconds if it's already open). {extra} extra cursor(s).", cursor_desc_none="Choose an image (PNG with transparency works best) and it becomes the game's cursor. Only you see it. Needs BepInEx.", cursor_hot_tip="Click: tip (arrow)", cursor_hot_center="Click: centre (crosshair)", cursor_hot_custom="Click: custom", cursor_pick="Choose image…", cursor_folder="Folder", cursor_enable="Turn on", cursor_disable="Turn off", cursor_bad_image="That image can't be read ({err}).", mods_cursor="Custom cursor", mods_open="Open mods folder", mods_reload="Reload", mods_empty="You don't have any mods yet.",
+        mods_btn="Mods", mods_title="Mods",
+        mods_desc="Add your own stickers and avatars. They're added as new ones: the game's originals are never changed.",
+        mods_how_stickers="Put your sticker images (PNG, JPG…) in the “stickers” folder inside the mods folder. They're added to the game's stickers. Any size works: they're adjusted automatically.", mods_how_avatars="Put your avatar images (PNG, JPG…) in the “avatars” folder inside the mods folder. They're added to the game's avatars, to use as your profile picture. Any size works: they're adjusted automatically.",
+        cursor_none="No custom cursor", cursor_on="Custom cursor on", cursor_off="Custom cursor off", cursor_desc_on="{size} · applied when you open the game from the launcher (or within a few seconds if it's already open). {extra} extra cursor(s).", cursor_desc_none="Choose an image (a transparent PNG works best) to use as the game's cursor. Only you can see it. Requires BepInEx.", cursor_hot_tip="Click point: tip (arrow)", cursor_hot_center="Click point: centre (crosshair)", cursor_hot_custom="Click point: custom", cursor_pick="Choose image…", cursor_folder="Folder", cursor_enable="Turn on", cursor_disable="Turn off", cursor_bad_image="That image can't be read ({err}).", mods_cursor="Custom cursor", mods_open="Open mods folder", mods_reload="Reload", mods_empty="Your mods folder is empty.",
         mods_count="{stickers} stickers · {avatars} avatars", mods_on="On", mods_off="Off", mods_by="by {author}",
         mods_bad_images="{n} images couldn't be read",
         mods_restart="Changes apply the next time you open the game from the launcher.",
         mods_installing="Installing mods: {stickers} stickers and {avatars} avatars…",
         mods_removed="Mods removed from the game.", mods_failed="Couldn't install the mods ({err}).",
         mods_download_failed="Couldn't download the room's mods ({err}).",
-        mods_declined="You didn't accept the room's mods, so you haven't joined.",
+        mods_declined="You declined the room's mods, so you didn't join.",
         mods_downloading="Downloading the room's mods: {stickers} stickers and {avatars} avatars…",
         mods_temp_cleared="The room's temporary mods have been deleted.",
         mods_confirm_title="This room uses mods",
         mods_confirm_text="The host uses custom stickers and avatars. To join you need to download them: they're temporary and get deleted when you leave. Your own mods are paused meanwhile.",
         mods_confirm_yes="Download and join", mods_confirm_no="Don't join"),
     "es": dict(
-        mods_btn="Mods", mods_title="Stickers y avatares (mods)",
+        mods_btn="Mods", mods_title="Mods",
         mods_desc="Añade tus propios stickers y avatares. Son huecos nuevos: los del juego no se tocan nunca.",
-        mods_how="Dentro de la carpeta de mods, crea una carpeta por mod con una carpeta “stickers” y/o “avatars” llena de imágenes (PNG, JPG…). Sirve cualquier tamaño: se ajustan solas.",
-        cursor_none="Sin cursor propio", cursor_on="Cursor propio activado", cursor_off="Cursor propio desactivado", cursor_desc_on="{size} · se aplica al abrir el juego desde el lanzador (o en unos segundos si ya está abierto). {extra} cursor(es) extra.", cursor_desc_none="Elige una imagen (mejor un PNG con transparencia) y será el cursor del juego. Solo lo ves tú. Necesita BepInEx.", cursor_hot_tip="Clic: punta (flecha)", cursor_hot_center="Clic: centro (mira)", cursor_hot_custom="Clic: personalizado", cursor_pick="Elegir imagen…", cursor_folder="Carpeta", cursor_enable="Activar", cursor_disable="Desactivar", cursor_bad_image="No se puede leer esa imagen ({err}).", mods_cursor="Cursor propio", mods_open="Abrir carpeta de mods", mods_reload="Recargar", mods_empty="Todavía no tienes mods.",
+        mods_how_stickers="Pon las imágenes de tus stickers (PNG, JPG…) en la carpeta “stickers” de la carpeta de mods. Se añaden a los stickers del juego. Sirve cualquier tamaño: se ajustan solas.", mods_how_avatars="Pon las imágenes de tus avatares (PNG, JPG…) en la carpeta “avatars” de la carpeta de mods. Se añaden a los avatares del juego, para usarlos como imagen de perfil. Sirve cualquier tamaño: se ajustan solas.",
+        cursor_none="Sin cursor propio", cursor_on="Cursor propio activado", cursor_off="Cursor propio desactivado", cursor_desc_on="{size} · se aplica al abrir el juego desde el lanzador (o en unos segundos si ya está abierto). {extra} cursor(es) extra.", cursor_desc_none="Elige una imagen (mejor un PNG con transparencia) y será el cursor del juego. Solo lo ves tú. Necesita BepInEx.", cursor_hot_tip="Clic: punta (flecha)", cursor_hot_center="Clic: centro (mira)", cursor_hot_custom="Clic: personalizado", cursor_pick="Elegir imagen…", cursor_folder="Carpeta", cursor_enable="Activar", cursor_disable="Desactivar", cursor_bad_image="No se puede leer esa imagen ({err}).", mods_cursor="Cursor propio", mods_open="Abrir carpeta de mods", mods_reload="Recargar", mods_empty="Tu carpeta de mods está vacía.",
         mods_count="{stickers} stickers · {avatars} avatares", mods_on="Activado", mods_off="Desactivado",
         mods_by="de {author}", mods_bad_images="{n} imágenes no se han podido leer",
         mods_restart="Los cambios se aplican la próxima vez que abras el juego desde el lanzador.",
@@ -616,10 +616,10 @@ _MODS = {
         mods_confirm_text="El anfitrión usa stickers y avatares personalizados. Para unirte tienes que descargarlos: son temporales y se borran al salir. Mientras tanto, tus mods quedan en pausa.",
         mods_confirm_yes="Descargar y unirme", mods_confirm_no="No unirme"),
     "fr": dict(
-        mods_btn="Mods", mods_title="Stickers et avatars (mods)",
+        mods_btn="Mods", mods_title="Mods",
         mods_desc="Ajoutez vos propres stickers et avatars. Ce sont de nouveaux emplacements : ceux du jeu ne sont jamais modifiés.",
-        mods_how="Dans le dossier des mods, créez un dossier par mod contenant un dossier « stickers » et/ou « avatars » rempli d'images (PNG, JPG…). Toutes les tailles conviennent : elles sont ajustées automatiquement.",
-        cursor_none="Pas de curseur perso", cursor_on="Curseur perso activé", cursor_off="Curseur perso désactivé", cursor_desc_on="{size} · appliqué en ouvrant le jeu depuis le lanceur (ou en quelques secondes s'il est déjà ouvert). {extra} curseur(s) en plus.", cursor_desc_none="Choisissez une image (de préférence un PNG transparent) et ce sera le curseur du jeu. Vous seul le voyez. Nécessite BepInEx.", cursor_hot_tip="Clic : pointe (flèche)", cursor_hot_center="Clic : centre (viseur)", cursor_hot_custom="Clic : personnalisé", cursor_pick="Choisir une image…", cursor_folder="Dossier", cursor_enable="Activer", cursor_disable="Désactiver", cursor_bad_image="Impossible de lire cette image ({err}).", mods_cursor="Curseur perso", mods_open="Ouvrir le dossier des mods", mods_reload="Actualiser", mods_empty="Vous n'avez encore aucun mod.",
+        mods_how_stickers="Mettez les images de vos stickers (PNG, JPG…) dans le dossier « stickers » du dossier des mods. Elles s'ajoutent aux stickers du jeu. Toutes les tailles conviennent : elles sont ajustées automatiquement.", mods_how_avatars="Mettez les images de vos avatars (PNG, JPG…) dans le dossier « avatars » du dossier des mods. Elles s'ajoutent aux avatars du jeu, comme image de profil. Toutes les tailles conviennent : elles sont ajustées automatiquement.",
+        cursor_none="Pas de curseur perso", cursor_on="Curseur perso activé", cursor_off="Curseur perso désactivé", cursor_desc_on="{size} · appliqué en ouvrant le jeu depuis le lanceur (ou en quelques secondes s'il est déjà ouvert). {extra} curseur(s) en plus.", cursor_desc_none="Choisissez une image (de préférence un PNG transparent) et ce sera le curseur du jeu. Vous seul le voyez. Nécessite BepInEx.", cursor_hot_tip="Clic : pointe (flèche)", cursor_hot_center="Clic : centre (viseur)", cursor_hot_custom="Clic : personnalisé", cursor_pick="Choisir une image…", cursor_folder="Dossier", cursor_enable="Activer", cursor_disable="Désactiver", cursor_bad_image="Impossible de lire cette image ({err}).", mods_cursor="Curseur perso", mods_open="Ouvrir le dossier des mods", mods_reload="Actualiser", mods_empty="Votre dossier des mods est vide.",
         mods_count="{stickers} stickers · {avatars} avatars", mods_on="Activé", mods_off="Désactivé",
         mods_by="par {author}", mods_bad_images="{n} images n'ont pas pu être lues",
         mods_restart="Les changements s'appliquent la prochaine fois que vous ouvrez le jeu depuis le lanceur.",
@@ -633,10 +633,10 @@ _MODS = {
         mods_confirm_text="L'hôte utilise des stickers et des avatars personnalisés. Pour rejoindre, vous devez les télécharger : ils sont temporaires et supprimés quand vous partez. Vos propres mods sont mis en pause en attendant.",
         mods_confirm_yes="Télécharger et rejoindre", mods_confirm_no="Ne pas rejoindre"),
     "it": dict(
-        mods_btn="Mod", mods_title="Sticker e avatar (mod)",
+        mods_btn="Mod", mods_title="Mod",
         mods_desc="Aggiungi i tuoi sticker e avatar. Sono spazi nuovi: quelli del gioco non vengono mai modificati.",
-        mods_how="Nella cartella dei mod, crea una cartella per ogni mod con una cartella “stickers” e/o “avatars” piena di immagini (PNG, JPG…). Va bene qualsiasi dimensione: vengono adattate da sole.",
-        cursor_none="Nessun cursore personalizzato", cursor_on="Cursore personalizzato attivo", cursor_off="Cursore personalizzato disattivato", cursor_desc_on="{size} · si applica aprendo il gioco dal launcher (o in pochi secondi se è già aperto). {extra} cursore/i extra.", cursor_desc_none="Scegli un'immagine (meglio un PNG trasparente) e diventerà il cursore del gioco. Lo vedi solo tu. Serve BepInEx.", cursor_hot_tip="Clic: punta (freccia)", cursor_hot_center="Clic: centro (mirino)", cursor_hot_custom="Clic: personalizzato", cursor_pick="Scegli immagine…", cursor_folder="Cartella", cursor_enable="Attiva", cursor_disable="Disattiva", cursor_bad_image="Impossibile leggere l'immagine ({err}).", mods_cursor="Cursore personalizzato", mods_open="Apri la cartella dei mod", mods_reload="Ricarica", mods_empty="Non hai ancora nessun mod.",
+        mods_how_stickers="Metti le immagini dei tuoi sticker (PNG, JPG…) nella cartella “stickers” della cartella dei mod. Si aggiungono agli sticker del gioco. Va bene qualsiasi dimensione: vengono adattate da sole.", mods_how_avatars="Metti le immagini dei tuoi avatar (PNG, JPG…) nella cartella “avatars” della cartella dei mod. Si aggiungono agli avatar del gioco, da usare come immagine del profilo. Va bene qualsiasi dimensione: vengono adattate da sole.",
+        cursor_none="Nessun cursore personalizzato", cursor_on="Cursore personalizzato attivo", cursor_off="Cursore personalizzato disattivato", cursor_desc_on="{size} · si applica aprendo il gioco dal launcher (o in pochi secondi se è già aperto). {extra} cursore/i extra.", cursor_desc_none="Scegli un'immagine (meglio un PNG trasparente) e diventerà il cursore del gioco. Lo vedi solo tu. Serve BepInEx.", cursor_hot_tip="Clic: punta (freccia)", cursor_hot_center="Clic: centro (mirino)", cursor_hot_custom="Clic: personalizzato", cursor_pick="Scegli immagine…", cursor_folder="Cartella", cursor_enable="Attiva", cursor_disable="Disattiva", cursor_bad_image="Impossibile leggere l'immagine ({err}).", mods_cursor="Cursore personalizzato", mods_open="Apri la cartella dei mod", mods_reload="Ricarica", mods_empty="La tua cartella dei mod è vuota.",
         mods_count="{stickers} sticker · {avatars} avatar", mods_on="Attivo", mods_off="Disattivato",
         mods_by="di {author}", mods_bad_images="{n} immagini non sono leggibili",
         mods_restart="Le modifiche si applicano la prossima volta che apri il gioco dal launcher.",
@@ -650,10 +650,10 @@ _MODS = {
         mods_confirm_text="L'host usa sticker e avatar personalizzati. Per entrare devi scaricarli: sono temporanei e vengono eliminati quando esci. Nel frattempo i tuoi mod restano in pausa.",
         mods_confirm_yes="Scarica ed entra", mods_confirm_no="Non entrare"),
     "de": dict(
-        mods_btn="Mods", mods_title="Sticker und Avatare (Mods)",
+        mods_btn="Mods", mods_title="Mods",
         mods_desc="Füge eigene Sticker und Avatare hinzu. Es sind neue Plätze: Die des Spiels werden nie verändert.",
-        mods_how="Lege im Mod-Ordner pro Mod einen Ordner an, mit einem Ordner „stickers“ und/oder „avatars“ voller Bilder (PNG, JPG…). Jede Größe funktioniert: Sie werden automatisch angepasst.",
-        cursor_none="Kein eigener Cursor", cursor_on="Eigener Cursor an", cursor_off="Eigener Cursor aus", cursor_desc_on="{size} · wird beim Start des Spiels über den Launcher angewendet (oder in Sekunden, wenn es schon läuft). {extra} weitere Cursor.", cursor_desc_none="Wähle ein Bild (am besten ein transparentes PNG) und es wird zum Cursor des Spiels. Nur du siehst ihn. Braucht BepInEx.", cursor_hot_tip="Klick: Spitze (Pfeil)", cursor_hot_center="Klick: Mitte (Fadenkreuz)", cursor_hot_custom="Klick: eigener", cursor_pick="Bild wählen…", cursor_folder="Ordner", cursor_enable="Einschalten", cursor_disable="Ausschalten", cursor_bad_image="Das Bild kann nicht gelesen werden ({err}).", mods_cursor="Eigener Cursor", mods_open="Mod-Ordner öffnen", mods_reload="Neu laden", mods_empty="Du hast noch keine Mods.",
+        mods_how_stickers="Lege deine Sticker-Bilder (PNG, JPG…) in den Ordner „stickers“ im Mod-Ordner. Sie kommen zu den Stickern des Spiels dazu. Jede Größe funktioniert: Sie werden automatisch angepasst.", mods_how_avatars="Lege deine Avatar-Bilder (PNG, JPG…) in den Ordner „avatars“ im Mod-Ordner. Sie kommen zu den Avataren des Spiels dazu, als Profilbild. Jede Größe funktioniert: Sie werden automatisch angepasst.",
+        cursor_none="Kein eigener Cursor", cursor_on="Eigener Cursor an", cursor_off="Eigener Cursor aus", cursor_desc_on="{size} · wird beim Start des Spiels über den Launcher angewendet (oder in Sekunden, wenn es schon läuft). {extra} weitere Cursor.", cursor_desc_none="Wähle ein Bild (am besten ein transparentes PNG) und es wird zum Cursor des Spiels. Nur du siehst ihn. Braucht BepInEx.", cursor_hot_tip="Klick: Spitze (Pfeil)", cursor_hot_center="Klick: Mitte (Fadenkreuz)", cursor_hot_custom="Klick: eigener", cursor_pick="Bild wählen…", cursor_folder="Ordner", cursor_enable="Einschalten", cursor_disable="Ausschalten", cursor_bad_image="Das Bild kann nicht gelesen werden ({err}).", mods_cursor="Eigener Cursor", mods_open="Mod-Ordner öffnen", mods_reload="Neu laden", mods_empty="Dein Mod-Ordner ist leer.",
         mods_count="{stickers} Sticker · {avatars} Avatare", mods_on="An", mods_off="Aus",
         mods_by="von {author}", mods_bad_images="{n} Bilder konnten nicht gelesen werden",
         mods_restart="Änderungen gelten ab dem nächsten Spielstart über den Launcher.",
@@ -667,10 +667,10 @@ _MODS = {
         mods_confirm_text="Der Host nutzt eigene Sticker und Avatare. Zum Beitreten musst du sie herunterladen: Sie sind temporär und werden beim Verlassen gelöscht. Deine eigenen Mods pausieren solange.",
         mods_confirm_yes="Herunterladen und beitreten", mods_confirm_no="Nicht beitreten"),
     "pt": dict(
-        mods_btn="Mods", mods_title="Stickers e avatares (mods)",
+        mods_btn="Mods", mods_title="Mods",
         mods_desc="Adicione seus próprios stickers e avatares. São espaços novos: os do jogo nunca são alterados.",
-        mods_how="Na pasta de mods, crie uma pasta para cada mod com uma pasta “stickers” e/ou “avatars” cheia de imagens (PNG, JPG…). Qualquer tamanho serve: elas são ajustadas sozinhas.",
-        cursor_none="Sem cursor próprio", cursor_on="Cursor próprio ativado", cursor_off="Cursor próprio desativado", cursor_desc_on="{size} · aplicado ao abrir o jogo pelo lançador (ou em segundos se já estiver aberto). {extra} cursor(es) extra.", cursor_desc_none="Escolha uma imagem (de preferência um PNG transparente) e ela será o cursor do jogo. Só você vê. Precisa do BepInEx.", cursor_hot_tip="Clique: ponta (seta)", cursor_hot_center="Clique: centro (mira)", cursor_hot_custom="Clique: personalizado", cursor_pick="Escolher imagem…", cursor_folder="Pasta", cursor_enable="Ativar", cursor_disable="Desativar", cursor_bad_image="Não foi possível ler a imagem ({err}).", mods_cursor="Cursor próprio", mods_open="Abrir pasta de mods", mods_reload="Recarregar", mods_empty="Você ainda não tem mods.",
+        mods_how_stickers="Coloque as imagens dos seus stickers (PNG, JPG…) na pasta “stickers” da pasta de mods. Elas se somam aos stickers do jogo. Qualquer tamanho serve: elas são ajustadas sozinhas.", mods_how_avatars="Coloque as imagens dos seus avatares (PNG, JPG…) na pasta “avatars” da pasta de mods. Elas se somam aos avatares do jogo, para usar como foto de perfil. Qualquer tamanho serve: elas são ajustadas sozinhas.",
+        cursor_none="Sem cursor próprio", cursor_on="Cursor próprio ativado", cursor_off="Cursor próprio desativado", cursor_desc_on="{size} · aplicado ao abrir o jogo pelo lançador (ou em segundos se já estiver aberto). {extra} cursor(es) extra.", cursor_desc_none="Escolha uma imagem (de preferência um PNG transparente) e ela será o cursor do jogo. Só você vê. Precisa do BepInEx.", cursor_hot_tip="Clique: ponta (seta)", cursor_hot_center="Clique: centro (mira)", cursor_hot_custom="Clique: personalizado", cursor_pick="Escolher imagem…", cursor_folder="Pasta", cursor_enable="Ativar", cursor_disable="Desativar", cursor_bad_image="Não foi possível ler a imagem ({err}).", mods_cursor="Cursor próprio", mods_open="Abrir pasta de mods", mods_reload="Recarregar", mods_empty="Sua pasta de mods está vazia.",
         mods_count="{stickers} stickers · {avatars} avatares", mods_on="Ativado", mods_off="Desativado",
         mods_by="de {author}", mods_bad_images="{n} imagens não puderam ser lidas",
         mods_restart="As mudanças valem a partir da próxima vez que abrir o jogo pelo launcher.",
@@ -684,10 +684,10 @@ _MODS = {
         mods_confirm_text="O anfitrião usa stickers e avatares personalizados. Para entrar, você precisa baixá-los: são temporários e apagados quando você sai. Enquanto isso, seus mods ficam pausados.",
         mods_confirm_yes="Baixar e entrar", mods_confirm_no="Não entrar"),
     "ru": dict(
-        mods_btn="Моды", mods_title="Стикеры и аватары (моды)",
+        mods_btn="Моды", mods_title="Моды",
         mods_desc="Добавляйте свои стикеры и аватары. Это новые слоты: игровые никогда не меняются.",
-        mods_how="В папке модов создайте по папке на каждый мод, а в ней папку «stickers» и/или «avatars» с картинками (PNG, JPG…). Подойдёт любой размер: картинки подгоняются сами.",
-        cursor_none="Свой курсор не задан", cursor_on="Свой курсор включён", cursor_off="Свой курсор выключен", cursor_desc_on="{size} · применяется при запуске игры из лаунчера (или через пару секунд, если она уже открыта). Доп. курсоров: {extra}.", cursor_desc_none="Выберите картинку (лучше PNG с прозрачностью), и она станет курсором игры. Видите только вы. Нужен BepInEx.", cursor_hot_tip="Клик: кончик (стрелка)", cursor_hot_center="Клик: центр (прицел)", cursor_hot_custom="Клик: свой", cursor_pick="Выбрать картинку…", cursor_folder="Папка", cursor_enable="Включить", cursor_disable="Выключить", cursor_bad_image="Не удаётся прочитать картинку ({err}).", mods_cursor="Свой курсор", mods_open="Открыть папку модов", mods_reload="Обновить", mods_empty="У вас пока нет модов.",
+        mods_how_stickers="Положите картинки стикеров (PNG, JPG…) в папку «stickers» в папке модов. Они добавятся к стикерам игры. Подойдёт любой размер: картинки подгоняются сами.", mods_how_avatars="Положите картинки аватаров (PNG, JPG…) в папку «avatars» в папке модов. Они добавятся к аватарам игры, для фото профиля. Подойдёт любой размер: картинки подгоняются сами.",
+        cursor_none="Свой курсор не задан", cursor_on="Свой курсор включён", cursor_off="Свой курсор выключен", cursor_desc_on="{size} · применяется при запуске игры из лаунчера (или через пару секунд, если она уже открыта). Доп. курсоров: {extra}.", cursor_desc_none="Выберите картинку (лучше PNG с прозрачностью), и она станет курсором игры. Видите только вы. Нужен BepInEx.", cursor_hot_tip="Клик: кончик (стрелка)", cursor_hot_center="Клик: центр (прицел)", cursor_hot_custom="Клик: свой", cursor_pick="Выбрать картинку…", cursor_folder="Папка", cursor_enable="Включить", cursor_disable="Выключить", cursor_bad_image="Не удаётся прочитать картинку ({err}).", mods_cursor="Свой курсор", mods_open="Открыть папку модов", mods_reload="Обновить", mods_empty="Папка модов пуста.",
         mods_count="Стикеры: {stickers} · аватары: {avatars}", mods_on="Вкл.", mods_off="Выкл.",
         mods_by="автор: {author}", mods_bad_images="Не удалось прочитать изображений: {n}",
         mods_restart="Изменения вступят в силу при следующем запуске игры из лаунчера.",
@@ -701,10 +701,10 @@ _MODS = {
         mods_confirm_text="Хост использует свои стикеры и аватары. Чтобы присоединиться, их нужно скачать: они временные и удаляются, когда вы выходите. Ваши моды пока будут приостановлены.",
         mods_confirm_yes="Скачать и войти", mods_confirm_no="Не входить"),
     "ja": dict(
-        mods_btn="MOD", mods_title="スタンプとアバター（MOD）",
+        mods_btn="MOD", mods_title="MOD",
         mods_desc="自分だけのスタンプやアバターを追加できます。新しい枠として追加されるので、ゲーム本来のものは一切変更されません。",
-        mods_how="MODフォルダの中にMODごとのフォルダを作り、その中に画像（PNG、JPGなど）を入れた「stickers」または「avatars」フォルダを置いてください。サイズは自動で調整されます。",
-        cursor_none="カスタムカーソルなし", cursor_on="カスタムカーソル：オン", cursor_off="カスタムカーソル：オフ", cursor_desc_on="{size} · ランチャーからゲームを開くと適用されます（起動中なら数秒で反映）。追加カーソル：{extra}", cursor_desc_none="画像（透過PNGがおすすめ）を選ぶとゲームのカーソルになります。自分にだけ表示されます。BepInExが必要です。", cursor_hot_tip="クリック位置：先端（矢印）", cursor_hot_center="クリック位置：中央（照準）", cursor_hot_custom="クリック位置：カスタム", cursor_pick="画像を選ぶ…", cursor_folder="フォルダ", cursor_enable="オンにする", cursor_disable="オフにする", cursor_bad_image="画像を読み込めません（{err}）。", mods_cursor="カーソル変更", mods_open="MODフォルダを開く", mods_reload="再読み込み", mods_empty="まだMODがありません。",
+        mods_how_stickers="スタンプの画像（PNG、JPGなど）をMODフォルダの中の「stickers」フォルダに入れてください。ゲームのスタンプに追加されます。サイズは自動で調整されます。", mods_how_avatars="アバターの画像（PNG、JPGなど）をMODフォルダの中の「avatars」フォルダに入れてください。ゲームのアバターに追加され、プロフィール画像に使えます。サイズは自動で調整されます。",
+        cursor_none="カスタムカーソルなし", cursor_on="カスタムカーソル：オン", cursor_off="カスタムカーソル：オフ", cursor_desc_on="{size} · ランチャーからゲームを開くと適用されます（起動中なら数秒で反映）。追加カーソル：{extra}", cursor_desc_none="画像（透過PNGがおすすめ）を選ぶとゲームのカーソルになります。自分にだけ表示されます。BepInExが必要です。", cursor_hot_tip="クリック位置：先端（矢印）", cursor_hot_center="クリック位置：中央（照準）", cursor_hot_custom="クリック位置：カスタム", cursor_pick="画像を選ぶ…", cursor_folder="フォルダ", cursor_enable="オンにする", cursor_disable="オフにする", cursor_bad_image="画像を読み込めません（{err}）。", mods_cursor="カーソル変更", mods_open="MODフォルダを開く", mods_reload="再読み込み", mods_empty="MODフォルダは空です。",
         mods_count="スタンプ {stickers} · アバター {avatars}", mods_on="オン", mods_off="オフ",
         mods_by="作者：{author}", mods_bad_images="{n} 枚の画像を読み込めませんでした",
         mods_restart="変更は次にランチャーからゲームを起動したときに反映されます。",
@@ -718,10 +718,10 @@ _MODS = {
         mods_confirm_text="ホストはオリジナルのスタンプとアバターを使用しています。参加するにはダウンロードが必要です。これらは一時的なもので、退出すると削除されます。その間、あなたのMODは一時停止されます。",
         mods_confirm_yes="ダウンロードして参加", mods_confirm_no="参加しない"),
     "ko": dict(
-        mods_btn="모드", mods_title="스탬프와 아바타 (모드)",
+        mods_btn="모드", mods_title="모드",
         mods_desc="나만의 스탬프와 아바타를 추가하세요. 새 슬롯으로 추가되므로 게임 원래의 것은 절대 바뀌지 않습니다.",
-        mods_how="모드 폴더 안에 모드마다 폴더를 만들고, 그 안에 이미지(PNG, JPG 등)를 넣은 “stickers” 또는 “avatars” 폴더를 두세요. 크기는 자동으로 맞춰집니다.",
-        cursor_none="사용자 커서 없음", cursor_on="사용자 커서 켜짐", cursor_off="사용자 커서 꺼짐", cursor_desc_on="{size} · 런처에서 게임을 열면 적용됩니다(이미 열려 있으면 몇 초 안에). 추가 커서 {extra}개.", cursor_desc_none="이미지(투명 PNG 권장)를 고르면 게임 커서가 됩니다. 나만 보입니다. BepInEx가 필요합니다.", cursor_hot_tip="클릭: 끝(화살표)", cursor_hot_center="클릭: 가운데(조준)", cursor_hot_custom="클릭: 사용자 지정", cursor_pick="이미지 선택…", cursor_folder="폴더", cursor_enable="켜기", cursor_disable="끄기", cursor_bad_image="이미지를 읽을 수 없습니다 ({err}).", mods_cursor="커서 변경", mods_open="모드 폴더 열기", mods_reload="새로고침", mods_empty="아직 모드가 없습니다.",
+        mods_how_stickers="스탬프 이미지(PNG, JPG 등)를 모드 폴더 안의 “stickers” 폴더에 넣으세요. 게임의 스탬프에 추가됩니다. 크기는 자동으로 맞춰집니다.", mods_how_avatars="아바타 이미지(PNG, JPG 등)를 모드 폴더 안의 “avatars” 폴더에 넣으세요. 게임의 아바타에 추가되어 프로필 이미지로 쓸 수 있습니다. 크기는 자동으로 맞춰집니다.",
+        cursor_none="사용자 커서 없음", cursor_on="사용자 커서 켜짐", cursor_off="사용자 커서 꺼짐", cursor_desc_on="{size} · 런처에서 게임을 열면 적용됩니다(이미 열려 있으면 몇 초 안에). 추가 커서 {extra}개.", cursor_desc_none="이미지(투명 PNG 권장)를 고르면 게임 커서가 됩니다. 나만 보입니다. BepInEx가 필요합니다.", cursor_hot_tip="클릭: 끝(화살표)", cursor_hot_center="클릭: 가운데(조준)", cursor_hot_custom="클릭: 사용자 지정", cursor_pick="이미지 선택…", cursor_folder="폴더", cursor_enable="켜기", cursor_disable="끄기", cursor_bad_image="이미지를 읽을 수 없습니다 ({err}).", mods_cursor="커서 변경", mods_open="모드 폴더 열기", mods_reload="새로고침", mods_empty="모드 폴더가 비어 있습니다.",
         mods_count="스탬프 {stickers} · 아바타 {avatars}", mods_on="켜짐", mods_off="꺼짐",
         mods_by="제작: {author}", mods_bad_images="이미지 {n}개를 읽지 못했습니다",
         mods_restart="변경 사항은 다음에 런처로 게임을 열 때 적용됩니다.",
@@ -735,10 +735,10 @@ _MODS = {
         mods_confirm_text="호스트가 커스텀 스탬프와 아바타를 사용합니다. 참가하려면 내려받아야 하며, 임시 파일이라 나가면 삭제됩니다. 그동안 내 모드는 일시 중지됩니다.",
         mods_confirm_yes="내려받고 참가", mods_confirm_no="참가 안 함"),
     "zh-CN": dict(
-        mods_btn="模组", mods_title="贴图与头像（模组）",
+        mods_btn="模组", mods_title="模组",
         mods_desc="添加你自己的贴图和头像。它们是新增的栏位，游戏原有的内容永远不会被改动。",
-        mods_how="在模组文件夹里为每个模组建一个文件夹，里面放一个装满图片（PNG、JPG 等）的“stickers”和/或“avatars”文件夹。任何尺寸都可以，会自动调整。",
-        cursor_none="未设置自定义光标", cursor_on="自定义光标：开", cursor_off="自定义光标：关", cursor_desc_on="{size} · 从启动器打开游戏时生效（若游戏已打开，几秒内生效）。额外光标：{extra} 个。", cursor_desc_none="选择一张图片（最好是透明 PNG），它就会成为游戏光标。只有你能看到。需要 BepInEx。", cursor_hot_tip="点击点：尖端（箭头）", cursor_hot_center="点击点：中心（准星）", cursor_hot_custom="点击点：自定义", cursor_pick="选择图片…", cursor_folder="文件夹", cursor_enable="开启", cursor_disable="关闭", cursor_bad_image="无法读取该图片（{err}）。", mods_cursor="自定义光标", mods_open="打开模组文件夹", mods_reload="重新加载", mods_empty="你还没有模组。",
+        mods_how_stickers="把贴图图片（PNG、JPG 等）放进模组文件夹里的“stickers”文件夹。它们会加入游戏的贴图中。任何尺寸都可以，会自动调整。", mods_how_avatars="把头像图片（PNG、JPG 等）放进模组文件夹里的“avatars”文件夹。它们会加入游戏的头像中，可用作个人资料图片。任何尺寸都可以，会自动调整。",
+        cursor_none="未设置自定义光标", cursor_on="自定义光标：开", cursor_off="自定义光标：关", cursor_desc_on="{size} · 从启动器打开游戏时生效（若游戏已打开，几秒内生效）。额外光标：{extra} 个。", cursor_desc_none="选择一张图片（最好是透明 PNG），它就会成为游戏光标。只有你能看到。需要 BepInEx。", cursor_hot_tip="点击点：尖端（箭头）", cursor_hot_center="点击点：中心（准星）", cursor_hot_custom="点击点：自定义", cursor_pick="选择图片…", cursor_folder="文件夹", cursor_enable="开启", cursor_disable="关闭", cursor_bad_image="无法读取该图片（{err}）。", mods_cursor="自定义光标", mods_open="打开模组文件夹", mods_reload="重新加载", mods_empty="你的模组文件夹是空的。",
         mods_count="贴图 {stickers} · 头像 {avatars}", mods_on="已启用", mods_off="已停用",
         mods_by="作者：{author}", mods_bad_images="有 {n} 张图片无法读取",
         mods_restart="更改会在下次从启动器打开游戏时生效。",
@@ -752,10 +752,10 @@ _MODS = {
         mods_confirm_text="房主使用了自定义贴图和头像。要加入就需要下载它们：这些是临时文件，离开后会被删除。在此期间你自己的模组会暂停。",
         mods_confirm_yes="下载并加入", mods_confirm_no="不加入"),
     "zh-TW": dict(
-        mods_btn="模組", mods_title="貼圖與頭像（模組）",
+        mods_btn="模組", mods_title="模組",
         mods_desc="加入你自己的貼圖和頭像。它們是新增的欄位，遊戲原有的內容永遠不會被更動。",
-        mods_how="在模組資料夾裡為每個模組建立一個資料夾，裡面放一個裝滿圖片（PNG、JPG 等）的「stickers」和／或「avatars」資料夾。任何尺寸都可以，會自動調整。",
-        cursor_none="未設定自訂游標", cursor_on="自訂游標：開", cursor_off="自訂游標：關", cursor_desc_on="{size} · 從啟動器開啟遊戲時生效（若遊戲已開啟，幾秒內生效）。額外游標：{extra} 個。", cursor_desc_none="選擇一張圖片（最好是透明 PNG），它就會成為遊戲游標。只有你看得到。需要 BepInEx。", cursor_hot_tip="點擊點：尖端（箭頭）", cursor_hot_center="點擊點：中心（準星）", cursor_hot_custom="點擊點：自訂", cursor_pick="選擇圖片…", cursor_folder="資料夾", cursor_enable="開啟", cursor_disable="關閉", cursor_bad_image="無法讀取該圖片（{err}）。", mods_cursor="自訂游標", mods_open="開啟模組資料夾", mods_reload="重新載入", mods_empty="你還沒有模組。",
+        mods_how_stickers="把貼圖圖片（PNG、JPG 等）放進模組資料夾裡的「stickers」資料夾。它們會加入遊戲的貼圖中。任何尺寸都可以，會自動調整。", mods_how_avatars="把頭像圖片（PNG、JPG 等）放進模組資料夾裡的「avatars」資料夾。它們會加入遊戲的頭像中，可用作個人資料圖片。任何尺寸都可以，會自動調整。",
+        cursor_none="未設定自訂游標", cursor_on="自訂游標：開", cursor_off="自訂游標：關", cursor_desc_on="{size} · 從啟動器開啟遊戲時生效（若遊戲已開啟，幾秒內生效）。額外游標：{extra} 個。", cursor_desc_none="選擇一張圖片（最好是透明 PNG），它就會成為遊戲游標。只有你看得到。需要 BepInEx。", cursor_hot_tip="點擊點：尖端（箭頭）", cursor_hot_center="點擊點：中心（準星）", cursor_hot_custom="點擊點：自訂", cursor_pick="選擇圖片…", cursor_folder="資料夾", cursor_enable="開啟", cursor_disable="關閉", cursor_bad_image="無法讀取該圖片（{err}）。", mods_cursor="自訂游標", mods_open="開啟模組資料夾", mods_reload="重新載入", mods_empty="你的模組資料夾是空的。",
         mods_count="貼圖 {stickers} · 頭像 {avatars}", mods_on="已啟用", mods_off="已停用",
         mods_by="作者：{author}", mods_bad_images="有 {n} 張圖片無法讀取",
         mods_restart="變更會在下次從啟動器開啟遊戲時生效。",
@@ -772,115 +772,115 @@ _MODS = {
 for _l, _d in _MODS.items():
     S[_l].update(_d)
 _MODS2 = {
-    "en": ("New mod", "My mod", "CRIMESIGHT Revival - mods\n\nEach folder here is a mod. Inside it:\n  stickers\\  put your sticker images here\n  avatars\\   put your avatar images here\n  mod.json   (optional) the mod's name and author\n\nPNG, JPG, WEBP... any size works: they're adjusted automatically.\nTo make another mod, use the “New mod” button in the launcher or copy a folder.\nThey're new slots: the game's own stickers and avatars are never changed.\n"),
-    "es": ("Nuevo mod", "Mi mod", "CRIMESIGHT Revival - mods\n\nCada carpeta de aquí es un mod. Dentro:\n  stickers\\  mete aquí las imágenes de tus stickers\n  avatars\\   mete aquí las imágenes de tus avatares\n  mod.json   (opcional) nombre y autor del mod\n\nPNG, JPG, WEBP... sirve cualquier tamaño: se ajustan solas.\nPara hacer otro mod, usa el botón “Nuevo mod” del lanzador o copia una carpeta.\nSon huecos nuevos: los stickers y avatares del juego no se tocan nunca.\n"),
-    "fr": ("Nouveau mod", "Mon mod", "CRIMESIGHT Revival - mods\n\nChaque dossier ici est un mod. À l'intérieur :\n  stickers\\  mettez ici les images de vos stickers\n  avatars\\   mettez ici les images de vos avatars\n  mod.json   (facultatif) nom et auteur du mod\n\nPNG, JPG, WEBP... toutes les tailles conviennent : elles sont ajustées automatiquement.\nPour créer un autre mod, utilisez le bouton « Nouveau mod » du lanceur ou copiez un dossier.\nCe sont de nouveaux emplacements : les stickers et avatars du jeu ne sont jamais modifiés.\n"),
-    "it": ("Nuovo mod", "Il mio mod", "CRIMESIGHT Revival - mod\n\nOgni cartella qui è un mod. Al suo interno:\n  stickers\\  metti qui le immagini dei tuoi sticker\n  avatars\\   metti qui le immagini dei tuoi avatar\n  mod.json   (facoltativo) nome e autore del mod\n\nPNG, JPG, WEBP... va bene qualsiasi dimensione: vengono adattate da sole.\nPer creare un altro mod, usa il pulsante “Nuovo mod” del launcher o copia una cartella.\nSono spazi nuovi: sticker e avatar del gioco non vengono mai modificati.\n"),
-    "de": ("Neuer Mod", "Mein Mod", "CRIMESIGHT Revival - Mods\n\nJeder Ordner hier ist ein Mod. Darin:\n  stickers\\  hier kommen die Bilder deiner Sticker hinein\n  avatars\\   hier kommen die Bilder deiner Avatare hinein\n  mod.json   (optional) Name und Autor des Mods\n\nPNG, JPG, WEBP... jede Größe funktioniert: Sie werden automatisch angepasst.\nFür einen weiteren Mod nutze die Schaltfläche „Neuer Mod“ im Launcher oder kopiere einen Ordner.\nEs sind neue Plätze: Die Sticker und Avatare des Spiels werden nie verändert.\n"),
-    "pt": ("Novo mod", "Meu mod", "CRIMESIGHT Revival - mods\n\nCada pasta aqui é um mod. Dentro dela:\n  stickers\\  coloque aqui as imagens dos seus stickers\n  avatars\\   coloque aqui as imagens dos seus avatares\n  mod.json   (opcional) nome e autor do mod\n\nPNG, JPG, WEBP... qualquer tamanho serve: elas são ajustadas sozinhas.\nPara criar outro mod, use o botão “Novo mod” do launcher ou copie uma pasta.\nSão espaços novos: os stickers e avatares do jogo nunca são alterados.\n"),
-    "ru": ("Новый мод", "Мой мод", "CRIMESIGHT Revival — моды\n\nКаждая папка здесь — это мод. Внутри:\n  stickers\\  сюда кладите картинки стикеров\n  avatars\\   сюда кладите картинки аватаров\n  mod.json   (необязательно) название и автор мода\n\nPNG, JPG, WEBP... подойдёт любой размер: картинки подгоняются сами.\nЧтобы сделать ещё один мод, нажмите «Новый мод» в лаунчере или скопируйте папку.\nЭто новые слоты: игровые стикеры и аватары никогда не меняются.\n"),
-    "ja": ("新しいMOD", "マイMOD", "CRIMESIGHT Revival - MOD\n\nここにあるフォルダ1つが1つのMODです。中身：\n  stickers\\  スタンプの画像をここに入れます\n  avatars\\   アバターの画像をここに入れます\n  mod.json   （任意）MODの名前と作者\n\nPNG、JPG、WEBPなど。サイズは自動で調整されます。\n別のMODを作るには、ランチャーの「新しいMOD」ボタンを使うか、フォルダをコピーしてください。\n新しい枠として追加されるので、ゲーム本来のスタンプやアバターは変更されません。\n"),
-    "ko": ("새 모드", "내 모드", "CRIMESIGHT Revival - 모드\n\n여기 있는 폴더 하나가 모드 하나입니다. 안에는:\n  stickers\\  스탬프 이미지를 여기에 넣으세요\n  avatars\\   아바타 이미지를 여기에 넣으세요\n  mod.json   (선택) 모드 이름과 제작자\n\nPNG, JPG, WEBP 등 어떤 크기든 자동으로 맞춰집니다.\n모드를 더 만들려면 런처의 “새 모드” 버튼을 누르거나 폴더를 복사하세요.\n새 슬롯으로 추가되므로 게임 원래의 스탬프와 아바타는 바뀌지 않습니다.\n"),
-    "zh-CN": ("新建模组", "我的模组", "CRIMESIGHT Revival - 模组\n\n这里的每个文件夹就是一个模组。里面有：\n  stickers\\  把贴图图片放在这里\n  avatars\\   把头像图片放在这里\n  mod.json   （可选）模组的名称和作者\n\nPNG、JPG、WEBP 等任何尺寸都可以，会自动调整。\n要再做一个模组，请使用启动器的“新建模组”按钮或复制一个文件夹。\n它们是新增的栏位，游戏原有的贴图和头像不会被改动。\n"),
-    "zh-TW": ("新增模組", "我的模組", "CRIMESIGHT Revival - 模組\n\n這裡的每個資料夾就是一個模組。裡面有：\n  stickers\\  把貼圖圖片放在這裡\n  avatars\\   把頭像圖片放在這裡\n  mod.json   （選填）模組的名稱和作者\n\nPNG、JPG、WEBP 等任何尺寸都可以，會自動調整。\n要再做一個模組，請使用啟動器的「新增模組」按鈕或複製一個資料夾。\n它們是新增的欄位，遊戲原有的貼圖和頭像不會被更動。\n"),
+    "en": ("CRIMESIGHT Revival - mods\n\nThis is your mods folder:\n  stickers\\  put your sticker images here\n  avatars\\   put your avatar images here\n  mod.json   (optional) the mod's name and author\n  models\\    your 3D models (see the README.txt inside)\n  cursor\\    your own cursor\n  stages\\    your scenarios from the scenario creator\n\nPNG, JPG, WEBP... any size works: they're adjusted automatically.\nThey're added as new ones: the game's own stickers and avatars are never changed.\n"),
+    "es": ("CRIMESIGHT Revival - mods\n\nEsta carpeta es tu mod:\n  stickers\\  mete aquí las imágenes de tus stickers\n  avatars\\   mete aquí las imágenes de tus avatares\n  mod.json   (opcional) nombre y autor del mod\n  models\\    tus modelos 3D (mira el README.txt de dentro)\n  cursor\\    tu cursor propio\n  stages\\    tus escenarios del creador de escenarios\n\nPNG, JPG, WEBP... sirve cualquier tamaño: se ajustan solas.\nSon huecos nuevos: los stickers y avatares del juego no se tocan nunca.\n"),
+    "fr": ("CRIMESIGHT Revival - mods\n\nCe dossier est votre mod :\n  stickers\\  mettez ici les images de vos stickers\n  avatars\\   mettez ici les images de vos avatars\n  mod.json   (facultatif) nom et auteur du mod\n  models\\    vos modèles 3D (voir le README.txt à l'intérieur)\n  cursor\\    votre curseur\n  stages\\    vos scénarios du créateur de scénarios\n\nPNG, JPG, WEBP... toutes les tailles conviennent : elles sont ajustées automatiquement.\nCe sont de nouveaux emplacements : les stickers et avatars du jeu ne sont jamais modifiés.\n"),
+    "it": ("CRIMESIGHT Revival - mod\n\nQuesta cartella è il tuo mod:\n  stickers\\  metti qui le immagini dei tuoi sticker\n  avatars\\   metti qui le immagini dei tuoi avatar\n  mod.json   (facoltativo) nome e autore del mod\n  models\\    i tuoi modelli 3D (vedi il README.txt all'interno)\n  cursor\\    il tuo cursore\n  stages\\    i tuoi scenari del creatore di scenari\n\nPNG, JPG, WEBP... va bene qualsiasi dimensione: vengono adattate da sole.\nSono spazi nuovi: sticker e avatar del gioco non vengono mai modificati.\n"),
+    "de": ("CRIMESIGHT Revival - Mods\n\nDieser Ordner ist dein Mod:\n  stickers\\  hier kommen die Bilder deiner Sticker hinein\n  avatars\\   hier kommen die Bilder deiner Avatare hinein\n  mod.json   (optional) Name und Autor des Mods\n  models\\    deine 3D-Modelle (siehe die README.txt darin)\n  cursor\\    dein eigener Mauszeiger\n  stages\\    deine Szenarien aus dem Szenario-Editor\n\nPNG, JPG, WEBP... jede Größe funktioniert: Sie werden automatisch angepasst.\nEs sind neue Plätze: Die Sticker und Avatare des Spiels werden nie verändert.\n"),
+    "pt": ("CRIMESIGHT Revival - mods\n\nEsta pasta é o seu mod:\n  stickers\\  coloque aqui as imagens dos seus stickers\n  avatars\\   coloque aqui as imagens dos seus avatares\n  mod.json   (opcional) nome e autor do mod\n  models\\    seus modelos 3D (veja o README.txt dentro)\n  cursor\\    seu cursor próprio\n  stages\\    seus cenários do criador de cenários\n\nPNG, JPG, WEBP... qualquer tamanho serve: elas são ajustadas sozinhas.\nSão espaços novos: os stickers e avatares do jogo nunca são alterados.\n"),
+    "ru": ("CRIMESIGHT Revival — моды\n\nЭта папка — ваш мод:\n  stickers\\  сюда кладите картинки стикеров\n  avatars\\   сюда кладите картинки аватаров\n  mod.json   (необязательно) название и автор мода\n  models\\    ваши 3D-модели (см. README.txt внутри)\n  cursor\\    ваш курсор\n  stages\\    ваши сценарии из редактора сценариев\n\nPNG, JPG, WEBP... подойдёт любой размер: картинки подгоняются сами.\nЭто новые слоты: игровые стикеры и аватары никогда не меняются.\n"),
+    "ja": ("CRIMESIGHT Revival - MOD\n\nこのフォルダがあなたのMODです：\n  stickers\\  スタンプの画像をここに入れます\n  avatars\\   アバターの画像をここに入れます\n  mod.json   （任意）MODの名前と作者\n  models\\    3Dモデル（中の README.txt を参照）\n  cursor\\    自分のカーソル\n  stages\\    シナリオ作成ツールのシナリオ\n\nPNG、JPG、WEBPなど。サイズは自動で調整されます。\n新しい枠として追加されるので、ゲーム本来のスタンプやアバターは変更されません。\n"),
+    "ko": ("CRIMESIGHT Revival - 모드\n\n이 폴더가 내 모드입니다:\n  stickers\\  스탬프 이미지를 여기에 넣으세요\n  avatars\\   아바타 이미지를 여기에 넣으세요\n  mod.json   (선택) 모드 이름과 제작자\n  models\\    내 3D 모델 (안의 README.txt 참고)\n  cursor\\    내 커서\n  stages\\    시나리오 제작기의 시나리오\n\nPNG, JPG, WEBP 등 어떤 크기든 자동으로 맞춰집니다.\n새 슬롯으로 추가되므로 게임 원래의 스탬프와 아바타는 바뀌지 않습니다.\n"),
+    "zh-CN": ("CRIMESIGHT Revival - 模组\n\n这个文件夹就是你的模组：\n  stickers\\  把贴图图片放在这里\n  avatars\\   把头像图片放在这里\n  mod.json   （可选）模组的名称和作者\n  models\\    你的 3D 模型（见里面的 README.txt）\n  cursor\\    你的自定义光标\n  stages\\    场景编辑器里的场景\n\nPNG、JPG、WEBP 等任何尺寸都可以，会自动调整。\n它们是新增的栏位，游戏原有的贴图和头像不会被改动。\n"),
+    "zh-TW": ("CRIMESIGHT Revival - 模組\n\n這個資料夾就是你的模組：\n  stickers\\  把貼圖圖片放在這裡\n  avatars\\   把頭像圖片放在這裡\n  mod.json   （選填）模組的名稱和作者\n  models\\    你的 3D 模型（見裡面的 README.txt）\n  cursor\\    你的自訂游標\n  stages\\    場景編輯器裡的場景\n\nPNG、JPG、WEBP 等任何尺寸都可以，會自動調整。\n它們是新增的欄位，遊戲原有的貼圖和頭像不會被更動。\n"),
 }
-_ROOT = {"en": "Main folder", "es": "Carpeta principal", "fr": "Dossier principal", "it": "Cartella principale",
-         "de": "Hauptordner", "pt": "Pasta principal", "ru": "Основная папка", "ja": "メインフォルダ",
-         "ko": "기본 폴더", "zh-CN": "主文件夹", "zh-TW": "主資料夾"}
+_ROOT = {"en": "Mods", "es": "Mods", "fr": "Mods", "it": "Mod",
+         "de": "Mods", "pt": "Mods", "ru": "Моды", "ja": "MOD",
+         "ko": "모드", "zh-CN": "模组", "zh-TW": "模組"}
 for _l, _v in _ROOT.items():
     S[_l]["mods_root"] = _v
-for _l, (_new, _ex, _readme) in _MODS2.items():
-    S[_l].update(mods_new=_new, mods_example=_ex, mods_readme=_readme)
+for _l, _readme in _MODS2.items():
+    S[_l]["mods_readme"] = _readme
 
 _TEXT_HINT = {
-    "en": "Stickers show no message in the match unless you give them one with the “Messages” button (“Amras: Good night!”). A number at the start of the file name (01_) only sets the order.",
-    "es": "Los stickers no muestran ningún mensaje en la partida salvo que les pongas uno con el botón “Mensajes” (“Amras: ¡Buenas noches!”). Un número al principio del nombre del archivo (01_) solo sirve para ordenar.",
-    "fr": "Les stickers n'affichent aucun message en partie, sauf si vous leur en donnez un avec le bouton « Messages » (« Amras : Bonne nuit ! »). Un numéro au début du nom du fichier (01_) sert seulement à l'ordre.",
-    "it": "Gli sticker non mostrano nessun messaggio in partita, a meno che tu non gliene dia uno con il pulsante “Messaggi” (“Amras: Buonanotte!”). Un numero all'inizio del nome del file (01_) serve solo per l'ordine.",
-    "de": "Sticker zeigen im Spiel keine Nachricht, außer du gibst ihnen eine über die Schaltfläche „Nachrichten“ („Amras: Gute Nacht!“). Eine Zahl am Anfang des Dateinamens (01_) legt nur die Reihenfolge fest.",
-    "pt": "Os stickers não mostram nenhuma mensagem na partida, a menos que você dê uma a eles com o botão “Mensagens” (“Amras: Boa noite!”). Um número no início do nome do arquivo (01_) só serve para ordenar.",
-    "ru": "Стикеры не показывают сообщение в матче, если вы не зададите его кнопкой «Сообщения» («Amras: Спокойной ночи!»). Число в начале имени файла (01_) нужно только для порядка.",
-    "ja": "「メッセージ」ボタンで設定しない限り、スタンプは試合中にメッセージを表示しません（「Amras: おやすみ！」）。ファイル名の先頭の番号（01_）は並び順にだけ使われます。",
-    "ko": "“메시지” 버튼으로 정하지 않으면 스탬프는 게임 중에 메시지를 표시하지 않습니다(“Amras: 잘 자!”). 파일 이름 앞의 숫자(01_)는 순서에만 쓰입니다.",
-    "zh-CN": "除非用“消息”按钮设置，贴图在对局中不会显示消息（“Amras：晚安！”）。文件名开头的数字（01_）只用于排序。",
-    "zh-TW": "除非用「訊息」按鈕設定，貼圖在對局中不會顯示訊息（「Amras：晚安！」）。檔名開頭的數字（01_）只用於排序。",
+    "en": "Stickers don't show a message in the match unless you give them one with the “Messages” button. A number at the start of the file name (01_) only sets the order.",
+    "es": "Los stickers no muestran ningún mensaje en la partida salvo que les pongas uno con el botón “Mensajes”. Un número al principio del nombre del archivo (01_) solo sirve para ordenar.",
+    "fr": "Les stickers n'affichent aucun message en partie, sauf si vous leur en donnez un avec le bouton « Messages ». Un numéro au début du nom du fichier (01_) sert seulement à l'ordre.",
+    "it": "Gli sticker non mostrano nessun messaggio in partita, a meno che tu non gliene dia uno con il pulsante “Messaggi”. Un numero all'inizio del nome del file (01_) serve solo per l'ordine.",
+    "de": "Sticker zeigen im Spiel keine Nachricht, außer du gibst ihnen eine über die Schaltfläche „Nachrichten“. Eine Zahl am Anfang des Dateinamens (01_) legt nur die Reihenfolge fest.",
+    "pt": "Os stickers não mostram nenhuma mensagem na partida, a menos que você dê uma a eles com o botão “Mensagens”. Um número no início do nome do arquivo (01_) só serve para ordenar.",
+    "ru": "Стикеры не показывают сообщение в матче, если вы не зададите его кнопкой «Сообщения». Число в начале имени файла (01_) нужно только для порядка.",
+    "ja": "「メッセージ」ボタンで設定しない限り、スタンプは試合中にメッセージを表示しません。ファイル名の先頭の番号（01_）は並び順にだけ使われます。",
+    "ko": "“메시지” 버튼으로 정하지 않으면 스탬프는 게임 중에 메시지를 표시하지 않습니다. 파일 이름 앞의 숫자(01_)는 순서에만 쓰입니다.",
+    "zh-CN": "除非用“消息”按钮设置，贴图在对局中不会显示消息。文件名开头的数字（01_）只用于排序。",
+    "zh-TW": "除非用「訊息」按鈕設定，貼圖在對局中不會顯示訊息。檔名開頭的數字（01_）只用於排序。",
 }
 for _l, _v in _TEXT_HINT.items():
     S[_l]["mods_text_hint"] = _v
 
 # --- recarga en caliente con BepInEx (activada por defecto: el lanzador la instala sola) -----------------------------------------------
 _BEP = {
-    "en": dict(bep_title="Hot reload", bep_desc="With BepInEx, the official mod loader for Unity games, mod changes appear in the game without restarting it, and the custom cursor, models and custom scenarios work. The launcher downloads it from its GitHub (34 MB) by itself, and you can remove it at any time.",
-               bep_status_off="Off", bep_status_on="On", bep_status_first="On · the next game start takes about a minute (first time only)",
+    "en": dict(bep_title="Hot reload", bep_desc="BepInEx is a mod loader that shows mod changes without restarting the game and enables the custom cursor, 3D models and custom scenarios. The launcher downloads it for you (34 MB); you can remove it at any time.",
+               bep_status_off="Off", bep_status_on="On", bep_status_first="On · the game will take about a minute to start next time (first time only)",
                bep_enable="Turn on", bep_disable="Remove BepInEx", bep_installing="Downloading BepInEx… {pct}%", bep_installed="Hot reload turned on.",
                bep_removed="BepInEx removed: the game is back to normal.", bep_download_failed="Couldn't download BepInEx ({err}).",
                bep_no_plugin="This launcher doesn't include the mods plugin.", bep_busy="Close the game first.",
-               mods_live_restart="Hot reload is on: changes appear in the game by themselves (if you're in a match, when you return to the menu).",
-               mods_live_updated="Mods updated in the game.", mods_host_changed="The host changed their mods: reopen the game to see them (or turn on hot reload)."),
-    "es": dict(bep_title="Recarga en caliente", bep_desc="Con BepInEx, el cargador de mods oficial de los juegos de Unity, los cambios de mods aparecen en el juego sin reiniciarlo, y funcionan el cursor propio, los modelos y los escenarios personalizados. El lanzador lo descarga solo de su GitHub (34 MB), y puedes quitarlo cuando quieras.",
+               mods_live_restart="Hot reload is on: changes appear in the game automatically (if you're in a match, once you're back in the menu).",
+               mods_live_updated="Mods updated in the game.", mods_host_changed="The host changed their mods: restart the game to see them (or turn on hot reload)."),
+    "es": dict(bep_title="Recarga en caliente", bep_desc="BepInEx es un cargador de mods que muestra los cambios sin reiniciar el juego y activa el cursor propio, los modelos 3D y los escenarios personalizados. El lanzador lo descarga por ti (34 MB); puedes quitarlo cuando quieras.",
                bep_status_off="Desactivada", bep_status_on="Activada", bep_status_first="Activada · el próximo arranque del juego tarda un minuto (solo la primera vez)",
                bep_enable="Activar", bep_disable="Quitar BepInEx", bep_installing="Descargando BepInEx… {pct}%", bep_installed="Recarga en caliente activada.",
                bep_removed="BepInEx quitado: el juego vuelve a estar como siempre.", bep_download_failed="No se pudo descargar BepInEx ({err}).",
                bep_no_plugin="Este lanzador no trae el plugin de mods.", bep_busy="Cierra antes el juego.",
                mods_live_restart="Recarga en caliente activada: los cambios aparecen solos en el juego (si estás en una partida, al volver al menú).",
                mods_live_updated="Mods actualizados en el juego.", mods_host_changed="El anfitrión ha cambiado sus mods: vuelve a abrir el juego para verlos (o activa la recarga en caliente)."),
-    "fr": dict(bep_title="Rechargement à chaud", bep_desc="Avec BepInEx, le chargeur de mods officiel des jeux Unity, les changements de mods apparaissent en jeu sans le redémarrer, et le curseur perso, les modèles et les scénarios personnalisés fonctionnent. Le lanceur le télécharge tout seul depuis son GitHub (34 Mo), et vous pouvez le retirer à tout moment.",
+    "fr": dict(bep_title="Rechargement à chaud", bep_desc="BepInEx est un chargeur de mods qui affiche les changements sans redémarrer le jeu et active le curseur perso, les modèles 3D et les scénarios personnalisés. Le lanceur le télécharge pour vous (34 Mo) ; vous pouvez le retirer à tout moment.",
                bep_status_off="Désactivé", bep_status_on="Activé", bep_status_first="Activé · le prochain lancement du jeu prend environ une minute (la première fois seulement)",
                bep_enable="Activer", bep_disable="Retirer BepInEx", bep_installing="Téléchargement de BepInEx… {pct}%", bep_installed="Rechargement à chaud activé.",
                bep_removed="BepInEx retiré : le jeu est revenu à la normale.", bep_download_failed="Impossible de télécharger BepInEx ({err}).",
                bep_no_plugin="Ce lanceur n'inclut pas le plugin des mods.", bep_busy="Fermez d'abord le jeu.",
                mods_live_restart="Rechargement à chaud activé : les changements apparaissent seuls en jeu (en partie, au retour au menu).",
                mods_live_updated="Mods mis à jour en jeu.", mods_host_changed="L'hôte a changé ses mods : relancez le jeu pour les voir (ou activez le rechargement à chaud)."),
-    "it": dict(bep_title="Ricarica a caldo", bep_desc="Con BepInEx, il caricatore di mod ufficiale dei giochi Unity, le modifiche alle mod compaiono nel gioco senza riavviarlo, e funzionano il cursore personalizzato, i modelli e gli scenari personalizzati. Il launcher lo scarica da solo dal suo GitHub (34 MB), e puoi rimuoverlo quando vuoi.",
+    "it": dict(bep_title="Ricarica a caldo", bep_desc="BepInEx è un caricatore di mod che mostra le modifiche senza riavviare il gioco e attiva il cursore personalizzato, i modelli 3D e gli scenari personalizzati. Il launcher lo scarica per te (34 MB); puoi rimuoverlo quando vuoi.",
                bep_status_off="Disattivata", bep_status_on="Attiva", bep_status_first="Attiva · il prossimo avvio del gioco richiede circa un minuto (solo la prima volta)",
                bep_enable="Attiva", bep_disable="Rimuovi BepInEx", bep_installing="Download di BepInEx… {pct}%", bep_installed="Ricarica a caldo attivata.",
                bep_removed="BepInEx rimosso: il gioco è tornato come prima.", bep_download_failed="Impossibile scaricare BepInEx ({err}).",
                bep_no_plugin="Questo launcher non include il plugin dei mod.", bep_busy="Chiudi prima il gioco.",
                mods_live_restart="Ricarica a caldo attiva: le modifiche compaiono da sole nel gioco (se sei in partita, al ritorno al menu).",
                mods_live_updated="Mod aggiornati nel gioco.", mods_host_changed="L'host ha cambiato i suoi mod: riapri il gioco per vederli (o attiva la ricarica a caldo)."),
-    "de": dict(bep_title="Hot Reload", bep_desc="Mit BepInEx, dem offiziellen Mod-Loader für Unity-Spiele, erscheinen Mod-Änderungen im Spiel, ohne es neu zu starten, und der eigene Cursor, die Modelle und eigene Szenarien funktionieren. Der Launcher lädt es selbst von seinem GitHub herunter (34 MB), und du kannst es jederzeit entfernen.",
+    "de": dict(bep_title="Hot Reload", bep_desc="BepInEx ist ein Mod-Loader, der Änderungen ohne Neustart des Spiels anzeigt und den eigenen Cursor, 3D-Modelle und eigene Szenarien ermöglicht. Der Launcher lädt es für dich herunter (34 MB); du kannst es jederzeit entfernen.",
                bep_status_off="Aus", bep_status_on="An", bep_status_first="An · der nächste Spielstart dauert etwa eine Minute (nur beim ersten Mal)",
                bep_enable="Aktivieren", bep_disable="BepInEx entfernen", bep_installing="BepInEx wird heruntergeladen… {pct}%", bep_installed="Hot Reload aktiviert.",
                bep_removed="BepInEx entfernt: Das Spiel ist wieder wie vorher.", bep_download_failed="BepInEx konnte nicht heruntergeladen werden ({err}).",
                bep_no_plugin="Dieser Launcher enthält das Mod-Plugin nicht.", bep_busy="Schließe zuerst das Spiel.",
                mods_live_restart="Hot Reload ist an: Änderungen erscheinen von selbst im Spiel (im Match erst zurück im Menü).",
                mods_live_updated="Mods im Spiel aktualisiert.", mods_host_changed="Der Host hat seine Mods geändert: Starte das Spiel neu, um sie zu sehen (oder aktiviere Hot Reload)."),
-    "pt": dict(bep_title="Recarga instantânea", bep_desc="Com o BepInEx, o carregador de mods oficial dos jogos Unity, as mudanças de mods aparecem no jogo sem reiniciá-lo, e funcionam o cursor próprio, os modelos e os cenários personalizados. O lançador o baixa sozinho do GitHub dele (34 MB), e você pode removê-lo quando quiser.",
+    "pt": dict(bep_title="Recarga instantânea", bep_desc="BepInEx é um carregador de mods que mostra as mudanças sem reiniciar o jogo e ativa o cursor próprio, os modelos 3D e os cenários personalizados. O lançador o baixa para você (34 MB); você pode removê-lo quando quiser.",
                bep_status_off="Desativada", bep_status_on="Ativada", bep_status_first="Ativada · a próxima abertura do jogo leva cerca de um minuto (só na primeira vez)",
                bep_enable="Ativar", bep_disable="Remover BepInEx", bep_installing="Baixando o BepInEx… {pct}%", bep_installed="Recarga instantânea ativada.",
                bep_removed="BepInEx removido: o jogo voltou ao normal.", bep_download_failed="Não foi possível baixar o BepInEx ({err}).",
                bep_no_plugin="Este launcher não inclui o plugin de mods.", bep_busy="Feche o jogo primeiro.",
                mods_live_restart="Recarga instantânea ativada: as mudanças aparecem sozinhas no jogo (numa partida, ao voltar ao menu).",
                mods_live_updated="Mods atualizados no jogo.", mods_host_changed="O anfitrião mudou os mods: reabra o jogo para vê-los (ou ative a recarga instantânea)."),
-    "ru": dict(bep_title="Горячая перезагрузка", bep_desc="С BepInEx, официальным загрузчиком модов для игр на Unity, изменения модов появляются в игре без перезапуска, а также работают свой курсор, модели и свои сценарии. Лаунчер сам скачивает его с GitHub (34 МБ), и его можно удалить в любой момент.",
+    "ru": dict(bep_title="Горячая перезагрузка", bep_desc="BepInEx — загрузчик модов: изменения появляются без перезапуска игры, а также работают свой курсор, 3D-модели и свои сценарии. Лаунчер скачает его сам (34 МБ); удалить его можно в любой момент.",
                bep_status_off="Выкл.", bep_status_on="Вкл.", bep_status_first="Вкл. · следующий запуск игры займёт около минуты (только в первый раз)",
                bep_enable="Включить", bep_disable="Удалить BepInEx", bep_installing="Скачивание BepInEx… {pct}%", bep_installed="Горячая перезагрузка включена.",
                bep_removed="BepInEx удалён: игра снова как обычно.", bep_download_failed="Не удалось скачать BepInEx ({err}).",
                bep_no_plugin="В этом лаунчере нет плагина модов.", bep_busy="Сначала закройте игру.",
                mods_live_restart="Горячая перезагрузка включена: изменения появляются в игре сами (во время матча — после возврата в меню).",
                mods_live_updated="Моды в игре обновлены.", mods_host_changed="Хост изменил моды: перезапустите игру, чтобы их увидеть (или включите горячую перезагрузку)."),
-    "ja": dict(bep_title="ホットリロード", bep_desc="Unityゲーム公式のMODローダーBepInExを使うと、MODの変更がゲームを再起動せずに反映され、カスタムカーソル・モデル・カスタムステージも使えます。ランチャーがGitHubから自動でダウンロードします（34 MB）。いつでも削除できます。",
+    "ja": dict(bep_title="ホットリロード", bep_desc="BepInExはMODローダーです。ゲームを再起動せずにMODの変更が反映され、カスタムカーソル・3Dモデル・カスタムステージが使えます。ランチャーが自動でダウンロードします（34 MB）。いつでも削除できます。",
                bep_status_off="オフ", bep_status_on="オン", bep_status_first="オン · 次回のゲーム起動は1分ほどかかります（初回のみ）",
                bep_enable="オンにする", bep_disable="BepInExを削除", bep_installing="BepInExをダウンロード中… {pct}%", bep_installed="ホットリロードをオンにしました。",
                bep_removed="BepInExを削除しました。ゲームは元どおりです。", bep_download_failed="BepInExをダウンロードできませんでした（{err}）。",
                bep_no_plugin="このランチャーにはMODプラグインが含まれていません。", bep_busy="先にゲームを閉じてください。",
                mods_live_restart="ホットリロードがオンです：変更は自動でゲームに反映されます（試合中はメニューに戻ったとき）。",
                mods_live_updated="ゲーム内のMODを更新しました。", mods_host_changed="ホストがMODを変更しました。見るにはゲームを再起動してください（またはホットリロードをオンに）。"),
-    "ko": dict(bep_title="실시간 반영", bep_desc="Unity 게임용 공식 모드 로더 BepInEx가 있으면 게임을 다시 시작하지 않아도 모드 변경이 반영되고, 사용자 커서·모델·커스텀 스테이지도 작동합니다. 런처가 GitHub에서 자동으로 내려받으며(34 MB), 언제든지 제거할 수 있습니다.",
+    "ko": dict(bep_title="실시간 반영", bep_desc="BepInEx는 모드 로더로, 게임을 다시 시작하지 않아도 변경 사항이 반영되고 사용자 커서·3D 모델·커스텀 스테이지를 쓸 수 있습니다. 런처가 대신 내려받으며(34 MB), 언제든지 제거할 수 있습니다.",
                bep_status_off="꺼짐", bep_status_on="켜짐", bep_status_first="켜짐 · 다음 게임 실행은 1분 정도 걸립니다(처음 한 번만)",
                bep_enable="켜기", bep_disable="BepInEx 제거", bep_installing="BepInEx 내려받는 중… {pct}%", bep_installed="실시간 반영을 켰습니다.",
                bep_removed="BepInEx를 제거했습니다. 게임이 원래대로 돌아왔습니다.", bep_download_failed="BepInEx를 내려받지 못했습니다 ({err}).",
                bep_no_plugin="이 런처에는 모드 플러그인이 없습니다.", bep_busy="먼저 게임을 닫으세요.",
                mods_live_restart="실시간 반영이 켜져 있습니다: 변경 사항이 게임에 자동으로 나타납니다(게임 중이면 메뉴로 돌아갈 때).",
                mods_live_updated="게임의 모드를 업데이트했습니다.", mods_host_changed="호스트가 모드를 바꿨습니다: 보려면 게임을 다시 여세요(또는 실시간 반영을 켜세요)."),
-    "zh-CN": dict(bep_title="热重载", bep_desc="有了 Unity 游戏的官方模组加载器 BepInEx，模组的更改无需重启游戏即可生效，自定义光标、模型和自定义场景也能使用。启动器会自动从其 GitHub 下载（34 MB），你随时可以移除。",
+    "zh-CN": dict(bep_title="热重载", bep_desc="BepInEx 是模组加载器：无需重启游戏即可看到模组更改，并支持自定义光标、3D 模型和自定义场景。启动器会自动下载（34 MB），可随时移除。",
                bep_status_off="未开启", bep_status_on="已开启", bep_status_first="已开启 · 下次启动游戏大约需要一分钟（仅第一次）",
                bep_enable="开启", bep_disable="移除 BepInEx", bep_installing="正在下载 BepInEx… {pct}%", bep_installed="已开启热重载。",
                bep_removed="已移除 BepInEx：游戏恢复原样。", bep_download_failed="无法下载 BepInEx（{err}）。",
                bep_no_plugin="此启动器未包含模组插件。", bep_busy="请先关闭游戏。",
                mods_live_restart="已开启热重载：修改会自动出现在游戏中（对局中则在回到菜单时）。",
                mods_live_updated="游戏中的模组已更新。", mods_host_changed="房主更改了模组：重新打开游戏即可看到（或开启热重载）。"),
-    "zh-TW": dict(bep_title="熱重載", bep_desc="有了 Unity 遊戲的官方模組載入器 BepInEx，模組的變更無需重啟遊戲即可生效，自訂游標、模型和自訂場景也能使用。啟動器會自動從其 GitHub 下載（34 MB），你隨時可以移除。",
+    "zh-TW": dict(bep_title="熱重載", bep_desc="BepInEx 是模組載入器：無需重啟遊戲即可看到模組變更，並支援自訂游標、3D 模型和自訂場景。啟動器會自動下載（34 MB），可隨時移除。",
                bep_status_off="未開啟", bep_status_on="已開啟", bep_status_first="已開啟 · 下次啟動遊戲大約需要一分鐘（僅第一次）",
                bep_enable="開啟", bep_disable="移除 BepInEx", bep_installing="正在下載 BepInEx… {pct}%", bep_installed="已開啟熱重載。",
                bep_removed="已移除 BepInEx：遊戲恢復原樣。", bep_download_failed="無法下載 BepInEx（{err}）。",
@@ -893,8 +893,8 @@ for _l, _d in _BEP.items():
 
 # Instalacion automatica de BepInEx al abrir el lanzador (registro)
 _BEP_AUTO = {
-    "en": dict(bep_installing_log="Installing BepInEx, the mod loader (34 MB download, only the first time)…",
-               bep_ready_log="BepInEx installed. The next game start takes about a minute (only the first time).",
+    "en": dict(bep_installing_log="Installing BepInEx, the mod loader (34 MB download, first time only)…",
+               bep_ready_log="BepInEx installed. The game will take about a minute to start next time (first time only).",
                bep_failed_log="{err} You can still play without it; the launcher will try again next time.",
                bep_wait="Waiting for BepInEx to finish installing…",
                bep_setup="Setting up BepInEx…"),
@@ -953,7 +953,7 @@ for _l, _d in _BEP_AUTO.items():
     S[_l].update(_d)
 
 _TXT = {
-    "en": ("Messages", "Sticker messages", "What appears in the match when you send each sticker. You can use any character: ¿?¡!:\"*… Leave it empty for no message.", "Saved"),
+    "en": ("Messages", "Sticker messages", "The message shown in the match when you send each sticker. Any character works: ¿?¡!:\"*… Leave it empty for no message.", "Saved"),
     "es": ("Mensajes", "Mensajes de los stickers", "Lo que sale en la partida al mandar cada sticker. Puedes usar cualquier carácter: ¿?¡!:\"*… Si lo dejas vacío, no sale ningún mensaje.", "Guardado"),
     "fr": ("Messages", "Messages des stickers", "Ce qui s'affiche en partie quand vous envoyez chaque sticker. Tous les caractères sont permis : ¿?¡!:\"*… Laissez vide pour n'afficher aucun message.", "Enregistré"),
     "it": ("Messaggi", "Messaggi degli sticker", "Ciò che compare in partita quando invii ogni sticker. Puoi usare qualsiasi carattere: ¿?¡!:\"*… Se lo lasci vuoto, non compare nessun messaggio.", "Salvato"),
@@ -986,7 +986,7 @@ for _l, (_d, _tip, _none) in _MEANS.items():
     S[_l].update(mods_means_desc=_d, mods_means_tip=_tip, mods_means_none=_none)
 
 _MANUAL = {
-    "en": "You can download it yourself from {url} and put the file in {folder}; then press “Turn on” again.",
+    "en": "You can download it yourself from {url} and put the file in {folder}, then press “Turn on” again.",
     "es": "Puedes descargarlo tú desde {url} y poner el archivo en {folder}; después pulsa «Activar» otra vez.",
     "fr": "Vous pouvez le télécharger vous-même depuis {url} et placer le fichier dans {folder}, puis appuyer de nouveau sur « Activer ».",
     "it": "Puoi scaricarlo tu da {url} e mettere il file in {folder}; poi premi di nuovo “Attiva”.",
@@ -1003,16 +1003,16 @@ for _l, _v in _MANUAL.items():
 
 # --- mods de los jugadores que se unen ---------------------------------------------------------
 _OFFER = {
-    "en": dict(mods_offer_title="{player} brings mods",
-               mods_offer_text="{player} wants to use their own stickers and avatars in your room. If you download them, everyone in the room will see them; they're temporary and get deleted when the room closes.",
+    "en": dict(mods_offer_title="{player} has mods",
+               mods_offer_text="{player} wants to use their own stickers and avatars in your room. If you download them, everyone in the room will see them. They're temporary and are deleted when the room closes.",
                mods_offer_yes="Download", mods_offer_no="No thanks",
-               mods_offer_sent="Your mods were sent to the host: if they accept, everyone will see them.",
+               mods_offer_sent="Your mods were sent to the host. If they accept, everyone will see them.",
                mods_offer_waiting="Waiting for the host to answer before opening the game (up to a minute)…",
                mods_offer_ok="✓ The host accepted your mods: you'll see them in the room.",
-               mods_offer_timeout="The host didn't answer in time: you join with the room's mods. If they accept later, your stickers will appear but you may need to put them back on your wheel.",
-               host_left_win="The host disappeared mid-match: it counts as a win for you (+{points} points).",
-               mods_offer_accepted="{player}'s mods added to the room.",
-               mods_offer_need_live="{player} brings mods: turn on hot reload (Mods window) to use them in your room.",
+               mods_offer_timeout="The host didn't answer in time, so you're joining with the room's mods. If they accept later, your stickers will appear, but you may need to add them to your wheel again.",
+               host_left_win="The host left mid-match: it counts as a win for you (+{points} points).",
+               mods_offer_accepted="{player}'s mods were added to the room.",
+               mods_offer_need_live="{player} has mods: turn on hot reload (in the Mods window) to use them in your room.",
                mods_confirm_text="The host uses custom stickers and avatars. To join you need to download them: they're temporary and get deleted when you leave. Your own mods are offered to the host: if they accept, everyone will see them."),
     "es": dict(mods_offer_title="{player} lleva mods",
                mods_offer_text="{player} quiere usar sus stickers y avatares en tu sala. Si los descargas, los verá todo el mundo en la sala; son temporales y se borran al cerrarla.",
@@ -1131,8 +1131,8 @@ for _l, _d in _OFFER.items():
 # --- anfitrion: que hacer con los mods de los invitados (preguntar o aceptar siempre) -------------
 _GUEST = {
     "en": dict(guest_mods_title="Guests' mods", guest_mods_ask="Ask me", guest_mods_always="Always accept",
-               guest_mods_desc="When you host and someone joins with their own stickers or avatars. You're asked in the game and in the launcher; with \"Always accept\" they're added straight away.",
-               mods_offer_always="Always accept", mods_offer_auto="{player}'s mods added to the room (you always accept them)."),
+               guest_mods_desc="For when you host and someone joins with their own stickers or avatars. You're asked in the game and in the launcher; with \"Always accept\" they're added right away.",
+               mods_offer_always="Always accept", mods_offer_auto="{player}'s mods were added to the room (you always accept them)."),
     "es": dict(guest_mods_title="Mods de los invitados", guest_mods_ask="Preguntarme", guest_mods_always="Aceptar siempre",
                guest_mods_desc="Cuando hosteas y alguien entra con sus propios stickers o avatares. Se te pregunta en el juego y en el lanzador; con «Aceptar siempre» se añaden sin preguntar.",
                mods_offer_always="Aceptar siempre", mods_offer_auto="Mods de {player} añadidos a la sala (los aceptas siempre)."),
@@ -1170,38 +1170,38 @@ for _l, _d in _GUEST.items():
 # ventana de mods por pestañas
 _MODTABS = {
     "en": dict(mods_tab_general="General", mods_tab_stickers="Stickers", mods_tab_avatars="Avatars",
-               mods_none_stickers="None of your mods has stickers yet.", mods_none_avatars="None of your mods has avatars yet.",
-               mods_toggle_note="Turning a mod on or off affects all of it: its stickers and its avatars."),
+               mods_none_stickers="You don't have any stickers yet.", mods_none_avatars="You don't have any avatars yet.",
+               mods_toggle_note="Turning mods on or off affects both your stickers and your avatars."),
     "es": dict(mods_tab_general="General", mods_tab_stickers="Stickers", mods_tab_avatars="Avatares",
-               mods_none_stickers="Ninguno de tus mods tiene stickers todavía.", mods_none_avatars="Ninguno de tus mods tiene avatares todavía.",
-               mods_toggle_note="Activar o desactivar un mod afecta a todo él: a sus stickers y a sus avatares."),
+               mods_none_stickers="Todavía no tienes stickers.", mods_none_avatars="Todavía no tienes avatares.",
+               mods_toggle_note="Activar o desactivar los mods afecta a tus stickers y a tus avatares a la vez."),
     "fr": dict(mods_tab_general="Général", mods_tab_stickers="Stickers", mods_tab_avatars="Avatars",
-               mods_none_stickers="Aucun de vos mods n'a encore de stickers.", mods_none_avatars="Aucun de vos mods n'a encore d'avatars.",
-               mods_toggle_note="Activer ou désactiver un mod s'applique à tout le mod : ses stickers et ses avatars."),
+               mods_none_stickers="Vous n'avez encore aucun sticker.", mods_none_avatars="Vous n'avez encore aucun avatar.",
+               mods_toggle_note="Activer ou désactiver les mods s'applique à la fois à vos stickers et à vos avatars."),
     "it": dict(mods_tab_general="Generale", mods_tab_stickers="Sticker", mods_tab_avatars="Avatar",
-               mods_none_stickers="Nessuno dei tuoi mod ha ancora sticker.", mods_none_avatars="Nessuno dei tuoi mod ha ancora avatar.",
-               mods_toggle_note="Attivare o disattivare un mod vale per tutto il mod: i suoi sticker e i suoi avatar."),
+               mods_none_stickers="Non hai ancora nessuno sticker.", mods_none_avatars="Non hai ancora nessun avatar.",
+               mods_toggle_note="Attivare o disattivare i mod vale sia per i tuoi sticker sia per i tuoi avatar."),
     "de": dict(mods_tab_general="Allgemein", mods_tab_stickers="Sticker", mods_tab_avatars="Avatare",
-               mods_none_stickers="Noch keine deiner Mods hat Sticker.", mods_none_avatars="Noch keine deiner Mods hat Avatare.",
-               mods_toggle_note="Eine Mod ein- oder auszuschalten gilt für die ganze Mod: ihre Sticker und ihre Avatare."),
+               mods_none_stickers="Du hast noch keine Sticker.", mods_none_avatars="Du hast noch keine Avatare.",
+               mods_toggle_note="Mods ein- oder auszuschalten gilt für deine Sticker und deine Avatare zugleich."),
     "pt": dict(mods_tab_general="Geral", mods_tab_stickers="Stickers", mods_tab_avatars="Avatares",
-               mods_none_stickers="Nenhum dos seus mods tem stickers ainda.", mods_none_avatars="Nenhum dos seus mods tem avatares ainda.",
-               mods_toggle_note="Ativar ou desativar um mod vale para o mod inteiro: os stickers e os avatares dele."),
+               mods_none_stickers="Você ainda não tem stickers.", mods_none_avatars="Você ainda não tem avatares.",
+               mods_toggle_note="Ativar ou desativar os mods vale para seus stickers e seus avatares ao mesmo tempo."),
     "ru": dict(mods_tab_general="Общее", mods_tab_stickers="Стикеры", mods_tab_avatars="Аватары",
-               mods_none_stickers="Ни в одном вашем моде пока нет стикеров.", mods_none_avatars="Ни в одном вашем моде пока нет аватаров.",
-               mods_toggle_note="Включение или выключение мода действует на весь мод: и на стикеры, и на аватары."),
+               mods_none_stickers="У вас пока нет стикеров.", mods_none_avatars="У вас пока нет аватаров.",
+               mods_toggle_note="Включение и выключение модов действует сразу и на стикеры, и на аватары."),
     "ja": dict(mods_tab_general="全般", mods_tab_stickers="スタンプ", mods_tab_avatars="アバター",
-               mods_none_stickers="スタンプが入ったMODはまだありません。", mods_none_avatars="アバターが入ったMODはまだありません。",
-               mods_toggle_note="MODのオン・オフはMOD全体（スタンプとアバターの両方）に適用されます。"),
+               mods_none_stickers="スタンプはまだありません。", mods_none_avatars="アバターはまだありません。",
+               mods_toggle_note="MODのオン・オフはスタンプとアバターの両方に適用されます。"),
     "ko": dict(mods_tab_general="일반", mods_tab_stickers="스탬프", mods_tab_avatars="아바타",
-               mods_none_stickers="아직 스탬프가 있는 모드가 없습니다.", mods_none_avatars="아직 아바타가 있는 모드가 없습니다.",
-               mods_toggle_note="모드를 켜거나 끄면 모드 전체(스탬프와 아바타 모두)에 적용됩니다."),
+               mods_none_stickers="아직 스탬프가 없습니다.", mods_none_avatars="아직 아바타가 없습니다.",
+               mods_toggle_note="모드를 켜거나 끄면 스탬프와 아바타 모두에 적용됩니다."),
     "zh-CN": dict(mods_tab_general="常规", mods_tab_stickers="贴图", mods_tab_avatars="头像",
-               mods_none_stickers="你的模组里还没有贴图。", mods_none_avatars="你的模组里还没有头像。",
-               mods_toggle_note="开启或关闭模组会作用于整个模组：它的贴图和头像。"),
+               mods_none_stickers="你还没有贴图。", mods_none_avatars="你还没有头像。",
+               mods_toggle_note="开启或关闭模组会同时作用于你的贴图和头像。"),
     "zh-TW": dict(mods_tab_general="一般", mods_tab_stickers="貼圖", mods_tab_avatars="頭像",
-               mods_none_stickers="你的模組裡還沒有貼圖。", mods_none_avatars="你的模組裡還沒有頭像。",
-               mods_toggle_note="開啟或關閉模組會作用於整個模組：它的貼圖和頭像。"),
+               mods_none_stickers="你還沒有貼圖。", mods_none_avatars="你還沒有頭像。",
+               mods_toggle_note="開啟或關閉模組會同時作用於你的貼圖和頭像。"),
 }
 for _l, _d in _MODTABS.items():
     S[_l].update(_d)
@@ -1210,7 +1210,7 @@ for _l, _d in _MODTABS.items():
 _MODELS = {
     "en": dict(mods_tab_models="Models", models_original="Original", models_now="Looks like {name}",
                models_desc="Swap a character's 3D model for another character's from the game (Sherlock and Moriarty too). They keep their own animations and behaviour; only the look changes. Only you see it, and the 2D portraits don't change.",
-               models_need_bep="Needs hot reload (BepInEx), in the General tab.",
+               models_need_bep="Requires hot reload (BepInEx), in the General tab.",
                models_survivor="Victim", models_traitor="Traitor"),
     "es": dict(mods_tab_models="Modelos", models_original="Original", models_now="Se ve como {name}",
                models_desc="Cambia el modelo 3D de un personaje por el de otro del juego (también Sherlock y Moriarty). Conserva sus animaciones y su forma de actuar; solo cambia su aspecto. Solo lo ves tú, y los retratos 2D no cambian.",
@@ -1259,10 +1259,10 @@ for _l, _d in _MODELS.items():
 # Modelos 3D propios (.glb): carpeta, esqueletos e instrucciones (README.txt de la carpeta de modelos)
 _MODELS_CUSTOM = {
     "en": dict(models_custom_title="Your own 3D models",
-               models_custom_desc="Put a .glb file in the models folder and it appears in the lists above with its file name. To make one, open a character's skeleton (\"esqueletos\" folder) in Blender, fit your model to it and export it as glTF Binary (.glb). The README in the folder explains the steps.",
+               models_custom_desc="Put a .glb file in the models folder and it appears in the lists above with its file name. To make one, open a character's skeleton (\"skeletons\" folder) in Blender, fit your model to it and export it as glTF Binary (.glb). The README in the folder explains the steps.",
                models_open="Open models folder", models_custom_tag="{name} (yours)",
-               models_skel_ok="{n} skeletons ready in the \"esqueletos\" folder.",
-               models_skel_wait="The skeletons appear after opening the game once with hot reload (BepInEx).",
+               models_skel_ok="{n} skeletons ready in the \"skeletons\" folder.",
+               models_skel_wait="The skeletons appear after you open the game once with hot reload (BepInEx).",
                models_readme="""CRIMESIGHT Revival - your own 3D models
 =========================================
 
@@ -1270,7 +1270,7 @@ Each .glb file in this folder is a model you can give to a character in the laun
 Only you see it. The game's animations still play, on top of your model.
 
 How to make one (Blender 3.6 or later):
- 1. Open the game once with hot reload (BepInEx). The "esqueletos" folder then gets a skeleton per character
+ 1. Open the game once with hot reload (BepInEx). The "skeletons" folder then gets a skeleton per character
     (Agatha.glb, Berkeley.glb...). They only contain bones, made from your own copy of the game.
  2. In Blender: File > Import > glTF 2.0, and pick the skeleton of the character you want to replace.
     Delete the tiny mesh called "CSR_borra_esta_malla".
@@ -1283,9 +1283,9 @@ How to make one (Blender 3.6 or later):
 Tips: one color texture per material (the game's shading is applied on top). Keep it under ~60,000 triangles.
 If something looks wrong, BepInEx/LogOutput.log has lines starting with [Modelos]."""),
     "es": dict(models_custom_title="Tus propios modelos 3D",
-               models_custom_desc="Pon un archivo .glb en la carpeta de modelos y aparece en las listas de arriba con su nombre de archivo. Para hacer uno, abre en Blender el esqueleto de un personaje (carpeta \"esqueletos\"), ajusta tu modelo a él y expórtalo como glTF Binary (.glb). El README de la carpeta explica los pasos.",
+               models_custom_desc="Pon un archivo .glb en la carpeta de modelos y aparece en las listas de arriba con su nombre de archivo. Para hacer uno, abre en Blender el esqueleto de un personaje (carpeta \"skeletons\"), ajusta tu modelo a él y expórtalo como glTF Binary (.glb). El README de la carpeta explica los pasos.",
                models_open="Abrir carpeta de modelos", models_custom_tag="{name} (tuyo)",
-               models_skel_ok="{n} esqueletos listos en la carpeta \"esqueletos\".",
+               models_skel_ok="{n} esqueletos listos en la carpeta \"skeletons\".",
                models_skel_wait="Los esqueletos aparecen después de abrir el juego una vez con la recarga en caliente (BepInEx).",
                models_readme="""CRIMESIGHT Revival - tus propios modelos 3D
 =============================================
@@ -1294,7 +1294,7 @@ Cada archivo .glb de esta carpeta es un modelo que puedes ponerle a un personaje
 Solo lo ves tú. Las animaciones del juego se siguen viendo, sobre tu modelo.
 
 Cómo hacer uno (Blender 3.6 o posterior):
- 1. Abre el juego una vez con la recarga en caliente (BepInEx). Entonces la carpeta "esqueletos" tendrá un
+ 1. Abre el juego una vez con la recarga en caliente (BepInEx). Entonces la carpeta "skeletons" tendrá un
     esqueleto por personaje (Agatha.glb, Berkeley.glb...). Solo tienen huesos, sacados de tu propia copia del juego.
  2. En Blender: Archivo > Importar > glTF 2.0, y elige el esqueleto del personaje que quieres sustituir.
     Borra la malla diminuta llamada "CSR_borra_esta_malla".
@@ -1307,49 +1307,49 @@ Cómo hacer uno (Blender 3.6 o posterior):
 Consejos: una textura de color por material (encima se pone el sombreado del juego). Mejor por debajo de
 ~60.000 triángulos. Si algo se ve mal, BepInEx/LogOutput.log tiene líneas que empiezan por [Modelos]."""),
     "fr": dict(models_custom_title="Vos propres modèles 3D",
-               models_custom_desc="Placez un fichier .glb dans le dossier des modèles et il apparaît dans les listes ci-dessus avec son nom de fichier. Pour en créer un, ouvrez le squelette d'un personnage (dossier « esqueletos ») dans Blender, ajustez-y votre modèle et exportez-le en glTF Binary (.glb). Le README du dossier explique les étapes.",
+               models_custom_desc="Placez un fichier .glb dans le dossier des modèles et il apparaît dans les listes ci-dessus avec son nom de fichier. Pour en créer un, ouvrez le squelette d'un personnage (dossier « skeletons ») dans Blender, ajustez-y votre modèle et exportez-le en glTF Binary (.glb). Le README du dossier explique les étapes.",
                models_open="Ouvrir le dossier des modèles", models_custom_tag="{name} (le vôtre)",
-               models_skel_ok="{n} squelettes prêts dans le dossier « esqueletos ».",
+               models_skel_ok="{n} squelettes prêts dans le dossier « skeletons ».",
                models_skel_wait="Les squelettes apparaissent après avoir lancé le jeu une fois avec le rechargement à chaud (BepInEx)."),
     "it": dict(models_custom_title="I tuoi modelli 3D",
-               models_custom_desc="Metti un file .glb nella cartella dei modelli e comparirà negli elenchi qui sopra con il nome del file. Per crearne uno, apri in Blender lo scheletro di un personaggio (cartella \"esqueletos\"), adattaci il tuo modello ed esportalo come glTF Binary (.glb). Il README della cartella spiega i passaggi.",
+               models_custom_desc="Metti un file .glb nella cartella dei modelli e comparirà negli elenchi qui sopra con il nome del file. Per crearne uno, apri in Blender lo scheletro di un personaggio (cartella \"skeletons\"), adattaci il tuo modello ed esportalo come glTF Binary (.glb). Il README della cartella spiega i passaggi.",
                models_open="Apri cartella dei modelli", models_custom_tag="{name} (tuo)",
-               models_skel_ok="{n} scheletri pronti nella cartella \"esqueletos\".",
+               models_skel_ok="{n} scheletri pronti nella cartella \"skeletons\".",
                models_skel_wait="Gli scheletri compaiono dopo aver aperto il gioco una volta con il ricaricamento a caldo (BepInEx)."),
     "de": dict(models_custom_title="Eigene 3D-Modelle",
-               models_custom_desc="Lege eine .glb-Datei in den Modellordner, dann erscheint sie mit ihrem Dateinamen in den Listen oben. Um eins zu machen, öffne das Skelett einer Figur (Ordner „esqueletos“) in Blender, passe dein Modell daran an und exportiere es als glTF Binary (.glb). Die README im Ordner erklärt die Schritte.",
+               models_custom_desc="Lege eine .glb-Datei in den Modellordner, dann erscheint sie mit ihrem Dateinamen in den Listen oben. Um eins zu machen, öffne das Skelett einer Figur (Ordner „skeletons“) in Blender, passe dein Modell daran an und exportiere es als glTF Binary (.glb). Die README im Ordner erklärt die Schritte.",
                models_open="Modellordner öffnen", models_custom_tag="{name} (deins)",
-               models_skel_ok="{n} Skelette bereit im Ordner „esqueletos“.",
+               models_skel_ok="{n} Skelette bereit im Ordner „skeletons“.",
                models_skel_wait="Die Skelette erscheinen, nachdem du das Spiel einmal mit Hot Reload (BepInEx) geöffnet hast."),
     "pt": dict(models_custom_title="Seus próprios modelos 3D",
-               models_custom_desc="Coloque um arquivo .glb na pasta de modelos e ele aparece nas listas acima com o nome do arquivo. Para fazer um, abra no Blender o esqueleto de um personagem (pasta \"esqueletos\"), ajuste seu modelo a ele e exporte como glTF Binary (.glb). O README da pasta explica os passos.",
+               models_custom_desc="Coloque um arquivo .glb na pasta de modelos e ele aparece nas listas acima com o nome do arquivo. Para fazer um, abra no Blender o esqueleto de um personagem (pasta \"skeletons\"), ajuste seu modelo a ele e exporte como glTF Binary (.glb). O README da pasta explica os passos.",
                models_open="Abrir pasta de modelos", models_custom_tag="{name} (seu)",
-               models_skel_ok="{n} esqueletos prontos na pasta \"esqueletos\".",
+               models_skel_ok="{n} esqueletos prontos na pasta \"skeletons\".",
                models_skel_wait="Os esqueletos aparecem depois de abrir o jogo uma vez com a recarga a quente (BepInEx)."),
     "ru": dict(models_custom_title="Свои 3D-модели",
-               models_custom_desc="Положите файл .glb в папку моделей, и он появится в списках выше под своим именем. Чтобы сделать модель, откройте в Blender скелет персонажа (папка «esqueletos»), подгоните под него свою модель и экспортируйте как glTF Binary (.glb). Шаги описаны в README в папке.",
+               models_custom_desc="Положите файл .glb в папку моделей, и он появится в списках выше под своим именем. Чтобы сделать модель, откройте в Blender скелет персонажа (папка «skeletons»), подгоните под него свою модель и экспортируйте как glTF Binary (.glb). Шаги описаны в README в папке.",
                models_open="Открыть папку моделей", models_custom_tag="{name} (ваша)",
-               models_skel_ok="{n} скелетов готово в папке «esqueletos».",
+               models_skel_ok="{n} скелетов готово в папке «skeletons».",
                models_skel_wait="Скелеты появятся, когда вы один раз откроете игру с горячей перезагрузкой (BepInEx)."),
     "ja": dict(models_custom_title="自作の3Dモデル",
-               models_custom_desc="モデルフォルダーに .glb ファイルを置くと、ファイル名で上のリストに表示されます。作るには、Blenderでキャラクターの骨格（「esqueletos」フォルダー）を開き、モデルを合わせて glTF Binary (.glb) で書き出します。手順はフォルダー内の README にあります。",
+               models_custom_desc="モデルフォルダーに .glb ファイルを置くと、ファイル名で上のリストに表示されます。作るには、Blenderでキャラクターの骨格（「skeletons」フォルダー）を開き、モデルを合わせて glTF Binary (.glb) で書き出します。手順はフォルダー内の README にあります。",
                models_open="モデルフォルダーを開く", models_custom_tag="{name}（自作）",
-               models_skel_ok="「esqueletos」フォルダーに骨格が {n} 個あります。",
+               models_skel_ok="「skeletons」フォルダーに骨格が {n} 個あります。",
                models_skel_wait="骨格は、ホットリロード（BepInEx）でゲームを一度起動すると作られます。"),
     "ko": dict(models_custom_title="나만의 3D 모델",
-               models_custom_desc="모델 폴더에 .glb 파일을 넣으면 위 목록에 파일 이름으로 나타납니다. 만들려면 Blender에서 캐릭터의 뼈대(\"esqueletos\" 폴더)를 열고 모델을 맞춘 뒤 glTF Binary(.glb)로 내보내세요. 단계는 폴더의 README에 있습니다.",
+               models_custom_desc="모델 폴더에 .glb 파일을 넣으면 위 목록에 파일 이름으로 나타납니다. 만들려면 Blender에서 캐릭터의 뼈대(\"skeletons\" 폴더)를 열고 모델을 맞춘 뒤 glTF Binary(.glb)로 내보내세요. 단계는 폴더의 README에 있습니다.",
                models_open="모델 폴더 열기", models_custom_tag="{name} (내 모델)",
-               models_skel_ok="\"esqueletos\" 폴더에 뼈대 {n}개가 준비되었습니다.",
+               models_skel_ok="\"skeletons\" 폴더에 뼈대 {n}개가 준비되었습니다.",
                models_skel_wait="뼈대는 핫 리로드(BepInEx)로 게임을 한 번 실행하면 생깁니다."),
     "zh-CN": dict(models_custom_title="你自己的3D模型",
-               models_custom_desc="把 .glb 文件放进模型文件夹，它就会以文件名出现在上面的列表里。制作方法：在 Blender 中打开角色的骨架（“esqueletos”文件夹），把你的模型对齐到骨架上，再导出为 glTF Binary (.glb)。文件夹里的 README 有详细步骤。",
+               models_custom_desc="把 .glb 文件放进模型文件夹，它就会以文件名出现在上面的列表里。制作方法：在 Blender 中打开角色的骨架（“skeletons”文件夹），把你的模型对齐到骨架上，再导出为 glTF Binary (.glb)。文件夹里的 README 有详细步骤。",
                models_open="打开模型文件夹", models_custom_tag="{name}（自制）",
-               models_skel_ok="“esqueletos”文件夹中已有 {n} 个骨架。",
+               models_skel_ok="“skeletons”文件夹中已有 {n} 个骨架。",
                models_skel_wait="用热重载（BepInEx）启动一次游戏后就会生成骨架。"),
     "zh-TW": dict(models_custom_title="你自己的3D模型",
-               models_custom_desc="把 .glb 檔案放進模型資料夾，它就會以檔名出現在上面的清單裡。製作方法：在 Blender 中開啟角色的骨架（「esqueletos」資料夾），把你的模型對齊到骨架上，再匯出為 glTF Binary (.glb)。資料夾裡的 README 有詳細步驟。",
+               models_custom_desc="把 .glb 檔案放進模型資料夾，它就會以檔名出現在上面的清單裡。製作方法：在 Blender 中開啟角色的骨架（「skeletons」資料夾），把你的模型對齊到骨架上，再匯出為 glTF Binary (.glb)。資料夾裡的 README 有詳細步驟。",
                models_open="開啟模型資料夾", models_custom_tag="{name}（自製）",
-               models_skel_ok="「esqueletos」資料夾中已有 {n} 個骨架。",
+               models_skel_ok="「skeletons」資料夾中已有 {n} 個骨架。",
                models_skel_wait="用熱重載（BepInEx）啟動一次遊戲後就會產生骨架。"),
 }
 for _l, _d in _MODELS_CUSTOM.items():
@@ -1357,27 +1357,27 @@ for _l, _d in _MODELS_CUSTOM.items():
 
 # Modelos en .fbx (se convierten solos) y modelos con otro esqueleto (se adaptan solos)
 _MODELS_FBX = {
-    "en": dict(models_custom_desc="Put a .fbx or .glb file in the models folder (or a subfolder with the model and its textures) and it appears in the lists above. Humanoid models from Mixamo, VRChat, VRoid, Blender, 3ds Max or MMD are fitted to the character's skeleton automatically. For a perfect fit, make it on one of the skeletons in the \"esqueletos\" folder. The README in the folder explains everything.",
+    "en": dict(models_custom_desc="Put a .fbx or .glb file in the models folder (or a subfolder with the model and its textures) and it appears in the lists above. Humanoid models from Mixamo, VRChat, VRoid, Blender, 3ds Max or MMD are fitted to the character's skeleton automatically. For a perfect fit, build it on one of the skeletons in the \"skeletons\" folder. The README in the folder explains everything.",
                models_convert_error="Couldn't read this model: {err}"),
-    "es": dict(models_custom_desc="Pon un archivo .fbx o .glb en la carpeta de modelos (o una subcarpeta con el modelo y sus texturas) y aparece en las listas de arriba. Los modelos humanoides de Mixamo, VRChat, VRoid, Blender, 3ds Max o MMD se adaptan solos al esqueleto del personaje. Para que encaje perfecto, hazlo sobre uno de los esqueletos de la carpeta \"esqueletos\". El README de la carpeta lo explica todo.",
+    "es": dict(models_custom_desc="Pon un archivo .fbx o .glb en la carpeta de modelos (o una subcarpeta con el modelo y sus texturas) y aparece en las listas de arriba. Los modelos humanoides de Mixamo, VRChat, VRoid, Blender, 3ds Max o MMD se adaptan solos al esqueleto del personaje. Para que encaje perfecto, hazlo sobre uno de los esqueletos de la carpeta \"skeletons\". El README de la carpeta lo explica todo.",
                models_convert_error="No he podido leer este modelo: {err}"),
-    "fr": dict(models_custom_desc="Placez un fichier .fbx ou .glb dans le dossier des modèles (ou un sous-dossier avec le modèle et ses textures) et il apparaît dans les listes ci-dessus. Les modèles humanoïdes de Mixamo, VRChat, VRoid, Blender, 3ds Max ou MMD s'adaptent automatiquement au squelette du personnage. Pour un ajustement parfait, créez-le sur l'un des squelettes du dossier « esqueletos ». Le README du dossier explique tout.",
+    "fr": dict(models_custom_desc="Placez un fichier .fbx ou .glb dans le dossier des modèles (ou un sous-dossier avec le modèle et ses textures) et il apparaît dans les listes ci-dessus. Les modèles humanoïdes de Mixamo, VRChat, VRoid, Blender, 3ds Max ou MMD s'adaptent automatiquement au squelette du personnage. Pour un ajustement parfait, créez-le sur l'un des squelettes du dossier « skeletons ». Le README du dossier explique tout.",
                models_convert_error="Impossible de lire ce modèle : {err}"),
-    "it": dict(models_custom_desc="Metti un file .fbx o .glb nella cartella dei modelli (o una sottocartella con il modello e le sue texture) e comparirà negli elenchi qui sopra. I modelli umanoidi di Mixamo, VRChat, VRoid, Blender, 3ds Max o MMD si adattano da soli allo scheletro del personaggio. Per un adattamento perfetto, crealo su uno degli scheletri della cartella \"esqueletos\". Il README della cartella spiega tutto.",
+    "it": dict(models_custom_desc="Metti un file .fbx o .glb nella cartella dei modelli (o una sottocartella con il modello e le sue texture) e comparirà negli elenchi qui sopra. I modelli umanoidi di Mixamo, VRChat, VRoid, Blender, 3ds Max o MMD si adattano da soli allo scheletro del personaggio. Per un adattamento perfetto, crealo su uno degli scheletri della cartella \"skeletons\". Il README della cartella spiega tutto.",
                models_convert_error="Non riesco a leggere questo modello: {err}"),
-    "de": dict(models_custom_desc="Lege eine .fbx- oder .glb-Datei in den Modellordner (oder einen Unterordner mit dem Modell und seinen Texturen), dann erscheint sie in den Listen oben. Humanoide Modelle aus Mixamo, VRChat, VRoid, Blender, 3ds Max oder MMD werden automatisch an das Skelett der Figur angepasst. Für eine perfekte Passform baue es auf einem der Skelette im Ordner „esqueletos“. Die README im Ordner erklärt alles.",
+    "de": dict(models_custom_desc="Lege eine .fbx- oder .glb-Datei in den Modellordner (oder einen Unterordner mit dem Modell und seinen Texturen), dann erscheint sie in den Listen oben. Humanoide Modelle aus Mixamo, VRChat, VRoid, Blender, 3ds Max oder MMD werden automatisch an das Skelett der Figur angepasst. Für eine perfekte Passform baue es auf einem der Skelette im Ordner „skeletons“. Die README im Ordner erklärt alles.",
                models_convert_error="Dieses Modell konnte nicht gelesen werden: {err}"),
-    "pt": dict(models_custom_desc="Coloque um arquivo .fbx ou .glb na pasta de modelos (ou uma subpasta com o modelo e suas texturas) e ele aparece nas listas acima. Modelos humanoides do Mixamo, VRChat, VRoid, Blender, 3ds Max ou MMD se ajustam sozinhos ao esqueleto do personagem. Para um encaixe perfeito, faça-o sobre um dos esqueletos da pasta \"esqueletos\". O README da pasta explica tudo.",
+    "pt": dict(models_custom_desc="Coloque um arquivo .fbx ou .glb na pasta de modelos (ou uma subpasta com o modelo e suas texturas) e ele aparece nas listas acima. Modelos humanoides do Mixamo, VRChat, VRoid, Blender, 3ds Max ou MMD se ajustam sozinhos ao esqueleto do personagem. Para um encaixe perfeito, faça-o sobre um dos esqueletos da pasta \"skeletons\". O README da pasta explica tudo.",
                models_convert_error="Não consegui ler este modelo: {err}"),
-    "ru": dict(models_custom_desc="Положите файл .fbx или .glb в папку моделей (или подпапку с моделью и её текстурами), и он появится в списках выше. Человекоподобные модели из Mixamo, VRChat, VRoid, Blender, 3ds Max или MMD сами подгоняются под скелет персонажа. Для идеальной посадки делайте модель на одном из скелетов из папки «esqueletos». Всё описано в README в папке.",
+    "ru": dict(models_custom_desc="Положите файл .fbx или .glb в папку моделей (или подпапку с моделью и её текстурами), и он появится в списках выше. Человекоподобные модели из Mixamo, VRChat, VRoid, Blender, 3ds Max или MMD сами подгоняются под скелет персонажа. Для идеальной посадки делайте модель на одном из скелетов из папки «skeletons». Всё описано в README в папке.",
                models_convert_error="Не удалось прочитать эту модель: {err}"),
-    "ja": dict(models_custom_desc="モデルフォルダーに .fbx か .glb ファイル（またはモデルとテクスチャを入れたサブフォルダー）を置くと、上のリストに表示されます。Mixamo、VRChat、VRoid、Blender、3ds Max、MMD の人型モデルは、キャラクターの骨格に自動で合わせられます。ぴったり合わせるには「esqueletos」フォルダーの骨格を使って作ってください。詳しくはフォルダー内の README を見てください。",
+    "ja": dict(models_custom_desc="モデルフォルダーに .fbx か .glb ファイル（またはモデルとテクスチャを入れたサブフォルダー）を置くと、上のリストに表示されます。Mixamo、VRChat、VRoid、Blender、3ds Max、MMD の人型モデルは、キャラクターの骨格に自動で合わせられます。ぴったり合わせるには「skeletons」フォルダーの骨格を使って作ってください。詳しくはフォルダー内の README を見てください。",
                models_convert_error="このモデルを読み込めませんでした: {err}"),
-    "ko": dict(models_custom_desc="모델 폴더에 .fbx 또는 .glb 파일(또는 모델과 텍스처가 든 하위 폴더)을 넣으면 위 목록에 나타납니다. Mixamo, VRChat, VRoid, Blender, 3ds Max, MMD의 인간형 모델은 캐릭터 뼈대에 자동으로 맞춰집니다. 완벽하게 맞추려면 \"esqueletos\" 폴더의 뼈대 위에서 만드세요. 자세한 내용은 폴더의 README에 있습니다.",
+    "ko": dict(models_custom_desc="모델 폴더에 .fbx 또는 .glb 파일(또는 모델과 텍스처가 든 하위 폴더)을 넣으면 위 목록에 나타납니다. Mixamo, VRChat, VRoid, Blender, 3ds Max, MMD의 인간형 모델은 캐릭터 뼈대에 자동으로 맞춰집니다. 완벽하게 맞추려면 \"skeletons\" 폴더의 뼈대 위에서 만드세요. 자세한 내용은 폴더의 README에 있습니다.",
                models_convert_error="이 모델을 읽을 수 없습니다: {err}"),
-    "zh-CN": dict(models_custom_desc="把 .fbx 或 .glb 文件（或装有模型及其贴图的子文件夹）放进模型文件夹，它就会出现在上面的列表里。来自 Mixamo、VRChat、VRoid、Blender、3ds Max 或 MMD 的人形模型会自动适配角色的骨架。想要完美贴合，请在“esqueletos”文件夹中的骨架上制作。文件夹里的 README 有详细说明。",
+    "zh-CN": dict(models_custom_desc="把 .fbx 或 .glb 文件（或装有模型及其贴图的子文件夹）放进模型文件夹，它就会出现在上面的列表里。来自 Mixamo、VRChat、VRoid、Blender、3ds Max 或 MMD 的人形模型会自动适配角色的骨架。想要完美贴合，请在“skeletons”文件夹中的骨架上制作。文件夹里的 README 有详细说明。",
                models_convert_error="无法读取这个模型：{err}"),
-    "zh-TW": dict(models_custom_desc="把 .fbx 或 .glb 檔案（或裝有模型及其貼圖的子資料夾）放進模型資料夾，它就會出現在上面的清單裡。來自 Mixamo、VRChat、VRoid、Blender、3ds Max 或 MMD 的人形模型會自動配合角色的骨架。想要完美貼合，請在「esqueletos」資料夾中的骨架上製作。資料夾裡的 README 有詳細說明。",
+    "zh-TW": dict(models_custom_desc="把 .fbx 或 .glb 檔案（或裝有模型及其貼圖的子資料夾）放進模型資料夾，它就會出現在上面的清單裡。來自 Mixamo、VRChat、VRoid、Blender、3ds Max 或 MMD 的人形模型會自動配合角色的骨架。想要完美貼合，請在「skeletons」資料夾中的骨架上製作。資料夾裡的 README 有詳細說明。",
                models_convert_error="無法讀取這個模型：{err}"),
 }
 _MODELS_FBX["en"]["models_readme"] = """CRIMESIGHT Revival - your own 3D models
@@ -1395,7 +1395,7 @@ What you can put here
  - Textures: the colour texture of each material, inside the .fbx or next to it (PNG, JPG, TGA, BMP, PSD...).
 
 For a perfect fit (optional, Blender 3.6 or later)
- 1. Open the game once with hot reload (BepInEx). The "esqueletos" folder then gets a skeleton per character
+ 1. Open the game once with hot reload (BepInEx). The "skeletons" folder then gets a skeleton per character
     (Agatha.glb, Berkeley.glb...). They only contain bones, made from your own copy of the game.
  2. In Blender: File > Import > glTF 2.0, pick the skeleton and delete the tiny mesh "CSR_borra_esta_malla".
  3. Fit your model over the bones, select it, then the armature (Shift+click), and Ctrl+P > With Automatic Weights.
@@ -1420,7 +1420,7 @@ Qué puedes poner aquí
  - Texturas: la de color de cada material, dentro del .fbx o junto a él (PNG, JPG, TGA, BMP, PSD...).
 
 Para que encaje perfecto (opcional, Blender 3.6 o posterior)
- 1. Abre el juego una vez con la recarga en caliente (BepInEx). Entonces la carpeta "esqueletos" tendrá un
+ 1. Abre el juego una vez con la recarga en caliente (BepInEx). Entonces la carpeta "skeletons" tendrá un
     esqueleto por personaje (Agatha.glb, Berkeley.glb...). Solo tienen huesos, sacados de tu propia copia del juego.
  2. En Blender: Archivo > Importar > glTF 2.0, elige el esqueleto y borra la malla diminuta "CSR_borra_esta_malla".
  3. Ajusta tu modelo a los huesos, selecciónalo, luego la armadura (Mayús+clic), y Ctrl+P > Con pesos automáticos.
@@ -1463,17 +1463,17 @@ for _l, _d in _MODELS_FBX_NOTES.items():
 
 # animaciones propias (reposo, andar, correr) por personaje
 _MODELS_ANIMS = {
-    "en": dict(models_anims_title="Animations", models_anims_desc="Replace a character's idle, walk or run with your own animation (.fbx or .glb, e.g. from Mixamo) from the \"animaciones\" folder. Any humanoid animation works: it's fitted to the character's skeleton. Works with the game's models and with yours.", models_anims_open="Open animations folder", models_anims_none="There are no animations yet: put .fbx or .glb files in the \"animaciones\" folder and press refresh.", models_anim_idle="Idle", models_anim_walk="Walk", models_anim_run="Run", models_anim_game="Game's"),
-    "es": dict(models_anims_title="Animaciones", models_anims_desc="Cambia el reposo, el andar o el correr de un personaje por una animación tuya (.fbx o .glb, por ejemplo de Mixamo) de la carpeta \"animaciones\". Vale cualquier animación humanoide: se adapta al esqueleto del personaje. Funciona con los modelos del juego y con los tuyos.", models_anims_open="Abrir carpeta de animaciones", models_anims_none="Aún no hay animaciones: pon archivos .fbx o .glb en la carpeta \"animaciones\" y pulsa refrescar.", models_anim_idle="Reposo", models_anim_walk="Andar", models_anim_run="Correr", models_anim_game="La del juego"),
-    "fr": dict(models_anims_title="Animations", models_anims_desc="Remplacez la pose de repos, la marche ou la course d'un personnage par votre propre animation (.fbx ou .glb, par ex. de Mixamo) du dossier « animaciones ». Toute animation humanoïde convient : elle s'adapte au squelette du personnage. Fonctionne avec les modèles du jeu et les vôtres.", models_anims_open="Ouvrir le dossier des animations", models_anims_none="Aucune animation pour l'instant : placez des fichiers .fbx ou .glb dans le dossier « animaciones » et actualisez.", models_anim_idle="Repos", models_anim_walk="Marche", models_anim_run="Course", models_anim_game="Celle du jeu"),
-    "it": dict(models_anims_title="Animazioni", models_anims_desc="Sostituisci la posa di riposo, la camminata o la corsa di un personaggio con una tua animazione (.fbx o .glb, ad es. da Mixamo) della cartella \"animaciones\". Va bene qualsiasi animazione umanoide: si adatta allo scheletro del personaggio. Funziona con i modelli del gioco e con i tuoi.", models_anims_open="Apri cartella delle animazioni", models_anims_none="Non ci sono ancora animazioni: metti file .fbx o .glb nella cartella \"animaciones\" e aggiorna.", models_anim_idle="Riposo", models_anim_walk="Camminata", models_anim_run="Corsa", models_anim_game="Quella del gioco"),
-    "de": dict(models_anims_title="Animationen", models_anims_desc="Ersetze das Stehen, Gehen oder Laufen einer Figur durch eine eigene Animation (.fbx oder .glb, z. B. von Mixamo) aus dem Ordner „animaciones“. Jede humanoide Animation geht: Sie wird an das Skelett der Figur angepasst. Funktioniert mit den Modellen des Spiels und mit deinen.", models_anims_open="Animationsordner öffnen", models_anims_none="Noch keine Animationen: Lege .fbx- oder .glb-Dateien in den Ordner „animaciones“ und aktualisiere.", models_anim_idle="Stehen", models_anim_walk="Gehen", models_anim_run="Laufen", models_anim_game="Die des Spiels"),
-    "pt": dict(models_anims_title="Animações", models_anims_desc="Troque o repouso, o andar ou o correr de um personagem por uma animação sua (.fbx ou .glb, por exemplo do Mixamo) da pasta \"animaciones\". Qualquer animação humanoide serve: ela se ajusta ao esqueleto do personagem. Funciona com os modelos do jogo e com os seus.", models_anims_open="Abrir pasta de animações", models_anims_none="Ainda não há animações: coloque arquivos .fbx ou .glb na pasta \"animaciones\" e atualize.", models_anim_idle="Repouso", models_anim_walk="Andar", models_anim_run="Correr", models_anim_game="A do jogo"),
-    "ru": dict(models_anims_title="Анимации", models_anims_desc="Замените стойку, ходьбу или бег персонажа своей анимацией (.fbx или .glb, например из Mixamo) из папки «animaciones». Подойдёт любая человекоподобная анимация: она подгоняется под скелет персонажа. Работает и с моделями игры, и с вашими.", models_anims_open="Открыть папку анимаций", models_anims_none="Анимаций пока нет: положите файлы .fbx или .glb в папку «animaciones» и обновите.", models_anim_idle="Стойка", models_anim_walk="Ходьба", models_anim_run="Бег", models_anim_game="Из игры"),
-    "ja": dict(models_anims_title="アニメーション", models_anims_desc="キャラクターの待機・歩き・走りを、「animaciones」フォルダーにある自分のアニメーション（.fbx か .glb、例えば Mixamo のもの）に置き換えます。人型のアニメーションならどれでも、キャラクターの骨格に合わせられます。ゲームのモデルにも自作モデルにも使えます。", models_anims_open="アニメーションフォルダーを開く", models_anims_none="まだアニメーションがありません。「animaciones」フォルダーに .fbx か .glb を置いて更新してください。", models_anim_idle="待機", models_anim_walk="歩き", models_anim_run="走り", models_anim_game="ゲームのもの"),
-    "ko": dict(models_anims_title="애니메이션", models_anims_desc="캐릭터의 대기, 걷기, 달리기를 \"animaciones\" 폴더에 있는 나만의 애니메이션(.fbx 또는 .glb, 예: Mixamo)으로 바꿉니다. 인간형 애니메이션이면 무엇이든 캐릭터 뼈대에 맞춰집니다. 게임 모델과 내 모델 모두에서 작동합니다.", models_anims_open="애니메이션 폴더 열기", models_anims_none="아직 애니메이션이 없습니다. \"animaciones\" 폴더에 .fbx 또는 .glb 파일을 넣고 새로 고치세요.", models_anim_idle="대기", models_anim_walk="걷기", models_anim_run="달리기", models_anim_game="게임 기본"),
-    "zh-CN": dict(models_anims_title="动画", models_anims_desc="用“animaciones”文件夹里你自己的动画（.fbx 或 .glb，例如来自 Mixamo）替换角色的待机、行走或奔跑。任何人形动画都可以，会自动适配角色的骨架。游戏模型和你的模型都适用。", models_anims_open="打开动画文件夹", models_anims_none="还没有动画：把 .fbx 或 .glb 文件放进“animaciones”文件夹，然后刷新。", models_anim_idle="待机", models_anim_walk="行走", models_anim_run="奔跑", models_anim_game="游戏原版"),
-    "zh-TW": dict(models_anims_title="動畫", models_anims_desc="用「animaciones」資料夾裡你自己的動畫（.fbx 或 .glb，例如來自 Mixamo）替換角色的待機、行走或奔跑。任何人形動畫都可以，會自動配合角色的骨架。遊戲模型和你的模型都適用。", models_anims_open="開啟動畫資料夾", models_anims_none="還沒有動畫：把 .fbx 或 .glb 檔案放進「animaciones」資料夾，然後重新整理。", models_anim_idle="待機", models_anim_walk="行走", models_anim_run="奔跑", models_anim_game="遊戲原版"),
+    "en": dict(models_anims_title="Animations", models_anims_desc="Replace a character's idle, walk or run with your own animation (.fbx or .glb, e.g. from Mixamo) from the \"animations\" folder. Any humanoid animation works: it's fitted to the character's skeleton. Works with both the game's models and yours.", models_anims_open="Open animations folder", models_anims_none="No animations yet: put .fbx or .glb files in the \"animations\" folder and press Reload.", models_anim_idle="Idle", models_anim_walk="Walk", models_anim_run="Run", models_anim_game="Game default"),
+    "es": dict(models_anims_title="Animaciones", models_anims_desc="Cambia el reposo, el andar o el correr de un personaje por una animación tuya (.fbx o .glb, por ejemplo de Mixamo) de la carpeta \"animations\". Vale cualquier animación humanoide: se adapta al esqueleto del personaje. Funciona con los modelos del juego y con los tuyos.", models_anims_open="Abrir carpeta de animaciones", models_anims_none="Aún no hay animaciones: pon archivos .fbx o .glb en la carpeta \"animations\" y pulsa refrescar.", models_anim_idle="Reposo", models_anim_walk="Andar", models_anim_run="Correr", models_anim_game="La del juego"),
+    "fr": dict(models_anims_title="Animations", models_anims_desc="Remplacez la pose de repos, la marche ou la course d'un personnage par votre propre animation (.fbx ou .glb, par ex. de Mixamo) du dossier « animations ». Toute animation humanoïde convient : elle s'adapte au squelette du personnage. Fonctionne avec les modèles du jeu et les vôtres.", models_anims_open="Ouvrir le dossier des animations", models_anims_none="Aucune animation pour l'instant : placez des fichiers .fbx ou .glb dans le dossier « animations » et actualisez.", models_anim_idle="Repos", models_anim_walk="Marche", models_anim_run="Course", models_anim_game="Celle du jeu"),
+    "it": dict(models_anims_title="Animazioni", models_anims_desc="Sostituisci la posa di riposo, la camminata o la corsa di un personaggio con una tua animazione (.fbx o .glb, ad es. da Mixamo) della cartella \"animations\". Va bene qualsiasi animazione umanoide: si adatta allo scheletro del personaggio. Funziona con i modelli del gioco e con i tuoi.", models_anims_open="Apri cartella delle animazioni", models_anims_none="Non ci sono ancora animazioni: metti file .fbx o .glb nella cartella \"animations\" e aggiorna.", models_anim_idle="Riposo", models_anim_walk="Camminata", models_anim_run="Corsa", models_anim_game="Quella del gioco"),
+    "de": dict(models_anims_title="Animationen", models_anims_desc="Ersetze das Stehen, Gehen oder Laufen einer Figur durch eine eigene Animation (.fbx oder .glb, z. B. von Mixamo) aus dem Ordner „animations“. Jede humanoide Animation geht: Sie wird an das Skelett der Figur angepasst. Funktioniert mit den Modellen des Spiels und mit deinen.", models_anims_open="Animationsordner öffnen", models_anims_none="Noch keine Animationen: Lege .fbx- oder .glb-Dateien in den Ordner „animations“ und aktualisiere.", models_anim_idle="Stehen", models_anim_walk="Gehen", models_anim_run="Laufen", models_anim_game="Die des Spiels"),
+    "pt": dict(models_anims_title="Animações", models_anims_desc="Troque o repouso, o andar ou o correr de um personagem por uma animação sua (.fbx ou .glb, por exemplo do Mixamo) da pasta \"animations\". Qualquer animação humanoide serve: ela se ajusta ao esqueleto do personagem. Funciona com os modelos do jogo e com os seus.", models_anims_open="Abrir pasta de animações", models_anims_none="Ainda não há animações: coloque arquivos .fbx ou .glb na pasta \"animations\" e atualize.", models_anim_idle="Repouso", models_anim_walk="Andar", models_anim_run="Correr", models_anim_game="A do jogo"),
+    "ru": dict(models_anims_title="Анимации", models_anims_desc="Замените стойку, ходьбу или бег персонажа своей анимацией (.fbx или .glb, например из Mixamo) из папки «animations». Подойдёт любая человекоподобная анимация: она подгоняется под скелет персонажа. Работает и с моделями игры, и с вашими.", models_anims_open="Открыть папку анимаций", models_anims_none="Анимаций пока нет: положите файлы .fbx или .glb в папку «animations» и обновите.", models_anim_idle="Стойка", models_anim_walk="Ходьба", models_anim_run="Бег", models_anim_game="Из игры"),
+    "ja": dict(models_anims_title="アニメーション", models_anims_desc="キャラクターの待機・歩き・走りを、「animations」フォルダーにある自分のアニメーション（.fbx か .glb、例えば Mixamo のもの）に置き換えます。人型のアニメーションならどれでも、キャラクターの骨格に合わせられます。ゲームのモデルにも自作モデルにも使えます。", models_anims_open="アニメーションフォルダーを開く", models_anims_none="まだアニメーションがありません。「animations」フォルダーに .fbx か .glb を置いて更新してください。", models_anim_idle="待機", models_anim_walk="歩き", models_anim_run="走り", models_anim_game="ゲームのもの"),
+    "ko": dict(models_anims_title="애니메이션", models_anims_desc="캐릭터의 대기, 걷기, 달리기를 \"animations\" 폴더에 있는 나만의 애니메이션(.fbx 또는 .glb, 예: Mixamo)으로 바꿉니다. 인간형 애니메이션이면 무엇이든 캐릭터 뼈대에 맞춰집니다. 게임 모델과 내 모델 모두에서 작동합니다.", models_anims_open="애니메이션 폴더 열기", models_anims_none="아직 애니메이션이 없습니다. \"animations\" 폴더에 .fbx 또는 .glb 파일을 넣고 새로 고치세요.", models_anim_idle="대기", models_anim_walk="걷기", models_anim_run="달리기", models_anim_game="게임 기본"),
+    "zh-CN": dict(models_anims_title="动画", models_anims_desc="用“animations”文件夹里你自己的动画（.fbx 或 .glb，例如来自 Mixamo）替换角色的待机、行走或奔跑。任何人形动画都可以，会自动适配角色的骨架。游戏模型和你的模型都适用。", models_anims_open="打开动画文件夹", models_anims_none="还没有动画：把 .fbx 或 .glb 文件放进“animations”文件夹，然后刷新。", models_anim_idle="待机", models_anim_walk="行走", models_anim_run="奔跑", models_anim_game="游戏原版"),
+    "zh-TW": dict(models_anims_title="動畫", models_anims_desc="用「animations」資料夾裡你自己的動畫（.fbx 或 .glb，例如來自 Mixamo）替換角色的待機、行走或奔跑。任何人形動畫都可以，會自動配合角色的骨架。遊戲模型和你的模型都適用。", models_anims_open="開啟動畫資料夾", models_anims_none="還沒有動畫：把 .fbx 或 .glb 檔案放進「animations」資料夾，然後重新整理。", models_anim_idle="待機", models_anim_walk="行走", models_anim_run="奔跑", models_anim_game="遊戲原版"),
 }
 for _l, _d in _MODELS_ANIMS.items():
     S[_l].update(_d)
@@ -1481,14 +1481,14 @@ for _l, _d in _MODELS_ANIMS.items():
 # modelos 3D y animaciones compartidos con la sala (como los stickers)
 _MODELS_SYNC = {
     "en": dict(models_room_entry="3D models and animations", models_room_count="{models} models · {anims} animations · {mb} MB",
-               models_offer_text="{player} wants to use their own 3D models and animations in your room ({mb} MB). If you accept, everyone in the room will see them on the characters you haven't changed; they're temporary and get deleted when the room closes.",
+               models_offer_text="{player} wants to use their own 3D models and animations in your room ({mb} MB). If you accept, everyone in the room will see them on the characters you haven't changed. They're temporary and are deleted when the room closes.",
                models_offer_sent="Your 3D models were offered to the host: if they accept, they'll be sent and everyone will see them.",
                models_offer_ok="✓ The host accepted your 3D models: you'll see them in the room.",
                models_downloading="Downloading the room's 3D models ({mb} MB)…", models_uploading="Sending your 3D models to the host ({mb} MB)…",
                models_download_failed="Couldn't download the room's 3D models ({err}).", models_upload_failed="Couldn't send your 3D models ({err}).",
                models_live_updated="3D models updated in the game.",
-               models_desc="Change a character's 3D model and animations: for another character from the game or for your own model. In your room everyone sees your choices (and the guests' you accept, on the characters you haven't changed); in someone else's room you see theirs, and yours come back when you leave. The 2D portraits don't change.",
-               mods_confirm_text="The host uses mods (stickers, avatars or 3D models). To join you need to download them: they're temporary and get deleted when you leave. Your own mods are paused meanwhile."),
+               models_desc="Change a character's 3D model and animations, to another character from the game or to your own model. In your room, everyone sees your choices (plus any guests' choices you accept, on characters you haven't changed). In someone else's room you see theirs, and yours come back when you leave. The 2D portraits don't change.",
+               mods_confirm_text="The host is using mods (stickers, avatars or 3D models). To join, you need to download them: they're temporary and are deleted when you leave. Your own mods are paused in the meantime."),
     "es": dict(models_room_entry="Modelos 3D y animaciones", models_room_count="{models} modelos · {anims} animaciones · {mb} MB",
                models_offer_text="{player} quiere usar sus propios modelos 3D y animaciones en tu sala ({mb} MB). Si aceptas, los verá todo el mundo en la sala en los personajes que tú no hayas cambiado; son temporales y se borran al cerrarla.",
                models_offer_sent="Tus modelos 3D se han ofrecido al anfitrión: si los acepta, se le envían y los veréis todos.",
@@ -1582,7 +1582,7 @@ _MODELS_SYNC = {
 }
 for _l, _d in _MODELS_SYNC.items():
     S[_l].update(_d)
-S['en']["models_offer_timeout"] = "The host didn't answer in time: you join with the room's 3D models. If they accept later, yours will appear by themselves."
+S['en']["models_offer_timeout"] = "The host didn't answer in time, so you're joining with the room's 3D models. If they accept later, yours will appear automatically."
 S['es']["models_offer_timeout"] = 'El anfitrión no ha contestado a tiempo: entras con los modelos 3D de la sala. Si los acepta después, los tuyos aparecerán solos.'
 S['fr']["models_offer_timeout"] = "L'hôte n'a pas répondu à temps : vous rejoignez avec les modèles 3D du salon. S'il les accepte plus tard, les vôtres apparaîtront d'eux-mêmes."
 S['it']["models_offer_timeout"] = "L'host non ha risposto in tempo: entri con i modelli 3D della stanza. Se li accetta dopo, i tuoi compariranno da soli."
@@ -1600,12 +1600,12 @@ S["es"]["models_readme"] = S["es"]["models_readme"].replace("Solo lo ves tú.", 
 _CHARS = {
     "en": dict(chars_title="New characters", chars_desc="A new character doesn't replace anyone: it joins the draw of each match, with the same chance as the originals (choose who can appear with the in-game \"Character selector\" in the waiting room). Without a name, animations or lines of its own it uses those of the character whose place it takes, and it always plays like that character. For a skin that always replaces a character, use the list above.",
                chars_add="Add character", chars_edit="Edit", chars_delete="Remove", chars_images_open="Open images folder",
-               chars_none="No new characters yet.", chars_name="Name", chars_name_keep="(keeps the name of the place it takes)",
+               chars_none="No new characters yet.", chars_name="Name", chars_name_keep="(uses the name of the character whose slot it takes)",
                chars_model="3D model", chars_role="Type", chars_role_pawn="Character", chars_role_traitor="Traitor",
-               chars_image="Image (portraits)", chars_image_none="Render from the model", chars_anims="Animations",
-               chars_talk="Lines", chars_talk_hint="Write only the ones you want to change; the empty ones keep the lines of the character whose place it takes. A traitor doesn't speak.",
+               chars_image="Image (portraits)", chars_image_none="Generate from the model", chars_anims="Animations",
+               chars_talk="Lines", chars_talk_hint="Only fill in the ones you want to change; empty ones keep the lines of the character whose slot it takes. Traitors don't speak.",
                chars_talk_keep="(keeps the original line)", chars_save="Save", chars_cancel="Cancel", chars_need_model="Choose a 3D model from the models folder.",
-               chars_has_anims="own animations", chars_has_talk="{n} lines", chars_has_image="image", roster_saved="Character selector saved."),
+               chars_has_anims="custom animations", chars_has_talk="{n} lines", chars_has_image="image", roster_saved="Character selector saved."),
     "es": dict(chars_title="Personajes nuevos", chars_desc="Un personaje nuevo no sustituye a nadie: entra en el sorteo de cada partida con la misma probabilidad que los originales (eliges quién puede salir con el «Selector de personajes» de la sala de espera del juego). Si no tiene nombre, animaciones o frases propias, usa los del personaje cuyo sitio ocupa, y siempre juega como él. Para una skin que sustituya siempre a un personaje, usa la lista de arriba.",
                chars_add="Añadir personaje", chars_edit="Editar", chars_delete="Quitar", chars_images_open="Abrir carpeta de imágenes",
                chars_none="Aún no hay personajes nuevos.", chars_name="Nombre", chars_name_keep="(se queda el del sitio que ocupe)",
@@ -1692,7 +1692,7 @@ for _l, _d in _CHARS.items():
 
 # de que personaje del juego saca las animaciones un personaje nuevo
 _ANIMFROM = {
-    "en": ("Animations of", "anims of {n}", "Without animations of its own it moves like the character chosen in \"Animations of\" (not like the one whose place it takes). Your own idle/walk/run replace those."),
+    "en": ("Animations of", "{n}'s animations", "Without its own animations, it moves like the character chosen in \"Animations of\" (not the one whose slot it takes). Your own idle/walk/run animations replace those."),
     "es": ("Animaciones de", "animaciones de {n}", "Sin animaciones propias se mueve como el personaje elegido en «Animaciones de» (no como el del sitio que ocupa). Tus animaciones de reposo/andar/correr sustituyen a esas."),
     "fr": ("Animations de", "animations de {n}", "Sans animations propres, il bouge comme le personnage choisi dans « Animations de » (pas comme celui dont il prend la place). Vos animations repos/marche/course remplacent celles-ci."),
     "it": ("Animazioni di", "animazioni di {n}", "Senza animazioni proprie si muove come il personaggio scelto in «Animazioni di» (non come quello di cui prende il posto). Le tue animazioni di riposo/camminata/corsa sostituiscono quelle."),
@@ -1710,19 +1710,10 @@ S["es"]["chars_desc"] = ("Un personaje nuevo no sustituye a nadie: entra en el s
                          "originales (eliges quién puede salir con el «Selector de personajes» de la sala de espera del juego). Juega "
                          "como el personaje cuyo sitio ocupa, pero se mueve como el que elijas en «Animaciones de» (o con tus animaciones). "
                          "Sin nombre o frases propias usa los del sitio que ocupa. Para una skin que sustituya siempre a un personaje, usa la lista de arriba.")
-S["en"]["chars_desc"] = ("A new character doesn't replace anyone: it joins the draw of each match, with the same chance as the originals "
-                         "(choose who can appear with the in-game \"Character selector\" in the waiting room). It plays like the character "
-                         "whose place it takes, but moves like the one you pick in \"Animations of\" (or with your own animations). Without a "
-                         "name or lines of its own it uses those of the place it takes. For a skin that always replaces a character, use the list above.")
+S["en"]["chars_desc"] = ("A new character doesn't replace anyone: it's added to the pool for each match, with the same chance of appearing as the originals (choose who can appear with the \"Character selector\" in the game's waiting room). It plays like the character whose slot it takes, but moves like the one you pick in \"Animations of\" (or with your own animations). If it has no name or lines of its own, it uses those of the character whose slot it takes. For a skin that always replaces a character, use the list above.")
 # las situaciones de las frases (descripcion propia; no es el texto del juego)
 _TALK_LABELS = {
-    "en": ["Searches and finds nothing", "Breathes in gas", "A danger got into the room", "Breaks the fuse box",
-           "Discovers a secret passage", "Discovers a note", "Discovers a fuse box", "Can't carry more items",
-           "Can't carry more weapons", "Picks up food", "Picks up medicine", "Picks up a weapon",
-           "Killer alone with someone (both suspicious)", "Alone with the killer", "Alone with the victim",
-           "Start of the match", "Attacked", "Attacked on the last day", "Healed by someone else", "Repairs the fuse box",
-           "Acts while dying", "Acts while hungry", "Acts while injured", "Walks into a dark room", "Uses a secret passage",
-           "Gives food to someone", "Uses medicine on themselves", "Gives medicine to someone"],
+    "en": ["Searches and finds nothing", "Breathes in gas", "Danger enters the room", "Breaks the fuse box", "Finds a secret passage", "Finds a note", "Finds a fuse box", "Can't carry more items", "Can't carry more weapons", "Picks up food", "Picks up medicine", "Picks up a weapon", "Alone with someone (both suspects)", "Alone with the killer", "Alone with the victim", "Match starts", "Gets attacked", "Gets attacked on the last day", "Healed by someone else", "Repairs the fuse box", "Acts while dying", "Acts while hungry", "Acts while injured", "Walks into a dark room", "Uses a secret passage", "Gives food to someone", "Uses medicine on themselves", "Gives medicine to someone"],
     "es": ["Busca y no encuentra nada", "Respira gas", "Un peligro ha entrado en la sala", "Rompe la caja de fusibles",
            "Descubre un pasadizo secreto", "Descubre una nota", "Descubre una caja de fusibles", "No puede llevar más objetos",
            "No puede llevar más armas", "Coge comida", "Coge un medicamento", "Coge un arma",
@@ -1730,6 +1721,15 @@ _TALK_LABELS = {
            "Empieza la partida", "Le atacan", "Le atacan el último día", "Otro le cura", "Arregla la caja de fusibles",
            "Actúa estando moribundo", "Actúa con hambre", "Actúa estando herido", "Entra en una sala a oscuras", "Usa un pasadizo secreto",
            "Da comida a alguien", "Se toma un medicamento", "Da un medicamento a alguien"],
+    "fr": ["Fouille et ne trouve rien", "Respire du gaz", "Un danger entre dans la salle", "Casse la boîte à fusibles", "Trouve un passage secret", "Trouve une note", "Trouve une boîte à fusibles", "Ne peut pas porter plus d'objets", "Ne peut pas porter plus d'armes", "Ramasse de la nourriture", "Ramasse un médicament", "Ramasse une arme", "Seul avec quelqu'un (tous deux suspects)", "Seul avec le tueur", "Seul avec la victime", "Début de la partie", "Se fait attaquer", "Se fait attaquer le dernier jour", "Soigné par quelqu'un d'autre", "Répare la boîte à fusibles", "Agit en étant mourant", "Agit en ayant faim", "Agit en étant blessé", "Entre dans une salle plongée dans le noir", "Utilise un passage secret", "Donne de la nourriture à quelqu'un", "Prend un médicament", "Donne un médicament à quelqu'un"],
+    "it": ["Cerca e non trova niente", "Respira gas", "Un pericolo entra nella stanza", "Rompe la scatola dei fusibili", "Trova un passaggio segreto", "Trova un biglietto", "Trova una scatola dei fusibili", "Non può portare altri oggetti", "Non può portare altre armi", "Raccoglie cibo", "Raccoglie una medicina", "Raccoglie un'arma", "Solo con qualcuno (entrambi sospettati)", "Solo con l'assassino", "Solo con la vittima", "Inizio della partita", "Viene attaccato", "Viene attaccato l'ultimo giorno", "Curato da qualcun altro", "Ripara la scatola dei fusibili", "Agisce mentre sta morendo", "Agisce affamato", "Agisce ferito", "Entra in una stanza al buio", "Usa un passaggio segreto", "Dà cibo a qualcuno", "Prende una medicina", "Dà una medicina a qualcuno"],
+    "de": ["Sucht und findet nichts", "Atmet Gas ein", "Eine Gefahr dringt in den Raum ein", "Zerstört den Sicherungskasten", "Entdeckt einen Geheimgang", "Entdeckt eine Notiz", "Entdeckt einen Sicherungskasten", "Kann keine Gegenstände mehr tragen", "Kann keine Waffen mehr tragen", "Hebt Essen auf", "Hebt Medizin auf", "Hebt eine Waffe auf", "Allein mit jemandem (beide verdächtig)", "Allein mit dem Mörder", "Allein mit dem Opfer", "Spielbeginn", "Wird angegriffen", "Wird am letzten Tag angegriffen", "Von jemand anderem geheilt", "Repariert den Sicherungskasten", "Handelt im Sterben", "Handelt hungrig", "Handelt verletzt", "Betritt einen dunklen Raum", "Benutzt einen Geheimgang", "Gibt jemandem Essen", "Nimmt Medizin", "Gibt jemandem Medizin"],
+    "pt": ["Procura e não encontra nada", "Respira gás", "Um perigo entra na sala", "Quebra a caixa de fusíveis", "Descobre uma passagem secreta", "Descobre um bilhete", "Descobre uma caixa de fusíveis", "Não consegue carregar mais itens", "Não consegue carregar mais armas", "Pega comida", "Pega um remédio", "Pega uma arma", "Sozinho com alguém (ambos suspeitos)", "Sozinho com o assassino", "Sozinho com a vítima", "Início da partida", "É atacado", "É atacado no último dia", "Curado por outra pessoa", "Conserta a caixa de fusíveis", "Age enquanto está morrendo", "Age com fome", "Age ferido", "Entra em uma sala escura", "Usa uma passagem secreta", "Dá comida a alguém", "Toma um remédio", "Dá um remédio a alguém"],
+    "ru": ["Ищет и ничего не находит", "Вдыхает газ", "В комнату проникла опасность", "Ломает щиток", "Находит тайный ход", "Находит записку", "Находит щиток", "Не может нести больше предметов", "Не может нести больше оружия", "Подбирает еду", "Подбирает лекарство", "Подбирает оружие", "Наедине с кем-то (оба под подозрением)", "Наедине с убийцей", "Наедине с жертвой", "Начало матча", "Подвергается нападению", "Подвергается нападению в последний день", "Его лечит другой", "Чинит щиток", "Действует при смерти", "Действует голодным", "Действует раненым", "Входит в тёмную комнату", "Использует тайный ход", "Даёт кому-то еду", "Принимает лекарство", "Даёт кому-то лекарство"],
+    "ja": ["探索して何も見つからない", "ガスを吸う", "部屋に危険が侵入した", "配電盤を壊す", "隠し通路を見つける", "メモを見つける", "配電盤を見つける", "これ以上アイテムを持てない", "これ以上武器を持てない", "食料を拾う", "薬を拾う", "武器を拾う", "誰かと二人きり（どちらも怪しい）", "殺人鬼と二人きり", "被害者と二人きり", "試合開始", "襲われる", "最終日に襲われる", "他の人に治療される", "配電盤を直す", "瀕死の状態で行動する", "空腹の状態で行動する", "負傷した状態で行動する", "暗い部屋に入る", "隠し通路を使う", "誰かに食料をあげる", "自分に薬を使う", "誰かに薬をあげる"],
+    "ko": ["수색했지만 아무것도 없음", "가스를 들이마심", "방에 위험이 침입함", "배전반을 부숨", "비밀 통로를 발견함", "메모를 발견함", "배전반을 발견함", "아이템을 더 들 수 없음", "무기를 더 들 수 없음", "음식을 주움", "약을 주움", "무기를 주움", "누군가와 단둘이 (둘 다 수상함)", "살인마와 단둘이", "피해자와 단둘이", "게임 시작", "공격당함", "마지막 날에 공격당함", "다른 사람이 치료해 줌", "배전반을 고침", "빈사 상태로 행동함", "배고픈 상태로 행동함", "부상 상태로 행동함", "어두운 방에 들어감", "비밀 통로를 사용함", "누군가에게 음식을 줌", "스스로 약을 씀", "누군가에게 약을 줌"],
+    "zh-CN": ["搜索但一无所获", "吸入毒气", "危险闯入了房间", "破坏配电箱", "发现密道", "发现纸条", "发现配电箱", "拿不下更多道具", "拿不下更多武器", "捡到食物", "捡到药品", "捡到武器", "与某人独处（两人都可疑）", "与杀手独处", "与受害者独处", "对局开始", "遭到袭击", "最后一天遭到袭击", "被别人治疗", "修好配电箱", "濒死时行动", "饥饿时行动", "受伤时行动", "走进黑暗的房间", "使用密道", "把食物给别人", "自己用药", "把药给别人"],
+    "zh-TW": ["搜索但一無所獲", "吸入毒氣", "危險闖入了房間", "破壞配電箱", "發現密道", "發現紙條", "發現配電箱", "拿不下更多道具", "拿不下更多武器", "撿到食物", "撿到藥品", "撿到武器", "與某人獨處（兩人都可疑）", "與殺手獨處", "與受害者獨處", "對局開始", "遭到襲擊", "最後一天遭到襲擊", "被別人治療", "修好配電箱", "瀕死時行動", "飢餓時行動", "受傷時行動", "走進黑暗的房間", "使用密道", "把食物給別人", "自己用藥", "把藥給別人"],
 }
 for _l, _labels in _TALK_LABELS.items():
     for _k, _v in zip(("cannotGetAnything", "damagedByGasRoom", "dangerHasInvaded", "destroySwitchboard", "discoverBypass",
@@ -1745,7 +1745,7 @@ New characters (Mods > Models > New characters)
  - A new character joins the draw of every match instead of always replacing someone: each match picks 6 of the
    enabled characters (originals and new ones, same chance). Choose who can appear with the "Character selector"
    button in the game's waiting room (the host decides for the room; at least 6 characters and 1 traitor).
- - It needs a 3D model; the name, image (folder "imagenes"; without one it's taken from the model), animations
+ - It needs a 3D model; the name, image (folder "images"; without one it's taken from the model), animations
    and lines are optional: what it doesn't have comes from the character whose place it takes, and it always
    plays like that character. A traitor only uses the model and animations."""
 S["es"]["models_readme"] += """
@@ -1754,24 +1754,24 @@ Personajes nuevos (Mods > Modelos > Personajes nuevos)
  - Un personaje nuevo entra en el sorteo de cada partida en vez de sustituir siempre a alguien: cada partida salen
    6 de los personajes activados (originales y nuevos, con la misma probabilidad). Elige quién puede salir con el
    botón «Selector de personajes» de la sala de espera del juego (decide el anfitrión; mínimo 6 personajes y 1 traidor).
- - Necesita un modelo 3D; el nombre, la imagen (carpeta "imagenes"; sin ella se saca del modelo), las animaciones
+ - Necesita un modelo 3D; el nombre, la imagen (carpeta "images"; sin ella se saca del modelo), las animaciones
    y las frases son opcionales: lo que no tenga lo pone el personaje cuyo sitio ocupa, y siempre juega como él.
    Un traidor solo usa el modelo y las animaciones."""
 S["en"]["models_readme"] += """
 
-Animations (folder "animaciones")
+Animations (folder "animations")
  - Put .fbx or .glb animations there (from Mixamo: choose "FBX Binary", "Without Skin" and "In Place" for walks
    and runs). In the launcher (Mods > Models > Animations) choose, for each character, which one replaces its
    idle, walk or run. The first animation in each file is used; the game still decides when each one plays."""
 S["es"]["models_readme"] += """
 
-Animaciones (carpeta "animaciones")
+Animaciones (carpeta "animations")
  - Pon ahí animaciones .fbx o .glb (de Mixamo: elige "FBX Binary", "Without Skin" e "In Place" para andar y
    correr). En el lanzador (Mods > Modelos > Animaciones) elige, para cada personaje, cuál sustituye a su reposo,
    su andar o su correr. Se usa la primera animación de cada archivo; el juego sigue decidiendo cuándo suena cada una."""
 
 _GAME_OPEN = {
-    "en": "CRIMESIGHT is already open. Close it and press the button again: the launcher opens it for you, already connected.",
+    "en": "CRIMESIGHT is already open. Close it and press the button again: the launcher will open it for you, already connected.",
     "es": "CRIMESIGHT ya está abierto. Ciérralo y vuelve a pulsar el botón: el lanzador lo abre por ti, ya conectado.",
     "fr": "CRIMESIGHT est déjà ouvert. Fermez-le et appuyez de nouveau sur le bouton : le lanceur l'ouvre pour vous, déjà connecté.",
     "it": "CRIMESIGHT è già aperto. Chiudilo e premi di nuovo il pulsante: il launcher lo apre per te, già connesso.",
@@ -1787,7 +1787,7 @@ for _l, _v in _GAME_OPEN.items():
     S[_l]["err_game_open"] = _v
 
 _LOCKED = {
-    "en": "Windows won't let the launcher modify the game's files ({path}). Make sure the game is closed. If you use Windows Security's \"Controlled folder access\", allow the launcher there. Steam → CRIMESIGHT → Properties → Installed files → \"Verify integrity\" also fixes damaged files.",
+    "en": "Windows won't let the launcher change the game's files ({path}). Make sure the game is closed. If you use \"Controlled folder access\" in Windows Security, allow the launcher there. You can also fix damaged files in Steam → CRIMESIGHT → Properties → Installed Files → \"Verify integrity of game files\".",
     "es": "Windows no deja al lanzador modificar los archivos del juego ({path}). Comprueba que el juego está cerrado. Si usas el «Acceso controlado a carpetas» de Seguridad de Windows, permite ahí el lanzador. En Steam → CRIMESIGHT → Propiedades → Archivos instalados → «Verificar integridad» también se arreglan archivos dañados.",
     "fr": "Windows n'autorise pas le lanceur à modifier les fichiers du jeu ({path}). Vérifiez que le jeu est fermé. Si vous utilisez « Dispositif d'accès contrôlé aux dossiers » de Sécurité Windows, autorisez-y le lanceur. Steam → CRIMESIGHT → Propriétés → Fichiers installés → « Vérifier l'intégrité » répare aussi les fichiers endommagés.",
     "it": "Windows non permette al launcher di modificare i file del gioco ({path}). Assicurati che il gioco sia chiuso. Se usi «Accesso alle cartelle controllato» di Sicurezza di Windows, consenti lì il launcher. Steam → CRIMESIGHT → Proprietà → File installati → «Verifica integrità» ripara anche i file danneggiati.",
@@ -1804,7 +1804,7 @@ for _l, _v in _LOCKED.items():
 
 # --- actualizar con el juego, una sesion u otro lanzador abiertos ------------------------------------
 _UPD_CLOSE = {
-    "en": dict(update_confirm_close="To update, the game, the current session and any other open launcher will be closed. If you're in the middle of a match, it counts as leaving it.",
+    "en": dict(update_confirm_close="To update, the game, the current session and any other open launchers will be closed. If you're in a match, this counts as leaving it.",
                update_close_btn="Close everything and update", update_closing="Closing the game and the session to update…"),
     "es": dict(update_confirm_close="Para actualizar se cerrarán el juego, la sesión en marcha y cualquier otro lanzador abierto. Si estás en mitad de una partida, contará como abandono.",
                update_close_btn="Cerrar todo y actualizar", update_closing="Cerrando el juego y la sesión para actualizar…"),
@@ -1860,15 +1860,15 @@ S["en"].update(
     stage_name='Name',
     stage_name_ph='My scenario',
     stage_mine='My scenarios',
-    stage_original='Back to the original',
+    stage_original="Reset to original",
     stage_save='Save',
     stage_saved='Saved. To play it, turn on hot reload (BepInEx) in Mods.',
     stage_delete='Delete',
     stage_test='Quick test',
-    stage_test_ok='Ready. In the game, create a room and choose “Test stage (CSR)”. No need to restart the game or save.',
+    stage_test_ok="Ready. In the game, create a room and choose “Test stage (CSR)”. You don't need to restart the game or save.",
     stage_test_stop='Stop testing',
-    stage_test_off='The test stage is an exact copy of scenario 01 again.',
-    stage_need_bep='To test a scenario you need hot reload (BepInEx). Turn it on in Mods.',
+    stage_test_off="The test stage is back to being an exact copy of scenario 01.",
+    stage_need_bep="To test a scenario, you need hot reload (BepInEx). Turn it on in Mods.",
     stage_need_name='Give your scenario a name first.',
     stage_fix_first='Fix the problems marked in red first.',
     stage_tool_move='Rooms and doors',
@@ -1877,7 +1877,7 @@ S["en"].update(
     stage_rotate='Rotate',
     stage_remove='Remove',
     stage_add='Add a room',
-    stage_help_move='Drag a room to move it. R rotates it, Del removes it. Click a door to change it (door → furniture → secret passage) or a window to let wolves in through it.',
+    stage_help_move="Drag a room to move it. R rotates it and Del removes it. Click a door to change it (door → furniture → secret passage), or click a window to let wolves in through it.",
     stage_help_gas='Click inside a room to add or remove a gas point.',
     stage_help_spawn='Click a cell to add or remove a starting cell for the characters.',
     stage_l_door='Door',
@@ -1889,10 +1889,10 @@ S["en"].update(
     stage_l_gas='Gas',
     stage_l_spawn='Starting cell',
     stage_ok='No problems.',
-    stage_active='In the test stage now: {name}',
-    stage_active_none='In the test stage now: copy of scenario 01',
+    stage_active="Currently in the test stage: {name}",
+    stage_active_none="Currently in the test stage: copy of scenario 01",
     stage_stats='{rooms} rooms · {doors} doors · {wolves} wolf entrances · {gas} gas · {byways} passages',
-    stage_only_host="In a room, everyone downloads the host's scenarios when joining. A custom scenario needs every player to have hot reload (BepInEx): while someone is missing it, the room won't let the match start and says so next to their name.",
+    stage_only_host="When joining a room, everyone downloads the host's scenarios. Custom scenarios require every player to have hot reload (BepInEx): until everyone has it, the match can't start, and the room shows a note next to the names of the players missing it.",
     stage_p_no_rooms='Add at least one room.',
     stage_p_out_of_bounds='Room {room} is partly off the grid.',
     stage_p_overlap='Rooms {room} and {other} overlap.',
@@ -1906,19 +1906,19 @@ S["en"].update(
     stage_p_few_gas="Gas points: {n}. The game's scenarios have at least {want}.",
     stage_p_few_byways="Secret passages: {n}. The game's scenarios have at least {want}.",
     stage_p_no_entrance='There is no entrance hall.',
-    stage_saved_live="Saved. It's now in the game's scenario list, with its name.",
+    stage_saved_live="Saved. It now appears in the game's scenario list under its name.",
     stage_saved_errors="Saved, but it won't show up in the game until you fix the problems marked in red.",
-    stage_room_need_bep="This room has custom scenarios. Without hot reload (BepInEx) you can't play them: the host won't be able to start one of them while you're in the room.",
-    stage_room_synced='Scenarios of the room ready in your game: {n}.',
+    stage_room_need_bep="This room has custom scenarios. Without hot reload (BepInEx) you can't play them: the host can't start one while you're in the room.",
+    stage_room_synced="The room's scenarios are ready in your game: {n}.",
     stage_room_failed="Couldn't prepare the custom scenarios ({err}). You can still play the normal ones.",
     stage_import_bad="That file isn't a CRIMESIGHT Revival scenario, or it's for another version of the game.",
     stage_imported="Scenario imported. It's already in your list.",
-    stage_exported='Scenario saved to {path}. Send that file to whoever you want.',
-    stage_too_many="The game's list fits {n} scenarios of yours. Turn one off first.",
-    stage_saved_off='Saved, but turned off: you already have {n} scenarios on. Turn one off to use this one.',
+    stage_exported="Scenario saved to {path}. You can send that file to anyone.",
+    stage_too_many="The game's list has room for {n} of your scenarios. Turn one off first.",
+    stage_saved_off="Saved, but turned off: you already have {n} scenarios turned on. Turn one off to use this one.",
     stage_import='Import',
     stage_export='Export',
-    stage_none="You haven't saved any scenario yet.",
+    stage_none="You haven't saved any scenarios yet.",
 )
 S["es"].update(
     stage_btn='Creador de escenarios',
@@ -2611,7 +2611,7 @@ S["zh-TW"].update(
     stage_none='你還沒有儲存任何場景。',
 )
 # ---- actualizacion del lanzador: se ofrece con sus novedades
-S["en"].update(update_title='New version available', update_ver='You have {cur}. The latest is {v}.', update_changes="What's new", update_no_notes='No notes for this version.', update_now='Update now', update_later='Not now', update_hint="To play with other people, it's best that everyone has the same version.", update_pill='Update available: {v}')
+S["en"].update(update_title='New version available', update_ver='You have {cur}. The latest is {v}.', update_changes="What's new", update_no_notes='No notes for this version.', update_now='Update now', update_later='Not now', update_hint="To play with others, it's best if everyone has the same version.", update_pill='Update available: {v}')
 S["es"].update(update_title='Nueva versión disponible', update_ver='Tienes la {cur}. La última es la {v}.', update_changes='Novedades', update_no_notes='Esta versión no trae notas.', update_now='Actualizar ahora', update_later='Ahora no', update_hint='Para jugar con otras personas, lo mejor es que todos tengáis la misma versión.', update_pill='Actualización disponible: {v}')
 S["fr"].update(update_title='Nouvelle version disponible', update_ver='Vous avez la {cur}. La dernière est la {v}.', update_changes='Nouveautés', update_no_notes='Pas de notes pour cette version.', update_now='Mettre à jour', update_later='Pas maintenant', update_hint="Pour jouer avec d'autres personnes, mieux vaut que tout le monde ait la même version.", update_pill='Mise à jour disponible : {v}')
 S["it"].update(update_title='Nuova versione disponibile', update_ver="Hai la {cur}. L'ultima è la {v}.", update_changes='Novità', update_no_notes='Nessuna nota per questa versione.', update_now='Aggiorna ora', update_later='Non ora', update_hint='Per giocare con altre persone è meglio che tutti abbiano la stessa versione.', update_pill='Aggiornamento disponibile: {v}')

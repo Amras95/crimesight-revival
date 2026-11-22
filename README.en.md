@@ -109,16 +109,19 @@ Add your own stickers and avatars. **They're new slots**: the game's own ones (i
 still depend on owning them on Steam) are never changed.
 
 1. In the launcher, click **Mods → Open mods folder** (`%APPDATA%\CrimeSightRevival\mods`). It comes ready
-   with an example mod and a `README.txt`.
-2. Put your images (PNG, JPG, WEBP…) in `stickers\` and/or `avatars\`. You can put them straight into the
-   mods folder or make one folder per mod (**New mod** button) to keep several packs.
+   with its folders and a `README.txt`.
+2. Put your images (PNG, JPG, WEBP…) in `stickers\` and/or `avatars\`. Images from several packs can go
+   in the same folders.
 3. Play. The launcher adds them to the game before opening it.
 
 ```
 mods\
   stickers\        01_hello.png, Good night!.png…
   avatars\         me.png
-  Cats\            another mod: its own stickers\ and avatars\ folders (+ optional mod.json)
+  mod.json         sticker messages (set with the "Messages" button)
+  models\          your 3D models, skeletons, animations and images
+  cursor\          your own cursor
+  stages\          your scenarios from the scenario creator
 ```
 
 - **Any image works.** They're adjusted to the game's size automatically (128×128 stickers with their white
@@ -226,7 +229,7 @@ WINEDLLOVERRIDES="winhttp=n,b" %command%
 4. Optional: `--mods-dir FOLDER` offers players the mods in that folder (same layout as the launcher's mods
    folder; needs `pip install pillow`).
 5. Optional: `--stages-dir FOLDER` offers players the scenario-creator scenarios in that folder (the `.json`
-   files from `%APPDATA%\CrimeSightRevival\stages`).
+   files from `%APPDATA%\CrimeSightRevival\mods\stages`).
 
 The password protects profile sync: the game only identifies itself with its Steam ID, so a server
 without a password would let anyone pretend to be another player.

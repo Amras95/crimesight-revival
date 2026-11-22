@@ -109,16 +109,19 @@ Añade stickers y avatares tuyos. **Son huecos nuevos**: los del juego (también
 dependiendo de tenerlos en Steam) no se tocan nunca.
 
 1. En el lanzador, pulsa **Mods → Abrir carpeta de mods** (`%APPDATA%\CrimeSightRevival\mods`). Viene
-   preparada con un mod de ejemplo y un `README.txt`.
-2. Mete tus imágenes (PNG, JPG, WEBP…) en `stickers\` y/o `avatars\`. Puedes ponerlas directamente en la
-   carpeta de mods o hacer una carpeta por mod (botón **Nuevo mod**) para tener varios packs.
+   preparada con sus carpetas y un `README.txt`.
+2. Mete tus imágenes (PNG, JPG, WEBP…) en `stickers\` y/o `avatars\`. Las de varios packs pueden ir en
+   las mismas carpetas.
 3. Juega. El lanzador las mete en el juego antes de abrirlo.
 
 ```
 mods\
   stickers\        01_saludo.png, ¡Buenas noches!.png…
   avatars\         yo.png
-  Gatos\           otro mod: su propia carpeta stickers\ y avatars\ (+ mod.json opcional)
+  mod.json         mensajes de los stickers (con el botón «Mensajes»)
+  models\          tus modelos 3D, esqueletos, animaciones e imágenes
+  cursor\          tu cursor propio
+  stages\          tus escenarios del creador de escenarios
 ```
 
 - **Cualquier imagen sirve.** Se ajustan solas al tamaño del juego (stickers de 128×128 con su borde blanco;
@@ -224,7 +227,7 @@ WINEDLLOVERRIDES="winhttp=n,b" %command%
 4. Opcional: `--mods-dir CARPETA` ofrece a los jugadores los mods de esa carpeta (misma estructura que la
    carpeta de mods del lanzador; necesita `pip install pillow`).
 5. Opcional: `--stages-dir CARPETA` ofrece a los jugadores los escenarios del creador que haya en esa
-   carpeta (los `.json` de `%APPDATA%\CrimeSightRevival\stages`).
+   carpeta (los `.json` de `%APPDATA%\CrimeSightRevival\mods\stages`).
 
 La contraseña protege la sincronización de perfiles: el juego solo se identifica con su ID de Steam,
 así que un servidor sin contraseña permitiría a cualquiera hacerse pasar por otro jugador.

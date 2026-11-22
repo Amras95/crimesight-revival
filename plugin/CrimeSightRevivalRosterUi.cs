@@ -81,6 +81,7 @@ namespace CrimeSightRevival.Mods
         static float _nextLook;
         static OutGameRoomWaitingMenuVer2 _menu;
         static bool _menuOpen;
+        static bool _btnFaded;      // la sala se ve detras de una ventana: el boton se queda, como el del manual, sin pulsar
         static readonly Vector2 BtnSize = new Vector2(176, 118);
 
         public static void Frame()
@@ -88,18 +89,22 @@ namespace CrimeSightRevival.Mods
             if (_root != null) { WindowFrame(); return; }
             if (Time.unscaledTime >= _nextLook)
             {
-                _nextLook = Time.unscaledTime + 0.5f;
+                _nextLook = Time.unscaledTime + 0.15f;                // como los iconos del mando (Pad.UiScan)
                 _menuOpen = MenuVisible();
-                bool want = _menuOpen && File.Exists(PoolFile);
+                // La sala se ve aunque tenga una ventana encima (ajustes, confirmaciones, dificultad de la IA...): el
+                // boton se queda igual que el del manual de al lado (el juego oscurece los dos), sin poder pulsarse.
+                // Con una ventana encima solo si se ve el del manual: fuera de la sala el juego la deja cargada.
+                bool want = File.Exists(PoolFile) && (_menuOpen || (RoomShown() && ManualSeen(_manual != null ? _manual : FindManual())));
                 if (want && (_btnRoot == null || (!_ownCanvas && _manual == null) || (_ownCanvas && FindManual() != null))) MakeButton();
                 if (_btnRoot != null) _btnRoot.SetActive(want);
                 if (want && !_ownCanvas && _btnRoot != null && _manual != null) Place(_btnRect, _manual);
+                if (want && _btnRoot != null) FadeButton(Covered());
             }
             if (_btnRoot == null || !_btnRoot.activeSelf || !_ownCanvas) return;
             // en nuestro lienzo (sin el del juego): raton a mano
-            bool over = RectTransformUtility.RectangleContainsScreenPoint(_btnRect, Input.mousePosition, null);
+            bool over = !_btnFaded && RectTransformUtility.RectangleContainsScreenPoint(_btnRect, Input.mousePosition, null);
             if (_btnImg != null) _btnImg.color = over ? Skin.Hover(_btnBase) : _btnBase;
-            if (over && Input.GetMouseButtonDown(0) && !_menu.IsOverlaySomeUI()) Open();
+            if (over && Input.GetMouseButtonDown(0) && !Covered()) Open();
         }
 
         static bool MenuVisible()
@@ -118,6 +123,62 @@ namespace CrimeSightRevival.Mods
                 return _menu != null && _menu.gameObject.activeInHierarchy && _menu.IsActive() && !AiPicker.IsOpen;
             }
             catch { _menu = null; return false; }
+        }
+
+        /// <summary>La sala de espera se ve (aunque haya una ventana encima).</summary>
+        static bool RoomShown()
+        {
+            try { return _menu != null && _menu.gameObject.activeInHierarchy; }
+            catch { _menu = null; return false; }
+        }
+
+        /// <summary>El boton del manual se ve (activo y sin un CanvasGroup que lo oculte).</summary>
+        static bool ManualSeen(RectTransform m)
+        {
+            try
+            {
+                if (m == null || !m.gameObject.activeInHierarchy) return false;
+                for (var t = m.transform; t != null; t = t.parent)
+                {
+                    var cg = t.GetComponent<CanvasGroup>();
+                    if (cg != null && cg.alpha < 0.05f) return false;
+                    if (cg != null && cg.ignoreParentGroups) break;
+                }
+                return true;
+            }
+            catch { return false; }
+        }
+
+        /// <summary>Hay una ventana encima de la sala (o no es la pantalla activa): el boton no se puede pulsar.</summary>
+        static bool Covered()
+        {
+            if (!_menuOpen) return true;
+            try { return _menu.IsOverlaySomeUI(); } catch { return true; }
+        }
+
+        /// <summary>Con la sala tapada el boton no recibe clics y se ve exactamente como el del manual de al lado: estan
+        /// en el mismo sitio, asi que lo que el juego oscurece los oscurece a los dos, y ademas se copia lo que lleva el
+        /// del manual (su transparencia y si esta desactivado).</summary>
+        static void FadeButton(bool faded)
+        {
+            _btnFaded = faded;
+            float a = 1f;
+            if (_manual != null)
+            {
+                try
+                {
+                    var mcg = _manual.GetComponent<CanvasGroup>();
+                    if (mcg != null) a = mcg.alpha;
+                    var mb = _manual.GetComponent<Button>();
+                    var ours = _btnRoot.GetComponent<Button>();
+                    if (mb != null && ours != null && ours.interactable != mb.interactable) ours.interactable = mb.interactable;
+                }
+                catch { }
+            }
+            var cg = _btnRoot.GetComponent<CanvasGroup>();
+            if (cg == null) { if (!faded && a >= 1f) return; cg = _btnRoot.AddComponent<CanvasGroup>(); }
+            if (cg.alpha != a) cg.alpha = a;
+            if (cg.blocksRaycasts == faded) cg.blocksRaycasts = !faded;
         }
 
         /// <summary>El boton "Manual online" de la sala (por su texto, en el idioma del juego).</summary>
@@ -213,7 +274,7 @@ namespace CrimeSightRevival.Mods
                     btn.onClick = new Button.ButtonClickedEvent();
                     btn.onClick.AddListener(Il2CppInterop.Runtime.DelegateSupport.ConvertDelegate<UnityEngine.Events.UnityAction>(new Action(() =>
                     {
-                        try { if (_root == null && !_menu.IsOverlaySomeUI()) Open(); } catch (Exception e) { Plugin.L.LogWarning("[Selector] " + e.Message); }
+                        try { if (_root == null && !Covered()) Open(); } catch (Exception e) { Plugin.L.LogWarning("[Selector] " + e.Message); }
                     })));
                 }
                 var icon = ModOffer.Box("Icono", rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 28), new Vector2(40, 40));

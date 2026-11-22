@@ -317,13 +317,13 @@ footer .updpill.on{display:inline-block}
         </div>
       </div>
       <div class="pane" data-pane="stickers">
-        <p data-t="mods_how"></p>
+        <p data-t="mods_how_stickers"></p>
         <p data-t="mods_text_hint"></p>
         <p class="note" data-t="mods_toggle_note"></p>
         <div class="mods" id="modlist_stickers"></div>
       </div>
       <div class="pane" data-pane="avatars">
-        <p data-t="mods_how"></p>
+        <p data-t="mods_how_avatars"></p>
         <p class="note" data-t="mods_toggle_note"></p>
         <div class="mods" id="modlist_avatars"></div>
       </div>
@@ -376,7 +376,6 @@ footer .updpill.on{display:inline-block}
     </div>
     <div class="actions">
       <button class="btn ghost small" style="margin-right:auto" onclick="closeMods();SE.open()" data-t="stage_btn"></button>
-      <button class="btn small" onclick="newMod()" data-t="mods_new"></button>
       <button class="btn ghost small" onclick="api('mods_open')" data-t="mods_open"></button>
       <button class="btn ghost small" onclick="loadMods()" data-t="mods_reload"></button>
       <button class="btn ghost small" onclick="closeMods()" data-t="close"></button>
@@ -673,7 +672,6 @@ function modTab(t){
   document.querySelectorAll('#mods .pane').forEach(p=>p.classList.toggle('on',p.dataset.pane===t));
   $('#mods .tabbody').scrollTop=0;
 }
-async function newMod(){await api('mods_new');loadMods()}
 async function toggleMod(folder,on){await api('mods_toggle',folder,on);loadMods()}
 let BEP=null;
 async function loadBep(){

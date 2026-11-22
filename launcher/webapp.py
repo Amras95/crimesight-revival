@@ -595,11 +595,6 @@ class Api:
         self._cfg["model_swaps"] = core.load_config().get("model_swaps") or {}   # que no lo pise otro guardado
         return self.models_state()
 
-    def mods_new(self):
-        folder = core.new_mod()
-        core.open_folder(folder)
-        return os.path.basename(folder)
-
     # ---------------------------------------------------------------- creador de escenarios
     STAGE_LABELS = {"Stage_Yokn": "01 · Lauriston Gardens", "Stage_Yokn_v1030": "02 · Briony Lodge",
                     "Stage_Yokn_v1040": "03 · Josiah Amberley", "Stage_Yokn_v1050": "04 · The Abbey Grange",
