@@ -5,7 +5,7 @@ Un mod es una carpeta normal con imagenes (no hace falta comprimir nada):
 
     mods/
       MiPack/
-        stickers/   gato.png, ok.png ...
+        stamps/     gato.png, ok.png ...
         avatars/    yo.png ...
         mod.json    (opcional) {"name": "Mi pack", "author": "Amras"}
 
@@ -24,6 +24,11 @@ STICKER_MARGIN = 7
 AVATAR_SIZE = 256
 AVATAR_BOX = (40, 33, 176)          # x, y y lado de la zona donde dibujan los iconos originales (la que se ve)
 KINDS = ("stickers", "avatars")
+# Folder of each kind on disk. Stickers are called "stamps" like in the game, but the kind keeps its old
+# name inside the program and in the zip sent over the network, so older launchers and servers still
+# understand the packs. The old "stickers" folder is not read any more (nothing is moved for the player).
+DIRS = {"stickers": "stamps", "avatars": "avatars"}
+OLD_DIRS = ("stickers",)
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif")
 MAX_STICKERS = 60                   # por sala
 MAX_AVATARS = 30
@@ -330,7 +335,7 @@ def text_for_game(text):
 
 
 def _images(folder, kind):
-    d = os.path.join(folder, kind)
+    d = os.path.join(folder, DIRS[kind])
     if not os.path.isdir(d):
         return []
     return sorted(f for f in os.listdir(d) if f.lower().endswith(IMAGE_EXT) and os.path.isfile(os.path.join(d, f)))
@@ -363,7 +368,7 @@ def load_mod(folder, owner=""):
     temp = os.path.basename(folder.rstrip("/\\")).endswith(TEMP_SUFFIX)
     for kind in KINDS:
         for fname in _images(folder, kind):
-            path = os.path.join(folder, kind, fname)
+            path = os.path.join(folder, DIRS[kind], fname)
             try:
                 with open(path, "rb") as f:
                     data = f.read()
@@ -455,10 +460,10 @@ def list_folders(mods_dir):
     (lo mas natural), la propia carpeta cuenta como un mod mas."""
     if not mods_dir or not os.path.isdir(mods_dir):
         return []
-    out = [mods_dir] if any(os.path.isdir(os.path.join(mods_dir, k)) for k in KINDS) else []
+    out = [mods_dir] if any(os.path.isdir(os.path.join(mods_dir, DIRS[k])) for k in KINDS) else []
     out += sorted(os.path.join(mods_dir, d) for d in os.listdir(mods_dir)
                   if os.path.isdir(os.path.join(mods_dir, d)) and not d.startswith((".", "_"))
-                  and d.lower() not in KINDS)
+                  and d.lower() not in set(DIRS.values()) | set(OLD_DIRS))
     return out
 
 
@@ -571,13 +576,13 @@ def unpack(data, dest_dir):
         for kind in KINDS:
             files = m.get(kind, [])[:MAX_STICKERS if kind == "stickers" else MAX_AVATARS]
             if files:
-                os.makedirs(os.path.join(folder, kind), exist_ok=True)
+                os.makedirs(os.path.join(folder, DIRS[kind]), exist_ok=True)
             for fname in files:
                 if not _SAFE_FILE.match(str(fname)):
                     raise ModError("nombre de imagen no valido")
                 png = z.read(f"{uid}/{kind}/{fname}")
                 check_normalized(kind, png)
-                with open(os.path.join(folder, kind, fname), "wb") as f:
+                with open(os.path.join(folder, DIRS[kind], fname), "wb") as f:
                     f.write(png)
         os.makedirs(folder, exist_ok=True)
         with open(os.path.join(folder, "mod.json"), "w", encoding="utf-8") as f:

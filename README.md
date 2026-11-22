@@ -34,8 +34,11 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 > **Mods de stickers y avatares:** probados en solitario, con y sin recarga en caliente. La descarga de los
 > mods del anfitrión al unirse a su sala está probada en local, aún no entre dos personas.
 >
-> **Creador de escenarios (nuevo en la 1.1):** probado en solitario. Compartir escenarios con la sala aún
-> no está probado entre dos personas.
+> **Creador de escenarios:** probado en solitario. Compartir escenarios con la sala aún no está probado
+> entre dos personas.
+>
+> **Modelos 3D, personajes nuevos y Selección de personajes:** probados en solitario. Compartirlos con la
+> sala aún no está probado entre dos personas.
 >
 > **Linux / Steam Deck:** versión nueva, aún en pruebas.
 >
@@ -75,9 +78,13 @@ que tienes el juego (los 11 idiomas del juego).
 
 ### En la sala
 
-- Los huecos libres se llenan con **IA** (`IA_1 (Normal)`…). **Expulsa a una IA** para cambiar su
-  dificultad: Normal → Difícil → Fácil → hueco libre para un amigo.
+- Los huecos libres se llenan con **IA** (`IA_1 (Normal)`…). **Expulsa a una IA** para abrir una ventana
+  en la que eliges su dificultad (Fácil, Normal, Difícil, Experto o Pesadilla), la aplicas a todas las IA a
+  la vez o dejas el hueco libre para un amigo. Sin la recarga en caliente, cada expulsión la pasa a la
+  siguiente dificultad.
 - Cuando entra un amigo, ocupa el sitio de una IA.
+- El botón **Selección de personajes** (junto a «Manual online») elige qué personajes pueden salir en la
+  partida: mira [Personajes nuevos y Selección de personajes](#personajes-nuevos-y-selección-de-personajes).
 
 ### Si tu amigo no puede entrar
 
@@ -110,18 +117,18 @@ dependiendo de tenerlos en Steam) no se tocan nunca.
 
 1. En el lanzador, pulsa **Mods → Abrir carpeta de mods** (`%APPDATA%\CrimeSightRevival\mods`). Viene
    preparada con sus carpetas y un `README.txt`.
-2. Mete tus imágenes (PNG, JPG, WEBP…) en `stickers\` y/o `avatars\`. Las de varios packs pueden ir en
+2. Mete tus imágenes (PNG, JPG, WEBP…) en `stamps\` y/o `avatars\`. Las de varios packs pueden ir en
    las mismas carpetas.
 3. Juega. El lanzador las mete en el juego antes de abrirlo.
 
 ```
 mods\
-  stickers\        01_saludo.png, ¡Buenas noches!.png…
+  stamps\          01_saludo.png, ¡Buenas noches!.png…
   avatars\         yo.png
-  mod.json         mensajes de los stickers (con el botón «Mensajes»)
+  mod.json         el nombre y el autor que se muestran para tus mods, y los mensajes de tus stickers
   models\          tus modelos 3D, esqueletos, animaciones e imágenes
   cursor\          tu cursor propio
-  stages\          tus escenarios del creador de escenarios
+  stages\          los escenarios que guardas en el Creador de escenarios
 ```
 
 - **Cualquier imagen sirve.** Se ajustan solas al tamaño del juego (stickers de 128×128 con su borde blanco;
@@ -130,31 +137,73 @@ mods\
   bordes (un busto cortado, una foto) van en un círculo para que encajen en todos los marcos.
 - **El mensaje del sticker** (lo que sale en el registro: «Amras: ¡Buenas noches!») es el nombre del archivo;
   un número delante (`01_`) solo sirve para ordenar. Para usar signos que Windows no deja en los nombres
-  (`? : " *`), escríbelo en **Mods → Mensajes**. Se guarda en el `mod.json` del mod.
-- **Activa o desactiva** cada mod desde la ventana de Mods.
+  (`? : " *`), escríbelo en **Mods → Mensajes**. Se guarda en `mod.json`.
+- **Equivale a…:** elige para cada sticker a qué sticker del juego equivale, para que las IA puedan
+  contestarle. Si lo dejas vacío, no contestan.
+- **Activa o desactiva tus mods** desde la ventana de Mods.
 - **En la sala de otro jugador**, antes de entrar sale un aviso con sus mods: **Descargar y unirme** o
   **No unirme**. Se descargan como temporales (`<id>+temp`), tus mods quedan en pausa durante la partida y
   al salir se borran los temporales y vuelven los tuyos. Si la sala no tiene mods, se entra sin ninguno:
-  todos los jugadores tienen que tener exactamente la misma lista.
+  todos los jugadores tienen que tener exactamente la misma lista. Si entras con mods tuyos, se le ofrecen
+  al anfitrión, que puede aceptarlos (o elegir **Aceptar siempre**); entonces los ve toda la sala.
 - Lo que tengas puesto en la rueda de stickers y el avatar elegido **se conservan** aunque añadas imágenes,
   cambies mensajes o se actualice el lanzador. Solo se quita un sticker si borras o renombras su imagen (el
   juego pone «Hola» en su hueco).
 
 ### Recarga en caliente (con BepInEx, activada por defecto)
 
-Los cambios de mods aparecen **con el juego abierto**, sin reiniciarlo. Esto, el cursor propio, los modelos y
-los escenarios personalizados funcionan gracias a BepInEx:
+Los cambios de mods aparecen **con el juego abierto**, sin reiniciarlo. BepInEx es también lo que hace
+funcionar el cursor propio, los modelos 3D, los personajes nuevos, los escenarios personalizados, el mando y
+los extras dentro del juego (Selección de personajes, Guía Revival, Créditos Revival):
 
-- Al abrirse, el lanzador descarga [BepInEx](https://github.com/BepInEx/BepInEx) (el cargador de mods oficial
-  de los juegos de Unity, 34 MB) **de su GitHub**: no viene incluido. Lo instala en la carpeta del juego junto
+- Al abrirse, el lanzador descarga [BepInEx](https://github.com/BepInEx/BepInEx) (un cargador de mods para
+  juegos de Unity, 34 MB) **de su GitHub**: no viene incluido. Lo instala en la carpeta del juego junto
   al plugin del proyecto. El primer arranque tarda un minuto mientras BepInEx se prepara. Si la descarga
   falla, puedes jugar igualmente sin él y el lanzador lo vuelve a intentar la próxima vez.
 - Mientras juegas, el lanzador vigila tu carpeta de mods: si añades una imagen, cambias un mensaje o
   activas/desactivas un mod, aparece en el juego en unos segundos. Si eres anfitrión, también le llega a tu
   sala; si estás en la sala de otro, recibes sus cambios.
 - Los cambios nunca se aplican a mitad de partida (se esperan al menú), para que todos tengan la misma lista.
-- **Mods → Recarga en caliente → Quitar BepInEx** (o «Dejar el juego original») lo borra todo y el juego vuelve
+- **Mods → General → Quitar BepInEx** (o «Dejar el juego original») lo borra todo y el juego vuelve
   a estar como siempre. Si lo quitas, el lanzador no lo vuelve a instalar hasta que pulses **Activar**.
+
+## Modelos 3D
+
+Pon a los personajes tus propios modelos 3D y animaciones, desde **Mods → Modelos**. Necesitan la recarga
+en caliente.
+
+- Mete archivos `.fbx` o `.glb` (o una subcarpeta con un modelo y sus texturas) en `mods\models\` y elige a
+  qué personaje sustituye cada uno. Los modelos humanoides (Mixamo, VRChat/Unity, VRoid, Blender, DAZ,
+  MMD…) se ajustan solos al personaje, y en ellos se ven las animaciones del juego.
+- **Tus propias animaciones:** sustituye el reposo, el andar o el correr de cualquier personaje por una
+  animación `.fbx` o `.glb` (por ejemplo de Mixamo). Funciona con los modelos del juego y con los tuyos.
+- Para un ajuste perfecto, el lanzador saca un esqueleto por personaje de tu copia del juego. El
+  `README.txt` de la carpeta de modelos explica cómo usarlo en Blender.
+- **Se comparten con la sala:** en tu sala todos ven tus modelos. Si entras en la sala de otro con los
+  tuyos, se le ofrecen al anfitrión; si acepta, todos los ven en los personajes que el anfitrión no haya
+  cambiado. Los modelos descargados son temporales y se borran al cerrarse la sala.
+
+## Personajes nuevos y Selección de personajes
+
+Un modelo también puede ser un **personaje nuevo** (**Mods → Modelos → Personajes nuevos**) en vez de
+sustituir a uno:
+
+- Entra en el sorteo de cada partida: en cada partida salen 6 de los personajes activados, y los
+  originales y los nuevos tienen la misma probabilidad.
+- Ponle un nombre, una imagen para los retratos, sus propias frases para cada situación, y las animaciones
+  de cualquier personaje del juego (**Animaciones de**) o las tuyas. Sin nombre o sin frases, usa los del
+  personaje cuyo sitio ocupa; sin imagen, se hace un retrato a partir de su modelo. Siempre juega como el
+  personaje cuyo sitio ocupa.
+- En la sala de espera del juego, el botón **Selección de personajes** enseña a todos los personajes con
+  su retrato, su nombre y su modelo 3D girando, y el anfitrión marca quién puede salir (mínimo 6). Se
+  guarda para la próxima vez; los demás jugadores pueden verlo, pero no cambiarlo.
+- Los personajes nuevos se comparten con la sala igual que los modelos.
+- Los personajes de tipo **Traidor** todavía no salen en las partidas.
+
+## Cursor propio
+
+**Mods → Cursor propio → Elegir imagen…** convierte cualquier imagen en el cursor del ratón del juego;
+luego eliges su punto de clic (punta o centro). Solo lo ves tú, y necesita la recarga en caliente.
 
 ## Creador de escenarios
 
@@ -177,21 +226,37 @@ como uno nuevo. Los escenarios originales no se tocan. Para jugarlos hace falta 
 
 - Inicio de sesión, perfil, tutorial, ajustes y nivel.
 - Salas de 2 a 4 jugadores mezclando personas e IA (probado con 2 personas; con Watson/Irene humanos,
-  **pendiente de probar**). IA para los cuatro papeles (Sherlock, Moriarty,
-  Watson e Irene), con tres dificultades.
-- Partidas completas: objetos, perros salvajes, escapes de gas, Asalto, turno final, asesinato,
+  **pendiente de probar**). IA para los cuatro papeles (Sherlock, Moriarty, Watson e Irene), con cinco
+  dificultades, de Fácil a Pesadilla.
+- Partidas completas: objetos, perros salvajes, escapes de gas, la orden Atacar, turno final, asesinato,
   detención y deducción final, con la cinemática correcta para cada bando.
-- Victorias, empates, derrotas y puntos. Ganar da 200 contra la IA fácil, 400 en normal, 800 en difícil y
-  1000 contra otras personas; empatar o perder, la mitad; abandonar, 0. Extras por acciones: arreglar el
-  cuadro eléctrico (+50), curar (+50), frustrar el Asalto (+100), gas lacrimógeno al asesino (+100) y acertar
-  al asesino (+100); como Moriarty, matar con el Asalto (+50), provocar el apagón (+50), gasear a alguien
-  (+50) y dejar K.O. a la víctima (+100).
+- Victorias, empates, derrotas y puntos. Ganar da 200 contra la IA Fácil, 400 en Normal, 800 en Difícil,
+  1000 en Experto, 1200 en Pesadilla y 1000 contra otras personas; empatar o perder, la mitad; abandonar, 0.
+- Extras por acciones, cada uno una vez por partida:
+  - **Bando de Sherlock:** acertar quién es el asesino (+100, con Sherlock o con Watson), gas lacrimógeno al
+    asesino (+100), arreglar la caja de fusibles (+50), encontrar una caja de fusibles (+50, y +50 más si es
+    antes que Moriarty), encontrar comida (+50) y descartar a alguien como asesino o como objetivo (+50
+    cada uno).
+  - **Bando de Moriarty:** dejar en estado crítico a alguien que no es el asesino (+100), matar con la orden
+    Atacar (+50), provocar el apagón (+50), gasear a alguien (+50), imponerse a una orden de Sherlock (+50, y
+    +50 más por volver a hacerlo sobre el mismo personaje), encontrar una caja de fusibles antes que
+    Sherlock (+50), curar al asesino (+50), y que un perro salvaje o un escape de gas hiera a alguien que no
+    es el asesino (+50 cada uno).
+  - **Cualquier bando:** curar a alguien (+50), usar un pasadizo secreto (+50), arreglar un escape de gas
+    (+50) y acabar con un perro salvaje o un traidor (+50).
 - Recompensas por puntos y nivel como en el original. El evento Project Winter queda abierto con su
   avatar desbloqueado. El contenido Deluxe sigue dependiendo de tenerlo en Steam.
 - Los logros de Steam se siguen consiguiendo (los gestiona el propio juego con Steam).
 - Mods de stickers y avatares nuevos, compartidos con la sala, con recarga en caliente.
+- Modelos 3D, animaciones propias, personajes nuevos y Selección de personajes, compartidos con la sala.
+- Cursor propio.
 - Creador de escenarios, con escenarios compartidos con la sala.
-- Las IA contestan a tus stickers con otro al azar.
+- Las IA a menudo contestan a tus stickers; con los tuyos propios, se guían por lo que elijas en
+  **Equivale a…**.
+- Sherlock y Watson ven el icono del otro en la lista de jugadores, y Watson IA señala cada sitio nuevo con
+  comida que descubre.
+- Dentro del juego: una **Guía Revival** (en el menú Jugar) que explica lo que añade Revival, y los
+  **Créditos Revival** (en la ventana de Opciones).
 - Controles con mando (Xbox, PlayStation, Switch, Steam Deck), con la recarga en caliente activada. Los
   botones están en la [wiki](https://github.com/Amras95/crimesight-revival/wiki/Mando).
 
@@ -288,6 +353,8 @@ original.
 
 CRIMESIGHT Revival por **Amras95** · [GitHub](https://github.com/Amras95) · [X](https://x.com/AmrasMithandir) ·
 [Ko-fi](https://ko-fi.com/amrasmithandir95)
+
+Contribuciones de **Ashen** · [GitHub](https://github.com/AshenAF92)
 
 El icono del lanzador es un diseño propio del proyecto. CRIMESIGHT es una marca de Konami Digital
 Entertainment; este proyecto no está afiliado ni avalado por Konami.

@@ -70,6 +70,8 @@ class Api:
         self._watch_updates()
         try:
             core.mods_dir()               # la carpeta de mods ya preparada desde el principio
+            core.models_dir()             # and the READMEs of its folders, in the launcher's language
+            core.cursor_dir()
         except OSError:
             pass
         if gd and not art.ready(core.app_dir()):

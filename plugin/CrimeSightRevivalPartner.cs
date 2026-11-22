@@ -1,10 +1,10 @@
-// CRIMESIGHT Revival - icono de Watson en la lista de jugadores de Sherlock.
+// CRIMESIGHT Revival - Sherlock and Watson see each other's icon in the player list.
 //
-// En la lista de jugadores (abajo a la derecha) el juego pone tu propio icono, el de Irene a Moriarty y el de
-// Moriarty a Irene (Hud.SetPlayersInfoRoleIrene/Moriarty), pero no tiene nada para ensenar Watson a Sherlock:
-// solo Watson veia su propio icono. Aqui, cada vez que el juego rellena los iconos (Hud.SetPlayersInfoRoleAll),
-// si eres Sherlock y hay un Watson, se le pone su icono igual que hace el juego con Irene. El juego de Sherlock no
-// sabe quien es Watson, asi que se busca en la lista de la sala (cada miembro lleva su papel).
+// In the player list (bottom right) the game shows your own icon, Irene's to Moriarty and Moriarty's to Irene
+// (Hud.SetPlayersInfoRoleIrene/Moriarty), but had nothing to show Watson to Sherlock or Sherlock to Watson (Watson
+// wasn't playable before). Here, each time the game fills in the icons (Hud.SetPlayersInfoRoleAll/Own), Sherlock
+// gets Watson's icon and Watson gets Sherlock's, the same way the game does it for Irene. Neither game knows who the
+// other one is, so they are found in the room's member list (each member carries its role).
 //
 // Ademas, el mapa de muebles para la Watson IA: cada turno el juego manda al servidor un resumen de la partida
 // (GameManager.CreateServerReferenceData), pero los muebles solo salen en las casillas a las que llega cada personaje.
@@ -48,14 +48,23 @@ namespace CrimeSightRevival.Mods
                 var gm = GameManager.instance;
                 var nm = NetworkManager.Instance;
                 if (gm == null || nm == null || __instance == null) return;
-                if (nm.IsCriminal || nm.IsIrene || nm.IsWatson) return;               // solo Sherlock
-                int watson = gm.GetWatsonPlayerIndex();
-                // El juego no sabe quien es Watson (solo lo sabe el propio Watson); se busca en la sala
-                if (watson < 0) watson = WatsonIndex(nm);
-                if (watson < 0) return;
+                if (nm.IsCriminal || nm.IsIrene) return;                               // only Sherlock and Watson
                 var list = __instance.playersInfo;
                 if (list == null) return;
                 bool on = true;
+                if (nm.IsWatson)
+                {
+                    // Watson: Sherlock's icon
+                    int sherlock = SherlockIndex(nm);
+                    if (sherlock < 0) return;
+                    list.SetRoleIconActive(ref sherlock, ref on);
+                    list.SetRoleIconSherlock(ref sherlock);
+                    return;
+                }
+                // Sherlock: Watson's icon (Sherlock's game doesn't know who Watson is: found in the room)
+                int watson = gm.GetWatsonPlayerIndex();
+                if (watson < 0) watson = WatsonIndex(nm);
+                if (watson < 0) return;
                 list.SetRoleIconActive(ref watson, ref on);
                 list.SetRoleIconWatson(ref watson);
             }
@@ -63,6 +72,22 @@ namespace CrimeSightRevival.Mods
             {
                 if (!_warned) { _warned = true; Plugin.L.LogWarning("[Watson] " + e.Message); }
             }
+        }
+
+        /// <summary>Sherlock's player number from the room list: the member who is not Moriarty, Irene or Watson.</summary>
+        static int SherlockIndex(NetworkManager nm)
+        {
+            var members = nm.GetCurrentRoom()?.Members;
+            var hs = NetworkManager.GetHostSystem();
+            if (members == null || hs == null) return -1;
+            for (int i = 0; i < members.Count; i++)
+            {
+                var x = members[i];
+                if (x == null || x.IsCriminal || x.IsIrene || x.IsWatson) continue;
+                string id = x.PlayerId;
+                return string.IsNullOrEmpty(id) ? -1 : hs.SearchMemberIndex(ref id);
+            }
+            return -1;
         }
 
         /// <summary>Numero de jugador de Watson segun la lista de la sala (el servidor manda el papel de cada uno).</summary>

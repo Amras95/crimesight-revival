@@ -30,11 +30,14 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 > **Tested and working:** solo matches against the AI and matches between two people (host and friend),
 > including over Radmin VPN.
 >
-> **Sticker and avatar mods:** tested solo, with and without hot reload. Downloading the host's mods when
+> **Stamp and avatar mods:** tested solo, with and without hot reload. Downloading the host's mods when
 > joining their room is tested locally, not yet between two people.
 >
-> **Scenario creator (new in 1.1):** tested solo. Sharing scenarios with the room hasn't been tested
-> between two people yet.
+> **Scenario creator:** tested solo. Sharing scenarios with the room hasn't been tested between two people
+> yet.
+>
+> **3D models, new characters and Character Selection:** tested solo. Sharing them with the room hasn't
+> been tested between two people yet.
 >
 > **Linux / Steam Deck:** new build, still being tested.
 >
@@ -74,9 +77,12 @@ game is set to (all 11 of the game's languages).
 
 ### In the room
 
-- Empty seats are filled with **AI** (`AI_1 (Normal)`…). **Kick an AI** to change its difficulty:
-  Normal → Hard → Easy → empty seat for a friend.
+- Empty seats are filled with **AI** (`AI_1 (Normal)`…). **Kick an AI** to open a window where you choose
+  its difficulty (Easy, Normal, Hard, Expert or Nightmare), apply it to every AI at once, or free the seat
+  for a friend. Without hot reload, each kick moves it to the next difficulty instead.
 - When a friend joins, they take an AI's seat.
+- The **Character Selection** button (next to "Online Manual") chooses which characters can appear in the
+  match: see [New characters and Character Selection](#new-characters-and-character-selection).
 
 ### If your friend can't get in
 
@@ -103,58 +109,99 @@ With the launcher's **"Your progress"** button you can:
 
 Steam Cloud isn't used, because each game's cloud storage is controlled by its publisher.
 
-## Mods: your own stickers and avatars
+## Mods: your own stamps and avatars
 
-Add your own stickers and avatars. **They're new slots**: the game's own ones (including the paid ones, which
+Add your own stamps and avatars. **They're new slots**: the game's own ones (including the paid ones, which
 still depend on owning them on Steam) are never changed.
 
 1. In the launcher, click **Mods → Open mods folder** (`%APPDATA%\CrimeSightRevival\mods`). It comes ready
    with its folders and a `README.txt`.
-2. Put your images (PNG, JPG, WEBP…) in `stickers\` and/or `avatars\`. Images from several packs can go
+2. Put your images (PNG, JPG, WEBP…) in `stamps\` and/or `avatars\`. Images from several packs can go
    in the same folders.
 3. Play. The launcher adds them to the game before opening it.
 
 ```
 mods\
-  stickers\        01_hello.png, Good night!.png…
+  stamps\          01_hello.png, Good night!.png…
   avatars\         me.png
-  mod.json         sticker messages (set with the "Messages" button)
+  mod.json         the name and author shown for your mods, and your stamp messages
   models\          your 3D models, skeletons, animations and images
-  cursor\          your own cursor
-  stages\          your scenarios from the scenario creator
+  cursor\          your custom cursor
+  stages\          the scenarios you save in the Scenario creator
 ```
 
-- **Any image works.** They're adjusted to the game's size automatically (128×128 stickers with their white
-  border; 256×256 avatars placed like the original ones). A **sheet with many stickers** in a grid is split
+- **Any image works.** They're adjusted to the game's size automatically (128×128 stamps with their white
+  border; 256×256 avatars placed like the original ones). A **sheet with many stamps** in a grid is split
   automatically, and images without transparency get their background removed. Avatars that reach the edges
   (a cropped bust, a photo) go inside a circle so they fit every frame.
-- **The sticker's message** (what shows in the log: "Amras: Good night!") is the file name; a number at the
+- **The stamp's message** (what shows in the log: "Amras: Good night!") is the file name; a number at the
   start (`01_`) only sets the order. To use characters Windows doesn't allow in file names (`? : " *`), type
-  it in **Mods → Messages**. It's saved in the mod's `mod.json`.
-- **Turn each mod on or off** from the Mods window.
+  it in **Mods → Messages**. It's saved in `mod.json`.
+- **Counts as…:** for each stamp, choose which of the game's stamps it counts as, so the AI players can
+  reply to it. If you leave it empty, they don't reply.
+- **Turn your mods on or off** from the Mods window.
 - **In another player's room**, before joining you get a notice with their mods: **Download and join** or
   **Don't join**. They're downloaded as temporary mods (`<id>+temp`), your own mods are paused during the
   match, and when you leave the temporary ones are deleted and yours come back. If the room has no mods, you
-  join without any: every player must have exactly the same list.
-- Whatever you have on your sticker wheel and your chosen avatar **are kept** when you add images, change
-  messages or the launcher updates. A sticker is only removed if you delete or rename its image (the game
+  join without any: every player must have exactly the same list. If you join with mods of your own,
+  they're offered to the host, who can accept them (or choose **Always accept**); then everyone in the room
+  sees them.
+- Whatever you have on your stamp wheel and your chosen avatar **are kept** when you add images, change
+  messages or the launcher updates. A stamp is only removed if you delete or rename its image (the game
   puts "Hello!" in its slot).
 
 ### Hot reload (with BepInEx, on by default)
 
-Mod changes appear **while the game is open**, without restarting it. This, the custom cursor, models and
-custom scenarios work through BepInEx:
+Mod changes appear **while the game is open**, without restarting it. BepInEx is also what makes the
+custom cursor, 3D models, new characters, custom scenarios, controller support and the in-game extras
+(Character Selection, Revival Guide, Revival Credits) work:
 
-- When it opens, the launcher downloads [BepInEx](https://github.com/BepInEx/BepInEx) (the official mod
-  loader for Unity games, 34 MB) **from its GitHub**: it's not bundled. It installs it in the game folder
+- When it opens, the launcher downloads [BepInEx](https://github.com/BepInEx/BepInEx) (a mod loader for
+  Unity games, 34 MB) **from its GitHub**: it's not bundled. It installs it in the game folder
   together with the project's plugin. The first game start takes about a minute while BepInEx sets up. If
   the download fails, you can still play without it and the launcher tries again next time.
 - While you play, the launcher watches your mods folder: if you add an image, change a message or turn a mod
   on/off, it shows up in the game within seconds. If you're the host, your room gets it too; if you're in
   someone else's room, you get their changes.
 - Changes are never applied mid-match (they wait for the menu), so everyone keeps the same list.
-- **Mods → Hot reload → Remove BepInEx** (or "Restore original game") deletes everything and the game is back
+- **Mods → General → Remove BepInEx** (or "Restore original game") deletes everything and the game is back
   to normal. After removing it, the launcher doesn't reinstall it until you click **Turn on**.
+
+## 3D models
+
+Give the characters your own 3D models and animations, from **Mods → Models**. They need hot reload.
+
+- Put `.fbx` or `.glb` files (or a subfolder with a model and its textures) in `mods\models\`, then choose
+  which character each one replaces. Humanoid models (Mixamo, VRChat/Unity, VRoid, Blender, DAZ, MMD…) are
+  fitted to the character automatically, and the game's animations play on them.
+- **Your own animations:** replace any character's idle, walk or run with an `.fbx` or `.glb` animation
+  (for example from Mixamo). It works on the game's models and on yours.
+- For a perfect fit, the launcher makes one skeleton per character from your copy of the game. The
+  `README.txt` in the models folder explains how to use it in Blender.
+- **Shared with the room:** in your room everyone sees your models. If you join someone else's room with
+  your own, they're offered to the host; if they accept, everyone sees them on the characters the host
+  hasn't changed. Downloaded models are temporary and are deleted when the room closes.
+
+## New characters and Character Selection
+
+A model can also be a **new character** (**Mods → Models → New characters**) instead of replacing one:
+
+- It joins the draw of every match: each match picks 6 of the enabled characters, and original and new
+  ones have the same chance.
+- Give it a name, a portrait image, its own lines for each situation, and the animations of any game
+  character (**Animations of**) or your own. Without a name or lines, it uses those of the character whose
+  place it takes; without an image, a portrait is made from its model. It always plays like the character
+  whose place it takes.
+- In the game's waiting room, the **Character Selection** button shows every character with their
+  portrait, name and spinning 3D model, and the host ticks who can appear (at least 6). It's saved for next
+  time; the other players can look but can't change it.
+- New characters are shared with the room like models.
+- Characters of the **Traitor** type don't appear in matches yet.
+
+## Custom cursor
+
+**Mods → Custom cursor → Choose image…** turns any image into the game's mouse cursor; then pick its click
+point (tip or centre). Only you see it, and it needs hot reload.
 
 ## Scenario creator
 
@@ -177,21 +224,35 @@ new one. The original scenarios are never changed. Playing them needs hot reload
 
 - Sign-in, profile, tutorial, settings and level.
 - Rooms for 2 to 4 players mixing people and AI (tested with 2 people; with human Watson/Irene,
-  **not tested yet**). AI for all
-  four roles (Sherlock, Moriarty, Watson and Irene), with three difficulty levels.
-- Full matches: items, wild dogs, gas leaks, Assault, final turn, murder, arrest and final deduction,
+  **not tested yet**). AI for all four roles (Sherlock, Moriarty, Watson and Irene), with five difficulty
+  levels, from Easy to Nightmare.
+- Full matches: items, wild dogs, gas leaks, the Assail, final turn, murder, arrest and final deduction,
   with the right cutscene for each side.
-- Wins, draws, losses and points. A win gives 200 against easy AI, 400 on normal, 800 on hard and 1000
-  against other people; a draw or loss gives half; quitting gives 0. Action bonuses: repairing the fuse box
-  (+50), healing (+50), foiling the Assault (+100), tear gas on the villain (+100) and naming the villain
-  (+100); as Moriarty, killing with the Assault (+50), causing the blackout (+50), gassing someone (+50) and
-  knocking out the target (+100).
+- Wins, draws, losses and points. A win gives 200 against Easy AI, 400 on Normal, 800 on Hard, 1000 on
+  Expert, 1200 on Nightmare and 1000 against other people; a draw or loss gives half; quitting gives 0.
+- Action bonuses, each counted once per match:
+  - **Sherlock's side:** naming the villain (+100, as Sherlock or Watson), tear gas on the villain (+100),
+    repairing the fuse box (+50), finding a fuse box (+50, and +50 more if before Moriarty), finding food
+    (+50), and ruling someone out as the villain or as the target (+50 each).
+  - **Moriarty's side:** leaving someone other than the villain in critical condition (+100), killing with
+    the Assail (+50), causing the blackout (+50), gassing someone (+50), overriding one of Sherlock's orders
+    (+50, and +50 more for doing it again on the same character), finding a fuse box before Sherlock (+50),
+    healing the villain (+50), and a wild dog or a gas leak hurting someone other than the villain (+50 each).
+  - **Either side:** healing someone (+50), using a secret passage (+50), repairing a gas leak (+50), and
+    defeating a wild dog or a traitor (+50).
 - Point and level rewards as in the original. The Project Winter event stays open with its avatar
   unlocked. Deluxe content still depends on owning it on Steam.
 - Steam achievements can still be earned (the game itself handles them with Steam).
-- New sticker and avatar mods, shared with the room, with hot reload.
+- New stamp and avatar mods, shared with the room, with hot reload.
+- 3D models, custom animations, new characters and Character Selection, shared with the room.
+- Custom cursor.
 - Scenario creator, with scenarios shared with the room.
-- The AI players answer your stickers with a random one.
+- The AI players often reply to your stamps; for your own stamps, they go by each one's **Counts as…**
+  setting.
+- Sherlock and Watson see each other's icon in the player list, and an AI Watson pings each new food spot
+  it finds.
+- In the game: a **Revival Guide** (in the Play menu) that explains what Revival adds, and **Revival
+  Credits** (in the Options window).
 - Controller support (Xbox, PlayStation, Switch, Steam Deck) with hot reload turned on. The button layout
   is in the [wiki](https://github.com/Amras95/crimesight-revival/wiki/Controller).
 
@@ -259,9 +320,9 @@ and `GET /revival/mods` (the room's mod pack).
 
 **Mods (`server/modpack.py`, `server/modimage.py`, `launcher/modinject.py`):**
 
-- Stickers are `StampData` objects in `resources.assets`; the free ones are in `StampSet` 0. The game
+- Stamps are `StampData` objects in `resources.assets`; the free ones are in `StampSet` 0. The game
   identifies them by `type | face` and sends their **position** in the list over the network (`setIndex`,
-  `dataIndex`), so every player in the room needs the same list in the same order. Each new sticker gets a
+  `dataIndex`), so every player in the room needs the same list in the same order. Each new stamp gets a
   type from 1000 to 4095 (the game uses 0-38) computed from the mod folder and the file name, so it's stable
   and the order (the game sorts by type) comes out the same on every PC.
 - Avatars are `CursorAvatarData` objects in `sharedassets3.assets`, listed by the `CursorAvatarSet`s of the
@@ -288,6 +349,8 @@ must be kept, and modified versions must say so and must not pass themselves off
 
 CRIMESIGHT Revival by **Amras95** · [GitHub](https://github.com/Amras95) · [X](https://x.com/AmrasMithandir) ·
 [Ko-fi](https://ko-fi.com/amrasmithandir95)
+
+Contributions by **Ashen** · [GitHub](https://github.com/AshenAF92)
 
 The launcher icon is an original design made for this project. CRIMESIGHT is a trademark of Konami
 Digital Entertainment; this project is not affiliated with or endorsed by Konami.

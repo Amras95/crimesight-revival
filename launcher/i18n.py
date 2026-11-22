@@ -583,25 +583,25 @@ _add("zh-TW",
 _MODS = {
     "en": dict(
         mods_btn="Mods", mods_title="Mods",
-        mods_desc="Add your own stickers and avatars. They're added as new ones: the game's originals are never changed.",
-        mods_how_stickers="Put your sticker images (PNG, JPG…) in the “stickers” folder inside the mods folder. They're added to the game's stickers. Any size works: they're adjusted automatically.", mods_how_avatars="Put your avatar images (PNG, JPG…) in the “avatars” folder inside the mods folder. They're added to the game's avatars, to use as your profile picture. Any size works: they're adjusted automatically.",
+        mods_desc="Add your own stamps and avatars. They're added as new ones: the game's originals are never changed.",
+        mods_how_stickers="Put your stamp images (PNG, JPG…) in the “stamps” folder inside the mods folder. They're added to the game's stamps. Any size works: they're adjusted automatically.", mods_how_avatars="Put your avatar images (PNG, JPG…) in the “avatars” folder inside the mods folder. They're added to the game's avatars, to use as your profile picture. Any size works: they're adjusted automatically.",
         cursor_none="No custom cursor", cursor_on="Custom cursor on", cursor_off="Custom cursor off", cursor_desc_on="{size} · applied when you open the game from the launcher (or within a few seconds if it's already open). {extra} extra cursor(s).", cursor_desc_none="Choose an image (a transparent PNG works best) to use as the game's cursor. Only you can see it. Requires BepInEx.", cursor_hot_tip="Click point: tip (arrow)", cursor_hot_center="Click point: centre (crosshair)", cursor_hot_custom="Click point: custom", cursor_pick="Choose image…", cursor_folder="Folder", cursor_enable="Turn on", cursor_disable="Turn off", cursor_bad_image="That image can't be read ({err}).", mods_cursor="Custom cursor", mods_open="Open mods folder", mods_reload="Reload", mods_empty="Your mods folder is empty.",
-        mods_count="{stickers} stickers · {avatars} avatars", mods_on="On", mods_off="Off", mods_by="by {author}",
+        mods_count="{stickers} stamps · {avatars} avatars", mods_on="On", mods_off="Off", mods_by="by {author}",
         mods_bad_images="{n} images couldn't be read",
         mods_restart="Changes apply the next time you open the game from the launcher.",
-        mods_installing="Installing mods: {stickers} stickers and {avatars} avatars…",
+        mods_installing="Installing mods: {stickers} stamps and {avatars} avatars…",
         mods_removed="Mods removed from the game.", mods_failed="Couldn't install the mods ({err}).",
         mods_download_failed="Couldn't download the room's mods ({err}).",
         mods_declined="You declined the room's mods, so you didn't join.",
-        mods_downloading="Downloading the room's mods: {stickers} stickers and {avatars} avatars…",
+        mods_downloading="Downloading the room's mods: {stickers} stamps and {avatars} avatars…",
         mods_temp_cleared="The room's temporary mods have been deleted.",
         mods_confirm_title="This room uses mods",
-        mods_confirm_text="The host uses custom stickers and avatars. To join you need to download them: they're temporary and get deleted when you leave. Your own mods are paused meanwhile.",
+        mods_confirm_text="The host uses custom stamps and avatars. To join you need to download them: they're temporary and get deleted when you leave. Your own mods are paused meanwhile.",
         mods_confirm_yes="Download and join", mods_confirm_no="Don't join"),
     "es": dict(
         mods_btn="Mods", mods_title="Mods",
         mods_desc="Añade tus propios stickers y avatares. Son huecos nuevos: los del juego no se tocan nunca.",
-        mods_how_stickers="Pon las imágenes de tus stickers (PNG, JPG…) en la carpeta “stickers” de la carpeta de mods. Se añaden a los stickers del juego. Sirve cualquier tamaño: se ajustan solas.", mods_how_avatars="Pon las imágenes de tus avatares (PNG, JPG…) en la carpeta “avatars” de la carpeta de mods. Se añaden a los avatares del juego, para usarlos como imagen de perfil. Sirve cualquier tamaño: se ajustan solas.",
+        mods_how_stickers="Pon las imágenes de tus stickers (PNG, JPG…) en la carpeta “stamps” de la carpeta de mods. Se añaden a los stickers del juego. Sirve cualquier tamaño: se ajustan solas.", mods_how_avatars="Pon las imágenes de tus avatares (PNG, JPG…) en la carpeta “avatars” de la carpeta de mods. Se añaden a los avatares del juego, para usarlos como imagen de perfil. Sirve cualquier tamaño: se ajustan solas.",
         cursor_none="Sin cursor propio", cursor_on="Cursor propio activado", cursor_off="Cursor propio desactivado", cursor_desc_on="{size} · se aplica al abrir el juego desde el lanzador (o en unos segundos si ya está abierto). {extra} cursor(es) extra.", cursor_desc_none="Elige una imagen (mejor un PNG con transparencia) y será el cursor del juego. Solo lo ves tú. Necesita BepInEx.", cursor_hot_tip="Clic: punta (flecha)", cursor_hot_center="Clic: centro (mira)", cursor_hot_custom="Clic: personalizado", cursor_pick="Elegir imagen…", cursor_folder="Carpeta", cursor_enable="Activar", cursor_disable="Desactivar", cursor_bad_image="No se puede leer esa imagen ({err}).", mods_cursor="Cursor propio", mods_open="Abrir carpeta de mods", mods_reload="Recargar", mods_empty="Tu carpeta de mods está vacía.",
         mods_count="{stickers} stickers · {avatars} avatares", mods_on="Activado", mods_off="Desactivado",
         mods_by="de {author}", mods_bad_images="{n} imágenes no se han podido leer",
@@ -618,7 +618,7 @@ _MODS = {
     "fr": dict(
         mods_btn="Mods", mods_title="Mods",
         mods_desc="Ajoutez vos propres stickers et avatars. Ce sont de nouveaux emplacements : ceux du jeu ne sont jamais modifiés.",
-        mods_how_stickers="Mettez les images de vos stickers (PNG, JPG…) dans le dossier « stickers » du dossier des mods. Elles s'ajoutent aux stickers du jeu. Toutes les tailles conviennent : elles sont ajustées automatiquement.", mods_how_avatars="Mettez les images de vos avatars (PNG, JPG…) dans le dossier « avatars » du dossier des mods. Elles s'ajoutent aux avatars du jeu, comme image de profil. Toutes les tailles conviennent : elles sont ajustées automatiquement.",
+        mods_how_stickers="Mettez les images de vos stickers (PNG, JPG…) dans le dossier « stamps » du dossier des mods. Elles s'ajoutent aux stickers du jeu. Toutes les tailles conviennent : elles sont ajustées automatiquement.", mods_how_avatars="Mettez les images de vos avatars (PNG, JPG…) dans le dossier « avatars » du dossier des mods. Elles s'ajoutent aux avatars du jeu, comme image de profil. Toutes les tailles conviennent : elles sont ajustées automatiquement.",
         cursor_none="Pas de curseur perso", cursor_on="Curseur perso activé", cursor_off="Curseur perso désactivé", cursor_desc_on="{size} · appliqué en ouvrant le jeu depuis le lanceur (ou en quelques secondes s'il est déjà ouvert). {extra} curseur(s) en plus.", cursor_desc_none="Choisissez une image (de préférence un PNG transparent) et ce sera le curseur du jeu. Vous seul le voyez. Nécessite BepInEx.", cursor_hot_tip="Clic : pointe (flèche)", cursor_hot_center="Clic : centre (viseur)", cursor_hot_custom="Clic : personnalisé", cursor_pick="Choisir une image…", cursor_folder="Dossier", cursor_enable="Activer", cursor_disable="Désactiver", cursor_bad_image="Impossible de lire cette image ({err}).", mods_cursor="Curseur perso", mods_open="Ouvrir le dossier des mods", mods_reload="Actualiser", mods_empty="Votre dossier des mods est vide.",
         mods_count="{stickers} stickers · {avatars} avatars", mods_on="Activé", mods_off="Désactivé",
         mods_by="par {author}", mods_bad_images="{n} images n'ont pas pu être lues",
@@ -635,7 +635,7 @@ _MODS = {
     "it": dict(
         mods_btn="Mod", mods_title="Mod",
         mods_desc="Aggiungi i tuoi sticker e avatar. Sono spazi nuovi: quelli del gioco non vengono mai modificati.",
-        mods_how_stickers="Metti le immagini dei tuoi sticker (PNG, JPG…) nella cartella “stickers” della cartella dei mod. Si aggiungono agli sticker del gioco. Va bene qualsiasi dimensione: vengono adattate da sole.", mods_how_avatars="Metti le immagini dei tuoi avatar (PNG, JPG…) nella cartella “avatars” della cartella dei mod. Si aggiungono agli avatar del gioco, da usare come immagine del profilo. Va bene qualsiasi dimensione: vengono adattate da sole.",
+        mods_how_stickers="Metti le immagini dei tuoi sticker (PNG, JPG…) nella cartella “stamps” della cartella dei mod. Si aggiungono agli sticker del gioco. Va bene qualsiasi dimensione: vengono adattate da sole.", mods_how_avatars="Metti le immagini dei tuoi avatar (PNG, JPG…) nella cartella “avatars” della cartella dei mod. Si aggiungono agli avatar del gioco, da usare come immagine del profilo. Va bene qualsiasi dimensione: vengono adattate da sole.",
         cursor_none="Nessun cursore personalizzato", cursor_on="Cursore personalizzato attivo", cursor_off="Cursore personalizzato disattivato", cursor_desc_on="{size} · si applica aprendo il gioco dal launcher (o in pochi secondi se è già aperto). {extra} cursore/i extra.", cursor_desc_none="Scegli un'immagine (meglio un PNG trasparente) e diventerà il cursore del gioco. Lo vedi solo tu. Serve BepInEx.", cursor_hot_tip="Clic: punta (freccia)", cursor_hot_center="Clic: centro (mirino)", cursor_hot_custom="Clic: personalizzato", cursor_pick="Scegli immagine…", cursor_folder="Cartella", cursor_enable="Attiva", cursor_disable="Disattiva", cursor_bad_image="Impossibile leggere l'immagine ({err}).", mods_cursor="Cursore personalizzato", mods_open="Apri la cartella dei mod", mods_reload="Ricarica", mods_empty="La tua cartella dei mod è vuota.",
         mods_count="{stickers} sticker · {avatars} avatar", mods_on="Attivo", mods_off="Disattivato",
         mods_by="di {author}", mods_bad_images="{n} immagini non sono leggibili",
@@ -652,7 +652,7 @@ _MODS = {
     "de": dict(
         mods_btn="Mods", mods_title="Mods",
         mods_desc="Füge eigene Sticker und Avatare hinzu. Es sind neue Plätze: Die des Spiels werden nie verändert.",
-        mods_how_stickers="Lege deine Sticker-Bilder (PNG, JPG…) in den Ordner „stickers“ im Mod-Ordner. Sie kommen zu den Stickern des Spiels dazu. Jede Größe funktioniert: Sie werden automatisch angepasst.", mods_how_avatars="Lege deine Avatar-Bilder (PNG, JPG…) in den Ordner „avatars“ im Mod-Ordner. Sie kommen zu den Avataren des Spiels dazu, als Profilbild. Jede Größe funktioniert: Sie werden automatisch angepasst.",
+        mods_how_stickers="Lege deine Sticker-Bilder (PNG, JPG…) in den Ordner „stamps“ im Mod-Ordner. Sie kommen zu den Stickern des Spiels dazu. Jede Größe funktioniert: Sie werden automatisch angepasst.", mods_how_avatars="Lege deine Avatar-Bilder (PNG, JPG…) in den Ordner „avatars“ im Mod-Ordner. Sie kommen zu den Avataren des Spiels dazu, als Profilbild. Jede Größe funktioniert: Sie werden automatisch angepasst.",
         cursor_none="Kein eigener Cursor", cursor_on="Eigener Cursor an", cursor_off="Eigener Cursor aus", cursor_desc_on="{size} · wird beim Start des Spiels über den Launcher angewendet (oder in Sekunden, wenn es schon läuft). {extra} weitere Cursor.", cursor_desc_none="Wähle ein Bild (am besten ein transparentes PNG) und es wird zum Cursor des Spiels. Nur du siehst ihn. Braucht BepInEx.", cursor_hot_tip="Klick: Spitze (Pfeil)", cursor_hot_center="Klick: Mitte (Fadenkreuz)", cursor_hot_custom="Klick: eigener", cursor_pick="Bild wählen…", cursor_folder="Ordner", cursor_enable="Einschalten", cursor_disable="Ausschalten", cursor_bad_image="Das Bild kann nicht gelesen werden ({err}).", mods_cursor="Eigener Cursor", mods_open="Mod-Ordner öffnen", mods_reload="Neu laden", mods_empty="Dein Mod-Ordner ist leer.",
         mods_count="{stickers} Sticker · {avatars} Avatare", mods_on="An", mods_off="Aus",
         mods_by="von {author}", mods_bad_images="{n} Bilder konnten nicht gelesen werden",
@@ -668,42 +668,42 @@ _MODS = {
         mods_confirm_yes="Herunterladen und beitreten", mods_confirm_no="Nicht beitreten"),
     "pt": dict(
         mods_btn="Mods", mods_title="Mods",
-        mods_desc="Adicione seus próprios stickers e avatares. São espaços novos: os do jogo nunca são alterados.",
-        mods_how_stickers="Coloque as imagens dos seus stickers (PNG, JPG…) na pasta “stickers” da pasta de mods. Elas se somam aos stickers do jogo. Qualquer tamanho serve: elas são ajustadas sozinhas.", mods_how_avatars="Coloque as imagens dos seus avatares (PNG, JPG…) na pasta “avatars” da pasta de mods. Elas se somam aos avatares do jogo, para usar como foto de perfil. Qualquer tamanho serve: elas são ajustadas sozinhas.",
+        mods_desc="Adicione seus próprios emojis e avatares. São espaços novos: os do jogo nunca são alterados.",
+        mods_how_stickers="Coloque as imagens dos seus emojis (PNG, JPG…) na pasta “stamps” da pasta de mods. Elas se somam aos emojis do jogo. Qualquer tamanho serve: elas são ajustadas sozinhas.", mods_how_avatars="Coloque as imagens dos seus avatares (PNG, JPG…) na pasta “avatars” da pasta de mods. Elas se somam aos avatares do jogo, para usar como foto de perfil. Qualquer tamanho serve: elas são ajustadas sozinhas.",
         cursor_none="Sem cursor próprio", cursor_on="Cursor próprio ativado", cursor_off="Cursor próprio desativado", cursor_desc_on="{size} · aplicado ao abrir o jogo pelo lançador (ou em segundos se já estiver aberto). {extra} cursor(es) extra.", cursor_desc_none="Escolha uma imagem (de preferência um PNG transparente) e ela será o cursor do jogo. Só você vê. Precisa do BepInEx.", cursor_hot_tip="Clique: ponta (seta)", cursor_hot_center="Clique: centro (mira)", cursor_hot_custom="Clique: personalizado", cursor_pick="Escolher imagem…", cursor_folder="Pasta", cursor_enable="Ativar", cursor_disable="Desativar", cursor_bad_image="Não foi possível ler a imagem ({err}).", mods_cursor="Cursor próprio", mods_open="Abrir pasta de mods", mods_reload="Recarregar", mods_empty="Sua pasta de mods está vazia.",
-        mods_count="{stickers} stickers · {avatars} avatares", mods_on="Ativado", mods_off="Desativado",
+        mods_count="{stickers} emojis · {avatars} avatares", mods_on="Ativado", mods_off="Desativado",
         mods_by="de {author}", mods_bad_images="{n} imagens não puderam ser lidas",
         mods_restart="As mudanças valem a partir da próxima vez que abrir o jogo pelo launcher.",
-        mods_installing="Instalando mods: {stickers} stickers e {avatars} avatares…",
+        mods_installing="Instalando mods: {stickers} emojis e {avatars} avatares…",
         mods_removed="Mods removidos do jogo.", mods_failed="Não foi possível instalar os mods ({err}).",
         mods_download_failed="Não foi possível baixar os mods da sala ({err}).",
         mods_declined="Você não aceitou os mods da sala, então não entrou.",
-        mods_downloading="Baixando os mods da sala: {stickers} stickers e {avatars} avatares…",
+        mods_downloading="Baixando os mods da sala: {stickers} emojis e {avatars} avatares…",
         mods_temp_cleared="Mods temporários da sala apagados.",
         mods_confirm_title="Esta sala usa mods",
-        mods_confirm_text="O anfitrião usa stickers e avatares personalizados. Para entrar, você precisa baixá-los: são temporários e apagados quando você sai. Enquanto isso, seus mods ficam pausados.",
+        mods_confirm_text="O anfitrião usa emojis e avatares personalizados. Para entrar, você precisa baixá-los: são temporários e apagados quando você sai. Enquanto isso, seus mods ficam pausados.",
         mods_confirm_yes="Baixar e entrar", mods_confirm_no="Não entrar"),
     "ru": dict(
         mods_btn="Моды", mods_title="Моды",
-        mods_desc="Добавляйте свои стикеры и аватары. Это новые слоты: игровые никогда не меняются.",
-        mods_how_stickers="Положите картинки стикеров (PNG, JPG…) в папку «stickers» в папке модов. Они добавятся к стикерам игры. Подойдёт любой размер: картинки подгоняются сами.", mods_how_avatars="Положите картинки аватаров (PNG, JPG…) в папку «avatars» в папке модов. Они добавятся к аватарам игры, для фото профиля. Подойдёт любой размер: картинки подгоняются сами.",
+        mods_desc="Добавляйте свои шаблоны и аватары. Это новые слоты: игровые никогда не меняются.",
+        mods_how_stickers="Положите картинки шаблонов (PNG, JPG…) в папку «stamps» в папке модов. Они добавятся к шаблонам игры. Подойдёт любой размер: картинки подгоняются сами.", mods_how_avatars="Положите картинки аватаров (PNG, JPG…) в папку «avatars» в папке модов. Они добавятся к аватарам игры, для фото профиля. Подойдёт любой размер: картинки подгоняются сами.",
         cursor_none="Свой курсор не задан", cursor_on="Свой курсор включён", cursor_off="Свой курсор выключен", cursor_desc_on="{size} · применяется при запуске игры из лаунчера (или через пару секунд, если она уже открыта). Доп. курсоров: {extra}.", cursor_desc_none="Выберите картинку (лучше PNG с прозрачностью), и она станет курсором игры. Видите только вы. Нужен BepInEx.", cursor_hot_tip="Клик: кончик (стрелка)", cursor_hot_center="Клик: центр (прицел)", cursor_hot_custom="Клик: свой", cursor_pick="Выбрать картинку…", cursor_folder="Папка", cursor_enable="Включить", cursor_disable="Выключить", cursor_bad_image="Не удаётся прочитать картинку ({err}).", mods_cursor="Свой курсор", mods_open="Открыть папку модов", mods_reload="Обновить", mods_empty="Папка модов пуста.",
-        mods_count="Стикеры: {stickers} · аватары: {avatars}", mods_on="Вкл.", mods_off="Выкл.",
+        mods_count="Шаблоны: {stickers} · аватары: {avatars}", mods_on="Вкл.", mods_off="Выкл.",
         mods_by="автор: {author}", mods_bad_images="Не удалось прочитать изображений: {n}",
         mods_restart="Изменения вступят в силу при следующем запуске игры из лаунчера.",
-        mods_installing="Установка модов: стикеры — {stickers}, аватары — {avatars}…",
+        mods_installing="Установка модов: шаблоны — {stickers}, аватары — {avatars}…",
         mods_removed="Моды удалены из игры.", mods_failed="Не удалось установить моды ({err}).",
         mods_download_failed="Не удалось скачать моды комнаты ({err}).",
         mods_declined="Вы не приняли моды комнаты, поэтому не присоединились.",
-        mods_downloading="Скачивание модов комнаты: стикеры — {stickers}, аватары — {avatars}…",
+        mods_downloading="Скачивание модов комнаты: шаблоны — {stickers}, аватары — {avatars}…",
         mods_temp_cleared="Временные моды комнаты удалены.",
         mods_confirm_title="В этой комнате есть моды",
-        mods_confirm_text="Хост использует свои стикеры и аватары. Чтобы присоединиться, их нужно скачать: они временные и удаляются, когда вы выходите. Ваши моды пока будут приостановлены.",
+        mods_confirm_text="Хост использует свои шаблоны и аватары. Чтобы присоединиться, их нужно скачать: они временные и удаляются, когда вы выходите. Ваши моды пока будут приостановлены.",
         mods_confirm_yes="Скачать и войти", mods_confirm_no="Не входить"),
     "ja": dict(
         mods_btn="MOD", mods_title="MOD",
         mods_desc="自分だけのスタンプやアバターを追加できます。新しい枠として追加されるので、ゲーム本来のものは一切変更されません。",
-        mods_how_stickers="スタンプの画像（PNG、JPGなど）をMODフォルダの中の「stickers」フォルダに入れてください。ゲームのスタンプに追加されます。サイズは自動で調整されます。", mods_how_avatars="アバターの画像（PNG、JPGなど）をMODフォルダの中の「avatars」フォルダに入れてください。ゲームのアバターに追加され、プロフィール画像に使えます。サイズは自動で調整されます。",
+        mods_how_stickers="スタンプの画像（PNG、JPGなど）をMODフォルダの中の「stamps」フォルダに入れてください。ゲームのスタンプに追加されます。サイズは自動で調整されます。", mods_how_avatars="アバターの画像（PNG、JPGなど）をMODフォルダの中の「avatars」フォルダに入れてください。ゲームのアバターに追加され、プロフィール画像に使えます。サイズは自動で調整されます。",
         cursor_none="カスタムカーソルなし", cursor_on="カスタムカーソル：オン", cursor_off="カスタムカーソル：オフ", cursor_desc_on="{size} · ランチャーからゲームを開くと適用されます（起動中なら数秒で反映）。追加カーソル：{extra}", cursor_desc_none="画像（透過PNGがおすすめ）を選ぶとゲームのカーソルになります。自分にだけ表示されます。BepInExが必要です。", cursor_hot_tip="クリック位置：先端（矢印）", cursor_hot_center="クリック位置：中央（照準）", cursor_hot_custom="クリック位置：カスタム", cursor_pick="画像を選ぶ…", cursor_folder="フォルダ", cursor_enable="オンにする", cursor_disable="オフにする", cursor_bad_image="画像を読み込めません（{err}）。", mods_cursor="カーソル変更", mods_open="MODフォルダを開く", mods_reload="再読み込み", mods_empty="MODフォルダは空です。",
         mods_count="スタンプ {stickers} · アバター {avatars}", mods_on="オン", mods_off="オフ",
         mods_by="作者：{author}", mods_bad_images="{n} 枚の画像を読み込めませんでした",
@@ -720,7 +720,7 @@ _MODS = {
     "ko": dict(
         mods_btn="모드", mods_title="모드",
         mods_desc="나만의 스탬프와 아바타를 추가하세요. 새 슬롯으로 추가되므로 게임 원래의 것은 절대 바뀌지 않습니다.",
-        mods_how_stickers="스탬프 이미지(PNG, JPG 등)를 모드 폴더 안의 “stickers” 폴더에 넣으세요. 게임의 스탬프에 추가됩니다. 크기는 자동으로 맞춰집니다.", mods_how_avatars="아바타 이미지(PNG, JPG 등)를 모드 폴더 안의 “avatars” 폴더에 넣으세요. 게임의 아바타에 추가되어 프로필 이미지로 쓸 수 있습니다. 크기는 자동으로 맞춰집니다.",
+        mods_how_stickers="스탬프 이미지(PNG, JPG 등)를 모드 폴더 안의 “stamps” 폴더에 넣으세요. 게임의 스탬프에 추가됩니다. 크기는 자동으로 맞춰집니다.", mods_how_avatars="아바타 이미지(PNG, JPG 등)를 모드 폴더 안의 “avatars” 폴더에 넣으세요. 게임의 아바타에 추가되어 프로필 이미지로 쓸 수 있습니다. 크기는 자동으로 맞춰집니다.",
         cursor_none="사용자 커서 없음", cursor_on="사용자 커서 켜짐", cursor_off="사용자 커서 꺼짐", cursor_desc_on="{size} · 런처에서 게임을 열면 적용됩니다(이미 열려 있으면 몇 초 안에). 추가 커서 {extra}개.", cursor_desc_none="이미지(투명 PNG 권장)를 고르면 게임 커서가 됩니다. 나만 보입니다. BepInEx가 필요합니다.", cursor_hot_tip="클릭: 끝(화살표)", cursor_hot_center="클릭: 가운데(조준)", cursor_hot_custom="클릭: 사용자 지정", cursor_pick="이미지 선택…", cursor_folder="폴더", cursor_enable="켜기", cursor_disable="끄기", cursor_bad_image="이미지를 읽을 수 없습니다 ({err}).", mods_cursor="커서 변경", mods_open="모드 폴더 열기", mods_reload="새로고침", mods_empty="모드 폴더가 비어 있습니다.",
         mods_count="스탬프 {stickers} · 아바타 {avatars}", mods_on="켜짐", mods_off="꺼짐",
         mods_by="제작: {author}", mods_bad_images="이미지 {n}개를 읽지 못했습니다",
@@ -736,25 +736,25 @@ _MODS = {
         mods_confirm_yes="내려받고 참가", mods_confirm_no="참가 안 함"),
     "zh-CN": dict(
         mods_btn="模组", mods_title="模组",
-        mods_desc="添加你自己的贴图和头像。它们是新增的栏位，游戏原有的内容永远不会被改动。",
-        mods_how_stickers="把贴图图片（PNG、JPG 等）放进模组文件夹里的“stickers”文件夹。它们会加入游戏的贴图中。任何尺寸都可以，会自动调整。", mods_how_avatars="把头像图片（PNG、JPG 等）放进模组文件夹里的“avatars”文件夹。它们会加入游戏的头像中，可用作个人资料图片。任何尺寸都可以，会自动调整。",
+        mods_desc="添加你自己的表情和头像。它们是新增的栏位，游戏原有的内容永远不会被改动。",
+        mods_how_stickers="把表情图片（PNG、JPG 等）放进模组文件夹里的“stamps”文件夹。它们会加入游戏的表情中。任何尺寸都可以，会自动调整。", mods_how_avatars="把头像图片（PNG、JPG 等）放进模组文件夹里的“avatars”文件夹。它们会加入游戏的头像中，可用作个人资料图片。任何尺寸都可以，会自动调整。",
         cursor_none="未设置自定义光标", cursor_on="自定义光标：开", cursor_off="自定义光标：关", cursor_desc_on="{size} · 从启动器打开游戏时生效（若游戏已打开，几秒内生效）。额外光标：{extra} 个。", cursor_desc_none="选择一张图片（最好是透明 PNG），它就会成为游戏光标。只有你能看到。需要 BepInEx。", cursor_hot_tip="点击点：尖端（箭头）", cursor_hot_center="点击点：中心（准星）", cursor_hot_custom="点击点：自定义", cursor_pick="选择图片…", cursor_folder="文件夹", cursor_enable="开启", cursor_disable="关闭", cursor_bad_image="无法读取该图片（{err}）。", mods_cursor="自定义光标", mods_open="打开模组文件夹", mods_reload="重新加载", mods_empty="你的模组文件夹是空的。",
-        mods_count="贴图 {stickers} · 头像 {avatars}", mods_on="已启用", mods_off="已停用",
+        mods_count="表情 {stickers} · 头像 {avatars}", mods_on="已启用", mods_off="已停用",
         mods_by="作者：{author}", mods_bad_images="有 {n} 张图片无法读取",
         mods_restart="更改会在下次从启动器打开游戏时生效。",
-        mods_installing="正在安装模组：贴图 {stickers} 个，头像 {avatars} 个…",
+        mods_installing="正在安装模组：表情 {stickers} 个，头像 {avatars} 个…",
         mods_removed="已从游戏中移除模组。", mods_failed="无法安装模组（{err}）。",
         mods_download_failed="无法下载房间的模组（{err}）。",
         mods_declined="你没有接受房间的模组，因此没有加入。",
-        mods_downloading="正在下载房间的模组：贴图 {stickers} 个，头像 {avatars} 个…",
+        mods_downloading="正在下载房间的模组：表情 {stickers} 个，头像 {avatars} 个…",
         mods_temp_cleared="已删除该房间的临时模组。",
         mods_confirm_title="这个房间使用了模组",
-        mods_confirm_text="房主使用了自定义贴图和头像。要加入就需要下载它们：这些是临时文件，离开后会被删除。在此期间你自己的模组会暂停。",
+        mods_confirm_text="房主使用了自定义表情和头像。要加入就需要下载它们：这些是临时文件，离开后会被删除。在此期间你自己的模组会暂停。",
         mods_confirm_yes="下载并加入", mods_confirm_no="不加入"),
     "zh-TW": dict(
         mods_btn="模組", mods_title="模組",
         mods_desc="加入你自己的貼圖和頭像。它們是新增的欄位，遊戲原有的內容永遠不會被更動。",
-        mods_how_stickers="把貼圖圖片（PNG、JPG 等）放進模組資料夾裡的「stickers」資料夾。它們會加入遊戲的貼圖中。任何尺寸都可以，會自動調整。", mods_how_avatars="把頭像圖片（PNG、JPG 等）放進模組資料夾裡的「avatars」資料夾。它們會加入遊戲的頭像中，可用作個人資料圖片。任何尺寸都可以，會自動調整。",
+        mods_how_stickers="把貼圖圖片（PNG、JPG 等）放進模組資料夾裡的「stamps」資料夾。它們會加入遊戲的貼圖中。任何尺寸都可以，會自動調整。", mods_how_avatars="把頭像圖片（PNG、JPG 等）放進模組資料夾裡的「avatars」資料夾。它們會加入遊戲的頭像中，可用作個人資料圖片。任何尺寸都可以，會自動調整。",
         cursor_none="未設定自訂游標", cursor_on="自訂游標：開", cursor_off="自訂游標：關", cursor_desc_on="{size} · 從啟動器開啟遊戲時生效（若遊戲已開啟，幾秒內生效）。額外游標：{extra} 個。", cursor_desc_none="選擇一張圖片（最好是透明 PNG），它就會成為遊戲游標。只有你看得到。需要 BepInEx。", cursor_hot_tip="點擊點：尖端（箭頭）", cursor_hot_center="點擊點：中心（準星）", cursor_hot_custom="點擊點：自訂", cursor_pick="選擇圖片…", cursor_folder="資料夾", cursor_enable="開啟", cursor_disable="關閉", cursor_bad_image="無法讀取該圖片（{err}）。", mods_cursor="自訂游標", mods_open="開啟模組資料夾", mods_reload="重新載入", mods_empty="你的模組資料夾是空的。",
         mods_count="貼圖 {stickers} · 頭像 {avatars}", mods_on="已啟用", mods_off="已停用",
         mods_by="作者：{author}", mods_bad_images="有 {n} 張圖片無法讀取",
@@ -771,38 +771,23 @@ _MODS = {
 }
 for _l, _d in _MODS.items():
     S[_l].update(_d)
-_MODS2 = {
-    "en": ("CRIMESIGHT Revival - mods\n\nThis is your mods folder:\n  stickers\\  put your sticker images here\n  avatars\\   put your avatar images here\n  mod.json   (optional) the mod's name and author\n  models\\    your 3D models (see the README.txt inside)\n  cursor\\    your own cursor\n  stages\\    your scenarios from the scenario creator\n\nPNG, JPG, WEBP... any size works: they're adjusted automatically.\nThey're added as new ones: the game's own stickers and avatars are never changed.\n"),
-    "es": ("CRIMESIGHT Revival - mods\n\nEsta carpeta es tu mod:\n  stickers\\  mete aquí las imágenes de tus stickers\n  avatars\\   mete aquí las imágenes de tus avatares\n  mod.json   (opcional) nombre y autor del mod\n  models\\    tus modelos 3D (mira el README.txt de dentro)\n  cursor\\    tu cursor propio\n  stages\\    tus escenarios del creador de escenarios\n\nPNG, JPG, WEBP... sirve cualquier tamaño: se ajustan solas.\nSon huecos nuevos: los stickers y avatares del juego no se tocan nunca.\n"),
-    "fr": ("CRIMESIGHT Revival - mods\n\nCe dossier est votre mod :\n  stickers\\  mettez ici les images de vos stickers\n  avatars\\   mettez ici les images de vos avatars\n  mod.json   (facultatif) nom et auteur du mod\n  models\\    vos modèles 3D (voir le README.txt à l'intérieur)\n  cursor\\    votre curseur\n  stages\\    vos scénarios du créateur de scénarios\n\nPNG, JPG, WEBP... toutes les tailles conviennent : elles sont ajustées automatiquement.\nCe sont de nouveaux emplacements : les stickers et avatars du jeu ne sont jamais modifiés.\n"),
-    "it": ("CRIMESIGHT Revival - mod\n\nQuesta cartella è il tuo mod:\n  stickers\\  metti qui le immagini dei tuoi sticker\n  avatars\\   metti qui le immagini dei tuoi avatar\n  mod.json   (facoltativo) nome e autore del mod\n  models\\    i tuoi modelli 3D (vedi il README.txt all'interno)\n  cursor\\    il tuo cursore\n  stages\\    i tuoi scenari del creatore di scenari\n\nPNG, JPG, WEBP... va bene qualsiasi dimensione: vengono adattate da sole.\nSono spazi nuovi: sticker e avatar del gioco non vengono mai modificati.\n"),
-    "de": ("CRIMESIGHT Revival - Mods\n\nDieser Ordner ist dein Mod:\n  stickers\\  hier kommen die Bilder deiner Sticker hinein\n  avatars\\   hier kommen die Bilder deiner Avatare hinein\n  mod.json   (optional) Name und Autor des Mods\n  models\\    deine 3D-Modelle (siehe die README.txt darin)\n  cursor\\    dein eigener Mauszeiger\n  stages\\    deine Szenarien aus dem Szenario-Editor\n\nPNG, JPG, WEBP... jede Größe funktioniert: Sie werden automatisch angepasst.\nEs sind neue Plätze: Die Sticker und Avatare des Spiels werden nie verändert.\n"),
-    "pt": ("CRIMESIGHT Revival - mods\n\nEsta pasta é o seu mod:\n  stickers\\  coloque aqui as imagens dos seus stickers\n  avatars\\   coloque aqui as imagens dos seus avatares\n  mod.json   (opcional) nome e autor do mod\n  models\\    seus modelos 3D (veja o README.txt dentro)\n  cursor\\    seu cursor próprio\n  stages\\    seus cenários do criador de cenários\n\nPNG, JPG, WEBP... qualquer tamanho serve: elas são ajustadas sozinhas.\nSão espaços novos: os stickers e avatares do jogo nunca são alterados.\n"),
-    "ru": ("CRIMESIGHT Revival — моды\n\nЭта папка — ваш мод:\n  stickers\\  сюда кладите картинки стикеров\n  avatars\\   сюда кладите картинки аватаров\n  mod.json   (необязательно) название и автор мода\n  models\\    ваши 3D-модели (см. README.txt внутри)\n  cursor\\    ваш курсор\n  stages\\    ваши сценарии из редактора сценариев\n\nPNG, JPG, WEBP... подойдёт любой размер: картинки подгоняются сами.\nЭто новые слоты: игровые стикеры и аватары никогда не меняются.\n"),
-    "ja": ("CRIMESIGHT Revival - MOD\n\nこのフォルダがあなたのMODです：\n  stickers\\  スタンプの画像をここに入れます\n  avatars\\   アバターの画像をここに入れます\n  mod.json   （任意）MODの名前と作者\n  models\\    3Dモデル（中の README.txt を参照）\n  cursor\\    自分のカーソル\n  stages\\    シナリオ作成ツールのシナリオ\n\nPNG、JPG、WEBPなど。サイズは自動で調整されます。\n新しい枠として追加されるので、ゲーム本来のスタンプやアバターは変更されません。\n"),
-    "ko": ("CRIMESIGHT Revival - 모드\n\n이 폴더가 내 모드입니다:\n  stickers\\  스탬프 이미지를 여기에 넣으세요\n  avatars\\   아바타 이미지를 여기에 넣으세요\n  mod.json   (선택) 모드 이름과 제작자\n  models\\    내 3D 모델 (안의 README.txt 참고)\n  cursor\\    내 커서\n  stages\\    시나리오 제작기의 시나리오\n\nPNG, JPG, WEBP 등 어떤 크기든 자동으로 맞춰집니다.\n새 슬롯으로 추가되므로 게임 원래의 스탬프와 아바타는 바뀌지 않습니다.\n"),
-    "zh-CN": ("CRIMESIGHT Revival - 模组\n\n这个文件夹就是你的模组：\n  stickers\\  把贴图图片放在这里\n  avatars\\   把头像图片放在这里\n  mod.json   （可选）模组的名称和作者\n  models\\    你的 3D 模型（见里面的 README.txt）\n  cursor\\    你的自定义光标\n  stages\\    场景编辑器里的场景\n\nPNG、JPG、WEBP 等任何尺寸都可以，会自动调整。\n它们是新增的栏位，游戏原有的贴图和头像不会被改动。\n"),
-    "zh-TW": ("CRIMESIGHT Revival - 模組\n\n這個資料夾就是你的模組：\n  stickers\\  把貼圖圖片放在這裡\n  avatars\\   把頭像圖片放在這裡\n  mod.json   （選填）模組的名稱和作者\n  models\\    你的 3D 模型（見裡面的 README.txt）\n  cursor\\    你的自訂游標\n  stages\\    場景編輯器裡的場景\n\nPNG、JPG、WEBP 等任何尺寸都可以，會自動調整。\n它們是新增的欄位，遊戲原有的貼圖和頭像不會被更動。\n"),
-}
 _ROOT = {"en": "Mods", "es": "Mods", "fr": "Mods", "it": "Mod",
          "de": "Mods", "pt": "Mods", "ru": "Моды", "ja": "MOD",
          "ko": "모드", "zh-CN": "模组", "zh-TW": "模組"}
 for _l, _v in _ROOT.items():
     S[_l]["mods_root"] = _v
-for _l, _readme in _MODS2.items():
-    S[_l]["mods_readme"] = _readme
 
 _TEXT_HINT = {
-    "en": "Stickers don't show a message in the match unless you give them one with the “Messages” button. A number at the start of the file name (01_) only sets the order.",
+    "en": "Stamps don't show a message in the match unless you give them one with the “Messages” button. A number at the start of the file name (01_) only sets the order.",
     "es": "Los stickers no muestran ningún mensaje en la partida salvo que les pongas uno con el botón “Mensajes”. Un número al principio del nombre del archivo (01_) solo sirve para ordenar.",
     "fr": "Les stickers n'affichent aucun message en partie, sauf si vous leur en donnez un avec le bouton « Messages ». Un numéro au début du nom du fichier (01_) sert seulement à l'ordre.",
     "it": "Gli sticker non mostrano nessun messaggio in partita, a meno che tu non gliene dia uno con il pulsante “Messaggi”. Un numero all'inizio del nome del file (01_) serve solo per l'ordine.",
     "de": "Sticker zeigen im Spiel keine Nachricht, außer du gibst ihnen eine über die Schaltfläche „Nachrichten“. Eine Zahl am Anfang des Dateinamens (01_) legt nur die Reihenfolge fest.",
-    "pt": "Os stickers não mostram nenhuma mensagem na partida, a menos que você dê uma a eles com o botão “Mensagens”. Um número no início do nome do arquivo (01_) só serve para ordenar.",
-    "ru": "Стикеры не показывают сообщение в матче, если вы не зададите его кнопкой «Сообщения». Число в начале имени файла (01_) нужно только для порядка.",
+    "pt": "Os emojis não mostram nenhuma mensagem na partida, a menos que você dê uma a eles com o botão “Mensagens”. Um número no início do nome do arquivo (01_) só serve para ordenar.",
+    "ru": "Шаблоны не показывают сообщение в матче, если вы не зададите его кнопкой «Сообщения». Число в начале имени файла (01_) нужно только для порядка.",
     "ja": "「メッセージ」ボタンで設定しない限り、スタンプは試合中にメッセージを表示しません。ファイル名の先頭の番号（01_）は並び順にだけ使われます。",
     "ko": "“메시지” 버튼으로 정하지 않으면 스탬프는 게임 중에 메시지를 표시하지 않습니다. 파일 이름 앞의 숫자(01_)는 순서에만 쓰입니다.",
-    "zh-CN": "除非用“消息”按钮设置，贴图在对局中不会显示消息。文件名开头的数字（01_）只用于排序。",
+    "zh-CN": "除非用“消息”按钮设置，表情在对局中不会显示消息。文件名开头的数字（01_）只用于排序。",
     "zh-TW": "除非用「訊息」按鈕設定，貼圖在對局中不會顯示訊息。檔名開頭的數字（01_）只用於排序。",
 }
 for _l, _v in _TEXT_HINT.items():
@@ -953,16 +938,16 @@ for _l, _d in _BEP_AUTO.items():
     S[_l].update(_d)
 
 _TXT = {
-    "en": ("Messages", "Sticker messages", "The message shown in the match when you send each sticker. Any character works: ¿?¡!:\"*… Leave it empty for no message.", "Saved"),
+    "en": ("Messages", "Stamp messages", "The message shown in the match when you send each stamp. Any character works: ¿?¡!:\"*… Leave it empty for no message.", "Saved"),
     "es": ("Mensajes", "Mensajes de los stickers", "Lo que sale en la partida al mandar cada sticker. Puedes usar cualquier carácter: ¿?¡!:\"*… Si lo dejas vacío, no sale ningún mensaje.", "Guardado"),
     "fr": ("Messages", "Messages des stickers", "Ce qui s'affiche en partie quand vous envoyez chaque sticker. Tous les caractères sont permis : ¿?¡!:\"*… Laissez vide pour n'afficher aucun message.", "Enregistré"),
     "it": ("Messaggi", "Messaggi degli sticker", "Ciò che compare in partita quando invii ogni sticker. Puoi usare qualsiasi carattere: ¿?¡!:\"*… Se lo lasci vuoto, non compare nessun messaggio.", "Salvato"),
     "de": ("Nachrichten", "Sticker-Nachrichten", "Was im Spiel erscheint, wenn du den Sticker sendest. Alle Zeichen sind erlaubt: ¿?¡!:\"*… Leer lassen, damit keine Nachricht erscheint.", "Gespeichert"),
-    "pt": ("Mensagens", "Mensagens dos stickers", "O que aparece na partida ao enviar cada sticker. Você pode usar qualquer caractere: ¿?¡!:\"*… Deixe vazio para não mostrar nenhuma mensagem.", "Salvo"),
-    "ru": ("Сообщения", "Сообщения стикеров", "Что появляется в матче, когда вы отправляете стикер. Можно использовать любые символы: ¿?¡!:\"*… Оставьте пустым, чтобы сообщения не было.", "Сохранено"),
+    "pt": ("Mensagens", "Mensagens dos emojis", "O que aparece na partida ao enviar cada emoji. Você pode usar qualquer caractere: ¿?¡!:\"*… Deixe vazio para não mostrar nenhuma mensagem.", "Salvo"),
+    "ru": ("Сообщения", "Сообщения шаблонов", "Что появляется в матче, когда вы отправляете шаблон. Можно использовать любые символы: ¿?¡!:\"*… Оставьте пустым, чтобы сообщения не было.", "Сохранено"),
     "ja": ("メッセージ", "スタンプのメッセージ", "スタンプを送ったときに試合中に表示される文です。どんな文字でも使えます：？！：\"*… 空欄にするとメッセージは表示されません。", "保存しました"),
     "ko": ("메시지", "스탬프 메시지", "스탬프를 보낼 때 게임에 표시되는 문구입니다. 어떤 문자든 쓸 수 있습니다: ?!:\"*… 비워 두면 메시지가 표시되지 않습니다.", "저장했습니다"),
-    "zh-CN": ("消息", "贴图消息", "发送每个贴图时在对局中显示的文字。可以使用任何字符：？！：\"*… 留空则不显示消息。", "已保存"),
+    "zh-CN": ("消息", "表情消息", "发送每个表情时在对局中显示的文字。可以使用任何字符：？！：\"*… 留空则不显示消息。", "已保存"),
     "zh-TW": ("訊息", "貼圖訊息", "傳送每個貼圖時在對局中顯示的文字。可以使用任何字元：？！：\"*… 留空則不顯示訊息。", "已儲存"),
 }
 for _l, (_b, _ti, _d, _s) in _TXT.items():
@@ -970,16 +955,16 @@ for _l, (_b, _ti, _d, _s) in _TXT.items():
 
 # A que sticker del juego equivale cada sticker de un mod (para que las IA le contesten)
 _MEANS = {
-    "en": ("The picture on the right of each sticker says which game sticker it counts as, so the AIs can reply to it. Leave it empty and they won't reply.", "Counts as…", "None"),
+    "en": ("The picture on the right of each stamp says which game stamp it counts as, so the AIs can reply to it. Leave it empty and they won't reply.", "Counts as…", "None"),
     "es": ("La imagen a la derecha de cada sticker dice a qué sticker del juego equivale, para que las IA puedan contestarle. Si la dejas vacía, no le contestan.", "Equivale a…", "Ninguno"),
     "fr": ("L'image à droite de chaque sticker indique à quel sticker du jeu il correspond, pour que les IA puissent y répondre. Laissez-la vide et elles n'y répondront pas.", "Correspond à…", "Aucun"),
     "it": ("L'immagine a destra di ogni sticker indica a quale sticker del gioco corrisponde, così le IA possono rispondergli. Se la lasci vuota, non rispondono.", "Corrisponde a…", "Nessuno"),
     "de": ("Das Bild rechts neben jedem Sticker gibt an, welchem Sticker des Spiels er entspricht, damit die KIs darauf antworten können. Bleibt es leer, antworten sie nicht.", "Entspricht…", "Keinem"),
-    "pt": ("A imagem à direita de cada sticker diz a qual sticker do jogo ele equivale, para que as IAs possam responder. Se ficar vazia, elas não respondem.", "Equivale a…", "Nenhum"),
-    "ru": ("Картинка справа от стикера показывает, какому стикеру игры он соответствует, чтобы ИИ могли на него ответить. Если оставить её пустой, ИИ не ответят.", "Соответствует…", "Ничему"),
+    "pt": ("A imagem à direita de cada emoji diz a qual emoji do jogo ele equivale, para que as IAs possam responder. Se ficar vazia, elas não respondem.", "Equivale a…", "Nenhum"),
+    "ru": ("Картинка справа от шаблона показывает, какому шаблону игры он соответствует, чтобы ИИ могли на него ответить. Если оставить её пустой, ИИ не ответят.", "Соответствует…", "Ничему"),
     "ja": ("各スタンプの右の画像は、それがゲームのどのスタンプに当たるかを示します。AIが返事できるようになります。空欄のままだとAIは返事をしません。", "相当するスタンプ…", "なし"),
     "ko": ("각 스탬프 오른쪽 그림은 그 스탬프가 게임의 어떤 스탬프에 해당하는지 나타냅니다. 그래야 AI가 답할 수 있습니다. 비워 두면 AI는 답하지 않습니다.", "해당 스탬프…", "없음"),
-    "zh-CN": ("每个贴图右边的图片表示它相当于游戏中的哪个贴图，这样AI才能回应。留空的话，AI不会回应。", "相当于…", "无"),
+    "zh-CN": ("每个表情右边的图片表示它相当于游戏中的哪个表情，这样AI才能回应。留空的话，AI不会回应。", "相当于…", "无"),
     "zh-TW": ("每個貼圖右邊的圖片表示它相當於遊戲中的哪個貼圖，這樣AI才能回應。留空的話，AI不會回應。", "相當於…", "無"),
 }
 for _l, (_d, _tip, _none) in _MEANS.items():
@@ -1004,16 +989,16 @@ for _l, _v in _MANUAL.items():
 # --- mods de los jugadores que se unen ---------------------------------------------------------
 _OFFER = {
     "en": dict(mods_offer_title="{player} has mods",
-               mods_offer_text="{player} wants to use their own stickers and avatars in your room. If you download them, everyone in the room will see them. They're temporary and are deleted when the room closes.",
+               mods_offer_text="{player} wants to use their own stamps and avatars in your room. If you download them, everyone in the room will see them. They're temporary and are deleted when the room closes.",
                mods_offer_yes="Download", mods_offer_no="No thanks",
                mods_offer_sent="Your mods were sent to the host. If they accept, everyone will see them.",
                mods_offer_waiting="Waiting for the host to answer before opening the game (up to a minute)…",
                mods_offer_ok="✓ The host accepted your mods: you'll see them in the room.",
-               mods_offer_timeout="The host didn't answer in time, so you're joining with the room's mods. If they accept later, your stickers will appear, but you may need to add them to your wheel again.",
+               mods_offer_timeout="The host didn't answer in time, so you're joining with the room's mods. If they accept later, your stamps will appear, but you may need to add them to your wheel again.",
                host_left_win="The host left mid-match: it counts as a win for you (+{points} points).",
                mods_offer_accepted="{player}'s mods were added to the room.",
                mods_offer_need_live="{player} has mods: turn on hot reload (in the Mods window) to use them in your room.",
-               mods_confirm_text="The host uses custom stickers and avatars. To join you need to download them: they're temporary and get deleted when you leave. Your own mods are offered to the host: if they accept, everyone will see them."),
+               mods_confirm_text="The host uses custom stamps and avatars. To join you need to download them: they're temporary and get deleted when you leave. Your own mods are offered to the host: if they accept, everyone will see them."),
     "es": dict(mods_offer_title="{player} lleva mods",
                mods_offer_text="{player} quiere usar sus stickers y avatares en tu sala. Si los descargas, los verá todo el mundo en la sala; son temporales y se borran al cerrarla.",
                mods_offer_yes="Descargar", mods_offer_no="No, gracias",
@@ -1059,27 +1044,27 @@ _OFFER = {
                mods_offer_need_live="{player} bringt Mods mit: Aktiviere Hot Reload (Mods-Fenster), um sie in deinem Raum zu nutzen.",
                mods_confirm_text="Der Host nutzt eigene Sticker und Avatare. Zum Beitreten musst du sie herunterladen: Sie sind temporär und werden beim Verlassen gelöscht. Deine eigenen Mods werden dem Host angeboten: Wenn er sie annimmt, sehen sie alle."),
     "pt": dict(mods_offer_title="{player} traz mods",
-               mods_offer_text="{player} quer usar seus próprios stickers e avatares na sua sala. Se você baixá-los, todos na sala vão vê-los; são temporários e apagados quando a sala fecha.",
+               mods_offer_text="{player} quer usar seus próprios emojis e avatares na sua sala. Se você baixá-los, todos na sala vão vê-los; são temporários e apagados quando a sala fecha.",
                mods_offer_yes="Baixar", mods_offer_no="Não, obrigado",
                mods_offer_sent="Seus mods foram enviados ao anfitrião: se ele aceitar, todos vão vê-los.",
                mods_offer_waiting="Aguardando a resposta do anfitrião antes de abrir o jogo (até um minuto)…",
                mods_offer_ok="✓ O anfitrião aceitou seus mods: você vai vê-los na sala.",
-               mods_offer_timeout="O anfitrião não respondeu a tempo: você entra com os mods da sala. Se ele aceitar depois, seus stickers vão aparecer, mas talvez você precise colocá-los de novo na sua roda.",
+               mods_offer_timeout="O anfitrião não respondeu a tempo: você entra com os mods da sala. Se ele aceitar depois, seus emojis vão aparecer, mas talvez você precise colocá-los de novo na sua roda.",
                host_left_win="O anfitrião sumiu no meio da partida: conta como vitória para você (+{points} pontos).",
                mods_offer_accepted="Mods de {player} adicionados à sala.",
                mods_offer_need_live="{player} traz mods: ative a recarga instantânea (janela Mods) para usá-los na sua sala.",
-               mods_confirm_text="O anfitrião usa stickers e avatares personalizados. Para entrar, você precisa baixá-los: são temporários e apagados quando você sai. Seus mods são oferecidos ao anfitrião: se ele aceitar, todos vão vê-los."),
+               mods_confirm_text="O anfitrião usa emojis e avatares personalizados. Para entrar, você precisa baixá-los: são temporários e apagados quando você sai. Seus mods são oferecidos ao anfitrião: se ele aceitar, todos vão vê-los."),
     "ru": dict(mods_offer_title="{player} принёс моды",
-               mods_offer_text="{player} хочет использовать свои стикеры и аватары в вашей комнате. Если вы их скачаете, их увидят все в комнате; они временные и удаляются при закрытии комнаты.",
+               mods_offer_text="{player} хочет использовать свои шаблоны и аватары в вашей комнате. Если вы их скачаете, их увидят все в комнате; они временные и удаляются при закрытии комнаты.",
                mods_offer_yes="Скачать", mods_offer_no="Нет, спасибо",
                mods_offer_sent="Ваши моды отправлены хосту: если он их примет, их увидят все.",
                mods_offer_waiting="Ждём ответа хоста перед запуском игры (до минуты)…",
                mods_offer_ok="✓ Хост принял ваши моды: вы увидите их в комнате.",
-               mods_offer_timeout="Хост не ответил вовремя: вы входите с модами комнаты. Если он примет их позже, ваши стикеры появятся, но, возможно, их придётся снова поставить в колесо.",
+               mods_offer_timeout="Хост не ответил вовремя: вы входите с модами комнаты. Если он примет их позже, ваши шаблоны появятся, но, возможно, их придётся снова поставить в колесо.",
                host_left_win="Хост пропал посреди матча: это засчитывается вам как победа (+{points} очков).",
                mods_offer_accepted="Моды игрока {player} добавлены в комнату.",
                mods_offer_need_live="{player} принёс моды: включите горячую перезагрузку (окно модов), чтобы использовать их в своей комнате.",
-               mods_confirm_text="Хост использует свои стикеры и аватары. Чтобы присоединиться, их нужно скачать: они временные и удаляются, когда вы выходите. Ваши моды предлагаются хосту: если он их примет, их увидят все."),
+               mods_confirm_text="Хост использует свои шаблоны и аватары. Чтобы присоединиться, их нужно скачать: они временные и удаляются, когда вы выходите. Ваши моды предлагаются хосту: если он их примет, их увидят все."),
     "ja": dict(mods_offer_title="{player} がMODを持っています",
                mods_offer_text="{player} が自分のスタンプとアバターをあなたのルームで使いたがっています。ダウンロードするとルームの全員に表示されます。一時的なもので、ルームを閉じると削除されます。",
                mods_offer_yes="ダウンロード", mods_offer_no="いいえ",
@@ -1103,7 +1088,7 @@ _OFFER = {
                mods_offer_need_live="{player} 님이 모드를 가져왔습니다: 내 방에서 쓰려면 실시간 반영(모드 창)을 켜세요.",
                mods_confirm_text="호스트가 커스텀 스탬프와 아바타를 사용합니다. 참가하려면 내려받아야 하며, 임시 파일이라 나가면 삭제됩니다. 내 모드는 호스트에게 제안되며, 수락하면 모두에게 보입니다."),
     "zh-CN": dict(mods_offer_title="{player} 带来了模组",
-               mods_offer_text="{player} 想在你的房间里使用自己的贴图和头像。下载后房间里的所有人都能看到；它们是临时的，房间关闭时会被删除。",
+               mods_offer_text="{player} 想在你的房间里使用自己的表情和头像。下载后房间里的所有人都能看到；它们是临时的，房间关闭时会被删除。",
                mods_offer_yes="下载", mods_offer_no="不用了",
                mods_offer_sent="你的模组已发送给房主：如果对方接受，所有人都能看到。",
                mods_offer_waiting="打开游戏前正在等待房主回复（最多一分钟）…",
@@ -1112,7 +1097,7 @@ _OFFER = {
                host_left_win="房主在对局中途消失了：算作你获胜（+{points} 分）。",
                mods_offer_accepted="已将 {player} 的模组加入房间。",
                mods_offer_need_live="{player} 带来了模组：开启热重载（模组窗口）即可在你的房间中使用。",
-               mods_confirm_text="房主使用了自定义贴图和头像。要加入就需要下载它们：这些是临时文件，离开后会被删除。你的模组会提供给房主：如果对方接受，所有人都能看到。"),
+               mods_confirm_text="房主使用了自定义表情和头像。要加入就需要下载它们：这些是临时文件，离开后会被删除。你的模组会提供给房主：如果对方接受，所有人都能看到。"),
     "zh-TW": dict(mods_offer_title="{player} 帶來了模組",
                mods_offer_text="{player} 想在你的房間裡使用自己的貼圖和頭像。下載後房間裡的所有人都能看到；它們是暫時的，房間關閉時會被刪除。",
                mods_offer_yes="下載", mods_offer_no="不用了",
@@ -1131,7 +1116,7 @@ for _l, _d in _OFFER.items():
 # --- anfitrion: que hacer con los mods de los invitados (preguntar o aceptar siempre) -------------
 _GUEST = {
     "en": dict(guest_mods_title="Guests' mods", guest_mods_ask="Ask me", guest_mods_always="Always accept",
-               guest_mods_desc="For when you host and someone joins with their own stickers or avatars. You're asked in the game and in the launcher; with \"Always accept\" they're added right away.",
+               guest_mods_desc="For when you host and someone joins with their own stamps or avatars. You're asked in the game and in the launcher; with \"Always accept\" they're added right away.",
                mods_offer_always="Always accept", mods_offer_auto="{player}'s mods were added to the room (you always accept them)."),
     "es": dict(guest_mods_title="Mods de los invitados", guest_mods_ask="Preguntarme", guest_mods_always="Aceptar siempre",
                guest_mods_desc="Cuando hosteas y alguien entra con sus propios stickers o avatares. Se te pregunta en el juego y en el lanzador; con «Aceptar siempre» se añaden sin preguntar.",
@@ -1146,10 +1131,10 @@ _GUEST = {
                guest_mods_desc="Wenn du hostest und jemand mit eigenen Stickern oder Avataren beitritt. Du wirst im Spiel und im Launcher gefragt; mit „Immer annehmen“ werden sie direkt hinzugefügt.",
                mods_offer_always="Immer annehmen", mods_offer_auto="Mods von {player} zum Raum hinzugefügt (du nimmst sie immer an)."),
     "pt": dict(guest_mods_title="Mods dos convidados", guest_mods_ask="Perguntar", guest_mods_always="Aceitar sempre",
-               guest_mods_desc="Quando você hospeda e alguém entra com stickers ou avatares próprios. Você é perguntado no jogo e no launcher; com \"Aceitar sempre\" eles são adicionados na hora.",
+               guest_mods_desc="Quando você hospeda e alguém entra com emojis ou avatares próprios. Você é perguntado no jogo e no launcher; com \"Aceitar sempre\" eles são adicionados na hora.",
                mods_offer_always="Aceitar sempre", mods_offer_auto="Mods de {player} adicionados à sala (você sempre aceita)."),
     "ru": dict(guest_mods_title="Моды гостей", guest_mods_ask="Спрашивать", guest_mods_always="Всегда принимать",
-               guest_mods_desc="Когда вы хост и кто-то заходит со своими стикерами или аватарами. Вопрос появится в игре и в лаунчере; с «Всегда принимать» они добавляются сразу.",
+               guest_mods_desc="Когда вы хост и кто-то заходит со своими шаблонами или аватарами. Вопрос появится в игре и в лаунчере; с «Всегда принимать» они добавляются сразу.",
                mods_offer_always="Всегда принимать", mods_offer_auto="Моды {player} добавлены в комнату (вы всегда их принимаете)."),
     "ja": dict(guest_mods_title="ゲストのMOD", guest_mods_ask="毎回確認", guest_mods_always="常に受け入れる",
                guest_mods_desc="ホスト中に誰かが自分のスタンプやアバターを持って参加したとき。ゲーム内とランチャーで確認されます。「常に受け入れる」ならすぐに追加されます。",
@@ -1158,7 +1143,7 @@ _GUEST = {
                guest_mods_desc="호스트 중 누군가 자신의 스탬프나 아바타를 가지고 들어올 때입니다. 게임과 런처에서 물어보며, '항상 수락'이면 바로 추가됩니다.",
                mods_offer_always="항상 수락", mods_offer_auto="{player} 님의 모드를 방에 추가했습니다(항상 수락)."),
     "zh-CN": dict(guest_mods_title="访客的模组", guest_mods_ask="每次询问", guest_mods_always="总是接受",
-               guest_mods_desc="当你做房主、有人带着自己的贴图或头像加入时。会在游戏内和启动器中询问你；选择“总是接受”则直接加入。",
+               guest_mods_desc="当你做房主、有人带着自己的表情或头像加入时。会在游戏内和启动器中询问你；选择“总是接受”则直接加入。",
                mods_offer_always="总是接受", mods_offer_auto="已将 {player} 的模组加入房间（你设置为总是接受）。"),
     "zh-TW": dict(guest_mods_title="訪客的模組", guest_mods_ask="每次詢問", guest_mods_always="總是接受",
                guest_mods_desc="當你當房主、有人帶著自己的貼圖或頭像加入時。會在遊戲內和啟動器中詢問你；選擇「總是接受」則直接加入。",
@@ -1169,9 +1154,9 @@ for _l, _d in _GUEST.items():
 
 # ventana de mods por pestañas
 _MODTABS = {
-    "en": dict(mods_tab_general="General", mods_tab_stickers="Stickers", mods_tab_avatars="Avatars",
-               mods_none_stickers="You don't have any stickers yet.", mods_none_avatars="You don't have any avatars yet.",
-               mods_toggle_note="Turning mods on or off affects both your stickers and your avatars."),
+    "en": dict(mods_tab_general="General", mods_tab_stickers="Stamps", mods_tab_avatars="Avatars",
+               mods_none_stickers="You don't have any stamps yet.", mods_none_avatars="You don't have any avatars yet.",
+               mods_toggle_note="Turning mods on or off affects both your stamps and your avatars."),
     "es": dict(mods_tab_general="General", mods_tab_stickers="Stickers", mods_tab_avatars="Avatares",
                mods_none_stickers="Todavía no tienes stickers.", mods_none_avatars="Todavía no tienes avatares.",
                mods_toggle_note="Activar o desactivar los mods afecta a tus stickers y a tus avatares a la vez."),
@@ -1184,21 +1169,21 @@ _MODTABS = {
     "de": dict(mods_tab_general="Allgemein", mods_tab_stickers="Sticker", mods_tab_avatars="Avatare",
                mods_none_stickers="Du hast noch keine Sticker.", mods_none_avatars="Du hast noch keine Avatare.",
                mods_toggle_note="Mods ein- oder auszuschalten gilt für deine Sticker und deine Avatare zugleich."),
-    "pt": dict(mods_tab_general="Geral", mods_tab_stickers="Stickers", mods_tab_avatars="Avatares",
-               mods_none_stickers="Você ainda não tem stickers.", mods_none_avatars="Você ainda não tem avatares.",
-               mods_toggle_note="Ativar ou desativar os mods vale para seus stickers e seus avatares ao mesmo tempo."),
-    "ru": dict(mods_tab_general="Общее", mods_tab_stickers="Стикеры", mods_tab_avatars="Аватары",
-               mods_none_stickers="У вас пока нет стикеров.", mods_none_avatars="У вас пока нет аватаров.",
-               mods_toggle_note="Включение и выключение модов действует сразу и на стикеры, и на аватары."),
+    "pt": dict(mods_tab_general="Geral", mods_tab_stickers="Emojis", mods_tab_avatars="Avatares",
+               mods_none_stickers="Você ainda não tem emojis.", mods_none_avatars="Você ainda não tem avatares.",
+               mods_toggle_note="Ativar ou desativar os mods vale para seus emojis e seus avatares ao mesmo tempo."),
+    "ru": dict(mods_tab_general="Общее", mods_tab_stickers="Шаблоны", mods_tab_avatars="Аватары",
+               mods_none_stickers="У вас пока нет шаблонов.", mods_none_avatars="У вас пока нет аватаров.",
+               mods_toggle_note="Включение и выключение модов действует сразу и на шаблоны, и на аватары."),
     "ja": dict(mods_tab_general="全般", mods_tab_stickers="スタンプ", mods_tab_avatars="アバター",
                mods_none_stickers="スタンプはまだありません。", mods_none_avatars="アバターはまだありません。",
                mods_toggle_note="MODのオン・オフはスタンプとアバターの両方に適用されます。"),
     "ko": dict(mods_tab_general="일반", mods_tab_stickers="스탬프", mods_tab_avatars="아바타",
                mods_none_stickers="아직 스탬프가 없습니다.", mods_none_avatars="아직 아바타가 없습니다.",
                mods_toggle_note="모드를 켜거나 끄면 스탬프와 아바타 모두에 적용됩니다."),
-    "zh-CN": dict(mods_tab_general="常规", mods_tab_stickers="贴图", mods_tab_avatars="头像",
-               mods_none_stickers="你还没有贴图。", mods_none_avatars="你还没有头像。",
-               mods_toggle_note="开启或关闭模组会同时作用于你的贴图和头像。"),
+    "zh-CN": dict(mods_tab_general="常规", mods_tab_stickers="表情", mods_tab_avatars="头像",
+               mods_none_stickers="你还没有表情。", mods_none_avatars="你还没有头像。",
+               mods_toggle_note="开启或关闭模组会同时作用于你的表情和头像。"),
     "zh-TW": dict(mods_tab_general="一般", mods_tab_stickers="貼圖", mods_tab_avatars="頭像",
                mods_none_stickers="你還沒有貼圖。", mods_none_avatars="你還沒有頭像。",
                mods_toggle_note="開啟或關閉模組會同時作用於你的貼圖和頭像。"),
@@ -1262,50 +1247,12 @@ _MODELS_CUSTOM = {
                models_custom_desc="Put a .glb file in the models folder and it appears in the lists above with its file name. To make one, open a character's skeleton (\"skeletons\" folder) in Blender, fit your model to it and export it as glTF Binary (.glb). The README in the folder explains the steps.",
                models_open="Open models folder", models_custom_tag="{name} (yours)",
                models_skel_ok="{n} skeletons ready in the \"skeletons\" folder.",
-               models_skel_wait="The skeletons appear after you open the game once with hot reload (BepInEx).",
-               models_readme="""CRIMESIGHT Revival - your own 3D models
-=========================================
-
-Each .glb file in this folder is a model you can give to a character in the launcher (Mods > Models).
-Only you see it. The game's animations still play, on top of your model.
-
-How to make one (Blender 3.6 or later):
- 1. Open the game once with hot reload (BepInEx). The "skeletons" folder then gets a skeleton per character
-    (Agatha.glb, Berkeley.glb...). They only contain bones, made from your own copy of the game.
- 2. In Blender: File > Import > glTF 2.0, and pick the skeleton of the character you want to replace.
-    Delete the tiny mesh called "CSR_borra_esta_malla".
- 3. Import or make your model and fit it over the bones (same height and pose, arms like the skeleton).
- 4. Select your model, then the armature (Shift+click), and press Ctrl+P > With Automatic Weights.
-    Do not rename the bones: the game finds them by name.
- 5. File > Export > glTF 2.0, format "glTF Binary (.glb)", with the textures included, into this folder.
- 6. In the launcher, choose your model in the character's list. If the game is open, it changes at once.
-
-Tips: one color texture per material (the game's shading is applied on top). Keep it under ~60,000 triangles.
-If something looks wrong, BepInEx/LogOutput.log has lines starting with [Modelos]."""),
+               models_skel_wait="The skeletons appear after you open the game once with hot reload (BepInEx)."),
     "es": dict(models_custom_title="Tus propios modelos 3D",
                models_custom_desc="Pon un archivo .glb en la carpeta de modelos y aparece en las listas de arriba con su nombre de archivo. Para hacer uno, abre en Blender el esqueleto de un personaje (carpeta \"skeletons\"), ajusta tu modelo a él y expórtalo como glTF Binary (.glb). El README de la carpeta explica los pasos.",
                models_open="Abrir carpeta de modelos", models_custom_tag="{name} (tuyo)",
                models_skel_ok="{n} esqueletos listos en la carpeta \"skeletons\".",
-               models_skel_wait="Los esqueletos aparecen después de abrir el juego una vez con la recarga en caliente (BepInEx).",
-               models_readme="""CRIMESIGHT Revival - tus propios modelos 3D
-=============================================
-
-Cada archivo .glb de esta carpeta es un modelo que puedes ponerle a un personaje en el lanzador (Mods > Modelos).
-Solo lo ves tú. Las animaciones del juego se siguen viendo, sobre tu modelo.
-
-Cómo hacer uno (Blender 3.6 o posterior):
- 1. Abre el juego una vez con la recarga en caliente (BepInEx). Entonces la carpeta "skeletons" tendrá un
-    esqueleto por personaje (Agatha.glb, Berkeley.glb...). Solo tienen huesos, sacados de tu propia copia del juego.
- 2. En Blender: Archivo > Importar > glTF 2.0, y elige el esqueleto del personaje que quieres sustituir.
-    Borra la malla diminuta llamada "CSR_borra_esta_malla".
- 3. Importa o haz tu modelo y ajústalo a los huesos (misma altura y postura, los brazos como el esqueleto).
- 4. Selecciona tu modelo, luego la armadura (Mayús+clic), y pulsa Ctrl+P > Con pesos automáticos.
-    No cambies el nombre de los huesos: el juego los busca por su nombre.
- 5. Archivo > Exportar > glTF 2.0, formato "glTF Binary (.glb)", con las texturas incluidas, en esta carpeta.
- 6. En el lanzador, elige tu modelo en la lista del personaje. Si el juego está abierto, cambia al momento.
-
-Consejos: una textura de color por material (encima se pone el sombreado del juego). Mejor por debajo de
-~60.000 triángulos. Si algo se ve mal, BepInEx/LogOutput.log tiene líneas que empiezan por [Modelos]."""),
+               models_skel_wait="Los esqueletos aparecen después de abrir el juego una vez con la recarga en caliente (BepInEx)."),
     "fr": dict(models_custom_title="Vos propres modèles 3D",
                models_custom_desc="Placez un fichier .glb dans le dossier des modèles et il apparaît dans les listes ci-dessus avec son nom de fichier. Pour en créer un, ouvrez le squelette d'un personnage (dossier « skeletons ») dans Blender, ajustez-y votre modèle et exportez-le en glTF Binary (.glb). Le README du dossier explique les étapes.",
                models_open="Ouvrir le dossier des modèles", models_custom_tag="{name} (le vôtre)",
@@ -1380,56 +1327,6 @@ _MODELS_FBX = {
     "zh-TW": dict(models_custom_desc="把 .fbx 或 .glb 檔案（或裝有模型及其貼圖的子資料夾）放進模型資料夾，它就會出現在上面的清單裡。來自 Mixamo、VRChat、VRoid、Blender、3ds Max 或 MMD 的人形模型會自動配合角色的骨架。想要完美貼合，請在「skeletons」資料夾中的骨架上製作。資料夾裡的 README 有詳細說明。",
                models_convert_error="無法讀取這個模型：{err}"),
 }
-_MODELS_FBX["en"]["models_readme"] = """CRIMESIGHT Revival - your own 3D models
-=========================================
-
-Each model in this folder can be given to a character in the launcher (Mods > Models). Only you see it.
-The game's animations play on your model.
-
-What you can put here
- - A .fbx or .glb file, or a subfolder with the model and its textures (handy for downloads: unzip them here).
-   The subfolder's name is the model's name.
- - Humanoid models (Mixamo, VRChat/Unity, VRoid, Blender, 3ds Max Biped, DAZ, MMD...) are fitted automatically:
-   their bones are recognised by name, the model is turned upright, scaled to the character and put in the
-   game's T pose. Hair, skirts and other extra bones follow the nearest body bone (they won't swing).
- - Textures: the colour texture of each material, inside the .fbx or next to it (PNG, JPG, TGA, BMP, PSD...).
-
-For a perfect fit (optional, Blender 3.6 or later)
- 1. Open the game once with hot reload (BepInEx). The "skeletons" folder then gets a skeleton per character
-    (Agatha.glb, Berkeley.glb...). They only contain bones, made from your own copy of the game.
- 2. In Blender: File > Import > glTF 2.0, pick the skeleton and delete the tiny mesh "CSR_borra_esta_malla".
- 3. Fit your model over the bones, select it, then the armature (Shift+click), and Ctrl+P > With Automatic Weights.
-    Do not rename the bones.
- 4. File > Export > glTF 2.0 (.glb) or FBX, into this folder.
-
-Then choose it in the character's list. If the game is open, it changes at once (press the refresh button after
-re-exporting). Keep it under ~60,000 triangles. If something looks wrong, BepInEx/LogOutput.log has lines
-starting with [Modelos] that say which bones were recognised."""
-_MODELS_FBX["es"]["models_readme"] = """CRIMESIGHT Revival - tus propios modelos 3D
-=============================================
-
-Cada modelo de esta carpeta se le puede poner a un personaje en el lanzador (Mods > Modelos). Solo lo ves tú.
-Las animaciones del juego se ven en tu modelo.
-
-Qué puedes poner aquí
- - Un archivo .fbx o .glb, o una subcarpeta con el modelo y sus texturas (útil para descargas: descomprímelas
-   aquí). El nombre de la subcarpeta es el nombre del modelo.
- - Los modelos humanoides (Mixamo, VRChat/Unity, VRoid, Blender, Biped de 3ds Max, DAZ, MMD...) se adaptan solos:
-   se reconocen sus huesos por el nombre, se pone de pie, se escala al personaje y se coloca en la postura T del
-   juego. El pelo, las faldas y otros huesos de más siguen al hueso del cuerpo más cercano (no se balancean).
- - Texturas: la de color de cada material, dentro del .fbx o junto a él (PNG, JPG, TGA, BMP, PSD...).
-
-Para que encaje perfecto (opcional, Blender 3.6 o posterior)
- 1. Abre el juego una vez con la recarga en caliente (BepInEx). Entonces la carpeta "skeletons" tendrá un
-    esqueleto por personaje (Agatha.glb, Berkeley.glb...). Solo tienen huesos, sacados de tu propia copia del juego.
- 2. En Blender: Archivo > Importar > glTF 2.0, elige el esqueleto y borra la malla diminuta "CSR_borra_esta_malla".
- 3. Ajusta tu modelo a los huesos, selecciónalo, luego la armadura (Mayús+clic), y Ctrl+P > Con pesos automáticos.
-    No cambies el nombre de los huesos.
- 4. Archivo > Exportar > glTF 2.0 (.glb) o FBX, en esta carpeta.
-
-Luego elígelo en la lista del personaje. Si el juego está abierto, cambia al momento (pulsa el botón de refrescar
-después de volver a exportar). Mejor por debajo de ~60.000 triángulos. Si algo se ve mal, BepInEx/LogOutput.log
-tiene líneas que empiezan por [Modelos] que dicen qué huesos se han reconocido."""
 for _l, _d in _MODELS_FBX.items():
     S[_l].update(_d)
 
@@ -1488,7 +1385,7 @@ _MODELS_SYNC = {
                models_download_failed="Couldn't download the room's 3D models ({err}).", models_upload_failed="Couldn't send your 3D models ({err}).",
                models_live_updated="3D models updated in the game.",
                models_desc="Change a character's 3D model and animations, to another character from the game or to your own model. In your room, everyone sees your choices (plus any guests' choices you accept, on characters you haven't changed). In someone else's room you see theirs, and yours come back when you leave. The 2D portraits don't change.",
-               mods_confirm_text="The host is using mods (stickers, avatars or 3D models). To join, you need to download them: they're temporary and are deleted when you leave. Your own mods are paused in the meantime."),
+               mods_confirm_text="The host is using mods (stamps, avatars or 3D models). To join, you need to download them: they're temporary and are deleted when you leave. Your own mods are paused in the meantime."),
     "es": dict(models_room_entry="Modelos 3D y animaciones", models_room_count="{models} modelos · {anims} animaciones · {mb} MB",
                models_offer_text="{player} quiere usar sus propios modelos 3D y animaciones en tu sala ({mb} MB). Si aceptas, los verá todo el mundo en la sala en los personajes que tú no hayas cambiado; son temporales y se borran al cerrarla.",
                models_offer_sent="Tus modelos 3D se han ofrecido al anfitrión: si los acepta, se le envían y los veréis todos.",
@@ -1533,7 +1430,7 @@ _MODELS_SYNC = {
                models_download_failed="Não foi possível baixar os modelos 3D da sala ({err}).", models_upload_failed="Não foi possível enviar seus modelos 3D ({err}).",
                models_live_updated="Modelos 3D atualizados no jogo.",
                models_desc="Mude o modelo 3D e as animações de um personagem: por outro personagem do jogo ou por um modelo seu. Na sua sala todos veem suas escolhas (e as dos convidados que você aceitar, nos personagens que você não mudou); na sala de outro você vê as dele, e as suas voltam ao sair. Os retratos 2D não mudam.",
-               mods_confirm_text="O anfitrião usa mods (stickers, avatares ou modelos 3D). Para entrar você precisa baixá-los: são temporários e apagados ao sair. Enquanto isso, seus próprios mods ficam de lado."),
+               mods_confirm_text="O anfitrião usa mods (emojis, avatares ou modelos 3D). Para entrar você precisa baixá-los: são temporários e apagados ao sair. Enquanto isso, seus próprios mods ficam de lado."),
     "ru": dict(models_room_entry="3D-модели и анимации", models_room_count="моделей: {models} · анимаций: {anims} · {mb} МБ",
                models_offer_text="{player} хочет использовать в вашей комнате свои 3D-модели и анимации ({mb} МБ). Если вы согласитесь, их увидят все в комнате на тех персонажах, которых вы не меняли; они временные и удалятся при закрытии комнаты.",
                models_offer_sent="Ваши 3D-модели предложены хосту: если он согласится, они будут отправлены и их увидят все.",
@@ -1542,7 +1439,7 @@ _MODELS_SYNC = {
                models_download_failed="Не удалось загрузить 3D-модели комнаты ({err}).", models_upload_failed="Не удалось отправить ваши 3D-модели ({err}).",
                models_live_updated="3D-модели обновлены в игре.",
                models_desc="Меняйте 3D-модель и анимации персонажа: на другого персонажа игры или на свою модель. В вашей комнате ваш выбор видят все (и выбор гостей, которых вы примете, на персонажах, которых вы не меняли); в чужой комнате вы видите выбор хозяина, а ваш вернётся, когда выйдете. 2D-портреты не меняются.",
-               mods_confirm_text="Хост использует моды (стикеры, аватары или 3D-модели). Чтобы войти, их нужно скачать: они временные и удалятся, когда вы выйдете. Ваши собственные моды пока отключаются."),
+               mods_confirm_text="Хост использует моды (шаблоны, аватары или 3D-модели). Чтобы войти, их нужно скачать: они временные и удалятся, когда вы выйдете. Ваши собственные моды пока отключаются."),
     "ja": dict(models_room_entry="3Dモデルとアニメーション", models_room_count="モデル {models} 個 · アニメーション {anims} 個 · {mb} MB",
                models_offer_text="{player} さんが自分の3Dモデルとアニメーションをあなたのルームで使いたがっています（{mb} MB）。受け入れると、あなたが変えていないキャラクターでルームの全員に表示されます。一時的なもので、ルームを閉じると削除されます。",
                models_offer_sent="あなたの3Dモデルをホストに提案しました。受け入れられると送信され、全員に表示されます。",
@@ -1593,8 +1490,6 @@ S['ja']["models_offer_timeout"] = 'ホストが時間内に答えませんでし
 S['ko']["models_offer_timeout"] = '호스트가 제때 답하지 않았습니다. 방의 3D 모델로 참가합니다. 나중에 수락하면 내 모델이 저절로 나타납니다.'
 S['zh-CN']["models_offer_timeout"] = '房主没有及时回应：你将使用房间的 3D 模型加入。如果房主之后接受，你的模型会自动出现。'
 S['zh-TW']["models_offer_timeout"] = '房主沒有及時回應：你將使用房間的 3D 模型加入。如果房主之後接受，你的模型會自動出現。'
-S["en"]["models_readme"] = S["en"]["models_readme"].replace("Only you see it.", "In your room everyone sees it (in someone else's room you see theirs).")
-S["es"]["models_readme"] = S["es"]["models_readme"].replace("Solo lo ves tú.", "En tu sala lo ven todos (en la de otro ves lo suyo).")
 
 # personajes nuevos (slots) y Selector de personajes
 _CHARS = {
@@ -1739,36 +1634,6 @@ for _l, _labels in _TALK_LABELS.items():
                        "startAction_statusHunger", "startAction_statusInjury", "stepIntoBlackoutRoom", "useBypass",
                        "useFoodForOther", "useMedicineForMyself", "useMedicineForOther"), _labels):
         S[_l]["talk_" + _k] = _v
-S["en"]["models_readme"] += """
-
-New characters (Mods > Models > New characters)
- - A new character joins the draw of every match instead of always replacing someone: each match picks 6 of the
-   enabled characters (originals and new ones, same chance). Choose who can appear with the "Character Selection"
-   button in the game's waiting room (the host decides for the room; at least 6 characters and 1 traitor).
- - It needs a 3D model; the name, image (folder "images"; without one it's taken from the model), animations
-   and lines are optional: what it doesn't have comes from the character whose place it takes, and it always
-   plays like that character. A traitor only uses the model and animations."""
-S["es"]["models_readme"] += """
-
-Personajes nuevos (Mods > Modelos > Personajes nuevos)
- - Un personaje nuevo entra en el sorteo de cada partida en vez de sustituir siempre a alguien: cada partida salen
-   6 de los personajes activados (originales y nuevos, con la misma probabilidad). Elige quién puede salir con el
-   botón «Selección de personajes» de la sala de espera del juego (decide el anfitrión; mínimo 6 personajes y 1 traidor).
- - Necesita un modelo 3D; el nombre, la imagen (carpeta "images"; sin ella se saca del modelo), las animaciones
-   y las frases son opcionales: lo que no tenga lo pone el personaje cuyo sitio ocupa, y siempre juega como él.
-   Un traidor solo usa el modelo y las animaciones."""
-S["en"]["models_readme"] += """
-
-Animations (folder "animations")
- - Put .fbx or .glb animations there (from Mixamo: choose "FBX Binary", "Without Skin" and "In Place" for walks
-   and runs). In the launcher (Mods > Models > Animations) choose, for each character, which one replaces its
-   idle, walk or run. The first animation in each file is used; the game still decides when each one plays."""
-S["es"]["models_readme"] += """
-
-Animaciones (carpeta "animations")
- - Pon ahí animaciones .fbx o .glb (de Mixamo: elige "FBX Binary", "Without Skin" e "In Place" para andar y
-   correr). En el lanzador (Mods > Modelos > Animaciones) elige, para cada personaje, cuál sustituye a su reposo,
-   su andar o su correr. Se usa la primera animación de cada archivo; el juego sigue decidiendo cuándo suena cada una."""
 
 _GAME_OPEN = {
     "en": "CRIMESIGHT is already open. Close it and press the button again: the launcher will open it for you, already connected.",
@@ -2678,3 +2543,1065 @@ def server_event(msg):
         if m:
             return fn(m)
     return None
+
+
+# ------------------------------------------------------------------ READMEs of the mods folders
+# README.txt of mods\, mods\models\ and mods\cursor\, written in the launcher's language (core.mods_dir,
+# models_dir and cursor_dir). The three share one layout: title, what's in the folder, then short sections.
+# "[Modelos]", "CSR_borra_esta_malla" and "[Cursor] el juego usa el cursor" stay as they are: that is how they
+# appear in the game's log and in Blender.
+_READMES = {
+    "en": ("""CRIMESIGHT Revival - mods
+=========================
+
+This is your mods folder. You manage everything in it from the launcher's Mods window.
+
+  stamps\\      your stamp images
+  avatars\\     your avatar images (to use as your profile picture)
+  mod.json     optional: the name and author shown for your mods
+  models\\      your 3D models and animations (see the README.txt inside)
+  cursor\\      your custom cursor (see the README.txt inside)
+  stages\\      the scenarios you save in the Scenario creator
+
+Stamps and avatars
+ - PNG, JPG, WEBP... Any size works: they're adjusted automatically.
+ - They're added as new ones: the game's own stamps and avatars are never changed.
+ - In your room everyone sees them (in someone else's room you see theirs).
+ - A stamp shows no message in the match unless you give it one with the "Messages" button
+   (Mods > Stamps). A number at the start of the file name (01_) only sets the order.
+ - Changes appear the next time you open the game from the launcher, or right away with
+   Hot reload (BepInEx) on, in Mods > General.""",
+           """CRIMESIGHT Revival - 3D models
+==============================
+
+Your own 3D models and animations. You manage them from the launcher, in Mods > Models.
+They need Hot reload (BepInEx) on, in Mods > General.
+
+  .fbx / .glb    your models; a subfolder with a model and its textures also works (handy for
+                 downloads: unzip them here). The subfolder's name becomes the model's name.
+  animations\\    your animations (see "Animations" below)
+  images\\        portrait images for new characters (see "New characters" below)
+  skeletons\\     one skeleton per character, for a perfect fit (see below)
+
+Models
+ - Give a model to a character in Mods > Models and it replaces that character's look.
+ - In your room everyone sees them (in someone else's room you see theirs).
+ - The game's animations play on your model.
+ - Humanoid models (Mixamo, VRChat/Unity, VRoid, Blender, 3ds Max Biped, DAZ, MMD...) are fitted
+   automatically: their bones are recognised by name, and the model is turned upright, scaled to the
+   character and put in the game's T pose. Hair, skirts and other extra bones follow the nearest body
+   bone (they don't swing).
+ - Textures: the colour texture of each material, inside the model file or next to it
+   (PNG, JPG, TGA, BMP, PSD...).
+ - Keep each model under about 60,000 triangles.
+ - If the game is open, changes appear right away (press "Reload" after exporting a model again).
+ - If something looks wrong, BepInEx/LogOutput.log has lines starting with [Modelos] that say
+   which bones were recognised.
+
+For a perfect fit (optional, Blender 3.6 or later)
+ 1. Open the game once with Hot reload on. The "skeletons" folder then gets one skeleton per
+    character (Agatha.glb, Berkeley.glb..., plus Traitor.glb and Victim.glb). They only contain
+    bones, made from your own copy of the game.
+ 2. In Blender: File > Import > glTF 2.0, pick the skeleton and delete the tiny mesh
+    "CSR_borra_esta_malla".
+ 3. Fit your model over the bones. Select the model, then the armature (Shift+click), and press
+    Ctrl+P > With Automatic Weights. Don't rename the bones.
+ 4. File > Export > glTF 2.0 (.glb) or FBX, into this folder.
+
+New characters (Mods > Models > New characters)
+ - Instead of always replacing someone, a new character joins the draw of every match: each match
+   picks 6 of the enabled characters, and original and new ones have the same chance. Choose who
+   can appear with the "Character Selection" button in the game's waiting room (the host decides
+   for their room; at least 6).
+ - It needs a 3D model. Everything else is optional:
+     name and lines: without them, it uses those of the character whose place it takes;
+     image: put it in the "images" folder; without one, it's generated from the model;
+     animations: without its own, it moves like the character chosen in "Animations of".
+ - It always plays like the character whose place it takes.
+ - Characters of the "Traitor" type don't appear in matches yet.
+
+Animations (folder "animations")
+ - Put .fbx or .glb animations here (from Mixamo: choose "FBX Binary" and "Without Skin", and
+   "In Place" for walks and runs). Any humanoid animation works: it's fitted to the character.
+ - In Mods > Models > Animations, choose for each character which animation replaces its idle,
+   walk or run. It works with both the game's models and yours.
+ - The first animation in each file is used; the game still decides when each one plays.""",
+           """CRIMESIGHT Revival - custom cursor
+==================================
+
+Your own mouse cursor. The easiest way is to use the launcher: Mods > Custom cursor >
+"Choose image...", then pick the click point. You can also put the files here yourself:
+
+  cursor.png     the normal cursor, in menus and in matches. A PNG with a transparent background,
+                 ideally 32x32 or 64x64 pixels.
+  hotspot.txt    optional: the point of cursor.png that clicks, as "x,y" in pixels from the
+                 top-left corner (0,0 by default, like an arrow). For a centred 32x32
+                 crosshair: 16,16
+  other .png     optional: each one replaces the game cursor with the same name (move, run,
+                 attack...). The names appear in BepInEx/LogOutput.log, in the lines
+                 "[Cursor] el juego usa el cursor ...".
+
+ - Only you see it.
+ - It needs Hot reload (BepInEx) on, in Mods > General.
+ - It's applied when you open the game from the launcher, or within a few seconds if it's
+   already open.
+ - To go back to the game's cursor, press "Turn off" in the launcher or empty this folder."""),
+
+    "es": ("""CRIMESIGHT Revival - mods
+=========================
+
+Esta es tu carpeta de mods. Todo lo que hay en ella se gestiona desde la ventana Mods del lanzador.
+
+  stamps\\      las imágenes de tus stickers
+  avatars\\     las imágenes de tus avatares (para usarlas como foto de perfil)
+  mod.json     opcional: el nombre y el autor que se muestran para tus mods
+  models\\      tus modelos 3D y animaciones (mira el README.txt de dentro)
+  cursor\\      tu cursor propio (mira el README.txt de dentro)
+  stages\\      los escenarios que guardas en el Creador de escenarios
+
+Stickers y avatares
+ - PNG, JPG, WEBP... Sirve cualquier tamaño: se ajustan solos.
+ - Se añaden como nuevos: los stickers y avatares del juego no se cambian nunca.
+ - En tu sala los ven todos (en la sala de otro ves los suyos).
+ - Un sticker no muestra ningún mensaje en la partida salvo que le pongas uno con el botón
+   "Mensajes" (Mods > Stickers). Un número al principio del nombre del archivo (01_) solo sirve
+   para ordenar.
+ - Los cambios se ven la próxima vez que abras el juego desde el lanzador, o al momento con la
+   Recarga en caliente (BepInEx) activada, en Mods > General.""",
+           """CRIMESIGHT Revival - modelos 3D
+===============================
+
+Tus propios modelos 3D y animaciones. Se gestionan desde el lanzador, en Mods > Modelos.
+Necesitan la Recarga en caliente (BepInEx) activada, en Mods > General.
+
+  .fbx / .glb    tus modelos; también vale una subcarpeta con un modelo y sus texturas (útil para
+                 lo que descargues: descomprímelo aquí). El nombre de la subcarpeta es el del modelo.
+  animations\\    tus animaciones (mira "Animaciones" más abajo)
+  images\\        imágenes de retrato para personajes nuevos (mira "Personajes nuevos" más abajo)
+  skeletons\\     un esqueleto por personaje, para un ajuste perfecto (mira más abajo)
+
+Modelos
+ - Asigna un modelo a un personaje en Mods > Modelos y este sustituirá su aspecto.
+ - En tu sala los ven todos (en la sala de otro ves los suyos).
+ - En tu modelo se ven las animaciones del juego.
+ - Los modelos humanoides (Mixamo, VRChat/Unity, VRoid, Blender, 3ds Max Biped, DAZ, MMD...) se
+   ajustan solos: sus huesos se reconocen por el nombre, y el modelo se pone de pie, se escala al
+   personaje y se coloca en la pose en T del juego. El pelo, las faldas y otros huesos extra siguen
+   al hueso del cuerpo más cercano (no se balancean).
+ - Texturas: la textura de color de cada material, dentro del archivo del modelo o a su lado
+   (PNG, JPG, TGA, BMP, PSD...).
+ - Procura que cada modelo tenga menos de unos 60.000 triángulos.
+ - Si el juego está abierto, los cambios se ven al momento (pulsa "Recargar" después de volver a
+   exportar un modelo).
+ - Si algo se ve mal, BepInEx/LogOutput.log tiene líneas que empiezan por [Modelos] que dicen qué
+   huesos se han reconocido.
+
+Para un ajuste perfecto (opcional, Blender 3.6 o posterior)
+ 1. Abre el juego una vez con la Recarga en caliente activada. La carpeta "skeletons" recibe
+    entonces un esqueleto por personaje (Agatha.glb, Berkeley.glb..., además de Traitor.glb y
+    Victim.glb). Solo contienen huesos, sacados de tu propia copia del juego.
+ 2. En Blender: Archivo > Importar > glTF 2.0, elige el esqueleto y borra la malla pequeñita
+    "CSR_borra_esta_malla".
+ 3. Ajusta tu modelo sobre los huesos. Selecciona el modelo, luego el esqueleto (Mayús+clic), y
+    pulsa Ctrl+P > Con pesos automáticos. No cambies el nombre de los huesos.
+ 4. Archivo > Exportar > glTF 2.0 (.glb) o FBX, en esta carpeta.
+
+Personajes nuevos (Mods > Modelos > Personajes nuevos)
+ - En vez de sustituir siempre a alguien, un personaje nuevo entra en el sorteo de cada partida: en
+   cada partida salen 6 de los personajes activados, y los originales y los nuevos tienen la misma
+   probabilidad. Elige quién puede salir con el botón "Selección de personajes" de la sala de
+   espera del juego (decide el anfitrión para su sala; mínimo 6).
+ - Necesita un modelo 3D. Todo lo demás es opcional:
+     nombre y frases: sin ellos, usa los del personaje cuyo sitio ocupa;
+     imagen: ponla en la carpeta "images"; sin ella, se genera a partir del modelo;
+     animaciones: sin las suyas, se mueve como el personaje elegido en "Animaciones de".
+ - Siempre juega como el personaje cuyo sitio ocupa.
+ - Los personajes de tipo "Traidor" todavía no salen en las partidas.
+
+Animaciones (carpeta "animations")
+ - Pon aquí animaciones .fbx o .glb (de Mixamo: elige "FBX Binary" y "Without Skin", e
+   "In Place" para andar y correr). Sirve cualquier animación humanoide: se ajusta al personaje.
+ - En Mods > Modelos > Animaciones, elige para cada personaje qué animación sustituye a su
+   reposo, su andar o su correr. Funciona con los modelos del juego y con los tuyos.
+ - Se usa la primera animación de cada archivo; el juego sigue decidiendo cuándo se ve cada una.""",
+           """CRIMESIGHT Revival - cursor propio
+==================================
+
+Tu propio cursor del ratón. Lo más fácil es usar el lanzador: Mods > Cursor propio >
+"Elegir imagen...", y luego elegir el punto de clic. También puedes poner los archivos aquí tú mismo:
+
+  cursor.png     el cursor normal, en los menús y en la partida. Un PNG con fondo transparente,
+                 mejor de 32x32 o 64x64 píxeles.
+  hotspot.txt    opcional: el punto de cursor.png que hace clic, como "x,y" en píxeles desde la
+                 esquina de arriba a la izquierda (0,0 por defecto, como una flecha). Para una
+                 mira centrada de 32x32: 16,16
+  otros .png     opcional: cada uno sustituye al cursor del juego que se llama igual (moverse,
+                 correr, atacar...). Los nombres salen en BepInEx/LogOutput.log, en las líneas
+                 "[Cursor] el juego usa el cursor ...".
+
+ - Solo lo ves tú.
+ - Necesita la Recarga en caliente (BepInEx) activada, en Mods > General.
+ - Se aplica al abrir el juego desde el lanzador, o en unos segundos si ya está abierto.
+ - Para volver al cursor del juego, pulsa "Desactivar" en el lanzador o vacía esta carpeta."""),
+
+    "fr": ("""CRIMESIGHT Revival - mods
+=========================
+
+Ceci est votre dossier de mods. Tout ce qu'il contient se gère depuis la fenêtre Mods du lanceur.
+
+  stamps\\      les images de vos stickers
+  avatars\\     les images de vos avatars (à utiliser comme photo de profil)
+  mod.json     facultatif : le nom et l'auteur affichés pour vos mods
+  models\\      vos modèles 3D et animations (voir le README.txt à l'intérieur)
+  cursor\\      votre curseur personnalisé (voir le README.txt à l'intérieur)
+  stages\\      les scénarios que vous enregistrez dans le Créateur de scénarios
+
+Stickers et avatars
+ - PNG, JPG, WEBP... Toutes les tailles conviennent : ils sont ajustés automatiquement.
+ - Ils sont ajoutés en plus : les stickers et avatars du jeu ne sont jamais modifiés.
+ - Dans votre salon, tout le monde les voit (dans le salon de quelqu'un d'autre, vous voyez les siens).
+ - Un sticker n'affiche aucun message en partie, sauf si vous lui en donnez un avec le bouton
+   « Messages » (Mods > Stickers). Un numéro au début du nom du fichier (01_) sert seulement à l'ordre.
+ - Les changements apparaissent la prochaine fois que vous ouvrez le jeu depuis le lanceur, ou tout
+   de suite avec le Rechargement à chaud (BepInEx) activé, dans Mods > Général.""",
+           """CRIMESIGHT Revival - modèles 3D
+===============================
+
+Vos propres modèles 3D et animations. Ils se gèrent depuis le lanceur, dans Mods > Modèles.
+Ils nécessitent le Rechargement à chaud (BepInEx) activé, dans Mods > Général.
+
+  .fbx / .glb    vos modèles ; un sous-dossier avec un modèle et ses textures fonctionne aussi
+                 (pratique pour les téléchargements : décompressez-les ici). Le nom du sous-dossier
+                 devient le nom du modèle.
+  animations\\    vos animations (voir « Animations » plus bas)
+  images\\        images de portrait pour les nouveaux personnages (voir « Nouveaux personnages »)
+  skeletons\\     un squelette par personnage, pour un ajustement parfait (voir plus bas)
+
+Modèles
+ - Donnez un modèle à un personnage dans Mods > Modèles et il remplace l'apparence de ce personnage.
+ - Dans votre salon, tout le monde les voit (dans le salon de quelqu'un d'autre, vous voyez les siens).
+ - Les animations du jeu sont jouées sur votre modèle.
+ - Les modèles humanoïdes (Mixamo, VRChat/Unity, VRoid, Blender, 3ds Max Biped, DAZ, MMD...) sont
+   ajustés automatiquement : leurs os sont reconnus par leur nom, et le modèle est redressé, mis à
+   l'échelle du personnage et placé dans la pose en T du jeu. Les cheveux, les jupes et les autres
+   os supplémentaires suivent l'os du corps le plus proche (ils ne se balancent pas).
+ - Textures : la texture de couleur de chaque matériau, dans le fichier du modèle ou à côté
+   (PNG, JPG, TGA, BMP, PSD...).
+ - Restez sous environ 60 000 triangles par modèle.
+ - Si le jeu est ouvert, les changements apparaissent tout de suite (appuyez sur « Actualiser »
+   après avoir réexporté un modèle).
+ - Si quelque chose cloche, BepInEx/LogOutput.log contient des lignes commençant par [Modelos]
+   qui indiquent quels os ont été reconnus.
+
+Pour un ajustement parfait (facultatif, Blender 3.6 ou plus récent)
+ 1. Ouvrez le jeu une fois avec le Rechargement à chaud activé. Le dossier « skeletons » reçoit
+    alors un squelette par personnage (Agatha.glb, Berkeley.glb..., plus Traitor.glb et
+    Victim.glb). Ils ne contiennent que des os, créés à partir de votre propre copie du jeu.
+ 2. Dans Blender : Fichier > Importer > glTF 2.0, choisissez le squelette et supprimez le petit
+    maillage « CSR_borra_esta_malla ».
+ 3. Placez votre modèle sur les os. Sélectionnez le modèle, puis l'armature (Maj+clic), et faites
+    Ctrl+P > Avec poids automatiques. Ne renommez pas les os.
+ 4. Fichier > Exporter > glTF 2.0 (.glb) ou FBX, dans ce dossier.
+
+Nouveaux personnages (Mods > Modèles > Nouveaux personnages)
+ - Au lieu de toujours remplacer quelqu'un, un nouveau personnage entre dans le tirage de chaque
+   partie : chaque partie tire 6 des personnages activés, et les originaux et les nouveaux ont la
+   même chance. Choisissez qui peut apparaître avec le bouton « Sélection des personnages » du
+   salon d'attente du jeu (l'hôte décide pour son salon ; au moins 6).
+ - Il lui faut un modèle 3D. Tout le reste est facultatif :
+     nom et répliques : sans eux, il utilise ceux du personnage dont il prend la place ;
+     image : mettez-la dans le dossier « images » ; sans image, elle est créée à partir du modèle ;
+     animations : sans les siennes, il bouge comme le personnage choisi dans « Animations de ».
+ - Il joue toujours comme le personnage dont il prend la place.
+ - Les personnages de type « Traître » n'apparaissent pas encore en partie.
+
+Animations (dossier « animations »)
+ - Mettez ici des animations .fbx ou .glb (depuis Mixamo : choisissez « FBX Binary » et
+   « Without Skin », et « In Place » pour les marches et les courses). Toute animation humanoïde
+   convient : elle est ajustée au personnage.
+ - Dans Mods > Modèles > Animations, choisissez pour chaque personnage quelle animation remplace
+   son attente, sa marche ou sa course. Cela fonctionne avec les modèles du jeu comme avec les vôtres.
+ - La première animation de chaque fichier est utilisée ; c'est toujours le jeu qui décide quand
+   chacune est jouée.""",
+           """CRIMESIGHT Revival - curseur personnalisé
+=========================================
+
+Votre propre curseur de souris. Le plus simple est de passer par le lanceur : Mods > Curseur perso >
+« Choisir une image... », puis choisissez le point de clic. Vous pouvez aussi mettre les fichiers
+ici vous-même :
+
+  cursor.png     le curseur normal, dans les menus et en partie. Un PNG à fond transparent,
+                 idéalement de 32x32 ou 64x64 pixels.
+  hotspot.txt    facultatif : le point de cursor.png qui clique, sous la forme « x,y » en pixels
+                 depuis le coin en haut à gauche (0,0 par défaut, comme une flèche). Pour un
+                 viseur centré de 32x32 : 16,16
+  autres .png    facultatif : chacun remplace le curseur du jeu qui porte le même nom (se
+                 déplacer, courir, attaquer...). Les noms apparaissent dans
+                 BepInEx/LogOutput.log, dans les lignes « [Cursor] el juego usa el cursor ... ».
+
+ - Vous seul le voyez.
+ - Il nécessite le Rechargement à chaud (BepInEx) activé, dans Mods > Général.
+ - Il s'applique quand vous ouvrez le jeu depuis le lanceur, ou en quelques secondes s'il est
+   déjà ouvert.
+ - Pour revenir au curseur du jeu, appuyez sur « Désactiver » dans le lanceur ou videz ce dossier."""),
+
+    "it": ("""CRIMESIGHT Revival - mod
+========================
+
+Questa è la tua cartella dei mod. Tutto quello che contiene si gestisce dalla finestra Mod del launcher.
+
+  stamps\\      le immagini dei tuoi sticker
+  avatars\\     le immagini dei tuoi avatar (da usare come immagine del profilo)
+  mod.json     facoltativo: il nome e l'autore mostrati per i tuoi mod
+  models\\      i tuoi modelli 3D e animazioni (vedi il README.txt all'interno)
+  cursor\\      il tuo cursore personalizzato (vedi il README.txt all'interno)
+  stages\\      gli scenari che salvi nel Creatore di scenari
+
+Sticker e avatar
+ - PNG, JPG, WEBP... Va bene qualsiasi dimensione: vengono adattati in automatico.
+ - Vengono aggiunti come nuovi: gli sticker e gli avatar del gioco non vengono mai modificati.
+ - Nella tua stanza li vedono tutti (nella stanza di un altro vedi i suoi).
+ - Uno sticker non mostra nessun messaggio in partita, a meno che tu non gliene assegni uno con il
+   pulsante "Messaggi" (Mod > Sticker). Un numero all'inizio del nome del file (01_) serve solo
+   per l'ordine.
+ - Le modifiche compaiono la prossima volta che apri il gioco dal launcher, o subito con la
+   Ricarica a caldo (BepInEx) attiva, in Mod > Generale.""",
+           """CRIMESIGHT Revival - modelli 3D
+===============================
+
+I tuoi modelli 3D e animazioni. Si gestiscono dal launcher, in Mod > Modelli.
+Richiedono la Ricarica a caldo (BepInEx) attiva, in Mod > Generale.
+
+  .fbx / .glb    i tuoi modelli; va bene anche una sottocartella con un modello e le sue texture
+                 (comodo per i download: estraili qui). Il nome della sottocartella diventa il
+                 nome del modello.
+  animations\\    le tue animazioni (vedi "Animazioni" più sotto)
+  images\\        immagini per i ritratti dei nuovi personaggi (vedi "Nuovi personaggi" più sotto)
+  skeletons\\     uno scheletro per personaggio, per un adattamento perfetto (vedi più sotto)
+
+Modelli
+ - Assegna un modello a un personaggio in Mod > Modelli e sostituirà l'aspetto di quel personaggio.
+ - Nella tua stanza li vedono tutti (nella stanza di un altro vedi i suoi).
+ - Sul tuo modello vengono riprodotte le animazioni del gioco.
+ - I modelli umanoidi (Mixamo, VRChat/Unity, VRoid, Blender, 3ds Max Biped, DAZ, MMD...) vengono
+   adattati in automatico: le ossa vengono riconosciute dal nome, e il modello viene raddrizzato,
+   portato alla scala del personaggio e messo nella posa a T del gioco. Capelli, gonne e altre ossa
+   extra seguono l'osso del corpo più vicino (non oscillano).
+ - Texture: la texture di colore di ogni materiale, dentro il file del modello o accanto
+   (PNG, JPG, TGA, BMP, PSD...).
+ - Tieni ogni modello sotto i 60.000 triangoli circa.
+ - Se il gioco è aperto, le modifiche compaiono subito (premi "Ricarica" dopo aver riesportato
+   un modello).
+ - Se qualcosa non va, BepInEx/LogOutput.log contiene righe che iniziano con [Modelos] e indicano
+   quali ossa sono state riconosciute.
+
+Per un adattamento perfetto (facoltativo, Blender 3.6 o successivo)
+ 1. Apri il gioco una volta con la Ricarica a caldo attiva. La cartella "skeletons" riceve allora
+    uno scheletro per personaggio (Agatha.glb, Berkeley.glb..., più Traitor.glb e Victim.glb).
+    Contengono solo ossa, create dalla tua copia del gioco.
+ 2. In Blender: File > Importa > glTF 2.0, scegli lo scheletro ed elimina la piccola mesh
+    "CSR_borra_esta_malla".
+ 3. Adatta il tuo modello alle ossa. Seleziona il modello, poi l'armatura (Maiusc+clic), e premi
+    Ctrl+P > Con pesi automatici. Non rinominare le ossa.
+ 4. File > Esporta > glTF 2.0 (.glb) o FBX, in questa cartella.
+
+Nuovi personaggi (Mod > Modelli > Nuovi personaggi)
+ - Invece di sostituire sempre qualcuno, un nuovo personaggio entra nel sorteggio di ogni partita:
+   ogni partita sceglie 6 dei personaggi attivati, e originali e nuovi hanno la stessa probabilità.
+   Scegli chi può comparire con il pulsante "Selezione dei personaggi" nella sala d'attesa del
+   gioco (decide l'host per la sua stanza; almeno 6).
+ - Serve un modello 3D. Tutto il resto è facoltativo:
+     nome e battute: senza, usa quelli del personaggio di cui prende il posto;
+     immagine: mettila nella cartella "images"; senza, viene creata dal modello;
+     animazioni: senza le sue, si muove come il personaggio scelto in "Animazioni di".
+ - Gioca sempre come il personaggio di cui prende il posto.
+ - I personaggi di tipo "Traditore" non compaiono ancora nelle partite.
+
+Animazioni (cartella "animations")
+ - Metti qui animazioni .fbx o .glb (da Mixamo: scegli "FBX Binary" e "Without Skin", e
+   "In Place" per camminate e corse). Va bene qualsiasi animazione umanoide: viene adattata al
+   personaggio.
+ - In Mod > Modelli > Animazioni, scegli per ogni personaggio quale animazione sostituisce la sua
+   posa d'attesa, la camminata o la corsa. Funziona sia con i modelli del gioco sia con i tuoi.
+ - Viene usata la prima animazione di ogni file; è sempre il gioco a decidere quando viene
+   riprodotta ciascuna.""",
+           """CRIMESIGHT Revival - cursore personalizzato
+===========================================
+
+Il tuo cursore del mouse. Il modo più semplice è usare il launcher: Mod > Cursore personalizzato >
+"Scegli immagine...", poi scegli il punto del clic. Puoi anche mettere i file qui a mano:
+
+  cursor.png     il cursore normale, nei menu e in partita. Un PNG con sfondo trasparente,
+                 meglio se 32x32 o 64x64 pixel.
+  hotspot.txt    facoltativo: il punto di cursor.png che fa clic, come "x,y" in pixel
+                 dall'angolo in alto a sinistra (0,0 di base, come una freccia). Per un mirino
+                 centrato di 32x32: 16,16
+  altri .png     facoltativo: ognuno sostituisce il cursore del gioco con lo stesso nome
+                 (muoversi, correre, attaccare...). I nomi compaiono in BepInEx/LogOutput.log,
+                 nelle righe "[Cursor] el juego usa el cursor ...".
+
+ - Lo vedi solo tu.
+ - Richiede la Ricarica a caldo (BepInEx) attiva, in Mod > Generale.
+ - Si applica quando apri il gioco dal launcher, o in pochi secondi se è già aperto.
+ - Per tornare al cursore del gioco, premi "Disattiva" nel launcher o svuota questa cartella."""),
+
+    "de": ("""CRIMESIGHT Revival - Mods
+=========================
+
+Das ist dein Mods-Ordner. Alles darin verwaltest du im Mods-Fenster des Launchers.
+
+  stamps\\      deine Sticker-Bilder
+  avatars\\     deine Avatar-Bilder (als Profilbild)
+  mod.json     optional: der Name und Autor, die für deine Mods angezeigt werden
+  models\\      deine 3D-Modelle und Animationen (siehe die README.txt darin)
+  cursor\\      dein eigener Cursor (siehe die README.txt darin)
+  stages\\      die Szenarien, die du im Szenario-Editor speicherst
+
+Sticker und Avatare
+ - PNG, JPG, WEBP... Jede Größe funktioniert: Sie werden automatisch angepasst.
+ - Sie werden als neue hinzugefügt: Die Sticker und Avatare des Spiels werden nie verändert.
+ - In deinem Raum sehen sie alle (im Raum eines anderen siehst du seine).
+ - Ein Sticker zeigt in der Partie keine Nachricht, es sei denn, du gibst ihm eine über die Schaltfläche
+   "Nachrichten" (Mods > Sticker). Eine Zahl am Anfang des Dateinamens (01_) legt nur die
+   Reihenfolge fest.
+ - Änderungen erscheinen, wenn du das Spiel das nächste Mal über den Launcher startest, oder sofort
+   mit eingeschaltetem Hot Reload (BepInEx), unter Mods > Allgemein.""",
+           """CRIMESIGHT Revival - 3D-Modelle
+===============================
+
+Deine eigenen 3D-Modelle und Animationen. Du verwaltest sie im Launcher unter Mods > Modelle.
+Sie brauchen eingeschaltetes Hot Reload (BepInEx), unter Mods > Allgemein.
+
+  .fbx / .glb    deine Modelle; ein Unterordner mit einem Modell und seinen Texturen klappt auch
+                 (praktisch für Downloads: hier entpacken). Der Name des Unterordners wird zum
+                 Namen des Modells.
+  animations\\    deine Animationen (siehe "Animationen" unten)
+  images\\        Porträtbilder für neue Figuren (siehe "Neue Figuren" unten)
+  skeletons\\     ein Skelett pro Figur, für eine perfekte Anpassung (siehe unten)
+
+Modelle
+ - Gib einer Figur unter Mods > Modelle ein Modell, und es ersetzt das Aussehen dieser Figur.
+ - In deinem Raum sehen sie alle (im Raum eines anderen siehst du seine).
+ - Die Animationen des Spiels laufen auf deinem Modell.
+ - Humanoide Modelle (Mixamo, VRChat/Unity, VRoid, Blender, 3ds Max Biped, DAZ, MMD...) werden
+   automatisch angepasst: Ihre Knochen werden am Namen erkannt, und das Modell wird aufgerichtet,
+   auf die Größe der Figur skaliert und in die T-Pose des Spiels gebracht. Haare, Röcke und andere
+   zusätzliche Knochen folgen dem nächsten Körperknochen (sie schwingen nicht).
+ - Texturen: die Farbtextur jedes Materials, in der Modelldatei oder daneben
+   (PNG, JPG, TGA, BMP, PSD...).
+ - Bleib pro Modell unter etwa 60.000 Dreiecken.
+ - Ist das Spiel offen, erscheinen Änderungen sofort (nach erneutem Export eines Modells
+   "Neu laden" drücken).
+ - Wenn etwas falsch aussieht, stehen in BepInEx/LogOutput.log Zeilen mit [Modelos], die zeigen,
+   welche Knochen erkannt wurden.
+
+Für eine perfekte Anpassung (optional, Blender 3.6 oder neuer)
+ 1. Starte das Spiel einmal mit eingeschaltetem Hot Reload. Der Ordner "skeletons" bekommt dann
+    ein Skelett pro Figur (Agatha.glb, Berkeley.glb..., dazu Traitor.glb und Victim.glb). Sie
+    enthalten nur Knochen, erstellt aus deiner eigenen Kopie des Spiels.
+ 2. In Blender: Datei > Importieren > glTF 2.0, wähle das Skelett und lösche das winzige Mesh
+    "CSR_borra_esta_malla".
+ 3. Passe dein Modell an die Knochen an. Wähle das Modell aus, dann das Armature (Umschalt+Klick),
+    und drücke Strg+P > Mit automatischen Gewichten. Benenne die Knochen nicht um.
+ 4. Datei > Exportieren > glTF 2.0 (.glb) oder FBX, in diesen Ordner.
+
+Neue Figuren (Mods > Modelle > Neue Figuren)
+ - Statt immer jemanden zu ersetzen, nimmt eine neue Figur an der Auslosung jeder Partie teil:
+   Jede Partie wählt 6 der aktivierten Figuren, und Originale und neue haben die gleiche Chance.
+   Wer erscheinen kann, legst du mit der Schaltfläche "Figurenauswahl" im Warteraum des Spiels
+   fest (der Host entscheidet für seinen Raum; mindestens 6).
+ - Sie braucht ein 3D-Modell. Alles andere ist optional:
+     Name und Sätze: ohne sie nutzt sie die der Figur, deren Platz sie einnimmt;
+     Bild: lege es in den Ordner "images"; ohne Bild wird es aus dem Modell erzeugt;
+     Animationen: ohne eigene bewegt sie sich wie die Figur, die unter "Animationen von" gewählt ist.
+ - Sie spielt sich immer wie die Figur, deren Platz sie einnimmt.
+ - Figuren vom Typ "Verräter" erscheinen noch nicht in Partien.
+
+Animationen (Ordner "animations")
+ - Lege hier .fbx- oder .glb-Animationen ab (von Mixamo: "FBX Binary" und "Without Skin" wählen,
+   und für Gehen und Laufen "In Place"). Jede humanoide Animation funktioniert: Sie wird an
+   die Figur angepasst.
+ - Unter Mods > Modelle > Animationen wählst du für jede Figur, welche Animation ihr Stehen,
+   Gehen oder Laufen ersetzt. Das funktioniert mit den Modellen des Spiels und mit deinen.
+ - Verwendet wird die erste Animation jeder Datei; wann welche läuft, entscheidet weiterhin das Spiel.""",
+           """CRIMESIGHT Revival - eigener Cursor
+===================================
+
+Dein eigener Mauszeiger. Am einfachsten geht es im Launcher: Mods > Eigener Cursor >
+"Bild wählen...", dann den Klickpunkt wählen. Du kannst die Dateien auch selbst hier ablegen:
+
+  cursor.png     der normale Cursor, in Menüs und in Partien. Ein PNG mit transparentem
+                 Hintergrund, am besten 32x32 oder 64x64 Pixel.
+  hotspot.txt    optional: der Punkt von cursor.png, der klickt, als "x,y" in Pixeln von der
+                 oberen linken Ecke (standardmäßig 0,0, wie ein Pfeil). Für ein zentriertes
+                 32x32-Fadenkreuz: 16,16
+  andere .png    optional: jede ersetzt den gleichnamigen Cursor des Spiels (bewegen, rennen,
+                 angreifen...). Die Namen stehen in BepInEx/LogOutput.log, in den Zeilen
+                 "[Cursor] el juego usa el cursor ...".
+
+ - Nur du siehst ihn.
+ - Er braucht eingeschaltetes Hot Reload (BepInEx), unter Mods > Allgemein.
+ - Er wird angewendet, wenn du das Spiel über den Launcher startest, oder nach ein paar Sekunden,
+   wenn es schon offen ist.
+ - Um zum Cursor des Spiels zurückzukehren, drücke im Launcher "Ausschalten" oder leere diesen
+   Ordner."""),
+
+    "pt": ("""CRIMESIGHT Revival - mods
+=========================
+
+Esta é a sua pasta de mods. Tudo o que há nela é gerenciado pela janela Mods do launcher.
+
+  stamps\\      as imagens dos seus emojis
+  avatars\\     as imagens dos seus avatares (para usar como foto de perfil)
+  mod.json     opcional: o nome e o autor mostrados para os seus mods
+  models\\      seus modelos 3D e animações (veja o README.txt lá dentro)
+  cursor\\      seu cursor próprio (veja o README.txt lá dentro)
+  stages\\      os cenários que você salva no Criador de cenários
+
+Emojis e avatares
+ - PNG, JPG, WEBP... Qualquer tamanho serve: eles são ajustados automaticamente.
+ - Eles são adicionados como novos: os emojis e avatares do jogo nunca são alterados.
+ - Na sua sala todos os veem (na sala de outra pessoa, você vê os dela).
+ - Um emoji não mostra nenhuma mensagem na partida, a menos que você defina uma com o botão
+   "Mensagens" (Mods > Emojis). Um número no início do nome do arquivo (01_) só define a ordem.
+ - As mudanças aparecem na próxima vez que você abrir o jogo pelo launcher, ou na hora com a
+   Recarga instantânea (BepInEx) ativada, em Mods > Geral.""",
+           """CRIMESIGHT Revival - modelos 3D
+===============================
+
+Seus próprios modelos 3D e animações. Eles são gerenciados pelo launcher, em Mods > Modelos.
+Precisam da Recarga instantânea (BepInEx) ativada, em Mods > Geral.
+
+  .fbx / .glb    seus modelos; uma subpasta com um modelo e suas texturas também serve (prático
+                 para downloads: descompacte-os aqui). O nome da subpasta vira o nome do modelo.
+  animations\\    suas animações (veja "Animações" mais abaixo)
+  images\\        imagens de retrato para novos personagens (veja "Novos personagens" mais abaixo)
+  skeletons\\     um esqueleto por personagem, para um ajuste perfeito (veja mais abaixo)
+
+Modelos
+ - Dê um modelo a um personagem em Mods > Modelos e ele substitui a aparência desse personagem.
+ - Na sua sala todos os veem (na sala de outra pessoa, você vê os dela).
+ - As animações do jogo são reproduzidas no seu modelo.
+ - Modelos humanoides (Mixamo, VRChat/Unity, VRoid, Blender, 3ds Max Biped, DAZ, MMD...) são
+   ajustados automaticamente: os ossos são reconhecidos pelo nome, e o modelo é endireitado,
+   colocado na escala do personagem e posto na pose em T do jogo. Cabelo, saias e outros ossos
+   extras seguem o osso do corpo mais próximo (não balançam).
+ - Texturas: a textura de cor de cada material, dentro do arquivo do modelo ou ao lado dele
+   (PNG, JPG, TGA, BMP, PSD...).
+ - Mantenha cada modelo abaixo de uns 60.000 triângulos.
+ - Se o jogo estiver aberto, as mudanças aparecem na hora (aperte "Recarregar" depois de
+   exportar um modelo de novo).
+ - Se algo parecer errado, BepInEx/LogOutput.log tem linhas começando com [Modelos] que dizem
+   quais ossos foram reconhecidos.
+
+Para um ajuste perfeito (opcional, Blender 3.6 ou mais recente)
+ 1. Abra o jogo uma vez com a Recarga instantânea ativada. A pasta "skeletons" recebe então um
+    esqueleto por personagem (Agatha.glb, Berkeley.glb..., além de Traitor.glb e Victim.glb).
+    Eles só têm ossos, feitos a partir da sua própria cópia do jogo.
+ 2. No Blender: Arquivo > Importar > glTF 2.0, escolha o esqueleto e apague a pequena malha
+    "CSR_borra_esta_malla".
+ 3. Ajuste seu modelo sobre os ossos. Selecione o modelo, depois a armação (Shift+clique), e
+    aperte Ctrl+P > Com pesos automáticos. Não renomeie os ossos.
+ 4. Arquivo > Exportar > glTF 2.0 (.glb) ou FBX, para esta pasta.
+
+Novos personagens (Mods > Modelos > Novos personagens)
+ - Em vez de sempre substituir alguém, um novo personagem entra no sorteio de cada partida: cada
+   partida escolhe 6 dos personagens ativados, e os originais e os novos têm a mesma chance.
+   Escolha quem pode aparecer com o botão "Seleção de personagens" na sala de espera do jogo
+   (o anfitrião decide pela sua sala; pelo menos 6).
+ - Ele precisa de um modelo 3D. Todo o resto é opcional:
+     nome e falas: sem eles, usa os do personagem cujo lugar ocupa;
+     imagem: coloque-a na pasta "images"; sem ela, é gerada a partir do modelo;
+     animações: sem as próprias, ele se move como o personagem escolhido em "Animações de".
+ - Ele sempre joga como o personagem cujo lugar ocupa.
+ - Personagens do tipo "Traidor" ainda não aparecem nas partidas.
+
+Animações (pasta "animations")
+ - Coloque aqui animações .fbx ou .glb (do Mixamo: escolha "FBX Binary" e "Without Skin", e
+   "In Place" para caminhadas e corridas). Qualquer animação humanoide serve: ela é ajustada ao
+   personagem.
+ - Em Mods > Modelos > Animações, escolha para cada personagem qual animação substitui sua pose
+   parada, caminhada ou corrida. Funciona com os modelos do jogo e com os seus.
+ - É usada a primeira animação de cada arquivo; o jogo continua decidindo quando cada uma é
+   reproduzida.""",
+           """CRIMESIGHT Revival - cursor próprio
+===================================
+
+Seu próprio cursor do mouse. O jeito mais fácil é usar o launcher: Mods > Cursor próprio >
+"Escolher imagem...", e depois escolha o ponto de clique. Você também pode colocar os arquivos
+aqui manualmente:
+
+  cursor.png     o cursor normal, nos menus e nas partidas. Um PNG com fundo transparente, de
+                 preferência de 32x32 ou 64x64 pixels.
+  hotspot.txt    opcional: o ponto de cursor.png que clica, como "x,y" em pixels a partir do
+                 canto superior esquerdo (0,0 por padrão, como uma seta). Para uma mira
+                 centralizada de 32x32: 16,16
+  outros .png    opcional: cada um substitui o cursor do jogo com o mesmo nome (mover, correr,
+                 atacar...). Os nomes aparecem em BepInEx/LogOutput.log, nas linhas
+                 "[Cursor] el juego usa el cursor ...".
+
+ - Só você o vê.
+ - Precisa da Recarga instantânea (BepInEx) ativada, em Mods > Geral.
+ - É aplicado quando você abre o jogo pelo launcher, ou em poucos segundos se ele já estiver aberto.
+ - Para voltar ao cursor do jogo, aperte "Desativar" no launcher ou esvazie esta pasta."""),
+
+    "ru": ("""CRIMESIGHT Revival — моды
+=========================
+
+Это ваша папка модов. Всё, что в ней лежит, настраивается в окне «Моды» лаунчера.
+
+  stamps\\      картинки ваших шаблонов
+  avatars\\     картинки ваших аватаров (для фото профиля)
+  mod.json     необязательно: имя и автор, которые показываются для ваших модов
+  models\\      ваши 3D-модели и анимации (см. README.txt внутри)
+  cursor\\      ваш курсор (см. README.txt внутри)
+  stages\\      сценарии, которые вы сохраняете в «Редакторе сценариев»
+
+Шаблоны и аватары
+ - PNG, JPG, WEBP... Подходит любой размер: они подгоняются автоматически.
+ - Они добавляются как новые: шаблоны и аватары игры никогда не меняются.
+ - В вашей комнате их видят все (в чужой комнате вы видите шаблоны и аватары хозяина).
+ - Шаблон не показывает сообщение в матче, если вы не зададите его кнопкой «Сообщения»
+   (Моды > Шаблоны). Число в начале имени файла (01_) задаёт только порядок.
+ - Изменения появятся, когда вы в следующий раз откроете игру из лаунчера, или сразу, если включена
+   «Горячая перезагрузка» (BepInEx) в разделе Моды > Общее.""",
+           """CRIMESIGHT Revival — 3D-модели
+==============================
+
+Ваши собственные 3D-модели и анимации. Они настраиваются в лаунчере, в разделе Моды > Модели.
+Им нужна включённая «Горячая перезагрузка» (BepInEx) в разделе Моды > Общее.
+
+  .fbx / .glb    ваши модели; подойдёт и подпапка с моделью и её текстурами (удобно для
+                 скачанного: распакуйте сюда). Имя подпапки становится именем модели.
+  animations\\    ваши анимации (см. «Анимации» ниже)
+  images\\        картинки портретов для новых персонажей (см. «Новые персонажи» ниже)
+  skeletons\\     по скелету на каждого персонажа, для идеальной подгонки (см. ниже)
+
+Модели
+ - Назначьте модель персонажу в разделе Моды > Модели, и она заменит его внешний вид.
+ - В вашей комнате их видят все (в чужой комнате вы видите модели хозяина).
+ - На вашей модели проигрываются анимации игры.
+ - Человекоподобные модели (Mixamo, VRChat/Unity, VRoid, Blender, 3ds Max Biped, DAZ, MMD...)
+   подгоняются автоматически: кости распознаются по названиям, а модель ставится вертикально,
+   масштабируется под персонажа и приводится к T-позе игры. Волосы, юбки и другие лишние кости
+   следуют за ближайшей костью тела (не качаются).
+ - Текстуры: цветовая текстура каждого материала, внутри файла модели или рядом с ним
+   (PNG, JPG, TGA, BMP, PSD...).
+ - Держите каждую модель в пределах примерно 60 000 треугольников.
+ - Если игра открыта, изменения видны сразу (после повторного экспорта модели нажмите «Обновить»).
+ - Если что-то выглядит не так, в BepInEx/LogOutput.log есть строки, начинающиеся с [Modelos], —
+   там видно, какие кости распознаны.
+
+Для идеальной подгонки (необязательно, Blender 3.6 или новее)
+ 1. Один раз запустите игру с включённой «Горячей перезагрузкой». В папке «skeletons» появится по
+    скелету на каждого персонажа (Agatha.glb, Berkeley.glb..., а также Traitor.glb и Victim.glb).
+    В них только кости, созданные из вашей копии игры.
+ 2. В Blender: Файл > Импорт > glTF 2.0, выберите скелет и удалите крошечный меш
+    «CSR_borra_esta_malla».
+ 3. Подгоните модель под кости. Выделите модель, затем арматуру (Shift+щелчок) и нажмите
+    Ctrl+P > С автоматическими весами. Не переименовывайте кости.
+ 4. Файл > Экспорт > glTF 2.0 (.glb) или FBX, в эту папку.
+
+Новые персонажи (Моды > Модели > Новые персонажи)
+ - Вместо того чтобы всегда кого-то заменять, новый персонаж участвует в жеребьёвке каждого
+   матча: в каждом матче выбираются 6 из включённых персонажей, и у оригинальных и новых шансы
+   равны. Кто может появиться, выбирается кнопкой «Выбор персонажей» в зале ожидания игры (решает
+   хозяин комнаты; минимум 6).
+ - Нужна 3D-модель. Всё остальное необязательно:
+     имя и реплики: без них используются те, что у персонажа, чьё место он занимает;
+     изображение: положите его в папку «images»; без него оно создаётся из модели;
+     анимации: без своих он двигается как персонаж, выбранный в «Анимации от».
+ - Играет он всегда как персонаж, чьё место занимает.
+ - Персонажи типа «Предатель» пока не появляются в матчах.
+
+Анимации (папка «animations»)
+ - Положите сюда анимации .fbx или .glb (из Mixamo: выберите «FBX Binary» и «Without Skin», а для
+   ходьбы и бега — «In Place»). Подходит любая человекоподобная анимация: она подгоняется под
+   персонажа.
+ - В разделе Моды > Модели > Анимации выберите для каждого персонажа, какая анимация заменит его
+   стойку, ходьбу или бег. Это работает и с моделями игры, и с вашими.
+ - Используется первая анимация в каждом файле; когда какая проигрывается, по-прежнему решает игра.""",
+           """CRIMESIGHT Revival — свой курсор
+================================
+
+Ваш собственный курсор мыши. Проще всего сделать это через лаунчер: Моды > Свой курсор >
+«Выбрать картинку...», затем выберите точку нажатия. Файлы можно положить сюда и вручную:
+
+  cursor.png     обычный курсор, в меню и в матче. PNG с прозрачным фоном, лучше 32x32 или
+                 64x64 пикселя.
+  hotspot.txt    необязательно: точка cursor.png, которая нажимает, в виде «x,y» в пикселях от
+                 левого верхнего угла (по умолчанию 0,0, как у стрелки). Для прицела 32x32 по
+                 центру: 16,16
+  другие .png    необязательно: каждый заменяет курсор игры с тем же именем (движение, бег,
+                 атака...). Имена есть в BepInEx/LogOutput.log, в строках
+                 «[Cursor] el juego usa el cursor ...».
+
+ - Видите его только вы.
+ - Нужна включённая «Горячая перезагрузка» (BepInEx) в разделе Моды > Общее.
+ - Применяется, когда вы открываете игру из лаунчера, или через несколько секунд, если игра уже
+   открыта.
+ - Чтобы вернуть курсор игры, нажмите «Выключить» в лаунчере или очистите эту папку."""),
+
+    "ja": ("""CRIMESIGHT Revival - MOD
+========================
+
+ここはあなたのMODフォルダーです。中身はすべてランチャーの「MOD」ウィンドウで管理します。
+
+  stamps\\      スタンプの画像
+  avatars\\     アバターの画像（プロフィール画像に使います）
+  mod.json     任意：あなたのMODに表示される名前と作者
+  models\\      3Dモデルとアニメーション（中の README.txt を参照）
+  cursor\\      カーソル変更（中の README.txt を参照）
+  stages\\      ステージクリエイターで保存したステージ
+
+スタンプとアバター
+ - PNG、JPG、WEBP など。サイズは自由で、自動で調整されます。
+ - 新しく追加されるので、ゲーム本来のスタンプやアバターは変更されません。
+ - 自分の部屋では全員に見えます（他の人の部屋ではその人のものが見えます）。
+ - スタンプは「メッセージ」ボタン（MOD > スタンプ）で設定しない限り、試合中にメッセージを
+   表示しません。ファイル名の先頭の番号（01_）は並び順にだけ使われます。
+ - 変更は次にランチャーからゲームを開いたときに反映されます。MOD > 全般 の
+   「ホットリロード」（BepInEx）がオンなら、すぐに反映されます。""",
+           """CRIMESIGHT Revival - 3Dモデル
+=============================
+
+自作の3Dモデルとアニメーションです。ランチャーの MOD > モデル で管理します。
+MOD > 全般 の「ホットリロード」（BepInEx）をオンにする必要があります。
+
+  .fbx / .glb    モデル。モデルとテクスチャを入れたサブフォルダーでもかまいません（ダウンロード
+                 したものはここに展開すると便利です）。サブフォルダーの名前がモデルの名前になります。
+  animations\\    アニメーション（下の「アニメーション」を参照）
+  images\\        新キャラクターの肖像画像（下の「新キャラクター」を参照）
+  skeletons\\     キャラクターごとの骨格。ぴったり合わせるときに使います（下を参照）
+
+モデル
+ - MOD > モデル でキャラクターにモデルを割り当てると、そのキャラクターの見た目が変わります。
+ - 自分の部屋では全員に見えます（他の人の部屋ではその人のものが見えます）。
+ - モデルにはゲームのアニメーションが再生されます。
+ - 人型モデル（Mixamo、VRChat/Unity、VRoid、Blender、3ds Max Biped、DAZ、MMD など）は自動で
+   合わせられます。ボーンは名前で認識され、モデルはまっすぐ立てられ、キャラクターの大きさに
+   合わせてゲームのTポーズになります。髪やスカートなどの追加ボーンは、いちばん近い体の
+   ボーンに付いて動きます（揺れません）。
+ - テクスチャ：各マテリアルのカラーテクスチャを、モデルファイルの中かその横に
+   （PNG、JPG、TGA、BMP、PSD など）。
+ - モデル1つにつき三角形は約 60,000 以下にしてください。
+ - ゲームが開いていれば変更はすぐに反映されます（モデルをエクスポートし直したら
+   「再読み込み」を押してください）。
+ - おかしく見えるときは、BepInEx/LogOutput.log の [Modelos] で始まる行に、どのボーンが
+   認識されたかが出ています。
+
+ぴったり合わせるには（任意、Blender 3.6 以降）
+ 1. 「ホットリロード」をオンにしてゲームを一度開きます。「skeletons」フォルダーに
+    キャラクターごとの骨格（Agatha.glb、Berkeley.glb など。ほかに Traitor.glb と Victim.glb）が
+    できます。中身はボーンだけで、あなたのゲームから作られています。
+ 2. Blender で：ファイル > インポート > glTF 2.0 で骨格を選び、小さなメッシュ
+    「CSR_borra_esta_malla」を削除します。
+ 3. モデルをボーンに合わせます。モデルを選択してからアーマチュアを選択（Shift+クリック）し、
+    Ctrl+P > 自動のウェイトで を押します。ボーンの名前は変えないでください。
+ 4. ファイル > エクスポート > glTF 2.0 (.glb) または FBX で、このフォルダーに保存します。
+
+新キャラクター（MOD > モデル > 新キャラクター）
+ - 新キャラクターは誰かを常に置き換えるのではなく、毎試合の抽選に加わります。毎試合、有効な
+   キャラクターから6人が選ばれ、元のキャラクターと新キャラクターの確率は同じです。出られる
+   キャラクターはゲームの待合室の「キャラクター選択」ボタンで選びます（部屋ごとにホストが
+   決めます。最低6人）。
+ - 3Dモデルが必要です。それ以外はすべて任意です：
+     名前とセリフ：ない場合は、入れ替わるキャラクターのものを使います。
+     画像：「images」フォルダーに入れます。ない場合はモデルから作られます。
+     アニメーション：ない場合は「アニメーション元」で選んだキャラクターと同じ動きをします。
+ - プレイはいつも、入れ替わるキャラクターと同じです。
+ - 種類が「裏切り者」のキャラクターは、まだ試合に登場しません。
+
+アニメーション（「animations」フォルダー）
+ - .fbx か .glb のアニメーションを入れます（Mixamo では「FBX Binary」と「Without Skin」を選び、
+   歩きと走りは「In Place」にします）。人型のアニメーションならどれでも使え、キャラクターに
+   合わせられます。
+ - MOD > モデル > アニメーション で、キャラクターごとに待機・歩き・走りをどのアニメーションに
+   置き換えるか選びます。ゲームのモデルにも自作のモデルにも使えます。
+ - 各ファイルの最初のアニメーションが使われます。いつ再生するかは今まで通りゲームが決めます。""",
+           """CRIMESIGHT Revival - カーソル変更
+=================================
+
+自分だけのマウスカーソルです。いちばん簡単なのはランチャーを使う方法です：MOD > カーソル変更 >
+「画像を選ぶ...」で画像を選び、クリックする点を選びます。ファイルを自分でここに置くこともできます：
+
+  cursor.png     通常のカーソル（メニューと試合中）。背景が透明な PNG で、32x32 か 64x64
+                 ピクセルがおすすめです。
+  hotspot.txt    任意：cursor.png のクリックする点。左上の角からのピクセルで "x,y"
+                 （初期値は矢印と同じ 0,0）。32x32 の中央の照準なら：16,16
+  ほかの .png    任意：それぞれ、同じ名前のゲームのカーソル（移動、走る、攻撃など）を置き換えます。
+                 名前は BepInEx/LogOutput.log の "[Cursor] el juego usa el cursor ..." の行に出ます。
+
+ - 見えるのは自分だけです。
+ - MOD > 全般 の「ホットリロード」（BepInEx）をオンにする必要があります。
+ - ランチャーからゲームを開いたときに反映されます。すでに開いていれば数秒で反映されます。
+ - ゲームのカーソルに戻すには、ランチャーで「オフにする」を押すか、このフォルダーを空にしてください。"""),
+
+    "ko": ("""CRIMESIGHT Revival - 모드
+=========================
+
+이곳은 내 모드 폴더입니다. 안에 있는 모든 것은 런처의 "모드" 창에서 관리합니다.
+
+  stamps\\      스탬프 이미지
+  avatars\\     아바타 이미지(프로필 사진으로 사용)
+  mod.json     선택: 내 모드에 표시되는 이름과 제작자
+  models\\      3D 모델과 애니메이션(안의 README.txt 참고)
+  cursor\\      커서 변경(안의 README.txt 참고)
+  stages\\      스테이지 제작기에서 저장한 스테이지
+
+스탬프와 아바타
+ - PNG, JPG, WEBP 등. 크기는 상관없으며 자동으로 맞춰집니다.
+ - 새것으로 추가되므로 게임 원래의 스탬프와 아바타는 바뀌지 않습니다.
+ - 내 방에서는 모두가 봅니다(다른 사람의 방에서는 그 사람의 것이 보입니다).
+ - 스탬프는 "메시지" 버튼(모드 > 스탬프)으로 설정하지 않으면 게임 중에 메시지를 보여 주지
+   않습니다. 파일 이름 앞의 번호(01_)는 순서를 정할 때만 쓰입니다.
+ - 변경 사항은 다음에 런처에서 게임을 열 때 반영됩니다. 모드 > 일반의 "실시간 반영"(BepInEx)을
+   켜 두면 바로 반영됩니다.""",
+           """CRIMESIGHT Revival - 3D 모델
+============================
+
+나만의 3D 모델과 애니메이션입니다. 런처의 모드 > 모델에서 관리합니다.
+모드 > 일반의 "실시간 반영"(BepInEx)을 켜야 합니다.
+
+  .fbx / .glb    모델. 모델과 텍스처가 든 하위 폴더도 됩니다(내려받은 파일은 여기에 압축을
+                 풀면 편합니다). 하위 폴더의 이름이 모델의 이름이 됩니다.
+  animations\\    애니메이션(아래 "애니메이션" 참고)
+  images\\        새 캐릭터의 초상화 이미지(아래 "새 캐릭터" 참고)
+  skeletons\\     캐릭터별 골격. 완벽하게 맞출 때 씁니다(아래 참고)
+
+모델
+ - 모드 > 모델에서 캐릭터에게 모델을 지정하면 그 캐릭터의 모습이 바뀝니다.
+ - 내 방에서는 모두가 봅니다(다른 사람의 방에서는 그 사람의 것이 보입니다).
+ - 모델에는 게임의 애니메이션이 재생됩니다.
+ - 사람형 모델(Mixamo, VRChat/Unity, VRoid, Blender, 3ds Max Biped, DAZ, MMD 등)은 자동으로
+   맞춰집니다. 본은 이름으로 인식되고, 모델은 똑바로 세워져 캐릭터 크기에 맞춰지고 게임의
+   T 포즈가 됩니다. 머리카락, 치마 등 추가 본은 가장 가까운 몸 본을 따라갑니다(흔들리지 않습니다).
+ - 텍스처: 각 머티리얼의 색상 텍스처를 모델 파일 안이나 그 옆에(PNG, JPG, TGA, BMP, PSD 등).
+ - 모델 하나당 삼각형은 약 60,000개 이하로 하세요.
+ - 게임이 열려 있으면 변경 사항이 바로 반영됩니다(모델을 다시 내보낸 뒤에는 "새로고침"을
+   누르세요).
+ - 이상해 보이면 BepInEx/LogOutput.log의 [Modelos]로 시작하는 줄에 어떤 본이 인식됐는지
+   나옵니다.
+
+완벽하게 맞추려면(선택 사항, Blender 3.6 이상)
+ 1. "실시간 반영"을 켜고 게임을 한 번 여세요. 그러면 "skeletons" 폴더에 캐릭터별 골격
+    (Agatha.glb, Berkeley.glb 등, 그리고 Traitor.glb와 Victim.glb)이 생깁니다. 본만 들어 있으며,
+    내 게임에서 만들어집니다.
+ 2. Blender에서: 파일 > 가져오기 > glTF 2.0으로 골격을 고르고, 작은 메시
+    "CSR_borra_esta_malla"를 지우세요.
+ 3. 모델을 본에 맞추세요. 모델을 선택한 다음 아마추어를 선택(Shift+클릭)하고
+    Ctrl+P > 자동 웨이트로를 누르세요. 본 이름은 바꾸지 마세요.
+ 4. 파일 > 내보내기 > glTF 2.0 (.glb) 또는 FBX로 이 폴더에 저장하세요.
+
+새 캐릭터(모드 > 모델 > 새 캐릭터)
+ - 새 캐릭터는 늘 누군가를 대체하는 것이 아니라 매 판의 추첨에 들어갑니다. 매 판 켜 둔 캐릭터 중
+   6명이 뽑히며, 원래 캐릭터와 새 캐릭터의 확률은 같습니다. 누가 나올 수 있는지는 게임
+   대기실의 "캐릭터 선택" 버튼으로 고릅니다(방마다 방장이 정합니다. 최소 6명).
+ - 3D 모델이 필요합니다. 나머지는 모두 선택 사항입니다:
+     이름과 대사: 없으면 자리를 대신하는 캐릭터의 것을 씁니다.
+     이미지: "images" 폴더에 넣으세요. 없으면 모델에서 만듭니다.
+     애니메이션: 없으면 "애니메이션 원본"에서 고른 캐릭터처럼 움직입니다.
+ - 플레이는 항상 자리를 대신하는 캐릭터와 같습니다.
+ - 종류가 "배신자"인 캐릭터는 아직 게임에 나오지 않습니다.
+
+애니메이션("animations" 폴더)
+ - .fbx 또는 .glb 애니메이션을 넣으세요(Mixamo에서는 "FBX Binary"와 "Without Skin"을 고르고,
+   걷기와 달리기는 "In Place"로). 사람형 애니메이션이면 무엇이든 되며, 캐릭터에 맞춰집니다.
+ - 모드 > 모델 > 애니메이션에서 캐릭터마다 대기, 걷기, 달리기를 어떤 애니메이션으로 바꿀지
+   고르세요. 게임의 모델에도 내 모델에도 쓸 수 있습니다.
+ - 각 파일의 첫 번째 애니메이션이 쓰이며, 언제 재생할지는 여전히 게임이 정합니다.""",
+           """CRIMESIGHT Revival - 커서 변경
+==============================
+
+나만의 마우스 커서입니다. 가장 쉬운 방법은 런처를 쓰는 것입니다: 모드 > 커서 변경 > "이미지 선택..."으로
+이미지를 고르고 클릭 지점을 고르세요. 파일을 직접 여기에 넣을 수도 있습니다:
+
+  cursor.png     일반 커서(메뉴와 게임 중). 배경이 투명한 PNG, 32x32 또는 64x64 픽셀 권장.
+  hotspot.txt    선택: cursor.png에서 클릭되는 지점, 왼쪽 위 모서리부터의 픽셀로 "x,y"
+                 (기본값은 화살표처럼 0,0). 가운데에 있는 32x32 조준점이라면: 16,16
+  다른 .png      선택: 각각 이름이 같은 게임 커서(이동, 달리기, 공격 등)를 바꿉니다. 이름은
+                 BepInEx/LogOutput.log의 "[Cursor] el juego usa el cursor ..." 줄에 나옵니다.
+
+ - 나만 볼 수 있습니다.
+ - 모드 > 일반의 "실시간 반영"(BepInEx)을 켜야 합니다.
+ - 런처에서 게임을 열 때 반영되며, 이미 열려 있으면 몇 초 안에 반영됩니다.
+ - 게임 커서로 돌아가려면 런처에서 "끄기"를 누르거나 이 폴더를 비우세요."""),
+
+    "zh-CN": ("""CRIMESIGHT Revival - 模组
+=========================
+
+这是你的模组文件夹。里面的一切都在启动器的"模组"窗口中管理。
+
+  stamps\\      你的表情图片
+  avatars\\     你的头像图片（用作个人资料图片）
+  mod.json     可选：为你的模组显示的名称和作者
+  models\\      你的 3D 模型和动画（见里面的 README.txt）
+  cursor\\      你的自定义光标（见里面的 README.txt）
+  stages\\      你在场景编辑器中保存的场景
+
+表情和头像
+ - PNG、JPG、WEBP 等。任何尺寸都可以：会自动调整。
+ - 它们会作为新的添加进来：游戏自带的表情和头像永远不会被修改。
+ - 在你的房间里所有人都能看到（在别人的房间里你看到的是对方的）。
+ - 表情在对局中不会显示消息，除非你用"消息"按钮（模组 > 表情）给它设置一条。
+   文件名开头的数字（01_）只用来排序。
+ - 更改会在下次从启动器打开游戏时生效；如果在 模组 > 常规 中开启了"热重载"（BepInEx），
+   会立即生效。""",
+              """CRIMESIGHT Revival - 3D 模型
+============================
+
+你自己的 3D 模型和动画。在启动器的 模组 > 模型 中管理。
+需要在 模组 > 常规 中开启"热重载"（BepInEx）。
+
+  .fbx / .glb    你的模型；也可以是装有模型及其贴图的子文件夹（下载的东西直接解压到这里很方便）。
+                 子文件夹的名字就是模型的名字。
+  animations\\    你的动画（见下面的"动画"）
+  images\\        新角色的肖像图片（见下面的"新角色"）
+  skeletons\\     每个角色一个骨架，用于完美贴合（见下文）
+
+模型
+ - 在 模组 > 模型 中把模型分配给一个角色，它就会替换那个角色的外观。
+ - 在你的房间里所有人都能看到（在别人的房间里你看到的是对方的）。
+ - 你的模型会播放游戏的动画。
+ - 人形模型（Mixamo、VRChat/Unity、VRoid、Blender、3ds Max Biped、DAZ、MMD 等）会自动适配：
+   按名字识别骨骼，把模型摆正，缩放到角色的大小，并摆成游戏的 T 字姿势。头发、裙子等额外的
+   骨骼会跟随最近的身体骨骼（不会摆动）。
+ - 贴图：每个材质的颜色贴图，放在模型文件里面或旁边（PNG、JPG、TGA、BMP、PSD 等）。
+ - 每个模型请控制在约 60,000 个三角面以内。
+ - 如果游戏开着，更改会立即生效（重新导出模型后请按"重新加载"）。
+ - 如果看起来不对，BepInEx/LogOutput.log 中以 [Modelos] 开头的行会显示识别了哪些骨骼。
+
+想要完美贴合（可选，Blender 3.6 或更新版本）
+ 1. 开启"热重载"后打开一次游戏。之后 "skeletons" 文件夹里会有每个角色的骨架
+    （Agatha.glb、Berkeley.glb 等，另外还有 Traitor.glb 和 Victim.glb）。里面只有骨骼，
+    由你自己的游戏生成。
+ 2. 在 Blender 中：文件 > 导入 > glTF 2.0，选择骨架，并删除小网格 "CSR_borra_esta_malla"。
+ 3. 把你的模型对准骨骼。先选中模型，再选中骨架（Shift+点击），然后按 Ctrl+P > 附带自动权重。
+    不要重命名骨骼。
+ 4. 文件 > 导出 > glTF 2.0 (.glb) 或 FBX，保存到这个文件夹。
+
+新角色（模组 > 模型 > 新角色）
+ - 新角色不会总是替换某个人，而是参加每局的抽选：每局从已启用的角色中选出 6 人，原有角色和
+   新角色的机会相同。能出场的角色在游戏等候室的"角色选择"按钮里选择（由房主为自己的房间
+   决定；至少 6 名）。
+ - 需要一个 3D 模型。其他都是可选的：
+     名字和台词：没有的话，使用它所顶替的角色的；
+     图片：放进 "images" 文件夹；没有的话从模型生成；
+     动画：没有自己的动画时，它的动作和"动画来源"中选择的角色一样。
+ - 它的玩法总是和它所顶替的角色一样。
+ - 类型为"叛徒"的角色暂时还不会在对局中出现。
+
+动画（"animations" 文件夹）
+ - 在这里放 .fbx 或 .glb 动画（从 Mixamo 下载时选择 "FBX Binary" 和 "Without Skin"，
+   走路和跑步选择 "In Place"）。任何人形动画都可以：会自动适配到角色上。
+ - 在 模组 > 模型 > 动画 中，为每个角色选择用哪个动画替换它的待机、走路或跑步。
+   游戏的模型和你的模型都可以使用。
+ - 使用每个文件中的第一个动画；什么时候播放哪个仍由游戏决定。""",
+              """CRIMESIGHT Revival - 自定义光标
+===============================
+
+你自己的鼠标光标。最简单的方法是用启动器：模组 > 自定义光标 > "选择图片..."，
+然后选择点击位置。你也可以自己把文件放在这里：
+
+  cursor.png     普通光标，用于菜单和对局中。背景透明的 PNG，最好是 32x32 或 64x64 像素。
+  hotspot.txt    可选：cursor.png 中点击的位置，从左上角算起的像素 "x,y"
+                 （默认 0,0，和箭头一样）。居中的 32x32 准星：16,16
+  其他 .png      可选：每个都会替换游戏中同名的光标（移动、跑步、攻击等）。名字可以在
+                 BepInEx/LogOutput.log 中 "[Cursor] el juego usa el cursor ..." 这几行里看到。
+
+ - 只有你自己能看到。
+ - 需要在 模组 > 常规 中开启"热重载"（BepInEx）。
+ - 从启动器打开游戏时生效；如果游戏已经开着，几秒钟内生效。
+ - 要恢复游戏的光标，在启动器中按"关闭"，或清空这个文件夹。"""),
+
+    "zh-TW": ("""CRIMESIGHT Revival - 模組
+=========================
+
+這是你的模組資料夾。裡面的一切都在啟動器的「模組」視窗中管理。
+
+  stamps\\      你的貼圖圖片
+  avatars\\     你的頭像圖片（用作個人資料圖片）
+  mod.json     選用：為你的模組顯示的名稱和作者
+  models\\      你的 3D 模型和動畫（見裡面的 README.txt）
+  cursor\\      你的自訂游標（見裡面的 README.txt）
+  stages\\      你在場景編輯器中儲存的場景
+
+貼圖和頭像
+ - PNG、JPG、WEBP 等。任何尺寸都可以：會自動調整。
+ - 它們會作為新的加入：遊戲內建的貼圖和頭像永遠不會被修改。
+ - 在你的房間裡所有人都看得到（在別人的房間裡你看到的是對方的）。
+ - 貼圖在對局中不會顯示訊息，除非你用「訊息」按鈕（模組 > 貼圖）幫它設定一則。
+   檔名開頭的數字（01_）只用來排序。
+ - 變更會在下次從啟動器開啟遊戲時生效；如果在 模組 > 一般 中開啟了「熱重載」（BepInEx），
+   會立即生效。""",
+              """CRIMESIGHT Revival - 3D 模型
+============================
+
+你自己的 3D 模型和動畫。在啟動器的 模組 > 模型 中管理。
+需要在 模組 > 一般 中開啟「熱重載」（BepInEx）。
+
+  .fbx / .glb    你的模型；也可以是裝有模型及其貼圖的子資料夾（下載的東西直接解壓縮到這裡很方便）。
+                 子資料夾的名稱就是模型的名稱。
+  animations\\    你的動畫（見下面的「動畫」）
+  images\\        新角色的肖像圖片（見下面的「新角色」）
+  skeletons\\     每個角色一個骨架，用於完美貼合（見下文）
+
+模型
+ - 在 模組 > 模型 中把模型分配給一個角色，它就會取代那個角色的外觀。
+ - 在你的房間裡所有人都看得到（在別人的房間裡你看到的是對方的）。
+ - 你的模型會播放遊戲的動畫。
+ - 人形模型（Mixamo、VRChat/Unity、VRoid、Blender、3ds Max Biped、DAZ、MMD 等）會自動適配：
+   依名稱辨識骨骼，把模型擺正，縮放到角色的大小，並擺成遊戲的 T 字姿勢。頭髮、裙子等額外的
+   骨骼會跟隨最近的身體骨骼（不會擺動）。
+ - 貼圖：每個材質的顏色貼圖，放在模型檔案裡面或旁邊（PNG、JPG、TGA、BMP、PSD 等）。
+ - 每個模型請控制在約 60,000 個三角面以內。
+ - 如果遊戲開著，變更會立即生效（重新匯出模型後請按「重新載入」）。
+ - 如果看起來不對，BepInEx/LogOutput.log 中以 [Modelos] 開頭的行會顯示辨識了哪些骨骼。
+
+想要完美貼合（選用，Blender 3.6 或更新版本）
+ 1. 開啟「熱重載」後開啟一次遊戲。之後 "skeletons" 資料夾裡會有每個角色的骨架
+    （Agatha.glb、Berkeley.glb 等，另外還有 Traitor.glb 和 Victim.glb）。裡面只有骨骼，
+    由你自己的遊戲產生。
+ 2. 在 Blender 中：檔案 > 匯入 > glTF 2.0，選擇骨架，並刪除小網格 "CSR_borra_esta_malla"。
+ 3. 把你的模型對準骨骼。先選取模型，再選取骨架（Shift+點擊），然後按 Ctrl+P > 附帶自動權重。
+    不要重新命名骨骼。
+ 4. 檔案 > 匯出 > glTF 2.0 (.glb) 或 FBX，儲存到這個資料夾。
+
+新角色（模組 > 模型 > 新角色）
+ - 新角色不會總是取代某個人，而是參加每局的抽選：每局從已啟用的角色中選出 6 人，原有角色和
+   新角色的機會相同。能出場的角色在遊戲等候室的「角色選擇」按鈕裡選擇（由房主為自己的房間
+   決定；至少 6 名）。
+ - 需要一個 3D 模型。其他都是選用的：
+     名稱和台詞：沒有的話，使用它所取代的角色的；
+     圖片：放進 "images" 資料夾；沒有的話從模型產生；
+     動畫：沒有自己的動畫時，它的動作和「動畫來源」中選擇的角色一樣。
+ - 它的玩法總是和它所取代的角色一樣。
+ - 類型為「叛徒」的角色暫時還不會在對局中出現。
+
+動畫（"animations" 資料夾）
+ - 在這裡放 .fbx 或 .glb 動畫（從 Mixamo 下載時選擇 "FBX Binary" 和 "Without Skin"，
+   走路和跑步選擇 "In Place"）。任何人形動畫都可以：會自動適配到角色上。
+ - 在 模組 > 模型 > 動畫 中，為每個角色選擇用哪個動畫取代它的待機、走路或跑步。
+   遊戲的模型和你的模型都可以使用。
+ - 使用每個檔案中的第一個動畫；什麼時候播放哪個仍由遊戲決定。""",
+              """CRIMESIGHT Revival - 自訂游標
+=============================
+
+你自己的滑鼠游標。最簡單的方法是用啟動器：模組 > 自訂游標 > 「選擇圖片...」，
+然後選擇點擊位置。你也可以自己把檔案放在這裡：
+
+  cursor.png     一般游標，用於選單和對局中。背景透明的 PNG，最好是 32x32 或 64x64 像素。
+  hotspot.txt    選用：cursor.png 中點擊的位置，從左上角算起的像素 "x,y"
+                 （預設 0,0，和箭頭一樣）。置中的 32x32 準星：16,16
+  其他 .png      選用：每個都會取代遊戲中同名的游標（移動、跑步、攻擊等）。名稱可以在
+                 BepInEx/LogOutput.log 中 "[Cursor] el juego usa el cursor ..." 這幾行裡看到。
+
+ - 只有你自己看得到。
+ - 需要在 模組 > 一般 中開啟「熱重載」（BepInEx）。
+ - 從啟動器開啟遊戲時生效；如果遊戲已經開著，幾秒鐘內生效。
+ - 要恢復遊戲的游標，在啟動器中按「關閉」，或清空這個資料夾。"""),
+}
+for _l, (_mods, _models, _cursor) in _READMES.items():
+    S[_l]["mods_readme"] = _mods
+    S[_l]["models_readme"] = _models
+    S[_l]["cursor_readme"] = _cursor
