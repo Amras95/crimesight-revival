@@ -426,12 +426,12 @@ namespace CrimeSightRevival.Mods
         }
 
         // ------------------------------------------------------------ esqueletos para Blender
-        const string SkeletonVersion = "1";
+        const string SkeletonVersion = "2";
         static readonly (string key, string name)[] SkeletonOf =
         {
             ("PawnTypeData_A", "Agatha"), ("PawnTypeData_B", "Berkeley"), ("PawnTypeData_C", "Catherine"),
             ("PawnTypeData_D", "Dorothy"), ("PawnTypeData_E", "Ellery"), ("PawnTypeData_F", "Freeman"),
-            ("ThreatTypeData_Survivor", "Victima"), ("ThreatTypeData_Traitor", "Traidor"),
+            ("ThreatTypeData_Survivor", "Victim"), ("ThreatTypeData_Traitor", "Traitor"),
         };
         static bool _skeletonsDone;
         static float _skeletonsNext;

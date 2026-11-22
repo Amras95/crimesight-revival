@@ -686,13 +686,16 @@ class LocalServer:
 
 # ------------------------------------------------------------------ mods de apariencia
 def mods_dir():
-    """Tus mods: una carpeta por mod, con subcarpetas stickers/ y avatars/ llenas de imagenes.
-    La primera vez se crea ya preparada: un mod de ejemplo vacio y unas instrucciones."""
+    """Tu mod: la propia carpeta de mods, con stickers/, avatars/ y mod.json (se crean si faltan) y unas
+    instrucciones. Dentro van tambien tus modelos (models/), tu cursor (cursor/) y tus escenarios (stages/)."""
     d = os.path.join(app_dir(), "mods")
-    first = not os.path.isdir(d)
-    os.makedirs(d, exist_ok=True)
-    if first:
-        new_mod(d)
+    for sub in ("stickers", "avatars"):
+        os.makedirs(os.path.join(d, sub), exist_ok=True)
+    meta = os.path.join(d, "mod.json")
+    if not os.path.exists(meta):
+        with open(meta, "w", encoding="utf-8") as f:
+            # nombre vacio = el de siempre ("Carpeta principal")
+            json.dump({"name": "", "author": ""}, f, ensure_ascii=False, indent=2)
     readme = os.path.join(d, "README.txt")
     text = t("mods_readme") + "\n" + t("mods_text_hint") + "\n"
     try:
@@ -709,19 +712,11 @@ def mods_dir():
     return d
 
 
-def new_mod(base=None):
-    """Crea una carpeta de mod lista para llenar (stickers/, avatars/ y mod.json). Devuelve la ruta."""
-    base = base or mods_dir()
-    name, n = t("mods_example"), 1
-    while os.path.exists(os.path.join(base, name if n == 1 else f"{name} {n}")):
-        n += 1
-    folder = os.path.join(base, name if n == 1 else f"{name} {n}")
-    for sub in ("stickers", "avatars"):
-        os.makedirs(os.path.join(folder, sub), exist_ok=True)
-    with open(os.path.join(folder, "mod.json"), "w", encoding="utf-8") as f:
-        # nombre vacio = se usa el de la carpeta (asi basta con renombrarla)
-        json.dump({"name": "", "author": ""}, f, ensure_ascii=False, indent=2)
-    return folder
+def _in_mods(name):
+    """Carpeta dentro de la de mods (models, cursor, stages); se crea vacia si no existe."""
+    d = os.path.join(mods_dir(), name)
+    os.makedirs(d, exist_ok=True)
+    return d
 
 
 def temp_mods_dir():
@@ -743,19 +738,21 @@ def mod_owner():
 
 
 def my_mods(cfg):
+    """Tu mod (la carpeta de mods), en una lista como los de una sala."""
     import modpack
-    return modpack.load_all(mods_dir(), cfg.get("mods_disabled", []), root_name=t("mods_root"), owner=mod_owner())
+    d = mods_dir()
+    m = modpack.load_mod(d, mod_owner())
+    m["name"] = t("mods_root")
+    m["enabled"] = os.path.basename(d) not in set(cfg.get("mods_disabled", []))
+    return [m]
 
 
 def mod_folder(name):
-    """Ruta de uno de tus mods por su nombre de carpeta ("mods" = la carpeta principal)."""
+    """Ruta de tu mod por su nombre de carpeta ("mods")."""
     base = mods_dir()
     if name == os.path.basename(base):
         return base
-    path = os.path.normpath(os.path.join(base, name))
-    if os.path.dirname(path) != os.path.normpath(base) or not os.path.isdir(path):
-        raise ValueError(t("err_unexpected", err=name))
-    return path
+    raise ValueError(t("err_unexpected", err=name))
 
 
 def my_room_set(cfg):
@@ -810,9 +807,8 @@ It needs the BepInEx plugin turned on. Only you see it. To go back to the game's
 
 
 def cursor_dir():
-    """Tu cursor propio (cursor.png y, si quieres, los demas cursores del juego)."""
-    d = os.path.join(app_dir(), "cursor")
-    os.makedirs(d, exist_ok=True)
+    """Tu cursor propio (cursor.png y, si quieres, los demas cursores del juego), en mods/cursor."""
+    d = _in_mods("cursor")
     readme = os.path.join(d, "README.txt")
     if not os.path.exists(readme):
         with open(readme, "w", encoding="utf-8") as f:
@@ -959,15 +955,18 @@ def model_swaps():
 
 # ---------------------------------------------------------------- modelos propios (.glb)
 # Cada .glb de la carpeta de modelos es un modelo que se puede poner a un personaje ("custom:<nombre>"). El plugin
-# escribe en csr_live/skeletons el esqueleto de cada personaje (solo huesos) y aqui se copia a models/esqueletos
+# escribe en csr_live/skeletons el esqueleto de cada personaje (solo huesos) y aqui se copia a models/skeletons
 # para hacer el modelo encima en Blender.
 CUSTOM_PREFIX = "custom:"
-SKELETON_DIR = "esqueletos"
+SKELETON_DIR = "skeletons"
+
+
 
 
 def models_dir():
-    """Tus modelos 3D: un .glb por modelo. La primera vez se crea con unas instrucciones y la carpeta de esqueletos."""
-    d = os.path.join(app_dir(), "models")
+    """Tus modelos 3D (mods/models): un .glb por modelo. La primera vez se crea con unas instrucciones y la carpeta
+    de esqueletos."""
+    d = _in_mods("models")
     os.makedirs(os.path.join(d, SKELETON_DIR), exist_ok=True)
     readme = os.path.join(d, "README.txt")
     text = t("models_readme") + "\n"
@@ -1000,7 +999,7 @@ def custom_sources():
             if os.path.isfile(p) and ext.lower() in MODEL_EXTS:
                 if stem not in out or ext.lower() == ".fbx":        # mismo nombre en .glb y .fbx: el .fbx
                     out[stem] = p
-            elif os.path.isdir(p) and f.lower() not in (SKELETON_DIR, ANIM_DIR):
+            elif os.path.isdir(p) and f.lower() not in (SKELETON_DIR, ANIM_DIR, IMAGE_DIR):
                 best = None
                 for dp, _dn, fs in os.walk(p):
                     if dp.count(os.sep) - p.count(os.sep) > 3:
@@ -1027,7 +1026,7 @@ model_issues = {}
 
 
 def sync_skeletons(game_dir):
-    """Copia los esqueletos que escribio el plugin a la carpeta de modelos (esqueletos). Devuelve cuantos hay."""
+    """Copia los esqueletos que escribio el plugin a la carpeta de modelos (skeletons). Devuelve cuantos hay."""
     if not game_dir:
         return 0
     src = os.path.join(live_dir(game_dir), "skeletons")
@@ -1143,9 +1142,9 @@ def _sync_files(d, want, sources, issues):
 
 
 # ---------------------------------------------------------------- animaciones propias
-# Cada .fbx/.glb de models/animaciones es una animacion (la primera que tenga) que puede sustituir el reposo, el
+# Cada .fbx/.glb de models/animations es una animacion (la primera que tenga) que puede sustituir el reposo, el
 # andar o el correr de un personaje. El plugin la adapta a su esqueleto (CrimeSightRevivalAnims.cs).
-ANIM_DIR = "animaciones"
+ANIM_DIR = "animations"
 ANIM_KINDS = ("idle", "walk", "run")
 anim_issues = {}
 
@@ -1205,7 +1204,7 @@ def set_anim_swap(slot, kind, name):
 # Un personaje nuevo no sustituye a nadie: entra en el sorteo de cada partida (Selector de personajes). Lleva su
 # modelo y, si quieres, sus animaciones, su nombre, su imagen y sus frases; lo que no tenga lo pone el personaje
 # cuyo sitio ocupa (tambien su forma de jugar). Si sale de traidor, solo cuentan el modelo y las animaciones.
-IMAGE_DIR = "imagenes"
+IMAGE_DIR = "images"
 IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".bmp")
 TALK_KEYS = ("cannotGetAnything", "damagedByGasRoom", "dangerHasInvaded", "destroySwitchboard", "discoverBypass",
              "discoverNote", "discoverSwitchboard", "fullItem", "fullWeapon", "getFood", "getMedicine", "getWeapon",
@@ -1222,7 +1221,7 @@ def images_dir():
 
 
 def custom_images():
-    """{nombre: archivo} de las imagenes para los personajes nuevos (carpeta imagenes)."""
+    """{nombre: archivo} de las imagenes para los personajes nuevos (carpeta images)."""
     out = {}
     try:
         d = images_dir()
@@ -2127,10 +2126,8 @@ _stage_cat = {}
 
 
 def stages_dir():
-    """Distribuciones guardadas por el jugador (un .json por escenario)."""
-    d = os.path.join(app_dir(), "stages")
-    os.makedirs(d, exist_ok=True)
-    return d
+    """Distribuciones guardadas por el jugador (un .json por escenario), en mods/stages."""
+    return _in_mods("stages")
 
 
 def stage_cache_dir():
