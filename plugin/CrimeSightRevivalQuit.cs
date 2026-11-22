@@ -1,9 +1,9 @@
 // CRIMESIGHT Revival - "Rendirse" para salir de una partida contra la IA.
 //
 // El juego ya trae un boton "Rendirse" en los ajustes de la partida, pero solo lo ensena a Moriarty
-// y a partir del turno 4 (y nunca en las salas de entrenamiento). Cuando eres la unica persona de la
-// sala (contra IAs o en el entrenamiento), aqui se ensena siempre y vale para cualquier papel: asi
-// se puede salir de una partida sin cerrar el juego. Con mas personas en la sala se deja como estaba.
+// y a partir del turno 4 (y nunca en las salas de entrenamiento). Now it is shown to every role from the
+// first turn, in every online match, during the command phase only (as the game's Forfeit window says). With a person on your team, the server asks them first (vote, see
+// CrimeSightRevivalTeam.cs); otherwise your side forfeits right away.
 using System;
 using System.Collections.Generic;
 using HarmonyLib;
@@ -45,7 +45,7 @@ namespace CrimeSightRevival.Mods
                 for (int i = 0; i < members.Count; i++)
                 {
                     var id = members[i]?.PlayerId ?? "";
-                    if (!id.StartsWith("bot", StringComparison.Ordinal)) people++;
+                    if (!Team.IsAi(id)) people++;               // players an AI took over don't count
                 }
                 return people <= 1;
             }
@@ -54,7 +54,11 @@ namespace CrimeSightRevival.Mods
 
         static void AfterEnable(ref bool __result)
         {
-            try { if (!__result && Alone() && !ReplayManager.IsReplay()) __result = true; }
+            try
+            {
+                if (!__result && !ReplayManager.IsReplay() && GameManager.instance != null && GameManager.instance.IsInstructPhase())
+                    __result = true;
+            }
             catch { }
         }
 
@@ -159,19 +163,19 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[Salir] resultado: " + e.Message); }
         }
 
-        // "Rendirse" del juego: solo deja a Moriarty, desde el turno 4 y fuera del entrenamiento. Si estas
-        // solo en la sala se hace aqui lo mismo que hace el juego (avisar al servidor de que te rindes),
-        // sin esas condiciones; el servidor termina la partida y el juego ensena el final.
+        // "Rendirse" del juego: solo deja a Moriarty, desde el turno 4 y fuera del entrenamiento. Here the server
+        // is told the same thing the game would tell it, for any role and turn. It ends the match, or first asks
+        // a teammate who is a person (then the match only ends if they agree).
         static bool BeforeRun()
         {
             try
             {
-                if (!Alone() || ReplayManager.IsReplay()) return true;
+                if (ReplayManager.IsReplay()) return true;
                 var nm = NetworkManager.Instance;
                 if (nm == null) return true;
                 string msg = "{\"surrenderPlayerId\":\"" + (ApiServer.PlayerId ?? "") + "\"}";
-                _iSurrendered = true;
-                _winnerUntil = UnityEngine.Time.unscaledTime + 60f;
+                _iSurrendered = Alone();             // with other people the server says who wins (csr_winner)
+                if (_iSurrendered) _winnerUntil = UnityEngine.Time.unscaledTime + 60f;
                 nm.Abandon(msg,
                     Il2CppInterop.Runtime.DelegateSupport.ConvertDelegate<Il2CppSystem.Action>(new Action(() =>
                         Plugin.L.LogInfo("[Salir] te has rendido"))),

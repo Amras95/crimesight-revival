@@ -7,7 +7,8 @@
 // las listas del juego (los del juego no se tocan). Si cambia mientras juegas, se aplica al volver
 // al menu, para que todos los jugadores tengan siempre la misma lista.
 //
-// No toca la red ni el servidor: solo anade huecos de apariencia.
+// No toca el servidor: solo anade huecos de apariencia (and makes a mod stamp received from another
+// player show the right stamp, see StampPlace).
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -46,6 +47,7 @@ namespace CrimeSightRevival.Mods
             TalkSkip.Init(h);
             Roster.Init(h);
             PartnerIcon.Init(h);
+            Team.Init(h);
             L.LogInfo("Mods en caliente activos. Carpeta: " + LiveMods.LiveDir);
         }
     }
@@ -88,6 +90,69 @@ namespace CrimeSightRevival.Mods
 
         [HarmonyPrefix, HarmonyPatch(typeof(StampManager), nameof(StampManager.StampFromPingButtonInGameLog))]
         static bool BeforePingStampLog(ref StampParam stampParam) => !LiveMods.Silent(stampParam?.responseMsgId);
+
+        // Stamps received from other players (see StampPlace)
+        [HarmonyPrefix, HarmonyPatch(typeof(NetworkManager), "WampEventCallback")]
+        static void BeforeWampEvent(Il2CppSystem.Collections.Generic.Dictionary<string, Il2CppSystem.Object> __1)
+        {
+            try { StampPlace.Fix(__1); } catch (Exception e) { StampPlace.Warn(e); }
+        }
+    }
+
+    // ---------------------------------------------------------------- stamps from other players
+    // A stamp message says which stamp it is twice: its type, and its place in the sender's stamp list
+    // (setIndex/dataIndex). The game shows the one at that place in ITS OWN list. Mod stamps are added to those
+    // lists, and for a few seconds after someone joins a room the lists can differ (a game that hasn't loaded
+    // the room's mods yet): the place then points at another stamp, e.g. one of yours instead of theirs. Here,
+    // for mod stamps, the place is worked out again from the type, in this game's own list.
+    static class StampPlace
+    {
+        const int FirstModType = 1000;
+        static bool _warned;
+
+        public static void Fix(Il2CppSystem.Collections.Generic.Dictionary<string, Il2CppSystem.Object> d)
+        {
+            if (d == null || !d.ContainsKey("tag") || !d.ContainsKey("type") || !d.ContainsKey("dataIndex")) return;
+            if (d["tag"]?.ToString() != "stamp") return;
+            if (!int.TryParse(d["type"]?.ToString(), out int type) || type < FirstModType) return;
+            int.TryParse(d["dataIndex"]?.ToString(), out int place);
+            int setId = 0;
+            if (d.ContainsKey("setIndex")) int.TryParse(d["setIndex"]?.ToString(), out setId);
+            var sm = StampManager.Instance;
+            var sets = sm?.registStampSet;
+            if (sets == null) return;
+            foreach (var set in sets)
+            {
+                if (set == null || set.SetId != setId || set.registStampData == null) continue;
+                var list = set.registStampData;
+                if (place >= 0 && place < list.Count && list[place] != null && (int)list[place].Type == type) return;   // same place here
+                for (int i = 0; i < list.Count; i++)
+                {
+                    if (list[i] == null || (int)list[i].Type != type) continue;
+                    d["dataIndex"] = Box(d["dataIndex"], i);
+                    Plugin.L.LogInfo($"[Stamps] stamp {type} from another player: place {place} -> {i}");
+                    return;
+                }
+                return;     // this game doesn't have that stamp (yet): left as it is
+            }
+        }
+
+        // the new number with the same kind of value the game's message had
+        static Il2CppSystem.Object Box(Il2CppSystem.Object like, int v)
+        {
+            string tn = like?.GetIl2CppType()?.FullName;
+            if (tn == "System.Int64") return new Il2CppSystem.Int64 { m_value = v }.BoxIl2CppObject();
+            if (tn == "System.Double") return new Il2CppSystem.Double { m_value = v }.BoxIl2CppObject();
+            if (tn == "System.Single") return new Il2CppSystem.Single { m_value = v }.BoxIl2CppObject();
+            return new Il2CppSystem.Int32 { m_value = v }.BoxIl2CppObject();
+        }
+
+        public static void Warn(Exception e)
+        {
+            if (_warned) return;
+            _warned = true;
+            Plugin.L.LogWarning("[Stamps] " + e.Message);
+        }
     }
 
     // ---------------------------------------------------------------- formato de live.json
@@ -165,6 +230,7 @@ namespace CrimeSightRevival.Mods
             { long t0 = Perf.T(); try { Models.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Modelos] " + e.Message); } Perf.Done("Models.Frame", t0); }
             { long t0 = Perf.T(); try { Roster.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Personajes] " + e.Message); } Perf.Done("Roster.Frame", t0); }
             try { TalkSkip.Frame(); } catch { }
+            try { Team.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Team] " + e.Message); }
             { long t0 = Perf.T(); try { RosterUi.Frame(); } catch (Exception e) { Plugin.L.LogWarning("[Selector] " + e.Message); } Perf.Done("RosterUi.Frame", t0); }
             if (Time.unscaledTime < _next) return;
             _next = Time.unscaledTime + 1f;
