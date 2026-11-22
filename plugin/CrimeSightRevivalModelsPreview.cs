@@ -100,7 +100,14 @@ namespace CrimeSightRevival.Mods
             if (!_parsing.TryAdd(id, true)) return;
             System.Threading.Tasks.Task.Run(() =>
             {
-                try { _parsed[id] = (sig, Glb.Read(File.ReadAllBytes(path))); }
+                try
+                {
+                    var model = Glb.Read(File.ReadAllBytes(path));
+                    var jobs = new System.Threading.Tasks.Task[model.images.Count];            // las texturas tambien, aqui (a la vez)
+                    for (int k = 0; k < jobs.Length; k++) { var img = model.images[k]; jobs[k] = System.Threading.Tasks.Task.Run(() => TexDec.Prepare(img)); }
+                    System.Threading.Tasks.Task.WaitAll(jobs);
+                    _parsed[id] = (sig, model);
+                }
                 catch { }
                 finally { _parsing.TryRemove(id, out _); }
             });

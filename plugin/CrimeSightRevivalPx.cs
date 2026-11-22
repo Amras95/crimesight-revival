@@ -11,6 +11,10 @@ namespace CrimeSightRevival.Mods
 {
     static class Px
     {
+        /// <summary>Un Color32 sin llamar a su constructor (cada llamada a un metodo de Unity desde el plugin pasa por
+        /// Il2Cpp y cuesta; en un bucle por pixel, segundos). Lo mismo con Mathf: en los bucles, matematicas de C#.</summary>
+        public static Color32 C(byte r, byte g, byte b, byte a) => new Color32 { r = r, g = g, b = b, a = a };
+
         public static unsafe Color32[] Get(Texture2D t)
         {
             var arr = t.GetPixels32();

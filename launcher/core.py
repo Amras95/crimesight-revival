@@ -1200,6 +1200,26 @@ TALK_KEYS = ("cannotGetAnything", "damagedByGasRoom", "dangerHasInvaded", "destr
              "startAction_statusHunger", "startAction_statusInjury", "stepIntoBlackoutRoom", "useBypass",
              "useFoodForOther", "useMedicineForMyself", "useMedicineForOther")
 
+# la cara que pone el personaje en cada frase, en el juego (igual para los seis): preocupado o atacado; las demas, normal
+TALK_REACTION = {"damagedByGasRoom": "worried", "dangerHasInvaded": "worried", "startAction_statusDying": "worried",
+                 "startAction_statusHunger": "worried", "startAction_statusInjury": "worried",
+                 "raid": "attacked", "raidFinalDay": "attacked"}
+REACTIONS = ("worried", "attacked")
+
+
+def _talk_img(v):
+    """Imagenes de las frases: por reaccion ("@worried", "@attacked") y por frase (las de TALK_KEYS)."""
+    out = {}
+    for k, name in (v or {}).items():
+        if name and (k in TALK_KEYS or (k.startswith("@") and k[1:] in REACTIONS)):
+            out[k] = str(name)
+    return out
+
+
+def talk_image_for(c_imgs, sit, main):
+    """La imagen de una frase: la suya, si no la de su reaccion, si no la principal."""
+    return c_imgs.get(sit) or c_imgs.get("@" + TALK_REACTION.get(sit, "")) or main
+
 
 def images_dir():
     d = os.path.join(models_dir(), IMAGE_DIR)
@@ -1238,6 +1258,7 @@ def characters():
         out.append({"id": c["id"], "name": str(c.get("name") or "")[:24], "role": "pawn",       # traidores: mas adelante
                     "anim_from": _anim_from(c.get("anim_from")),
                     "model": str(c.get("model") or ""), "image": str(c.get("image") or ""),
+                    "talk_img": _talk_img(c.get("talk_img")),
                     "anims": {k: v for k, v in (c.get("anims") or {}).items() if k in ANIM_KINDS and v},
                     "talk": {k: str(v)[:240] for k, v in (c.get("talk") or {}).items() if k in TALK_KEYS and str(v).strip()}})
     return out
@@ -1252,7 +1273,7 @@ def save_character(c):
     if not re.match(r"^[a-z0-9]{10}$", cid):
         cid = secrets.token_hex(5)
     entry = {"id": cid, "name": str(c.get("name") or "").strip()[:24], "role": "pawn", "anim_from": _anim_from(c.get("anim_from")),
-             "model": str(c.get("model") or ""), "image": str(c.get("image") or ""),
+             "model": str(c.get("model") or ""), "image": str(c.get("image") or ""), "talk_img": _talk_img(c.get("talk_img")),
              "anims": {k: v for k, v in (c.get("anims") or {}).items() if k in ANIM_KINDS and v},
              "talk": {k: str(v).strip()[:240] for k, v in (c.get("talk") or {}).items() if k in TALK_KEYS and str(v).strip()}}
     lst = [x for x in lst if x.get("id") != cid] + [entry]
@@ -1404,11 +1425,20 @@ def my_model_set():
             ref = add("anim", name, asrc.get(name), anim_issues)
             if ref:
                 entry["anims"][kind] = ref
-        img = _image_file(c["image"], isrc.get(c["image"])) if c["image"] else None
-        if img and os.path.getsize(img) <= modelpack.MAX_IMAGE_BYTES:
+
+        def add_image(name):
+            img = _image_file(name, isrc.get(name)) if name else None
+            if not img or os.path.getsize(img) > modelpack.MAX_IMAGE_BYTES:
+                return None
             sha = _sha256_file(img)
-            ms["files"][sha] = {"kind": "image", "size": os.path.getsize(img), "name": c["image"], "path": img}
-            entry["image"] = modelpack.FILE_PREFIX + sha
+            ms["files"][sha] = {"kind": "image", "size": os.path.getsize(img), "name": name, "path": img}
+            return modelpack.FILE_PREFIX + sha
+        ref = add_image(c["image"])
+        if ref:
+            entry["image"] = ref
+        timg = {k: r for k, r in ((k, add_image(n)) for k, n in c["talk_img"].items()) if r}
+        if timg:
+            entry["talk_img"] = timg
         ms["chars"][c["id"]] = entry
     ms["hash"] = modelpack.set_hash(ms)
     return ms
@@ -1499,10 +1529,11 @@ def _install_roster(d, rm, roster):
     idir = os.path.join(d, "images")
     want = {}
     for c in chars.values():
-        sha = (c.get("image") or "")[len(modelpack.FILE_PREFIX):]
-        if sha and sha in files:
-            src = files[sha]["path"]
-            want[sha[:16] + (".jpg" if src.lower().endswith((".jpg", ".jpeg")) else ".png")] = src
+        for v in [c.get("image")] + list((c.get("talk_img") or {}).values()):
+            sha = (v or "")[len(modelpack.FILE_PREFIX):]
+            if sha and sha in files:
+                src = files[sha]["path"]
+                want[sha[:16] + (".jpg" if src.lower().endswith((".jpg", ".jpeg")) else ".png")] = src
     if want or os.path.isdir(idir):
         os.makedirs(idir, exist_ok=True)
         for name, src in want.items():
@@ -1517,12 +1548,23 @@ def _install_roster(d, rm, roster):
                 except OSError:
                     pass
 
-    def image_of(c):
-        sha = (c.get("image") or "")[len(modelpack.FILE_PREFIX):]
+    def image_of(c, v=None):
+        sha = ((c.get("image") if v is None else v) or "")[len(modelpack.FILE_PREFIX):]
         for name in want:
             if sha and name.startswith(sha[:16]):
                 return "images/" + name
         return None
+
+    def talk_images(c):
+        """La imagen de cada frase que no lleva la principal (por frase o por la reaccion que pone en el juego)."""
+        timg = c.get("talk_img") or {}
+        out = {}
+        for sit in TALK_KEYS:
+            v = talk_image_for(timg, sit, None)
+            path = image_of(c, v) if v else None
+            if path:
+                out[sit] = path
+        return out
 
     def model_of(c):
         sha = (c.get("model") or "")[len(modelpack.FILE_PREFIX):]
@@ -1533,7 +1575,7 @@ def _install_roster(d, rm, roster):
         if not c:
             return None
         return {"id": cid, "name": c.get("name") or None, "talk": dict(c.get("talk") or {}), "image": image_of(c),
-                "model": model_of(c), "anim_from": _anim_from(c.get("anim_from"))}
+                "talk_images": talk_images(c), "model": model_of(c), "anim_from": _anim_from(c.get("anim_from"))}
     out = {"id": (roster or {}).get("id", ""), "positions": {}, "traitor": None}
     if roster:
         out["positions"] = {k: entry(v) for k, v in (roster.get("positions") or {}).items()}

@@ -65,7 +65,7 @@ def _used(ms):
     used = {v[len(FILE_PREFIX):] for v in ms["swaps"].values() if v.startswith(FILE_PREFIX)}
     used |= {v[len(FILE_PREFIX):] for k in ms["anims"].values() for v in k.values()}
     for c in ms.get("chars", {}).values():
-        for v in [c.get("model"), c.get("image")] + list((c.get("anims") or {}).values()):
+        for v in [c.get("model"), c.get("image")] + list((c.get("anims") or {}).values()) + list((c.get("talk_img") or {}).values()):
             if v:
                 used.add(v[len(FILE_PREFIX):])
     return used
@@ -95,6 +95,8 @@ def _char_copy(c):
            "anims": dict(c.get("anims") or {}), "talk": dict(c.get("talk") or {})}
     if c.get("image"):
         out["image"] = c["image"]
+    if c.get("talk_img"):
+        out["talk_img"] = dict(c["talk_img"])
     return out
 
 
@@ -161,6 +163,13 @@ def clean(meta):
                  "anim_from": c.get("anim_from") if c.get("anim_from") in PAWNS else PAWNS[0], "anims": an, "talk": talk}
         if c.get("image"):
             out_c["image"] = c["image"]
+        timg = {}
+        for k, v in list((c.get("talk_img") or {}).items())[:MAX_TALK]:
+            if not (_TALK_KEY.match(str(k)) or str(k) in ("@worried", "@attacked")) or not target_ok(v, "image"):
+                raise ModelError("imagen de frase no valida")
+            timg[str(k)] = v
+        if timg:
+            out_c["talk_img"] = timg
         chars[str(cid)] = out_c
     if len(chars) > MAX_CHARS:
         raise ModelError("demasiados personajes")

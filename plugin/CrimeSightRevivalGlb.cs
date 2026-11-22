@@ -66,7 +66,12 @@ namespace CrimeSightRevival.Mods
             public float[] color = { 1, 1, 1, 1 };            // color base (si no hay textura, o multiplicado)
         }
 
-        public class Image { public byte[] data; public string mime; }
+        public class Image
+        {
+            public byte[] data; public string mime;
+            // ya descodificada en otro hilo (TexDec): RGBA32 de abajo a arriba con todos sus mipmaps, lista para subirla
+            public byte[] raw; public int rw, rh, rmips;
+        }
 
         // ------------------------------------------------------------ matrices
         public static float[] Identity() => new float[] { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };

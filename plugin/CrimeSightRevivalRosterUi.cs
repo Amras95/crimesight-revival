@@ -549,7 +549,7 @@ namespace CrimeSightRevival.Mods
                 {
                     var c = src[i];
                     byte v = (byte)Math.Min(255, (int)(c.r * 0.3f + c.g * 0.59f + c.b * 0.11f));
-                    px[i] = new Color32(v, v, v, c.a);
+                    px[i] = Px.C(v, v, v, c.a);
                 }
                 g = new Texture2D(t.width, t.height, TextureFormat.RGBA32, false) { hideFlags = HideFlags.DontUnloadUnusedAsset, wrapMode = TextureWrapMode.Clamp };
                 Px.Set(g, px);
@@ -713,6 +713,7 @@ namespace CrimeSightRevival.Mods
                 cd.name = _sk.MakeText(cd.rect, "", 22, new Vector2(0, -114), new Vector2(216, 40), true);
                 cd.name.enableAutoSizing = true; cd.name.fontSizeMin = 12; cd.name.fontSizeMax = 22;
                 cd.name.raycastTarget = false;
+                cd.name.color = new Color(0.07f, 0.07f, 0.09f, 1f);        // negro: el fondo de la ventana es claro
                 cd.tag = _sk.MakeText(cd.rect, "", 16, new Vector2(0, -142), new Vector2(216, 24), false);
                 cd.tag.raycastTarget = false;
                 var boxR = ModOffer.Box("Box", cd.rect, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(26, -26), new Vector2(40, 40));
@@ -788,8 +789,9 @@ namespace CrimeSightRevival.Mods
                 cd.pic.color = tex != null ? Color.white : it.enabled ? new Color(0.55f, 0.58f, 0.7f, 1f) : new Color(0.5f, 0.5f, 0.5f, 1f);
                 BasePic(cd.pic, tex != null ? (Texture)tex : Silhouette());
                 cd.name.text = NameOf(it);
+                cd.name.color = new Color(0.07f, 0.07f, 0.09f, 1f);
                 cd.tag.text = it.role == "traitor" ? (it.orig ? "" : TTraitor[_lang]) : (it.orig ? "" : TNew[_lang]);
-                cd.tag.color = it.role == "traitor" ? new Color(1f, 0.42f, 0.38f, 1f) : new Color(0.6f, 0.85f, 1f, 1f);
+                cd.tag.color = it.role == "traitor" ? new Color(0.75f, 0.15f, 0.12f, 1f) : new Color(0.1f, 0.35f, 0.72f, 1f);
                 cd.tick.gameObject.SetActive(it.enabled);
                 cd.bg.color = it.enabled ? cd.baseColor : Color.Lerp(cd.baseColor, Color.black, 0.45f);
             }
@@ -1059,8 +1061,8 @@ namespace CrimeSightRevival.Mods
             for (int y = 0; y < n; y++)
                 for (int x = 0; x < n; x++)
                 {
-                    float a = Mathf.Clamp01(cover(x + 0.5f, y + 0.5f));
-                    px[y * n + x] = new Color32(255, 255, 255, (byte)(a * 255));
+                    float a = cover(x + 0.5f, y + 0.5f); a = a < 0 ? 0 : a > 1 ? 1 : a;
+                    px[y * n + x] = Px.C(255, 255, 255, (byte)(a * 255));
                 }
             t.SetPixels32(px);
             t.Apply();
@@ -1074,10 +1076,10 @@ namespace CrimeSightRevival.Mods
             const int n = 128;
             _silhouette = Draw(n, (x, y) =>
             {
-                float head = 24f - Vector2.Distance(new Vector2(x, y), new Vector2(64, 86));
+                float head = 24f - (float)Math.Sqrt((x - 64) * (x - 64) + (y - 86) * (y - 86));
                 // hombros: media elipse ancha abajo
                 float dx = (x - 64) / 48f, dy = (y - 8) / 50f;
-                float body = (1f - Mathf.Sqrt(dx * dx + dy * dy)) * 40f;
+                float body = (1f - (float)Math.Sqrt(dx * dx + dy * dy)) * 40f;
                 if (y > 58) body = Math.Min(body, 58 - y + 1);
                 return Math.Max(head, body) + 0.5f;
             });
@@ -1100,21 +1102,17 @@ namespace CrimeSightRevival.Mods
         {
             if (_tick != null) return _tick;
             const int n = 48;
-            var a = new Vector2(11, 25); var b = new Vector2(20, 14); var c = new Vector2(38, 35);
-            _tick = Draw(n, (x, y) =>
-            {
-                var p = new Vector2(x, y);
-                float d = Math.Min(Seg(p, a, b), Seg(p, b, c));
-                return 4.2f - d;
-            });
+            _tick = Draw(n, (x, y) => 4.2f - Math.Min(Seg(x, y, 11, 25, 20, 14), Seg(x, y, 20, 14, 38, 35)));
             return _tick;
         }
 
-        static float Seg(Vector2 p, Vector2 a, Vector2 b)
+        static float Seg(float px, float py, float ax, float ay, float bx, float by)
         {
-            var ab = b - a;
-            float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude);
-            return Vector2.Distance(p, a + ab * t);
+            float abx = bx - ax, aby = by - ay;
+            float t = ((px - ax) * abx + (py - ay) * aby) / (abx * abx + aby * aby);
+            t = t < 0 ? 0 : t > 1 ? 1 : t;
+            float dx = px - (ax + abx * t), dy = py - (ay + aby * t);
+            return (float)Math.Sqrt(dx * dx + dy * dy);
         }
     }
 }

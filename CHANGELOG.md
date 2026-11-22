@@ -17,6 +17,7 @@ The first block (from the first `## ` to the next one) is what the launcher show
   - Para que un modelo sustituya siempre a un personaje (una skin), sigue estando la lista de siempre.
 - **Selector de personajes**: botón nuevo en la sala de espera del juego. Ves a todos los personajes de la sala con su imagen, su nombre y su modelo 3D girando, y marcas quién puede salir (mínimo 6). Lo decide el anfitrión para su sala y se guarda para la próxima vez; los demás lo ven sin poder cambiarlo.
 - Los personajes nuevos se comparten con la sala igual que los modelos.
+- Sus diálogos llevan su imagen, entera y ajustada al recuadro. Puedes poner una imagen para cuando está preocupado y otra para cuando le atacan (las caras que pone el juego en esas frases), o una para cualquier frase.
 - Al omitir un diálogo de una escena (como las del final de la partida), el resto de la escena pasa al momento en vez de quedarse unos segundos en negro.
 
 ### English
@@ -27,6 +28,7 @@ The first block (from the first `## ` to the next one) is what the launcher show
   - To have a model always replace a character (a skin), the usual list is still there.
 - **Character selector**: a new button in the game's waiting room. You see every character in the room with its image, its name and its 3D model spinning, and tick who can appear (at least 6). The host decides for their room and it's saved for next time; everyone else sees it without being able to change it.
 - New characters are shared with the room just like models.
+- Their dialogues show their image, whole and fitted to the frame. You can set one image for when they're worried and another for when they're attacked (the faces the game uses in those lines), or one for any single line.
 - Skipping a dialogue in a scene (like the end-of-match ones) now plays the rest of the scene at once instead of sitting a few seconds on a black screen.
 
 ## 1.3 (actualización) · Modelos 3D compartidos en la sala / Shared 3D models in the room

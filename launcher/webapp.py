@@ -557,7 +557,8 @@ class Api:
     # ---- personajes nuevos (slots del Selector de personajes)
     def chars_state(self):
         return {"chars": core.characters(), "models": core.custom_models(), "anims": core.custom_anims(),
-                "images": list(core.custom_images()), "talk_keys": list(core.TALK_KEYS), "kinds": list(core.ANIM_KINDS)}
+                "images": list(core.custom_images()), "talk_keys": list(core.TALK_KEYS), "kinds": list(core.ANIM_KINDS),
+                "reactions": dict(core.TALK_REACTION)}
 
     def chars_save(self, c):
         if not isinstance(c, dict) or not c.get("model"):

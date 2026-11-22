@@ -31,14 +31,56 @@ namespace CrimeSightRevival.Mods
         internal const string Traitor = "ThreatTypeData_Traitor";
         static readonly string[] DefaultNames = { "Agatha", "Berkeley", "Catherine", "Dorothy", "Ellery", "Freeman" };
 
-        internal class Entry { public string id, name, image, model, role, animFrom; public Dictionary<string, string> talk = new(); }
+        internal class Entry { public string id, name, image, model, role, animFrom; public Dictionary<string, string> talk = new(), talkImages = new(); }
         internal static readonly Color PortraitBg = new Color(0.16f, 0.17f, 0.22f, 1f);
         class State { public string id = ""; public readonly Entry[] pos = new Entry[6]; public Entry traitor; }
 
         static string File_ => Path.Combine(LiveMods.LiveDir, "roster.json");
         static string _sig = "";
         static State _cur;
-        static float _next, _nextSprites;
+        static float _next, _nextSprites, _nextTalk;
+
+        // ------------------------------------------------------------ una sola frase en la presentacion
+        // En la presentacion de la partida algunos personajes hablan dos veces (una por cada companero al que saludan:
+        // pawnGameStart03, pawnGameStart06...). Un personaje nuevo tiene una sola frase para eso, asi que solo dice la
+        // primera; las demas no entran en la cola de dialogos del juego.
+        static readonly Dictionary<string, string> _introLine = new();   // "partida|posicion" -> su frase
+
+        public static void Init(HarmonyLib.Harmony h)
+        {
+            try
+            {
+                var m = HarmonyLib.AccessTools.DeclaredMethod(typeof(CharaTalkDialogue), "OpenTalkDialogue");
+                if (m != null) h.Patch(m, prefix: new HarmonyLib.HarmonyMethod(typeof(Roster).GetMethod(nameof(BeforeOpenTalk),
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Personajes] presentacion: " + e.Message); }
+        }
+
+        static bool BeforeOpenTalk(object[] __args, ref bool __result)
+        {
+            try
+            {
+                if (_cur == null || __args == null || __args.Length == 0) return true;
+                var d = (__args[0] as Il2CppSystem.Object)?.TryCast<HintTalkData>() ?? __args[0] as HintTalkData;
+                if (d == null) return true;
+                string name = d.name ?? "";
+                var m = TalkKey.Match(name);
+                if (!m.Success || BaseSituation(m.Groups[2].Value) != "pawnGameStart") return true;
+                int i = m.Groups[1].Value[0] - '1';
+                if (_cur.pos[i] == null) return true;
+                string k = _cur.id + "|" + i;
+                // Las frases se piden todas al empezar y el juego las pone en cola; al cerrarse una, saca la siguiente
+                // llamando OTRA VEZ a esta misma funcion. Por eso la frase elegida tiene que poder abrirse siempre, y las
+                // demas no se dejan entrar en la cola (asi la cola nunca llega a pedirlas).
+                if (!_introLine.TryGetValue(k, out var chosen)) { _introLine[k] = name; return true; }
+                if (chosen == name) return true;
+                Plugin.L.LogInfo("[Personajes] presentacion: " + (_cur.pos[i].name ?? Pawns[i]) + " ya habla en " + chosen + ", se quita " + name);
+                __result = true;
+                return false;
+            }
+            catch { return true; }
+        }
 
         public static void Frame()
         {
@@ -51,6 +93,7 @@ namespace CrimeSightRevival.Mods
                 Read();
                 ApplyText();
                 if (Time.unscaledTime >= _nextSprites) { _nextSprites = Time.unscaledTime + 3f; ApplySprites(); ApplyBorrow(); }
+                if (Time.unscaledTime >= _nextTalk) { _nextTalk = Time.unscaledTime + 5f; ApplyTalkPics(); }
                 CacheOriginals();
             }
             catch (Exception e) { Warn("frame", "[Personajes] " + e.Message); }
@@ -83,6 +126,8 @@ namespace CrimeSightRevival.Mods
                 }
                 catch (Exception e) { Plugin.L.LogWarning("[Personajes] roster.json: " + e.Message); st = null; }
             RestoreSprites();
+            RestoreTalkPics();
+            _nextTalk = 0f;
             _cur = st;
             if (st == null) { Plugin.L.LogInfo("[Personajes] partida con los personajes originales"); return; }
             var sb = new StringBuilder();
@@ -101,6 +146,9 @@ namespace CrimeSightRevival.Mods
             if (e.ValueKind != JsonValueKind.Object) return null;
             var en = new Entry { id = Str(e, "id") ?? "?", name = Str(e, "name"), image = Str(e, "image"), model = Str(e, "model"), animFrom = Str(e, "anim_from") };
             if (string.IsNullOrWhiteSpace(en.name)) en.name = null;
+            if (e.TryGetProperty("talk_images", out var ti) && ti.ValueKind == JsonValueKind.Object)
+                foreach (var p in ti.EnumerateObject())
+                    if (p.Value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(p.Value.GetString())) en.talkImages[p.Name] = p.Value.GetString();
             if (e.TryGetProperty("talk", out var t) && t.ValueKind == JsonValueKind.Object)
                 foreach (var p in t.EnumerateObject())
                     if (p.Value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(p.Value.GetString())) en.talk[p.Name] = p.Value.GetString();
@@ -356,6 +404,146 @@ namespace CrimeSightRevival.Mods
             }
         }
 
+        // ------------------------------------------------------------ retratos de los dialogos
+        // Las frases de cada personaje (HintTalkData) llevan su retrato (talk_chara_pawn0N, _impatient, _killer,
+        // talk_chara_2way_pawn0N). Con un personaje nuevo en ese sitio, sus dialogos llevan su imagen (o la silueta),
+        // en la forma del retrato original, igual que los demas retratos.
+        static readonly Dictionary<IntPtr, (HintTalkData d, Sprite orig)> _talkSwapped = new();
+        static readonly Dictionary<string, Sprite> _talkMade = new();      // "sprite original|imagen" -> retrato
+        static readonly List<UnityEngine.Object> _talkObjs = new();
+        static int _talkSeen = -1;
+        static readonly Regex TalkSprite = new(@"^talk_chara_(?:2way_)?pawn0([1-6])");
+
+        static void ApplyTalkPics()
+        {
+            bool any = false;
+            if (_cur != null) foreach (var e in _cur.pos) any |= e != null;
+            if (!any) { RestoreTalkPics(); return; }
+            var all = Resources.FindObjectsOfTypeAll(Il2CppType.Of<HintTalkData>());
+            if (all.Length == _talkSeen) return;                              // nada nuevo cargado
+            _talkSeen = all.Length;
+            int n = 0;
+            foreach (var o in all)
+            {
+                var d = o.TryCast<HintTalkData>();
+                if (d == null || _talkSwapped.ContainsKey(d.Pointer)) continue;
+                var sp = d.CharaImage;
+                if (sp == null) continue;
+                var m = TalkSprite.Match(sp.name);
+                if (!m.Success) continue;
+                var e = _cur.pos[m.Groups[1].Value[0] - '1'];
+                if (e == null) continue;
+                string path = TalkImageOf(e, d.name);
+                string mk = sp.Pointer + "|" + path;
+                if (!_talkMade.TryGetValue(mk, out var ns))
+                {
+                    var img = path != null ? LoadImage(Path.Combine(LiveMods.LiveDir, path)) : null;
+                    try { ns = img != null ? FitContain(img, sp, _talkObjs) : Fitted(null, sp, 0, _talkObjs); }
+                    catch (Exception ex) { Warn("talkfit", "[Personajes] dialogo: " + ex.Message); ns = null; }
+                    _talkMade[mk] = ns;
+                }
+                if (ns == null) continue;
+                _talkSwapped[d.Pointer] = (d, sp);
+                d.CharaImage = ns;
+                n++;
+            }
+            if (n > 0) Plugin.L.LogInfo($"[Personajes] {n} dialogo(s) con el retrato del personaje nuevo ({_talkMade.Count} imagen(es))");
+        }
+
+        /// <summary>La imagen de una frase (por su nombre, ctg_talk_pwPawn0N_situacion_...): la suya o la principal.</summary>
+        static string TalkImageOf(Entry e, string dataName)
+        {
+            var m = dataName != null ? TalkKey.Match(dataName) : null;
+            if (m != null && m.Success && e.talkImages.Count > 0)
+            {
+                string sit = BaseSituation(m.Groups[2].Value);
+                if (e.talkImages.TryGetValue(sit, out var p)) return p;
+                if (sit == "startAction")                                        // una sola frase para los tres estados
+                    foreach (var k in new[] { "startAction_statusInjury", "startAction_statusHunger", "startAction_statusDying" })
+                        if (e.talkImages.TryGetValue(k, out p)) return p;
+            }
+            return string.IsNullOrEmpty(e.image) ? null : e.image;
+        }
+
+        /// <summary>Retrato de dialogo: la imagen entera (sin lo transparente de alrededor), lo mas grande que quepa en
+        /// el del juego, apoyada abajo y centrada; sin recortarla con la forma del original. Por abajo se desvanece como
+        /// los del juego (que se funden con el recuadro del texto, que queda por delante).</summary>
+        static Sprite FitContain(Texture2D img, Sprite orig, List<UnityEngine.Object> made)
+        {
+            var r = orig.rect;
+            int w = Math.Max(4, Math.Min(2048, (int)r.width)), h = Math.Max(4, Math.Min(2048, (int)r.height));
+            var src = Pixels(img);
+            int sw = img.width, sh = img.height;
+            int x0 = sw, y0 = sh, x1 = -1, y1 = -1;
+            for (int y = 0; y < sh; y++)
+                for (int x = 0; x < sw; x++)
+                    if (src[y * sw + x].a > 16) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+            if (x1 < 0) { x0 = 0; y0 = 0; x1 = sw - 1; y1 = sh - 1; }
+            float bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+            float k = Math.Min(w * 0.96f / bw, h * 0.98f / bh);
+            float dw = bw * k, left = (w - dw) / 2f;
+            // cuanto se ve el original en cada fila (lo mas opaco de la fila): asi se desvanece por abajo
+            var fade = new float[h];
+            try
+            {
+                var shape = SpriteToTex(orig);
+                var mp = Pixels(shape);
+                _pixels.Remove(shape.Pointer);
+                int mw = shape.width, mh = shape.height;
+                UnityEngine.Object.Destroy(shape);
+                var rowMax = new float[mh];
+                float top = 0;
+                for (int y = 0; y < mh; y++)
+                {
+                    int m = 0;
+                    for (int x = 0; x < mw; x++) { int a = mp[y * mw + x].a; if (a > m) m = a; }
+                    rowMax[y] = m / 255f;
+                    if (rowMax[y] > top) top = rowMax[y];
+                }
+                // de abajo arriba, la curva solo sube (los huecos de la figura no cuentan): la parte de abajo que se funde
+                float run = 0;
+                for (int y = 0; y < h; y++)
+                {
+                    int my = Math.Min(mh - 1, (int)((y + 0.5f) * mh / h));
+                    run = Math.Max(run, top > 0 ? rowMax[my] / top : 1f);
+                    fade[y] = run;
+                }
+            }
+            catch { for (int y = 0; y < h; y++) fade[y] = 1f; }
+            var dst = new Color32[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                float sy = y0 + (y + 0.5f) / k - 0.5f;
+                if (sy > y1 + 0.5f) continue;
+                float f = fade[y];
+                for (int x = 0; x < w; x++)
+                {
+                    float sx = x0 + (x - left + 0.5f) / k - 0.5f;
+                    if (sx < x0 - 0.5f || sx > x1 + 0.5f) continue;
+                    var c = Bilinear(src, sw, sh, sx, sy);
+                    if (f < 1f) c.a = (byte)(c.a * f);
+                    dst[y * w + x] = c;
+                }
+            }
+            var tex = Px.Make(w, h, dst, "csr_talk_" + orig.name);
+            var pivot = new Vector2(orig.pivot.x / Math.Max(1f, r.width), orig.pivot.y / Math.Max(1f, r.height));
+            var s = Sprite.Create(tex, new Rect(0, 0, w, h), pivot, orig.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+            s.name = orig.name;
+            s.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            made.Add(s); made.Add(tex);
+            return s;
+        }
+
+        static void RestoreTalkPics()
+        {
+            foreach (var v in _talkSwapped.Values) try { if (v.d != null) v.d.CharaImage = v.orig; } catch { }
+            _talkSwapped.Clear();
+            foreach (var o in _talkObjs) if (o != null) UnityEngine.Object.Destroy(o);
+            _talkObjs.Clear();
+            _talkMade.Clear();
+            _talkSeen = -1;
+        }
+
         /// <summary>Las placas con el nombre que ya estan en el tablero se repintan con la nueva.</summary>
         static void RefreshNamePanels(PawnTypeData d, Texture tex)
         {
@@ -453,6 +641,194 @@ namespace CrimeSightRevival.Mods
 
         /// <summary>Un sprite del mismo tamano y forma que el original, con la imagen recortada para llenarlo (centrada
         /// a lo ancho, tirando hacia arriba, donde suele estar la cara) y tenida si es de herido o en coma.</summary>
+        // ------------------------------------------------------------ fondo de las fotos de resultados
+        // Result_SSKiller_* / Result_SSTarget_* son la figura del personaje sobre un fondo: degradado gris con la arana
+        // (asesino) o la diana (objetivo) a la derecha. Para un personaje nuevo se rehace ese fondo sin nadie a partir
+        // de las seis fotos del juego (en cada una el personaje tapa una parte distinta):
+        //   - el degradado sale de las primeras columnas (libres en todas);
+        //   - el dibujo es lo que en al menos 2 fotos tiene su color y no el del fondo, en trozos grandes que se ven
+        //     claros en casi todas; lo que tapan los personajes se completa con su simetria (la arana es simetrica de
+        //     izquierda a derecha; la diana tambien de arriba abajo).
+        // Se guarda en csr_live/cache/bg_<campo>.png (solo en este PC).
+        static readonly Dictionary<string, Color32[]> _under = new();
+
+        static Color32[] UnderFor(Sprite orig, int w, int h)
+        {
+            string n = orig.name ?? "";
+            string field = n.StartsWith("Result_SSKiller_") ? "resultKillerSprite" : n.StartsWith("Result_SSTarget_") ? "resultTargetSprite" : null;
+            if (field == null) return null;
+            string key = field + "|" + w + "x" + h;
+            if (_under.TryGetValue(key, out var have)) return have;
+            Color32[] bg = null;
+            string path = Path.Combine(LiveMods.LiveDir, "cache", "bg_" + field + ".png");
+            try
+            {
+                var cached = LoadImage(path);
+                if (cached != null && cached.width == w && cached.height == h) bg = Pixels(cached);
+                if (bg == null)
+                {
+                    var all = new List<Color32[]>();
+                    foreach (var kv in FindPawnData())
+                    {
+                        Sprite sp = _swapped.TryGetValue(kv.Value.Pointer, out var sw) && sw.orig.TryGetValue(field, out var o) ? o : GetSp(kv.Value, field);
+                        if (sp == null || !(sp.name ?? "").StartsWith("Result_SS")) continue;
+                        var t = SpriteToTex(sp);
+                        if (t.width == w && t.height == h) all.Add(Pixels(t));
+                        _pixels.Remove(t.Pointer);
+                        UnityEngine.Object.Destroy(t);
+                    }
+                    if (all.Count >= 4)
+                    {
+                        bg = CleanBackground(all, w, h, field == "resultTargetSprite");
+                        try
+                        {
+                            Directory.CreateDirectory(Path.GetDirectoryName(path));
+                            var t = Px.Make(w, h, bg, "csr_bg");
+                            File.WriteAllBytes(path, ImageConversion.EncodeToPNG(t));
+                            UnityEngine.Object.Destroy(t);
+                        }
+                        catch { }
+                        Plugin.L.LogInfo($"[Personajes] fondo de {field} rehecho ({all.Count} fotos del juego)");
+                    }
+                }
+            }
+            catch (Exception e) { Warn("under" + field, "[Personajes] fondo de " + field + ": " + e.Message); bg = null; }
+            _under[key] = bg;
+            return bg;
+        }
+
+        static Color32[] CleanBackground(List<Color32[]> all, int w, int h, bool vertical)
+        {
+            int k = all.Count, np = w * h;
+            var med = new Color32[np]; var low = new int[np];
+            var tr = new int[k]; var tg = new int[k]; var tb = new int[k]; var ts = new int[k];
+            for (int i = 0; i < np; i++)
+            {
+                for (int j = 0; j < k; j++) { var c = all[j][i]; tr[j] = c.r; tg[j] = c.g; tb[j] = c.b; ts[j] = c.r + c.g + c.b; }
+                Array.Sort(tr); Array.Sort(tg); Array.Sort(tb); Array.Sort(ts);
+                med[i] = Px.C((byte)tr[k / 2], (byte)tg[k / 2], (byte)tb[k / 2], 255);
+                low[i] = ts[1];                                                  // el segundo mas oscuro (suma)
+            }
+            // degradado: media de las 6 primeras columnas de cada fila
+            var gr = new int[h * 3];
+            for (int y = 0; y < h; y++)
+            {
+                int r = 0, g = 0, b = 0, c6 = Math.Min(6, w);
+                for (int x = 0; x < c6; x++) { var c = med[y * w + x]; r += c.r; g += c.g; b += c.b; }
+                gr[y * 3] = r / c6; gr[y * 3 + 1] = g / c6; gr[y * 3 + 2] = b / c6;
+            }
+            int xr = (int)(w * 0.5f);
+            // color del dibujo: mediana de lo que se ve claro en casi todas
+            var strict = new bool[np];
+            var hr = new int[256]; var hg = new int[256]; var hb = new int[256]; int ns = 0;
+            for (int y = 0; y < h; y++)
+                for (int x = xr + 1; x < w; x++)
+                {
+                    int i = y * w + x;
+                    if (low[i] > gr[y * 3] + gr[y * 3 + 1] + gr[y * 3 + 2] + 75) { strict[i] = true; hr[med[i].r]++; hg[med[i].g]++; hb[med[i].b]++; ns++; }
+                }
+            int Mid(int[] hist) { int acc = 0; for (int v = 0; v < 256; v++) { acc += hist[v]; if (acc * 2 >= ns) return v; } return 128; }
+            int er = Mid(hr), eg = Mid(hg), eb = Mid(hb);
+            var nEc = new byte[np]; var nGr = new byte[np];
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    int i = y * w + x, a = 0, b = 0;
+                    for (int j = 0; j < k; j++)
+                    {
+                        var c = all[j][i];
+                        if (Math.Abs(c.r - er) + Math.Abs(c.g - eg) + Math.Abs(c.b - eb) < 45) a++;
+                        if (Math.Abs(c.r - gr[y * 3]) + Math.Abs(c.g - gr[y * 3 + 1]) + Math.Abs(c.b - gr[y * 3 + 2]) < 45) b++;
+                    }
+                    nEc[i] = (byte)a; nGr[i] = (byte)b;
+                }
+            // trozos del dibujo (vecinos de 4) que tienen al menos 300 pixeles claros en casi todas
+            var keep = new bool[np]; var seen = new bool[np]; var q = new Queue<int>(); var comp = new List<int>();
+            for (int s0 = 0; s0 < np; s0++)
+            {
+                int x0 = s0 % w;
+                if (seen[s0] || x0 <= xr || !(nEc[s0] >= 2 && nEc[s0] >= nGr[s0])) continue;
+                comp.Clear(); q.Enqueue(s0); seen[s0] = true; int sc = 0;
+                while (q.Count > 0)
+                {
+                    int i = q.Dequeue(); comp.Add(i); if (strict[i]) sc++;
+                    int x = i % w, y = i / w;
+                    void Try(int xx, int yy)
+                    {
+                        if (xx <= xr || xx >= w || yy < 0 || yy >= h) return;
+                        int jj = yy * w + xx;
+                        if (seen[jj] || !(nEc[jj] >= 2 && nEc[jj] >= nGr[jj])) return;
+                        seen[jj] = true; q.Enqueue(jj);
+                    }
+                    Try(x + 1, y); Try(x - 1, y); Try(x, y + 1); Try(x, y - 1);
+                }
+                if (sc >= 300) foreach (var i in comp) keep[i] = true;
+            }
+            var pts = new List<int>();
+            for (int i = 0; i < np; i++) if (keep[i]) pts.Add(i);
+            var fill = (bool[])keep.Clone();
+            if (pts.Count > 0)
+            {
+                int Best(bool horiz)
+                {
+                    int bestA = 0; double bestS = -1;
+                    int lo = horiz ? w : 0, hi = horiz ? 2 * w : 2 * h;
+                    for (int a2 = lo; a2 < hi; a2 += 2)
+                    {
+                        int m = 0;
+                        foreach (var i in pts)
+                        {
+                            int x = i % w, y = i / w, xx = horiz ? a2 - x : x, yy = horiz ? y : a2 - y;
+                            if (xx >= 0 && xx < w && yy >= 0 && yy < h && keep[yy * w + xx]) m++;
+                        }
+                        if (m > bestS) { bestS = m; bestA = a2; }
+                    }
+                    return bestA;
+                }
+                int ax2 = Best(true), ay2 = vertical ? Best(false) : 0;
+                foreach (var i in pts)
+                {
+                    int x = i % w, y = i / w;
+                    void Mark(int xx, int yy)
+                    {
+                        if (xx < 0 || xx >= w || yy < 0 || yy >= h) return;
+                        int jj = yy * w + xx;
+                        if (nEc[jj] >= 1 && nGr[jj] <= 2) fill[jj] = true;
+                    }
+                    Mark(ax2 - x, y);
+                    if (vertical) { Mark(x, ay2 - y); Mark(ax2 - x, ay2 - y); }
+                }
+            }
+            var bg = new Color32[np];
+            var ec = Px.C((byte)er, (byte)eg, (byte)eb, 255);
+            for (int y = 0; y < h; y++)
+            {
+                var g = Px.C((byte)gr[y * 3], (byte)gr[y * 3 + 1], (byte)gr[y * 3 + 2], 255);
+                for (int x = 0; x < w; x++) bg[y * w + x] = fill[y * w + x] ? ec : g;
+            }
+            return bg;
+        }
+
+        // la figura de una imagen: lo que no es transparente, y donde esta la cabeza (centro de lo de arriba)
+        static readonly Dictionary<IntPtr, (int x0, int y0, int x1, int y1, float hx)> _figures = new();
+        static (int x0, int y0, int x1, int y1, float hx) Figure(Texture2D img, Color32[] src)
+        {
+            if (_figures.TryGetValue(img.Pointer, out var have)) return have;
+            int sw = img.width, sh = img.height, x0 = sw, y0 = sh, x1 = -1, y1 = -1;
+            for (int y = 0; y < sh; y++)
+                for (int x = 0; x < sw; x++)
+                    if (src[y * sw + x].a > 16) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+            if (x1 < 0) { x0 = 0; y0 = 0; x1 = sw - 1; y1 = sh - 1; }
+            int band = Math.Max(1, (int)((y1 - y0 + 1) * 0.12f));
+            double sx = 0; long n = 0;
+            for (int y = y1; y > y1 - band && y >= 0; y--)                  // filas de arriba (las texturas van de abajo arriba)
+                for (int x = x0; x <= x1; x++)
+                    if (src[y * sw + x].a > 128) { sx += x; n++; }
+            var f = (x0, y0, x1, y1, n > 0 ? (float)(sx / n) : (x0 + x1) / 2f);
+            _figures[img.Pointer] = f;
+            return f;
+        }
+
         static Sprite Fitted(Texture2D img, Sprite orig, int tint, List<UnityEngine.Object> made)
         {
             // la forma del original (su transparencia): el retrato nuevo no se sale de ella
@@ -466,16 +842,32 @@ namespace CrimeSightRevival.Mods
             Color32[] src = null; int sw = 0, sh = 0; float scale = 1, x0 = 0, y0 = 0;
             if (img != null)
             {
+                // se encuadra la figura (sin lo transparente de alrededor) desde arriba, centrada en la cabeza: asi la
+                // cara siempre se ve; en los retratos cuadrados o apaisados, de la cabeza a medio cuerpo
                 src = Pixels(img); sw = img.width; sh = img.height;
-                scale = Math.Max((float)w / sw, (float)h / sh);               // cubrir
-                float cw = w / scale, ch = h / scale;
-                x0 = (sw - cw) / 2f; y0 = (sh - ch) * 0.75f;                   // quitar mas de abajo que de arriba
+                var fg0 = Figure(img, src);
+                float A = (float)w / h, bw = fg0.x1 - fg0.x0 + 1, bh = fg0.y1 - fg0.y0 + 1;
+                float winW = bw, winH = bw / A;
+                if (winH > bh) { winH = bh; winW = winH * A; }
+                if (A >= 0.6f && bh > bw * 1.15f && winH > bh * 0.62f) { winH = bh * 0.62f; winW = winH * A; }
+                float top = fg0.y1 + 1 + winH * 0.12f;                        // aire por encima de la cabeza
+                y0 = top - winH;
+                x0 = fg0.hx - winW / 2f;
+                scale = w / winW;
             }
             var sil = img == null ? Pixels(RosterUi.Silhouette()) : null;
+            bool cutout = false;                                          // el retrato es la figura recortada de un personaje
+            if (img == null)
+            {
+                int opaque = 0;
+                for (int i = 0; i < mask.Length; i += 3) if (mask[i].a > 128) opaque++;
+                cutout = opaque < mask.Length / 3 * 0.72f;
+            }
             int sn = 128;
             float sSize = h * 0.86f, sLeft = (w - sSize) / 2f;
-            var bg = new Color32(34, 36, 46, 255);
-            var fg = new Color32(122, 128, 150, 255);
+            var bg = Px.C(34, 36, 46, 255);
+            var fg = Px.C(122, 128, 150, 255);
+            var under = img != null ? UnderFor(orig, w, h) : null;           // resultados: el fondo de asesino / objetivo
             var dst = new Color32[w * h];
             for (int y = 0; y < h; y++)
             {
@@ -483,17 +875,28 @@ namespace CrimeSightRevival.Mods
                 for (int x = 0; x < w; x++)
                 {
                     byte m = mask[y * w + x].a;
-                    if (m == 0) { dst[y * w + x] = new Color32(0, 0, 0, 0); continue; }
+                    if (m == 0) { dst[y * w + x] = Px.C(0, 0, 0, 0); continue; }
                     Color32 c;
-                    if (src != null) c = Bilinear(src, sw, sh, x0 + (x + 0.5f) / scale - 0.5f, sy);
+                    if (src != null)
+                    {
+                        float sx = x0 + (x + 0.5f) / scale - 0.5f;
+                        c = sx < -0.5f || sx > sw - 0.5f || sy < -0.5f || sy > sh - 0.5f ? Px.C(0, 0, 0, 0) : Bilinear(src, sw, sh, sx, sy);
+                    }
+                    else if (cutout) c = bg;                                  // la silueta de un personaje, en oscuro
                     else
                     {
                         float u = (x - sLeft) / sSize * sn, v = y / sSize * sn;
                         float a = u >= 0 && v >= 0 && u < sn && v < sn ? Bilinear(sil, sn, sn, u, v).a / 255f : 0f;
-                        c = new Color32((byte)(bg.r + (fg.r - bg.r) * a), (byte)(bg.g + (fg.g - bg.g) * a), (byte)(bg.b + (fg.b - bg.b) * a), 255);
+                        c = Px.C((byte)(bg.r + (fg.r - bg.r) * a), (byte)(bg.g + (fg.g - bg.g) * a), (byte)(bg.b + (fg.b - bg.b) * a), 255);
                     }
-                    if (tint == 1) c = new Color32(c.r, (byte)(c.g * 0.55f), (byte)(c.b * 0.55f), c.a);
-                    else if (tint == 2) { byte g = (byte)((c.r * 0.3f + c.g * 0.59f + c.b * 0.11f) * 0.6f); c = new Color32(g, g, g, c.a); }
+                    if (under != null)
+                    {
+                        var u = under[y * w + x];
+                        float ia = c.a / 255f;
+                        c = Px.C((byte)(c.r * ia + u.r * (1 - ia)), (byte)(c.g * ia + u.g * (1 - ia)), (byte)(c.b * ia + u.b * (1 - ia)), 255);
+                    }
+                    if (tint == 1) c = Px.C(c.r, (byte)(c.g * 0.55f), (byte)(c.b * 0.55f), c.a);
+                    else if (tint == 2) { byte g = (byte)((c.r * 0.3f + c.g * 0.59f + c.b * 0.11f) * 0.6f); c = Px.C(g, g, g, c.a); }
                     c.a = (byte)(c.a * m / 255);
                     dst[y * w + x] = c;
                 }
@@ -520,12 +923,14 @@ namespace CrimeSightRevival.Mods
 
         internal static Color32 Bilinear(Color32[] px, int w, int h, float x, float y)
         {
-            x = Mathf.Clamp(x, 0, w - 1); y = Mathf.Clamp(y, 0, h - 1);
-            int x0 = (int)x, y0 = (int)y, x1 = Math.Min(w - 1, x0 + 1), y1 = Math.Min(h - 1, y0 + 1);
+            if (x < 0) x = 0; else if (x > w - 1) x = w - 1;
+            if (y < 0) y = 0; else if (y > h - 1) y = h - 1;
+            int x0 = (int)x, y0 = (int)y, x1 = x0 + 1 < w ? x0 + 1 : x0, y1 = y0 + 1 < h ? y0 + 1 : y0;
             float fx = x - x0, fy = y - y0;
+            float w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
             Color32 a = px[y0 * w + x0], b = px[y0 * w + x1], c = px[y1 * w + x0], d = px[y1 * w + x1];
-            byte L(byte p, byte q, byte r, byte s) => (byte)Mathf.Clamp(Mathf.Lerp(Mathf.Lerp(p, q, fx), Mathf.Lerp(r, s, fx), fy) + 0.5f, 0, 255);
-            return new Color32(L(a.r, b.r, c.r, d.r), L(a.g, b.g, c.g, d.g), L(a.b, b.b, c.b, d.b), L(a.a, b.a, c.a, d.a));
+            return Px.C((byte)(a.r * w00 + b.r * w10 + c.r * w01 + d.r * w11 + 0.5f), (byte)(a.g * w00 + b.g * w10 + c.g * w01 + d.g * w11 + 0.5f),
+                        (byte)(a.b * w00 + b.b * w10 + c.b * w01 + d.b * w11 + 0.5f), (byte)(a.a * w00 + b.a * w10 + c.a * w01 + d.a * w11 + 0.5f));
         }
 
         // ------------------------------------------------------------ placa con el nombre
@@ -566,7 +971,7 @@ namespace CrimeSightRevival.Mods
                             }
                         byte a = (byte)Math.Max(m, (int)(o * 0.85f));
                         byte v = (byte)m;
-                        outp[y * w + x] = new Color32(v, v, v, a);
+                        outp[y * w + x] = Px.C(v, v, v, a);
                     }
                 Px.Set(tex, outp);
                 _pixels.Remove(tex.Pointer);
@@ -621,6 +1026,19 @@ namespace CrimeSightRevival.Mods
                     if (!File.Exists(ColorPath(key)) && SaveSprite(sp, ColorPath(key))) Plugin.L.LogInfo("[Personajes] retrato en color de " + key + " para el Selector");
                 }
             if (!File.Exists(FacePath(Traitor)) && !_traitorAsked) _traitorAsked = SnapTraitorFace(null);
+            // el fondo de las fotos de resultados, ya en la sala (asi no cuesta nada al empezar la partida)
+            foreach (var f in new[] { "resultKillerSprite", "resultTargetSprite" })
+            {
+                if (File.Exists(Path.Combine(dir, "bg_" + f + ".png"))) continue;
+                foreach (var kv in FindPawnData())
+                {
+                    var sp = GetSp(kv.Value, f);
+                    if (sp == null || !(sp.name ?? "").StartsWith("Result_SS")) continue;
+                    UnderFor(sp, (int)sp.textureRect.width, (int)sp.textureRect.height);
+                    break;
+                }
+                break;                                                           // uno cada vez
+            }
         }
 
         static bool SaveSprite(Sprite sp, string path)

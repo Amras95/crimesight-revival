@@ -167,7 +167,7 @@ footer .updpill.on{display:inline-block}
 .charedit label{display:flex;flex-direction:column;gap:3px}.charedit small{color:var(--dim)}
 .charedit input,.charedit textarea{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;color:inherit;padding:6px 8px;font:inherit}
 .charedit .row2{display:flex;gap:10px;flex-wrap:wrap}.charedit .talks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.charedit textarea{resize:vertical;min-height:38px}.charedit summary{cursor:pointer;color:#c9ccff}
+.charedit textarea{resize:vertical;min-height:38px}.charedit .talk select{margin-top:3px;max-width:100%}.charedit summary{cursor:pointer;color:#c9ccff}
 .mod .info b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mod .info small{color:var(--dim);font-size:12px}
 .mod .info .warn{color:#ffb37a}
@@ -641,13 +641,17 @@ function charEdit(cid){
   if(!CHARS)return;
   const c=CHARS.chars.find(x=>x.id===cid)||{id:'',name:'',role:'pawn',model:'',image:'',anims:{},talk:{}};
   const anims=CHARS.kinds.map(k=>`<label class="animk"><small>${esc(T('models_anim_'+k))}</small>${charSel('ce_an_'+k,CHARS.anims,(c.anims||{})[k]||'',T('models_anim_game'))}</label>`).join('');
-  const talk=CHARS.talk_keys.map(k=>`<label class="talk"><small>${esc(T('talk_'+k))}</small><textarea id="ce_tk_${k}" rows="2" maxlength="240" placeholder="${esc(T('chars_talk_keep'))}">${esc((c.talk||{})[k]||'')}</textarea></label>`).join('');
+  const ti=c.talk_img||{};
+  const react=k=>(CHARS.reactions||{})[k];
+  const talk=CHARS.talk_keys.map(k=>`<label class="talk"><small>${esc(T('talk_'+k))}${react(k)?` · <i>${esc(T('chars_react_'+react(k)))}</i>`:''}</small><textarea id="ce_tk_${k}" rows="2" maxlength="240" placeholder="${esc(T('chars_talk_keep'))}">${esc((c.talk||{})[k]||'')}</textarea>${charSel('ce_ti_'+k,CHARS.images,ti[k]||'',T(react(k)?'chars_img_by_react':'chars_img_main'))}</label>`).join('');
+  const reacts=['worried','attacked'].map(r=>`<label><small>${esc(T('chars_img_'+r))}</small>${charSel('ce_ti_@'+r,CHARS.images,ti['@'+r]||'',T('chars_img_main'))}</label>`).join('');
   const e=$('#charedit');
   e.innerHTML=`<input type="hidden" id="ce_id" value="${esc(c.id)}">
     <label><small>${esc(T('chars_name'))}</small><input id="ce_name" maxlength="24" value="${esc(c.name)}" placeholder="${esc(T('chars_name_keep'))}"></label>
     <div class="row2"><label><small>${esc(T('chars_model'))}</small>${charSel('ce_model',CHARS.models,c.model,'—')}</label>
       <label><small>${esc(T('chars_anim_from'))}</small><select class="small" id="ce_from">${CHAR_ORIG.map((n,i)=>`<option value="PawnTypeData_${'ABCDEF'[i]}"${(c.anim_from||'PawnTypeData_A')==='PawnTypeData_'+'ABCDEF'[i]?' selected':''}>${esc(n)}</option>`).join('')}</select></label>
       <label><small>${esc(T('chars_image'))}</small>${charSel('ce_image',CHARS.images,c.image,T('chars_image_none'))}</label></div>
+    <div class="row2">${reacts}</div><p class="note">${esc(T('chars_img_hint'))}</p>
     <div><small>${esc(T('chars_anims'))}</small><div class="animsel">${anims}</div><p class="note">${esc(T('chars_anims_hint'))}</p></div>
     <details><summary>${esc(T('chars_talk'))}</summary><p class="note">${esc(T('chars_talk_hint'))}</p><div class="talks">${talk}</div></details>
     <div class="curctl"><button class="btn small" onclick="charSave()">${esc(T('chars_save'))}</button><button class="btn ghost small" onclick="charClose()">${esc(T('chars_cancel'))}</button></div>`;
@@ -658,6 +662,8 @@ async function charSave(){
   const c={id:$('#ce_id').value,name:$('#ce_name').value,role:'pawn',anim_from:$('#ce_from').value,model:$('#ce_model').value,image:$('#ce_image').value,anims:{},talk:{}};
   CHARS.kinds.forEach(k=>{const v=$('#ce_an_'+k).value;if(v)c.anims[k]=v});
   CHARS.talk_keys.forEach(k=>{const v=$('#ce_tk_'+k).value.trim();if(v)c.talk[k]=v});
+  c.talk_img={};
+  CHARS.talk_keys.concat(['@worried','@attacked']).forEach(k=>{const e=document.getElementById('ce_ti_'+k);if(e&&e.value)c.talk_img[k]=e.value});
   const r=await api('chars_save',c);if(r&&r.error){toast(r.error);return}
   charClose();loadChars();
 }

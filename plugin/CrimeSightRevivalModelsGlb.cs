@@ -67,6 +67,30 @@ namespace CrimeSightRevival.Mods
                 var c = new Custom { sig = sig, model = model, tex = new Texture2D[model.images.Count] };
                 for (int i = 0; i < model.images.Count; i++)
                 {
+                    var im = model.images[i];
+                    if (im.raw != null)                                         // ya descodificada en otro hilo
+                    {
+                        Texture2D rt = null;
+                        try
+                        {
+                            rt = new Texture2D(im.rw, im.rh, TextureFormat.RGBA32, true) { name = "csr_" + id + "_" + i, hideFlags = HideFlags.DontUnloadUnusedAsset };
+                            if (rt.mipmapCount != im.rmips) throw new Exception("mipmaps " + rt.mipmapCount + " != " + im.rmips);
+                            var hnd = System.Runtime.InteropServices.GCHandle.Alloc(im.raw, System.Runtime.InteropServices.GCHandleType.Pinned);
+                            try { rt.LoadRawTextureData(hnd.AddrOfPinnedObject(), im.raw.Length); }
+                            finally { hnd.Free(); }
+                            rt.Apply(false, false);
+                            rt.wrapMode = TextureWrapMode.Repeat;
+                            c.tex[i] = rt;
+                            im.raw = null;
+                            continue;
+                        }
+                        catch (Exception e)
+                        {
+                            if (rt != null) UnityEngine.Object.Destroy(rt);
+                            im.raw = null;
+                            Plugin.L.LogWarning($"[Modelos] {id}: textura {i} preparada no valida ({e.Message}), se lee como antes");
+                        }
+                    }
                     var t = new Texture2D(2, 2, TextureFormat.RGBA32, true) { name = "csr_" + id + "_" + i, hideFlags = HideFlags.DontUnloadUnusedAsset };
                     if (ImageConversion.LoadImage(t, model.images[i].data, false)) { t.wrapMode = TextureWrapMode.Repeat; c.tex[i] = t; }
                     else Plugin.L.LogWarning($"[Modelos] {id}: no pude leer la textura {i} ({model.images[i].mime})");
