@@ -23,29 +23,34 @@ namespace CrimeSightRevival.Mods
     static class RosterUi
     {
         // idiomas del juego: ja, en, fr, it, de, es, pt, ru, ko, zh-cn, zh-tw
-        static readonly string[] TBtn = { "キャラクター選択", "Character selector", "Sélecteur de personnages", "Selettore di personaggi",
-            "Figurenauswahl", "Selector de personajes", "Seletor de personagens", "Выбор персонажей", "캐릭터 선택", "角色选择", "角色選擇" };
+        static readonly string[] TBtn = { "キャラクター選択", "Character Selection", "Sélection des personnages", "Selezione dei personaggi",
+            "Figurenauswahl", "Selección de personajes", "Seleção de personagens", "Выбор персонажей", "캐릭터 선택", "角色选择", "角色選擇" };
         static readonly string[] THost = {
-            "出場できるキャラにチェック。毎試合、チェックした中からランダムに6人が出ます（最低6人）。",
-            "Tick who can appear. Each match picks 6 at random among the ticked ones (at least 6).",
-            "Cochez qui peut apparaître. Chaque partie en tire 6 au hasard parmi eux (au moins 6).",
-            "Spunta chi può comparire. Ogni partita ne sorteggia 6 tra quelli spuntati (almeno 6).",
-            "Hake an, wer erscheinen darf. Jede Partie lost 6 davon aus (mindestens 6).",
-            "Marca quién puede salir. Cada partida salen 6 al azar entre los marcados (mínimo 6).",
-            "Marque quem pode aparecer. Cada partida sorteia 6 entre os marcados (mínimo 6).",
-            "Отметьте, кто может появиться. В каждом матче случайно выбираются 6 из отмеченных (минимум 6).",
-            "나올 수 있는 캐릭터를 체크하세요. 매 판 체크한 캐릭터 중 6명이 무작위로 나옵니다(최소 6명).",
-            "勾选可以出场的角色。每局从勾选的角色中随机选出 6 人（至少 6 人）。",
-            "勾選可以出場的角色。每局從勾選的角色中隨機選出 6 人（至少 6 人）。" };
-        static readonly string[] TGuest = { "このルームではホストが決めます。", "In this room the host decides.", "Dans ce salon, c'est l'hôte qui décide.",
-            "In questa stanza decide l'host.", "In diesem Raum entscheidet der Host.", "En esta sala lo decide el anfitrión.",
-            "Nesta sala quem decide é o anfitrião.", "В этой комнате решает хозяин.", "이 방에서는 방장이 정합니다.", "此房间由房主决定。", "此房間由房主決定。" };
-        static readonly string[] TNeedPawns = { "キャラは最低{0}人必要です。", "There must be at least {0} characters.", "Il faut au moins {0} personnages.",
-            "Servono almeno {0} personaggi.", "Es müssen mindestens {0} Figuren sein.", "Tiene que haber al menos {0} personajes.",
-            "É preciso ter pelo menos {0} personagens.", "Нужно не меньше {0} персонажей.", "캐릭터는 최소 {0}명 필요합니다.", "至少需要 {0} 名角色。", "至少需要 {0} 名角色。" };
+            "毎試合、チェックしたキャラから6人がランダムに選ばれます。6人以上チェックしてください。",
+            "Each match picks 6 of the ticked characters at random. Keep at least 6 ticked.",
+            "Chaque partie tire au hasard 6 des personnages cochés. Gardez-en au moins 6 cochés.",
+            "Ogni partita sceglie a caso 6 dei personaggi spuntati. Tienine spuntati almeno 6.",
+            "Jede Partie wählt zufällig 6 der angehakten Figuren. Lass mindestens 6 angehakt.",
+            "Cada partida elige al azar 6 de los personajes marcados. Deja al menos 6 marcados.",
+            "Cada partida escolhe ao acaso 6 dos personagens marcados. Deixe pelo menos 6 marcados.",
+            "В каждом матче случайно выбираются 6 из отмеченных персонажей. Оставьте отмеченными не меньше 6.",
+            "매 판 체크한 캐릭터 중 6명이 무작위로 나옵니다. 6명 이상 체크해 두세요.",
+            "每局从勾选的角色中随机选出 6 人。请至少勾选 6 人。",
+            "每局從勾選的角色中隨機選出 6 人。請至少勾選 6 人。" };
+        static readonly string[] TGuest = { "出場キャラを変更できるのはホストだけです。", "Only the host can change which characters can appear.",
+            "Seul l'hôte peut choisir les personnages qui peuvent apparaître.", "Solo l'host può scegliere quali personaggi possono comparire.",
+            "Nur der Host kann festlegen, welche Figuren erscheinen können.", "Solo el anfitrión puede elegir qué personajes pueden salir.",
+            "Só o anfitrião pode escolher quais personagens podem aparecer.", "Выбирать персонажей может только хозяин комнаты.",
+            "출전할 캐릭터는 방장만 바꿀 수 있습니다.", "只有房主可以更改能出场的角色。", "只有房主可以變更能出場的角色。" };
+        static readonly string[] TNeedPawns = { "キャラは{0}人以上チェックしてください。", "Keep at least {0} characters ticked.",
+            "Gardez au moins {0} personnages cochés.", "Tieni spuntati almeno {0} personaggi.", "Lass mindestens {0} Figuren angehakt.",
+            "Deja al menos {0} personajes marcados.", "Deixe pelo menos {0} personagens marcados.", "Оставьте отмеченными не меньше {0} персонажей.",
+            "캐릭터를 {0}명 이상 체크해 두세요.", "请至少勾选 {0} 名角色。", "請至少勾選 {0} 名角色。" };
         static readonly string[] TNeedTraitor = { "裏切り者は最低1人必要です。", "There must be at least 1 traitor.", "Il faut au moins 1 traître.",
             "Serve almeno 1 traditore.", "Es muss mindestens 1 Verräter sein.", "Tiene que haber al menos 1 traidor.",
             "É preciso ter pelo menos 1 traidor.", "Нужен хотя бы 1 предатель.", "배신자는 최소 1명 필요합니다.", "至少需要 1 名叛徒。", "至少需要 1 名叛徒。" };
+        static readonly string[] TCount = { "選択中 {0} / {1}", "{0} of {1} ticked", "{0} sur {1} cochés", "{0} su {1} spuntati",
+            "{0} von {1} angehakt", "{0} de {1} marcados", "{0} de {1} marcados", "Отмечено: {0} из {1}", "{0} / {1} 선택됨", "已勾选 {0} / {1}", "已勾選 {0} / {1}" };
         static readonly string[] TSave = { "保存", "Save", "Enregistrer", "Salva", "Speichern", "Guardar", "Salvar", "Сохранить", "저장", "保存", "儲存" };
         static readonly string[] TCancel = { "キャンセル", "Cancel", "Annuler", "Annulla", "Abbrechen", "Cancelar", "Cancelar", "Отмена", "취소", "取消", "取消" };
         static readonly string[] TClose = { "閉じる", "Close", "Fermer", "Chiudi", "Schließen", "Cerrar", "Fechar", "Закрыть", "닫기", "关闭", "關閉" };
@@ -81,6 +86,7 @@ namespace CrimeSightRevival.Mods
         static float _nextLook;
         static OutGameRoomWaitingMenuVer2 _menu;
         static bool _menuOpen;
+        static bool _btnOver;
         static bool _btnFaded;      // la sala se ve detras de una ventana: el boton se queda, como el del manual, sin pulsar
         static readonly Vector2 BtnSize = new Vector2(176, 118);
 
@@ -103,6 +109,8 @@ namespace CrimeSightRevival.Mods
             if (_btnRoot == null || !_btnRoot.activeSelf || !_ownCanvas) return;
             // en nuestro lienzo (sin el del juego): raton a mano
             bool over = !_btnFaded && RectTransformUtility.RectangleContainsScreenPoint(_btnRect, Input.mousePosition, null);
+            if (over && !_btnOver) Sfx(AudioManager.PlayOutGameMouseOverButton);
+            _btnOver = over;
             if (_btnImg != null) _btnImg.color = over ? Skin.Hover(_btnBase) : _btnBase;
             if (over && Input.GetMouseButtonDown(0) && !Covered()) Open();
         }
@@ -198,7 +206,7 @@ namespace CrimeSightRevival.Mods
                     {
                         if (t == null || t.text == null || t.text.Trim() != label) continue;
                         var b = t.GetComponentInParent<Button>();
-                        if (b != null) return b.GetComponent<RectTransform>();
+                        if (b != null && !InSettings(b.transform)) return b.GetComponent<RectTransform>();
                     }
                 if (Time.unscaledTime < _nextWideSearch) return null;
                 _nextWideSearch = Time.unscaledTime + 10f;
@@ -207,11 +215,23 @@ namespace CrimeSightRevival.Mods
                     var t = o.TryCast<TextMeshProUGUI>();
                     if (t == null || !t.gameObject.activeInHierarchy || t.text == null || t.text.Trim() != label) continue;
                     var b = t.GetComponentInParent<Button>();
-                    if (b != null) return b.GetComponent<RectTransform>();
+                    if (b != null && !InSettings(b.transform)) return b.GetComponent<RectTransform>();
                 }
             }
             catch { }
             return null;
+        }
+
+        /// <summary>The Settings window has its own "Online Manual" button (same text): that one isn't the room's.</summary>
+        static bool InSettings(Transform t)
+        {
+            try
+            {
+                for (; t != null; t = t.parent)
+                    if (t.GetComponent<OutGameOptionMainPopup>() != null) return true;
+            }
+            catch { }
+            return false;
         }
 
         /// <summary>"Selector de personajes" -> "Selector" arriba y "de personajes" debajo (la primera palabra sola).</summary>
@@ -276,6 +296,7 @@ namespace CrimeSightRevival.Mods
                     {
                         try { if (_root == null && !Covered()) Open(); } catch (Exception e) { Plugin.L.LogWarning("[Selector] " + e.Message); }
                     })));
+                    try { UIScriptingHelper.SetMouseOverSoundEvent(btn); } catch { }   // the copy loses the game's hover sound
                 }
                 var icon = ModOffer.Box("Icono", rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 28), new Vector2(40, 40));
                 var ri = icon.gameObject.AddComponent<RawImage>();
@@ -360,7 +381,9 @@ namespace CrimeSightRevival.Mods
         static readonly List<Item> _items = new();
         static bool _host;
         static int _min = 6, _page, _hover = -1, _shown = -2;
-        static TextMeshProUGUI _status, _pageLabel, _previewName, _previewNote;
+        static TextMeshProUGUI _status, _pageLabel, _previewName, _previewNote, _count;
+        static GameWindow _gw;              // the game's window, copied (null: the plugin's own dark window)
+        static Color _ink = Color.white;    // text color on the window
         static RectTransform _prevRect, _nextRect, _saveRect, _cancelRect;
         static Image _prevImg, _nextImg, _saveImg, _cancelImg;
         static Color _prevBase, _nextBase, _saveBase, _cancelBase;
@@ -544,7 +567,7 @@ namespace CrimeSightRevival.Mods
             {
                 try { _lang = Math.Max(0, Math.Min(10, (int)TextManager.Instance.GetLangType())); } catch { _lang = 1; }
                 _sk = Skin.Get();
-                _page = 0; _hover = -1; _shown = -2; _dirty = false;
+                _page = 0; _hover = -1; _shown = -2; _dirty = false; _hot = -1;
                 _root = new GameObject("CSR_Selector");
                 UnityEngine.Object.DontDestroyOnLoad(_root);
                 var canvas = _root.AddComponent<Canvas>();
@@ -556,77 +579,12 @@ namespace CrimeSightRevival.Mods
                 scaler.matchWidthOrHeight = 0.5f;
                 _root.AddComponent<GraphicRaycaster>();
                 var dim = ModOffer.Box("Dim", _root.transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-                dim.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.82f);
-                var panel = _sk.MakePanel(_root.transform, new Vector2(1600, 920)).transform;
-                // fondo solido: que no se vea la sala a traves de la ventana
-                var back = ModOffer.Box("Fondo", panel, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(-28, -28));
-                back.gameObject.AddComponent<Image>().color = new Color(0.045f, 0.05f, 0.075f, 0.96f);
-                back.SetAsFirstSibling();
-                _sk.MakeText(panel, TBtn[_lang], 40, new Vector2(0, 410), new Vector2(1500, 60), true);
-                _status = _sk.MakeText(panel, "", 22, new Vector2(-230, 355), new Vector2(1060, 56), false);
-                _status.enableWordWrapping = true;
-
-                var cardSize = new Vector2(232, 318);
-                for (int k = 0; k < PerPage; k++)
-                {
-                    int col = k % Cols, row = k / Cols;
-                    var pos = new Vector2(-690 + col * 250, 160 - row * 336);
-                    var cd = new Card();
-                    cd.bg = _sk.MakeButton(panel, "", false, pos, cardSize, 18, out cd.rect, out var lbl);
-                    UnityEngine.Object.Destroy(lbl.gameObject);
-                    cd.baseColor = cd.bg.color;
-                    var picR = ModOffer.Box("Imagen", cd.rect, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 28), new Vector2(200, 220));
-                    cd.pic = picR.gameObject.AddComponent<RawImage>();
-                    cd.pic.raycastTarget = false;
-                    cd.name = _sk.MakeText(cd.rect, "", 22, new Vector2(0, -114), new Vector2(216, 40), true);
-                    cd.name.enableAutoSizing = true; cd.name.fontSizeMin = 12; cd.name.fontSizeMax = 22;
-                    cd.name.raycastTarget = false;
-                    cd.tag = _sk.MakeText(cd.rect, "", 16, new Vector2(0, -142), new Vector2(216, 24), false);
-                    cd.tag.raycastTarget = false;
-                    var boxR = ModOffer.Box("Casilla", cd.rect, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(26, -26), new Vector2(40, 40));
-                    cd.box = boxR.gameObject.AddComponent<Image>();
-                    cd.box.color = new Color(0.05f, 0.06f, 0.1f, 0.85f);
-                    cd.box.raycastTarget = false;
-                    var frame = ModOffer.Box("Borde", boxR, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero).gameObject.AddComponent<RawImage>();
-                    frame.texture = BoxTex(); frame.raycastTarget = false;
-                    var tickR = ModOffer.Box("Marca", boxR, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-                    cd.tick = tickR.gameObject.AddComponent<RawImage>();
-                    cd.tick.texture = TickTex();
-                    cd.tick.color = GameWindow.Amber;
-                    cd.tick.raycastTarget = false;
-                    _cards[k] = cd;
-                }
-
-                // vista 3D a la derecha
-                var pv = ModOffer.Box("Vista", panel, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(530, 20), new Vector2(440, 600));
-                pv.gameObject.AddComponent<Image>().color = new Color(0.03f, 0.035f, 0.06f, 0.9f);
-                _previewPic = ModOffer.Box("Retrato", pv, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(360, 400)).gameObject.AddComponent<RawImage>();
-                _previewPic.raycastTarget = false;
-                _preview = ModOffer.Box("Modelo", pv, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero).gameObject.AddComponent<RawImage>();
-                _preview.raycastTarget = false;
-                _rig = Rig.Make("CSR_SelectorVista", new Vector3(5000, -6000, 0));
-                _rig.Size(440, 600, new Color(0.03f, 0.035f, 0.06f, 1f));
-                _preview.texture = _rig.rt;
-                _previewName = _sk.MakeText(panel, "", 30, new Vector2(530, -315), new Vector2(440, 44), true);
-                _previewNote = _sk.MakeText(pv, "", 18, new Vector2(0, -250), new Vector2(400, 60), false);
-                _previewNote.enableWordWrapping = true;
-
-                // paginas y botones
-                var sb = new Vector2(80, 60);
-                _prevImg = _sk.MakeButton(panel, "<", false, new Vector2(-480, -372), sb, 30, out _prevRect, out _);
-                _pageLabel = _sk.MakeText(panel, "", 24, new Vector2(-315, -372), new Vector2(200, 50), false);
-                _nextImg = _sk.MakeButton(panel, ">", false, new Vector2(-150, -372), sb, 30, out _nextRect, out _);
-                var bs = new Vector2(250, 64);
-                if (_host)
-                {
-                    _saveImg = _sk.MakeButton(panel, TSave[_lang], true, new Vector2(400, -390), bs, 26, out _saveRect, out _);
-                    _cancelImg = _sk.MakeButton(panel, TCancel[_lang], false, new Vector2(665, -390), bs, 26, out _cancelRect, out _);
-                }
-                else _cancelImg = _sk.MakeButton(panel, TClose[_lang], false, new Vector2(665, -390), bs, 26, out _cancelRect, out _);
-                _prevBase = _prevImg.color; _nextBase = _nextImg.color; _cancelBase = _cancelImg.color;
-                if (_saveImg != null) _saveBase = _saveImg.color;
+                dim.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.75f);
+                _gw = null;
+                if (!BuildNative()) BuildOwn();
                 SetStatus(null);
                 Fill();
+                Sfx(AudioManager.PlayOutGameWindowOpen);
                 Plugin.L.LogInfo($"[Selector] abierto ({_items.Count} personajes, {(_host ? "anfitrion" : "solo ver")})");
             }
             catch (Exception e)
@@ -636,13 +594,183 @@ namespace CrimeSightRevival.Mods
             }
         }
 
+        // The cards (left) and the 3D view (right) are laid out in their own units and scaled to fit the window.
+        const float ContentW = 1462f, ContentH = 740f;
+
+        /// <summary>The game's own window (green title band, paper, framed box, game buttons), made bigger.</summary>
+        static bool BuildNative()
+        {
+            var gw = GameWindow.Create(_root.transform);
+            if (gw == null) return false;
+            _gw = gw;
+            gw.SetText(gw.Title, TBtn[_lang]);
+            var box = gw.BodyBox;
+            _ink = gw.Body.color;
+            const float pad = 16f;
+            float fs = gw.Body.fontSize, headH = fs * 1.8f;
+            // The window is sized around what goes in it: the cards and the view take 60% of the screen's width
+            // (less if the window would get too tall), plus the header line and margins.
+            Rect scr = gw.ScreenRect(), win = gw.Bounds(), boxNow = GameWindow.RectIn(gw.Root, box);
+            float k = box.rect.width > 0f ? boxNow.width / box.rect.width : 1f;            // box units -> window units
+            float chrome = win.height - boxNow.height, extraH = (headH + 2.5f * pad) * k;
+            float wantW = scr.width * 0.6f, wantH = wantW * ContentH / ContentW;
+            float maxH = scr.height * 0.9f - chrome - extraH;
+            if (wantH > maxH) { wantH = maxH; wantW = wantH * ContentW / ContentH; }
+            gw.Resize(new Vector2(wantW + 2f * pad * k, wantH + extraH));
+            float bw = box.rect.width, bh = box.rect.height;
+            float top = bh / 2f - pad - headH - pad * 0.5f, bottom = -bh / 2f + pad;
+            float s = Math.Max(0.1f, Math.Min((bw - 2f * pad) / ContentW, (top - bottom) / ContentH));
+            float cw = ContentW * s, countW = cw * 0.24f, headY = bh / 2f - pad - headH / 2f;
+            // header: what to do on the left, how many are ticked on the right (lined up with the cards and the view)
+            var d = gw.Body.rectTransform;
+            d.anchorMin = d.anchorMax = d.pivot = new Vector2(0.5f, 0.5f);
+            d.sizeDelta = new Vector2(cw - countW, headH);
+            d.anchoredPosition = new Vector2(-countW / 2f, headY);
+            gw.Body.alignment = TextAlignmentOptions.MidlineLeft;
+            gw.Body.enableWordWrapping = true;
+            gw.Body.enableAutoSizing = true;
+            gw.Body.fontSizeMax = fs;
+            gw.Body.fontSizeMin = Math.Min(14f, fs);
+            _status = gw.Body;
+            _count = ModOffer.Label(box, "", gw.Body.font, fs, new Vector2(cw / 2f - countW / 2f, headY), new Vector2(countW, headH));
+            if (gw.Body.fontSharedMaterial != null) _count.fontSharedMaterial = gw.Body.fontSharedMaterial;
+            _count.color = _ink;
+            _count.alignment = TextAlignmentOptions.MidlineRight;
+            _count.enableWordWrapping = false;
+            _count.fontSizeMin = Math.Min(14f, fs);
+            var content = ModOffer.Box("Content", box, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                                       new Vector2(0f, (top + bottom) / 2f), new Vector2(ContentW, ContentH));
+            content.localScale = new Vector3(s, s, 1f);
+            BuildContent(content);
+            if (_host)
+            {
+                _saveImg = gw.AddBottomButton(TSave[_lang], false, 0, 2, GameWindow.Amber, out _saveRect, out _);
+                _cancelImg = gw.AddBottomButton(TCancel[_lang], false, 1, 2, null, out _cancelRect, out _);
+            }
+            else _cancelImg = gw.AddBottomButton(TClose[_lang], false, 0, 1, null, out _cancelRect, out _);
+            return true;
+        }
+
+        /// <summary>Without the game's window (e.g. it isn't loaded): the plugin's own dark window.</summary>
+        static void BuildOwn()
+        {
+            _ink = _sk.Body;
+            var panel = _sk.MakePanel(_root.transform, new Vector2(1600, 920)).transform;
+            // solid back: the room doesn't show through the window
+            var back = ModOffer.Box("Back", panel, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(-28, -28));
+            back.gameObject.AddComponent<Image>().color = new Color(0.045f, 0.05f, 0.075f, 0.96f);
+            back.SetAsFirstSibling();
+            _sk.MakeText(panel, TBtn[_lang], 40, new Vector2(0, 410), new Vector2(1500, 60), true);
+            // header lined up with the cards and the view below (content at 0.9 scale: x from -658 to 658)
+            _status = _sk.MakeText(panel, "", 22, new Vector2(-139, 358), new Vector2(1038, 50), false);
+            _status.alignment = TextAlignmentOptions.MidlineLeft;
+            _status.enableWordWrapping = true;
+            _count = _sk.MakeText(panel, "", 24, new Vector2(519, 358), new Vector2(278, 50), false);
+            _count.alignment = TextAlignmentOptions.MidlineRight;
+            _count.enableWordWrapping = false;
+            var content = ModOffer.Box("Content", panel, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -10), new Vector2(ContentW, ContentH));
+            content.localScale = new Vector3(0.9f, 0.9f, 1f);
+            BuildContent(content);
+            var bs = new Vector2(250, 64);
+            if (_host)
+            {
+                _saveImg = _sk.MakeButton(panel, TSave[_lang], true, new Vector2(-135, -395), bs, 26, out _saveRect, out _);
+                _cancelImg = _sk.MakeButton(panel, TCancel[_lang], false, new Vector2(135, -395), bs, 26, out _cancelRect, out _);
+            }
+            else _cancelImg = _sk.MakeButton(panel, TClose[_lang], false, new Vector2(0, -395), bs, 26, out _cancelRect, out _);
+            _cancelBase = _cancelImg.color;
+            if (_saveImg != null) _saveBase = _saveImg.color;
+        }
+
+        /// <summary>Text on the window itself (the game's paper or the dark panel), in the window's ink.</summary>
+        static TextMeshProUGUI InkText(Transform parent, string text, float size, Vector2 pos, Vector2 box)
+        {
+            var t = _sk.MakeText(parent, text, size, pos, box, true);
+            if (_gw != null && _gw.Body != null)
+            {
+                t.font = _gw.Body.font;
+                if (_gw.Body.fontSharedMaterial != null) t.fontSharedMaterial = _gw.Body.fontSharedMaterial;
+                t.color = _ink;
+            }
+            return t;
+        }
+
+        /// <summary>Cards in a 4x2 grid with the page arrows under them, and the 3D view on the right.</summary>
+        static void BuildContent(RectTransform content)
+        {
+            var cardSize = new Vector2(232, 318);
+            for (int k = 0; k < PerPage; k++)
+            {
+                int col = k % Cols, row = k / Cols;
+                var pos = new Vector2(-615 + col * 250, 211 - row * 336);
+                var cd = new Card();
+                cd.bg = _sk.MakeButton(content, "", false, pos, cardSize, 18, out cd.rect, out var lbl);
+                UnityEngine.Object.Destroy(lbl.gameObject);
+                cd.baseColor = cd.bg.color;
+                var picR = ModOffer.Box("Image", cd.rect, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 28), new Vector2(200, 220));
+                cd.pic = picR.gameObject.AddComponent<RawImage>();
+                cd.pic.raycastTarget = false;
+                cd.name = _sk.MakeText(cd.rect, "", 22, new Vector2(0, -114), new Vector2(216, 40), true);
+                cd.name.enableAutoSizing = true; cd.name.fontSizeMin = 12; cd.name.fontSizeMax = 22;
+                cd.name.raycastTarget = false;
+                cd.tag = _sk.MakeText(cd.rect, "", 16, new Vector2(0, -142), new Vector2(216, 24), false);
+                cd.tag.raycastTarget = false;
+                var boxR = ModOffer.Box("Box", cd.rect, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(26, -26), new Vector2(40, 40));
+                cd.box = boxR.gameObject.AddComponent<Image>();
+                cd.box.color = new Color(0.05f, 0.06f, 0.1f, 0.85f);
+                cd.box.raycastTarget = false;
+                var frame = ModOffer.Box("Frame", boxR, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero).gameObject.AddComponent<RawImage>();
+                frame.texture = BoxTex(); frame.raycastTarget = false;
+                var tickR = ModOffer.Box("Tick", boxR, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+                cd.tick = tickR.gameObject.AddComponent<RawImage>();
+                cd.tick.texture = TickTex();
+                cd.tick.color = GameWindow.Amber;
+                cd.tick.raycastTarget = false;
+                _cards[k] = cd;
+            }
+
+            // page arrows under the grid
+            var sb = new Vector2(110, 60);
+            if (_gw != null)
+            {
+                _prevImg = _gw.AddButton("<", false, content, new Vector2(-405, -335), sb, null, out _prevRect, out _);
+                _nextImg = _gw.AddButton(">", false, content, new Vector2(-75, -335), sb, null, out _nextRect, out _);
+            }
+            else
+            {
+                _prevImg = _sk.MakeButton(content, "<", false, new Vector2(-405, -335), sb, 30, out _prevRect, out _);
+                _nextImg = _sk.MakeButton(content, ">", false, new Vector2(-75, -335), sb, 30, out _nextRect, out _);
+            }
+            _pageLabel = InkText(content, "", 26, new Vector2(-240, -335), new Vector2(200, 50));
+            _prevBase = _prevImg != null ? _prevImg.color : Color.white;
+            _nextBase = _nextImg != null ? _nextImg.color : Color.white;
+
+            // 3D view on the right, the name under it
+            var pv = ModOffer.Box("View", content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(511, 70), new Vector2(440, 600));
+            pv.gameObject.AddComponent<Image>().color = new Color(0.03f, 0.035f, 0.06f, 0.95f);
+            _previewPic = ModOffer.Box("Portrait", pv, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(360, 400)).gameObject.AddComponent<RawImage>();
+            _previewPic.raycastTarget = false;
+            _preview = ModOffer.Box("Model", pv, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero).gameObject.AddComponent<RawImage>();
+            _preview.raycastTarget = false;
+            _rig = Rig.Make("CSR_SelectorVista", new Vector3(5000, -6000, 0));
+            _rig.Size(440, 600, new Color(0.03f, 0.035f, 0.06f, 1f));
+            _preview.texture = _rig.rt;
+            _previewName = InkText(content, "", 32, new Vector2(511, -268), new Vector2(440, 50));
+            _previewNote = _sk.MakeText(pv, "", 18, new Vector2(0, -250), new Vector2(400, 60), false);
+            _previewNote.enableWordWrapping = true;
+        }
+
+        static void SetText(TextMeshProUGUI t, string s) { if (_gw != null) _gw.SetText(t, s); else t.text = s; }
+
         static int Pages => Math.Max(1, (_items.Count + PerPage - 1) / PerPage);
 
         static void SetStatus(string warn)
         {
             if (_status == null) return;
-            _status.text = warn ?? (_host ? THost[_lang] : TGuest[_lang]);
-            _status.color = warn != null ? new Color(1f, 0.45f, 0.4f, 1f) : _sk.Body;
+            string t = warn ?? (_host ? THost[_lang] : TGuest[_lang]);
+            if (_gw != null) _gw.SetText(_status, t); else _status.text = t;
+            bool darkInk = _ink.r * 0.3f + _ink.g * 0.59f + _ink.b * 0.11f < 0.5f;     // light paper: a darker red reads better
+            _status.color = warn == null ? _ink : darkInk ? new Color(0.75f, 0.12f, 0.1f, 1f) : new Color(1f, 0.45f, 0.4f, 1f);
         }
 
         static void Fill()
@@ -665,7 +793,13 @@ namespace CrimeSightRevival.Mods
                 cd.tick.gameObject.SetActive(it.enabled);
                 cd.bg.color = it.enabled ? cd.baseColor : Color.Lerp(cd.baseColor, Color.black, 0.45f);
             }
-            if (_pageLabel != null) _pageLabel.text = (_page + 1) + " / " + Pages;
+            if (_pageLabel != null) SetText(_pageLabel, (_page + 1) + " / " + Pages);
+            if (_count != null)
+            {
+                int on = 0;
+                foreach (var x in _items) if (x.enabled) on++;
+                SetText(_count, string.Format(TCount[_lang], on, _items.Count));
+            }
             bool many = Pages > 1;
             _prevRect.gameObject.SetActive(many); _nextRect.gameObject.SetActive(many); _pageLabel.gameObject.SetActive(many);
         }
@@ -738,29 +872,47 @@ namespace CrimeSightRevival.Mods
             if (_picsChanged) { _picsChanged = false; Fill(); if (_shown >= 0 && _rig?.content == null) ShowPreview(_shown); }
             Hover(_prevImg, _prevBase, _prevRect, mouse); Hover(_nextImg, _nextBase, _nextRect, mouse);
             Hover(_saveImg, _saveBase, _saveRect, mouse); Hover(_cancelImg, _cancelBase, _cancelRect, mouse);
-            if (Input.GetKeyDown(KeyCode.Escape)) { Close(); return; }
+            _gw?.KeepTexts();
+            // the game's hover sound when the mouse reaches a card or a button
+            int hot = over >= 0 ? over : Over(_prevRect, mouse) ? -2 : Over(_nextRect, mouse) ? -3 : Over(_saveRect, mouse) ? -4 : Over(_cancelRect, mouse) ? -5 : -1;
+            if (hot != _hot) { _hot = hot; if (hot != -1) Sfx(AudioManager.PlayOutGameMouseOverButton); }
+            if (Input.GetKeyDown(KeyCode.Escape)) { Sfx(AudioManager.PlayOutGameCancel); Close(); return; }
+            // mouse wheel: next / previous page (stops at the first and last page)
+            float wheel = Input.mouseScrollDelta.y;
+            if (Pages > 1 && Math.Abs(wheel) > 0.01f)
+            {
+                int to = Math.Max(0, Math.Min(Pages - 1, _page + (wheel < 0f ? 1 : -1)));
+                if (to != _page) { _page = to; Fill(); Sfx(AudioManager.PlayOutGameNormalClick); }
+            }
             if (!Input.GetMouseButtonDown(0)) return;
             if (over >= 0) Toggle(over);
-            else if (Over(_prevRect, mouse)) { _page = (_page + Pages - 1) % Pages; Fill(); }
-            else if (Over(_nextRect, mouse)) { _page = (_page + 1) % Pages; Fill(); }
+            else if (Over(_prevRect, mouse)) { _page = (_page + Pages - 1) % Pages; Fill(); Sfx(AudioManager.PlayOutGameNormalClick); }
+            else if (Over(_nextRect, mouse)) { _page = (_page + 1) % Pages; Fill(); Sfx(AudioManager.PlayOutGameNormalClick); }
             else if (Over(_saveRect, mouse)) Save();
-            else if (Over(_cancelRect, mouse)) Close();
+            else if (Over(_cancelRect, mouse)) { Sfx(AudioManager.PlayOutGameCancel); Close(); }
         }
 
-        static void Hover(Image img, Color c, RectTransform r, Vector2 m) { if (img != null) img.color = Over(r, m) ? Skin.Hover(c) : c; }
+        static int _hot = -1;
+
+        /// <summary>One of the game's sounds (never breaks the window if the sound system isn't there).</summary>
+        static void Sfx(Action play) { try { play(); } catch { } }
+
+        static void Hover(Image img, Color c, RectTransform r, Vector2 m) { if (img != null && _gw == null) img.color = Over(r, m) ? Skin.Hover(c) : c; }
 
         static void Toggle(int i)
         {
-            if (!_host) { SetStatus(TGuest[_lang]); return; }
+            if (!_host) { SetStatus(TGuest[_lang]); Sfx(AudioManager.PlaySystemNG); return; }
             var it = _items[i];
             if (it.enabled)
             {
                 int pawns = 0, traitors = 0;
                 foreach (var x in _items) if (x.enabled) { if (x.role == "traitor") traitors++; else pawns++; }
-                if (it.role == "traitor" && traitors <= 1) { SetStatus(TNeedTraitor[_lang]); return; }
-                if (it.role != "traitor" && pawns <= _min) { SetStatus(string.Format(TNeedPawns[_lang], _min)); return; }
+                if (it.role == "traitor" && traitors <= 1) { SetStatus(TNeedTraitor[_lang]); Sfx(AudioManager.PlaySystemNG); return; }
+                if (it.role != "traitor" && pawns <= _min) { SetStatus(string.Format(TNeedPawns[_lang], _min)); Sfx(AudioManager.PlaySystemNG); return; }
             }
             it.enabled = !it.enabled;
+            bool on = it.enabled;
+            Sfx(() => AudioManager.PlayToggleCheck(on));
             _dirty = true;
             SetStatus(null);
             Fill();
@@ -845,6 +997,7 @@ namespace CrimeSightRevival.Mods
                 Plugin.L.LogInfo("[Selector] guardado: " + (off.Count == 0 ? "todos" : off.Count + " sin marcar"));
             }
             catch (Exception e) { Plugin.L.LogWarning("[Selector] no pude guardar: " + e.Message); SetStatus(e.Message); return; }
+            Sfx(AudioManager.PlayOutGameDecideClick);
             Close();
             Toast(TSaved[_lang]);
         }
@@ -861,7 +1014,8 @@ namespace CrimeSightRevival.Mods
             if (_rig != null) { _rig.content = null; _rig.Destroy(); _rig = null; }
             if (_root != null) UnityEngine.Object.Destroy(_root);
             _root = null;
-            _status = _pageLabel = _previewName = _previewNote = null;
+            _status = _pageLabel = _previewName = _previewNote = _count = null;
+            _gw = null;
             _prevRect = _nextRect = _saveRect = _cancelRect = null;
             _prevImg = _nextImg = _saveImg = _cancelImg = null;
             _preview = _previewPic = null;

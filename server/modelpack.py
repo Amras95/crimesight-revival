@@ -171,6 +171,19 @@ def clean(meta):
     return out
 
 
+def fill_enabled(items):
+    """With fewer than 6 ticked (e.g. a ticked new character was removed), the unticked originals that draw()
+    brings back show as ticked, in the same order, so the Character Selection shows what a match will use."""
+    on = sum(1 for it in items if it.get("enabled"))
+    for it in items:
+        if on >= MIN_PAWNS:
+            break
+        if str(it.get("id", "")).startswith("orig:") and not it.get("enabled"):
+            it["enabled"] = True
+            on += 1
+    return items
+
+
 def draw(ms, disabled, rng):
     """Reparto de una partida: que personaje se ve en cada uno de los 6 sitios y que traidor. Salen 6 de los
     activados (originales y nuevos con la misma probabilidad); un original sale en su propio sitio y los nuevos

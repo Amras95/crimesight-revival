@@ -187,7 +187,7 @@ class ModelRoom:
                 if c.get("role", "pawn") != "pawn":
                     continue
                 out.append({"id": cid, "role": "pawn", "name": c.get("name", ""), "enabled": cid not in self.disabled})
-            return out
+            return modelpack.fill_enabled(out)
 
     def draw(self):
         """Reparto de una partida nueva (lo pide la sala al empezar la cuenta atras)."""
