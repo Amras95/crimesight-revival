@@ -106,6 +106,7 @@ def hazard_window(start, end, base, max_turn):
             hi = mid
     return s, e, (lo + hi) / 2
 COUNTDOWN_SECONDS = 3
+SURRENDER_VOTE_SECONDS = 20          # a teammate who is a person has this long to agree to forfeit
 DEFAULT_AI_DIFFICULTY = "normal"   # se puede cambiar con --ai-difficulty
 STAGES = ["Stage_Yokn", "Stage_Yokn_v1030", "Stage_Yokn_v1040", "Stage_Yokn_v1050", "Stage_Yokn_v1060"]
 # Escenarios que anade el plugin de BepInEx (no salen en "Random"). El plugin carga el escenario real.
@@ -448,6 +449,8 @@ class Hub:
         room = self.rooms.get(str(p.get("id", "")))
         if room is None:
             return rc({"not_found": True, "success": False})
+        if room.members.get(sess.player_id, {}).get("replaced"):
+            return rc({"full": True, "success": False})   # left mid-match: an AI plays their role until it ends
         if not room.has_space() and sess.player_id not in room.members:
             return rc({"full": True, "success": False})
         if sess.room and sess.room is not room:
@@ -547,6 +550,9 @@ class Room:
         self.assault = False       # hubo orden de Asalto este turno
         self.open_seats = 0        # huecos que el anfitrion reserva para humanos (expulsando a una IA)
         self.bot_task = None
+        self.match_order = []      # player order frozen when the match starts (the game keeps its own list)
+        self.taking_orders = False # between StartCommandPhase and StartActionPhase (AI orders for this turn are ready)
+        self.vote = None           # surrender vote running: {"from", "waiting", "message", "task"}
         self.stage_sig = {}        # jugadores a los que se espera por el escenario (lo que dicen las variables)
         self.stamp_quiet = 0       # hasta cuando las IA no contestan a mas stickers
         self.stamp_seq = 0
@@ -594,6 +600,10 @@ class Room:
     def ordered_members(self):
         """Orden de los jugadores: anfitrion, resto de humanos y despues las IA."""
         pids = list(self.members)
+        if self.phase != "lobby" and self.match_order:
+            # During a match the order stays as it was at the start: the game keeps its own player list, so a
+            # new host or an AI taking over a player who left must not move anyone (pings use this place)
+            return [p for p in self.match_order if p in self.members] + [p for p in pids if p not in self.match_order]
         return sorted(pids, key=lambda p: (p != self.owner, bool(self.members[p].get("bot")), pids.index(p)))
 
     def member_index(self, pid):
@@ -974,8 +984,13 @@ class Room:
         if pid not in self.members:
             return
         if self.phase not in ("lobby", "ended") and not self.recorded and not self.members[pid].get("bot"):
-            # Se va a mitad de partida (cierra el juego, se le cae la conexion...): cuenta como si se
-            # rindiera. Pierde su bando y gana el otro; a los que quedan el juego les ensena el final.
+            if any(h != pid for h in self.humans()):
+                # Leaves mid-match (quits, closes the game, loses the connection...) while other people are
+                # still playing: the loss goes on their profile and an AI plays their role until the end
+                await self.replace_with_ai(sess)
+                return
+            # Se va a mitad de partida (cierra el juego, se le cae la conexion...) y no queda nadie mas: cuenta
+            # como si se rindiera. Pierde su bando y gana el otro.
             await self.forfeit(pid, reason="sale de la partida")
         name = self.members.pop(pid)["name"]
         self.sessions.pop(pid, None)
@@ -998,6 +1013,58 @@ class Room:
                                      "OwnerId": self.owner, "OwnerName": owner["name"]})
         if self.phase not in ("lobby", "ended"):
             await self.check_phase_complete()
+
+    async def replace_with_ai(self, sess):
+        """A player leaves mid-match while other people are still playing. The loss is recorded for them now
+        and an AI plays their role until the match ends. The game keeps them in its player list (removing
+        someone mid-match would shift everyone's place in it); they are taken out back in the lobby."""
+        pid = sess.player_id
+        m = self.members[pid]
+        log.info("Sala %s: %s se va a mitad de partida; una IA lleva su papel", self.id, m["name"])
+        self.record_quitter(pid)
+        tag = ai.BOT_NAMES.get(str(self.owner_lang() or "").upper(), ai.BOT_NAMES["EN"])[0]
+        m["human_name"] = m["name"]
+        m["name"] = f"{m['human_name']} ({tag})"       # same word as the AI names in the room ("AI", "IA", "KI"...)
+        # Hard, or Expert if another AI in the match is Expert or Nightmare (same rule as the solo partner AI)
+        m.update({"bot": True, "replaced": True, "ready": True, "slot": None, "difficulty": self.support_level()})
+        self.sessions.pop(pid, None)
+        self.hub.unsubscribe(sess, self.topic)
+        if sess.room is self:
+            sess.room = None
+        self.reference.pop(pid, None)       # their turn data would be out of date from now on
+        for got in self.pending.values():   # the AI answers for them from now on
+            if isinstance(got, dict):
+                got.pop(pid, None)
+        if self.owner == pid:
+            self.owner = self.humans()[0]
+        self.log_call("left", self.turn, pid)
+        await self.control("CsrReplaced", {"PlayerId": pid, "PlayerName": m["human_name"], "NewName": m["name"]})
+        if self.vote:
+            if self.vote["from"] == pid:
+                await self.end_vote("cancel", pid)
+            elif pid in self.vote["waiting"]:
+                self.vote["waiting"].discard(pid)
+                if not self.vote["waiting"]:
+                    await self.team_forfeit()
+        if self.taking_orders and self.turn_ref:
+            self.plan_bots(self.turn_ref, only=pid)     # it already gives orders this turn
+        if not self.bot_task or self.bot_task.done():
+            self.bot_task = asyncio.ensure_future(self._bot_heartbeat())
+        self.refresh_vars()
+        await self.start_if_prepared()      # if they left while the match was loading
+        await self.check_phase_complete()
+
+    def record_quitter(self, pid):
+        """Loss for a player who left a match that goes on without them (no points, no action bonuses)."""
+        m = self.members[pid]
+        role = int(m["role"])
+        u = self.hub.api.s.user(pid)
+        pts = stats.record_match(u, role, "abandon", [], self.current_stage or self.settings.get("stage", ""),
+                                 match_id=getattr(self, "match_id", None), level=self.level(), finish="abandon")
+        log.info("Sala %s: %s (%s) ABANDONA, +%s puntos -> %s", self.id, m["name"], ROLE_KEY.get(role, role),
+                 pts, stats.summary(u))
+        self.log_call("awarded", pid, "abandon", [], pts)
+        self.hub.api.s.save()
 
     def refresh_vars(self):
         v = {k: val for k, val in self.vars.items() if not k.startswith(("player_", "role_", "ready_", "match_count_"))}
@@ -1263,6 +1330,7 @@ class Room:
         for m in self.members.values():
             m["ready"] = False
         self.refresh_vars()
+        self.match_order = self.ordered_members()
         self.match_id = f"{self.id}-{int(time.time())}-{secrets.token_hex(3)}"
         try:
             self.mlog = matchlog.MatchLog(os.path.dirname(self.hub.api.s.path), self.match_id,
@@ -1375,13 +1443,16 @@ class Room:
         if not self.object_items and not self.searched:
             self.deal_items()
         self.pending.setdefault("prepare", {})[sess.player_id] = True
-        if self._complete("prepare"):
+        await self.start_if_prepared()
+        return rc({})
+
+    async def start_if_prepared(self):
+        if "prepare" in self.pending and self._complete("prepare"):
             self.pending.pop("prepare", None)
             self.phase = "playing"
             # Cada jugador recibe lo que sabe su papel (GameManager.SelectOpenWeapon/SelectOpenFood)
             for pid in self.humans():
                 await self.control_to([pid], "RoleData", self.role_data(pid))
-        return rc({})
 
     def deal_items(self):
         """Reparte los objetos de la partida entre los muebles, como el servidor original.
@@ -1633,6 +1704,7 @@ class Room:
             self.claims = {"sherlock": set(), "moriarty": set()}
             self.irene_cmds = []
             self.plan_bots(self.turn_ref)
+            self.taking_orders = True
             self.bot_pinged = {}
             asyncio.ensure_future(self.bot_announce())
             data = {}
@@ -1686,11 +1758,13 @@ class Room:
         log.info("Sala %s turno %s: Watson descubre comida en el mueble %s", self.id, self.turn, o)
         return {"nextTargetId": o, "nextItemId": self.object_items[o]}
 
-    def plan_bots(self, ref):
-        """La IA decide sus ordenes con el estado del turno que manda el cliente."""
-        self.bot_orders = {}
-        self.bot_new_food = {}     # Watson IA -> mueble con comida que acaba de descubrir este turno
-        bots = self.bots()
+    def plan_bots(self, ref, only=None):
+        """La IA decide sus ordenes con el estado del turno que manda el cliente.
+        only: plan just this AI and keep the others' orders (an AI that takes over a player mid-turn)."""
+        if only is None:
+            self.bot_orders = {}
+            self.bot_new_food = {}     # Watson IA -> mueble con comida que acaba de descubrir este turno
+        bots = [only] if only else self.bots()
         if not bots or not ref.get("pawns"):
             return
         gone = set(self.searched) | self.disabled_objects
@@ -1709,6 +1783,8 @@ class Room:
         # Cada bando solo sabe que personajes ha ordenado su propio equipo (y los que han reclamado
         # sus humanos con un ping este turno)
         taken = {team: set(c) for team, c in self.claims.items()}
+        for b, given in self.bot_orders.items():      # orders other AIs already have this turn
+            taken[self.side(b)] |= {o["pawnId"] for o in given}
         prio = {ROLE_CRIMINAL: 0, ROLE_IRENE: 1, ROLE_DETECTIVE: 2, ROLE_WATSON: 3}
         for pid in sorted(bots, key=lambda b: prio.get(self.members[b]["role"], 9)):
             m = self.members[pid]
@@ -1775,6 +1851,7 @@ class Room:
             if orders:
                 payloads[bot] = {"payload": {"list": orders}}
         self.bot_orders = {}
+        self.taking_orders = False
         ghost = self.ghost_moriarty()
         if ghost:
             payloads[GHOST_CRIMINAL] = {"payload": {"list": ghost}}
@@ -2071,10 +2148,10 @@ class Room:
 
     def level(self):
         """Nivel de la partida para los puntos: contra personas "online"; si no, el de la IA."""
-        if len([p for p, m in self.members.items() if not m.get("bot")]) >= 2:
+        if len([p for p, m in self.members.items() if not m.get("bot") or m.get("replaced")]) >= 2:
             return "online"
         order = ai.RANK
-        diffs = [m.get("difficulty", "normal") for m in self.members.values() if m.get("bot")]
+        diffs = [m.get("difficulty", "normal") for m in self.members.values() if m.get("bot") and not m.get("replaced")]
         return max(diffs, key=lambda d: order.get(d, 1)) if diffs else "normal"
 
     def remember(self, commands, ordered_by_sherlock):
@@ -2337,7 +2414,8 @@ class Room:
         self.conclude("sherlock" if right else "draw", extra)
 
     def conclude(self, winner, extra=None, quitter=None):
-        """winner: "sherlock", "moriarty" o "draw". extra: acciones con puntos, por rol o por jugador."""
+        """winner: "sherlock", "moriarty" o "draw". extra: acciones con puntos, por rol o por jugador.
+        quitter: the player who forfeited or left, or a set of them (a team that voted to forfeit)."""
         if self.recorded:
             return
         self.recorded = True
@@ -2350,13 +2428,14 @@ class Room:
         self.hub.api.s.save()
 
     def _record_players(self, winner, extra, quitter, reason):
+        quitters = {quitter} if isinstance(quitter, str) else set(quitter or ())
         for pid, m in self.members.items():
             if m.get("bot"):
                 continue
             role = int(m["role"])
             side = "sherlock" if role in (ROLE_DETECTIVE, ROLE_WATSON) else "moriarty"
             outcome = "draw" if winner == "draw" else ("win" if side == winner else "lose")
-            if pid == quitter:
+            if pid in quitters:
                 outcome = "abandon"
             acts = list(extra.get(role, [])) + list(extra.get(pid, [])) + sorted(self.events.get(pid, ()))
             u = self.hub.api.s.user(pid)
@@ -2373,16 +2452,93 @@ class Room:
         return rc({})
 
     async def p_Abandon(self, sess, p):
-        await self.forfeit(sess.player_id, message=p.get("message", ""), reason="se rinde")
+        message = p.get("message", "")
+        try:
+            data = json.loads(message) if message else {}
+        except ValueError:
+            data = {}
+        if isinstance(data, dict) and "csr_vote" in data:       # a teammate answers the surrender vote
+            await self.vote_answer(sess.player_id, data.get("csr_vote") == "yes")
+            return rc({})
+        if self.phase in ("lobby", "ended") or self.recorded:
+            return rc({})
+        mates = self.teammates(sess.player_id)
+        if mates:
+            await self.start_vote(sess.player_id, mates, message)
+        else:
+            await self.forfeit(sess.player_id, message=message, reason="se rinde")
         return rc({})
 
-    async def forfeit(self, pid, message="", reason=""):
-        """pid se rinde o se va: pierde su bando, gana el otro, y la partida termina para todos."""
+    # ---- surrender vote: with a person on your team, they must agree before your side forfeits
+    def teammates(self, pid):
+        return [h for h in self.humans() if h != pid and self.side(h) == self.side(pid)]
+
+    async def start_vote(self, pid, mates, message):
+        if self.vote:
+            return
+        self.vote = {"from": pid, "waiting": set(mates), "message": message or "{}",
+                     "task": asyncio.ensure_future(self._vote_timeout())}
+        log.info("Sala %s: %s quiere rendirse; se pregunta a %s", self.id, self.members[pid]["name"],
+                 [self.members[x]["name"] for x in mates])
+        await self.control_to(mates, "CsrSurrenderVote", {"PlayerId": pid, "PlayerName": self.members[pid]["name"],
+                                                          "Seconds": SURRENDER_VOTE_SECONDS})
+        await self.control_to([pid], "CsrSurrenderWait", {"Seconds": SURRENDER_VOTE_SECONDS})
+
+    async def vote_answer(self, pid, yes):
+        v = self.vote
+        if not v or pid not in v["waiting"]:
+            return
+        log.info("Sala %s: %s %s rendirse", self.id, self.members[pid]["name"], "acepta" if yes else "no quiere")
+        if not yes:
+            await self.end_vote("no", pid)
+            return
+        v["waiting"].discard(pid)
+        if not v["waiting"]:
+            await self.team_forfeit()
+
+    async def _vote_timeout(self):
+        try:
+            await asyncio.sleep(SURRENDER_VOTE_SECONDS + 3)     # a little longer than the window, for the network
+        except asyncio.CancelledError:
+            return
+        v = self.vote
+        if v and self.phase not in ("lobby", "ended"):
+            v["task"] = None
+            await self.end_vote("timeout", next(iter(v["waiting"]), v["from"]))
+
+    def cancel_vote(self):
+        v, self.vote = self.vote, None
+        if v and v.get("task") and v["task"] is not asyncio.current_task():
+            v["task"].cancel()
+        return v
+
+    async def end_vote(self, result, who):
+        """The match goes on: result "no" (who said no), "timeout" (who didn't answer) or "cancel"."""
+        v = self.cancel_vote()
+        if not v:
+            return
+        team = [h for h in self.humans() if self.side(h) == self.side(v["from"])]
+        name = self.members.get(who, {}).get("human_name") or self.members.get(who, {}).get("name", "")
+        await self.control_to(team, "CsrSurrenderVoteEnd", {"Result": result, "PlayerName": name})
+
+    async def team_forfeit(self):
+        """Everyone asked agreed: the team forfeits (all its people get the loss, as if each had surrendered)."""
+        v = self.cancel_vote()
+        if not v:
+            return
+        team = [h for h in self.humans() if self.side(h) == self.side(v["from"])]
+        await self.forfeit(v["from"], message=v["message"], reason="se rinde (votacion del equipo)",
+                           quitters=set(team) | {v["from"]})
+
+    async def forfeit(self, pid, message="", reason="", quitters=None):
+        """pid se rinde o se va: pierde su bando, gana el otro, y la partida termina para todos.
+        quitters: everyone who forfeits with them (a team vote); by default only pid."""
+        self.cancel_vote()
         self.phase = "ended"
         role = self.members.get(pid, {}).get("role")
         log.info("Sala %s: %s %s", self.id, self.members.get(pid, {}).get("name", pid), reason)
         winner = "moriarty" if role in (ROLE_DETECTIVE, ROLE_WATSON) else "sherlock"
-        self.conclude(winner, quitter=pid)
+        self.conclude(winner, quitter=quitters or pid)
         crim = self.players_by_role([ROLE_CRIMINAL])
         det = self.players_by_role([ROLE_DETECTIVE])
         await self.control("Abandon", {"Data": {
@@ -2397,6 +2553,12 @@ class Room:
             "csr_quitter_role": ROLE_KEY.get(role, ""), "csr_reason": "surrender" if message else "left"}})
 
     async def p_Rematch(self, sess, p):
+        gone = {pid: m.get("human_name", m["name"]) for pid, m in self.members.items() if m.get("replaced")}
+        for pid in gone:                   # left mid-match: out of the room now (an AI took their place)
+            self.members.pop(pid)
+        self.match_order = []
+        self.taking_orders = False
+        self.cancel_vote()
         self.phase = "lobby"
         self.restore_support()
         self.current_stage = None          # con "Random", la siguiente partida sortea otro escenario
@@ -2407,6 +2569,13 @@ class Room:
         self.recorded, self.hazard_prob = False, {}
         self.vars["random_seed"] = random.randint(1, 2**31 - 1)
         await self.control("Rematch", {"RandomSeed": "random_seed"})
+        if gone:
+            self.fill_bots()
+            self.refresh_vars()
+            owner = self.members[self.owner]
+            for pid, name in gone.items():
+                await self.control("Leave", {"PlayerId": pid, "PlayerName": name,
+                                             "OwnerId": self.owner, "OwnerName": owner["name"]})
         return rc({})
 
     async def p_PingLog(self, sess, p):

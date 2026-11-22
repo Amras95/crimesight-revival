@@ -127,7 +127,7 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[Watson] " + e.Message); }
         }
 
-        /// <summary>Nombre de la Watson IA de la sala (las IA tienen un id que empieza por "bot"), o null.</summary>
+        /// <summary>Nombre de la Watson IA de la sala (las IA tienen un id que empieza por "bot", or a player an AI took over), o null.</summary>
         static string AiWatsonName(out string room)
         {
             room = null;
@@ -138,7 +138,7 @@ namespace CrimeSightRevival.Mods
             for (int i = 0; i < members.Count; i++)
             {
                 var x = members[i];
-                if (x != null && x.IsWatson && (x.PlayerId ?? "").StartsWith("bot")) return x.Name;
+                if (x != null && x.IsWatson && Team.IsAi(x.PlayerId)) return x.Name;
             }
             return null;
         }

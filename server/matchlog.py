@@ -100,6 +100,10 @@ class MatchLog:
         self.rec["awarded"].append({"player": player, "outcome": outcome, "points": points,
                                     "actions": [a.replace("ctg_name_result_", "") for a in actions]})
 
+    def left(self, turn, player):
+        """A player left mid-match and an AI played their role from that turn on."""
+        self.rec.setdefault("left", []).append({"turn": turn, "player": player})
+
     def killed(self, turn, assault):
         self.rec["kill"] = {"turn": turn, "assault": bool(assault)}
 
