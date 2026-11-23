@@ -945,6 +945,7 @@ class Room:
                    "name": self.members[bot]["name"], "obj": "", "ignore": 0}
             await self.hub.emit(self.topic, msg, var=self.vars, eligible=self.bot_ping_audience(bot, PING_SEARCH))
             log.info("Sala %s turno %s: Watson IA senala la comida del mueble %s", self.id, self.turn, obj)
+            self.bot_new_food.pop(bot, None)       # pinged once: not again if the AI announces again this turn
             await asyncio.sleep(random.uniform(0.4, 0.9))
         for bot, orders in list((self.bot_orders or {}).items()):
             if bot not in self.members:
@@ -1484,6 +1485,7 @@ class Room:
         self.ai_mem = ai.new_memory()
         self.watson_food, self.watson_done = set(), False
         self.bot_food = {}
+        self.bot_food_turn = {}     # Watson IA -> turno en que ya descubrio su mueble con comida
         self.furniture, self.furniture_at = {}, {}
         self.irene_cmds, self.watson_suspect = [], None
         self.food_items = set(range(food))
@@ -1515,7 +1517,11 @@ class Room:
         known = self.bot_food.get(pid)
         if known is None:
             known = self.bot_food[pid] = set(random.sample(foods, min(FOOD_OPEN_COUNT, len(foods))))
-        if role == ROLE_WATSON:
+        revealed = self.__dict__.setdefault("bot_food_turn", {})
+        if role == ROLE_WATSON and revealed.get(pid) != self.turn:
+            # one new furniture per turn: this also runs again when the AI changes plan mid-turn (someone takes
+            # one of its characters), and that used to reveal and ping another one each time
+            revealed[pid] = self.turn
             hidden = [o for o in foods if o not in known]
             if hidden:
                 # mejor uno que se pueda senalar con un ping (que este en una casilla de los datos del turno)
