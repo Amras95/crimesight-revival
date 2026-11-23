@@ -1735,8 +1735,8 @@ _lang = "en"
 
 # creador de escenarios (de momento en ingles y espanol; el resto de idiomas usa el ingles)
 S["en"].update(
-    stage_btn='Scenario creator',
-    stage_title='Scenario creator',
+    stage_btn='Scenario Creator',
+    stage_title='Scenario Creator',
     stage_desc="Rearrange the rooms of one of the game's scenarios. Each scenario you save shows up in the game's scenario list as a new one; the game's own scenarios are never changed.",
     stage_reading='Reading the scenarios from your game… {pct}%',
     stage_base='Base scenario',
@@ -1748,7 +1748,7 @@ S["en"].update(
     stage_saved='Saved. To play it, turn on hot reload (BepInEx) in Mods.',
     stage_delete='Delete',
     stage_test='Quick test',
-    stage_test_ok="Ready. In the game, create a room and choose “Test stage (CSR)”. You don't need to restart the game or save.",
+    stage_test_ok="Ready. In the game, create a room and choose “Test Stage (CSR)”. You don't need to restart the game or save.",
     stage_test_stop='Stop testing',
     stage_test_off="The test stage is back to being an exact copy of scenario 01.",
     stage_need_bep="To test a scenario, you need hot reload (BepInEx). Turn it on in Mods.",
@@ -2579,7 +2579,7 @@ This is your mods folder. You manage everything in it from the launcher's Mods w
   mod.json     optional: the name and author shown for your mods
   models\\      your 3D models and animations (see the README.txt inside)
   cursor\\      your custom cursor (see the README.txt inside)
-  stages\\      the scenarios you save in the Scenario creator
+  stages\\      the scenarios you save in the Scenario Creator
 
 Stamps and avatars
  - PNG, JPG, WEBP... Any size works: they're adjusted automatically.

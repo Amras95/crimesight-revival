@@ -5,7 +5,7 @@
 // Tutorial y Entrenamiento: lista a la izquierda, titulo, paginas con flechas). Mientras se abre desde
 // ese boton, la lista solo tiene las entradas de la guia (registradas como consejos del juego) y el texto
 // de cada pagina, con los iconos de los botones del mando que uses, va donde normalmente va la imagen.
-// Los textos de la guia estan en GuideText.cs (espanol e ingles; los demas idiomas ven el ingles).
+// Los textos de la guia estan en GuideText.cs (one version per game language, all 11).
 // Todas las paginas usan el mismo tamano de letra (BodySize). Las que tienen captura (GuideText.Image) la
 // ensenan arriba, de lado a lado, y el texto debajo; las capturas estan en GuideImages.cs, generado por
 // tools/guide_images.py.
