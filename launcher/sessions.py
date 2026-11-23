@@ -483,7 +483,7 @@ def _room_models_watcher(ctx, cfg, url, password, rm, offer=None):
 def _models_room_start(cfg, srv):
     """Anfitrion o en solitario: tus modelos y personajes nuevos son los de la sala, y tu decides el Selector."""
     srv.models.set_base(core.my_model_set())
-    core.room_disabled = srv.models.set_disabled(cfg.get("roster_disabled") or [])
+    core.room_disabled = srv.models.set_disabled(core.load_config().get("roster_disabled") or [])
     core.room_host = True
     core.room_roster = None
     core.room_models = srv.models.local()
@@ -512,10 +512,10 @@ def _roster_watcher(ctx, cfg, url, steam_id, srv):
             if a and a[0] != state["answer"]:
                 state["answer"] = a[0]
                 core.room_disabled = srv.models.set_disabled(a[1])
-                cfg["roster_disabled"] = list(core.room_disabled)
                 c2 = core.load_config()
                 c2["roster_disabled"] = list(core.room_disabled)
-                core.save_config(c2)
+                core.write_config(c2)
+                cfg["roster_disabled"] = c2["roster_disabled"]
                 core.install_models(gd)
                 ctx.log(t("roster_saved"))
         roster, disabled = core.roster_state(url, steam_id)
