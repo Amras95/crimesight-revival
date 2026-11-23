@@ -91,11 +91,17 @@ namespace CrimeSightRevival.Mods
         [HarmonyPrefix, HarmonyPatch(typeof(StampManager), nameof(StampManager.StampFromPingButtonInGameLog))]
         static bool BeforePingStampLog(ref StampParam stampParam) => !LiveMods.Silent(stampParam?.responseMsgId);
 
-        // Stamps received from other players (see StampPlace)
-        [HarmonyPrefix, HarmonyPatch(typeof(NetworkManager), "WampEventCallback")]
-        static void BeforeWampEvent(Il2CppSystem.Collections.Generic.Dictionary<string, Il2CppSystem.Object> __1)
+        // Stamps received from other players, in the room and in the match (see StampPlace)
+        [HarmonyPrefix, HarmonyPatch(typeof(StampManager), nameof(StampManager.CreateRoomStamp))]
+        static void BeforeRoomStamp(ref StampParam __0)
         {
-            try { StampPlace.Fix(__1); } catch (Exception e) { StampPlace.Warn(e); }
+            try { StampPlace.Fix(__0); } catch (Exception e) { StampPlace.Warn(e); }
+        }
+
+        [HarmonyPrefix, HarmonyPatch(typeof(StampManager), "CallStamp")]
+        static void BeforeCallStamp(ref StampParam __0)
+        {
+            try { StampPlace.Fix(__0); } catch (Exception e) { StampPlace.Warn(e); }
         }
     }
 
@@ -104,47 +110,35 @@ namespace CrimeSightRevival.Mods
     // (setIndex/dataIndex). The game shows the one at that place in ITS OWN list. Mod stamps are added to those
     // lists, and for a few seconds after someone joins a room the lists can differ (a game that hasn't loaded
     // the room's mods yet): the place then points at another stamp, e.g. one of yours instead of theirs. Here,
-    // for mod stamps, the place is worked out again from the type, in this game's own list.
+    // for mod stamps, the place is worked out again from the type, in this game's own list, just before the game
+    // shows a received stamp. (Checking the network message itself didn't work: stamps don't come through there.)
     static class StampPlace
     {
         const int FirstModType = 1000;
         static bool _warned;
 
-        public static void Fix(Il2CppSystem.Collections.Generic.Dictionary<string, Il2CppSystem.Object> d)
+        public static void Fix(StampParam p)
         {
-            if (d == null || !d.ContainsKey("tag") || !d.ContainsKey("type") || !d.ContainsKey("dataIndex")) return;
-            if (d["tag"]?.ToString() != "stamp") return;
-            if (!int.TryParse(d["type"]?.ToString(), out int type) || type < FirstModType) return;
-            int.TryParse(d["dataIndex"]?.ToString(), out int place);
-            int setId = 0;
-            if (d.ContainsKey("setIndex")) int.TryParse(d["setIndex"]?.ToString(), out setId);
-            var sm = StampManager.Instance;
-            var sets = sm?.registStampSet;
+            if (p == null) return;
+            int type = (int)p.type;
+            if (type < FirstModType) return;
+            var sets = StampManager.Instance?.registStampSet;
             if (sets == null) return;
+            int place = p.dataIndex;
             foreach (var set in sets)
             {
-                if (set == null || set.SetId != setId || set.registStampData == null) continue;
+                if (set == null || set.SetId != p.setId || set.registStampData == null) continue;
                 var list = set.registStampData;
                 if (place >= 0 && place < list.Count && list[place] != null && (int)list[place].Type == type) return;   // same place here
                 for (int i = 0; i < list.Count; i++)
                 {
                     if (list[i] == null || (int)list[i].Type != type) continue;
-                    d["dataIndex"] = Box(d["dataIndex"], i);
+                    p.dataIndex = i;
                     Plugin.L.LogInfo($"[Stamps] stamp {type} from another player: place {place} -> {i}");
                     return;
                 }
                 return;     // this game doesn't have that stamp (yet): left as it is
             }
-        }
-
-        // the new number with the same kind of value the game's message had
-        static Il2CppSystem.Object Box(Il2CppSystem.Object like, int v)
-        {
-            string tn = like?.GetIl2CppType()?.FullName;
-            if (tn == "System.Int64") return new Il2CppSystem.Int64 { m_value = v }.BoxIl2CppObject();
-            if (tn == "System.Double") return new Il2CppSystem.Double { m_value = v }.BoxIl2CppObject();
-            if (tn == "System.Single") return new Il2CppSystem.Single { m_value = v }.BoxIl2CppObject();
-            return new Il2CppSystem.Int32 { m_value = v }.BoxIl2CppObject();
         }
 
         public static void Warn(Exception e)
