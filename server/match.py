@@ -393,12 +393,11 @@ class Hub:
             base = eligible if eligible is not None else {s.player_id for s in self.sessions}
             eligible = {p for p in base if room.authrole(p) not in roles}
         echo = room is not None and "Control" in kw
-        team = room.private_team(sess, kw) if room is not None and "tag" in kw and room.phase in IN_MATCH else None
-        if team:
-            # Private messages (Moriarty and Irene's top row, Irene's "Here's your killer!" stamp, Watson AI's food
-            # ping, and replies to them): the game sends them to everyone and each game hides only some of them
-            # (not the replies). Only that side gets them now.
-            eligible = room.team_members(team, eligible) | {sess.player_id}
+        if room is not None and "tag" in kw and room.phase in IN_MATCH and room.private_team(sess, kw) == "moriarty":
+            # Private channel of Moriarty and Irene (Irene's pings, her "Here's your killer!" stamp and the stamps
+            # that answer those pings): the game sends them to everyone and each game hides them, but the replies
+            # still showed on Sherlock's side. Only Moriarty's side gets them now.
+            eligible = room.team_members("moriarty", eligible) | {sess.player_id}
         if room is not None and kw.get("tag") == "stamp" and room.phase in IN_MATCH and \
                 str(kw.get("pingType", NO_PING)) not in ("", str(NO_PING)):
             names = sorted(room.members.get(p, {}).get("name", p) for p in eligible) if eligible is not None else "todos"
@@ -727,18 +726,7 @@ class Room:
         if (tag == "stamp" and (typ == IRENE_KILLER_STAMP or ping in IRENE_PINGS)) or \
                 (tag == "ping" and typ in IRENE_PINGS):
             return "moriarty"
-        if tag == "stamp" and ping == PING_SEARCH and self.is_watson_ai(kw):
-            return "sherlock"        # a reply to Watson AI's food ping, which only Sherlock's side sees
         return None
-
-    def is_watson_ai(self, kw):
-        """The ping a stamp answers was sent by Watson AI."""
-        for b in self.bots():
-            if self.members[b].get("role") != ROLE_WATSON:
-                continue
-            if str(kw.get("pingPlayerId")) == str(self.member_index(b)) or kw.get("pingPlayerName") == self.members[b]["name"]:
-                return True
-        return False
 
     def team_members(self, team, eligible=None):
         return {p for p in self.members if self.side(p) == team and (eligible is None or p in eligible)}
@@ -955,7 +943,7 @@ class Room:
                    "posposX": px, "posposY": py, "posposZ": pz,
                    "callposposX": cx, "callposposY": 0, "callposposZ": cz,
                    "name": self.members[bot]["name"], "obj": "", "ignore": 0}
-            await self.hub.emit(self.topic, msg, var=self.vars, eligible=self.team_members("sherlock"))   # his side only
+            await self.hub.emit(self.topic, msg, var=self.vars, eligible=self.bot_ping_audience(bot, PING_SEARCH))
             log.info("Sala %s turno %s: Watson IA senala la comida del mueble %s", self.id, self.turn, obj)
             self.bot_new_food.pop(bot, None)       # pinged once: not again if the AI announces again this turn
             await asyncio.sleep(random.uniform(0.4, 0.9))
