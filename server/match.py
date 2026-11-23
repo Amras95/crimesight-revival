@@ -1323,6 +1323,10 @@ class Room:
         stage = self.settings.get("stage") or ""
         if stage in STAGES:
             return stage
+        if stage.startswith("Stage_Tutorial"):
+            # Solo training: its scripted characters are placed for the original mansion. On another map one of them
+            # ended up inside a wall and the first turn never started ("Case 01: The First Killer").
+            return "Stage_Yokn"
         if stage in EXTRA_STAGES or stage.startswith(CUSTOM_STAGE_PREFIX):
             if not self.stage_wait(starting=True):
                 return stage
