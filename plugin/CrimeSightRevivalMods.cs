@@ -116,7 +116,6 @@ namespace CrimeSightRevival.Mods
     static class StampPlace
     {
         static readonly HashSet<int> _logged = new();
-        static int _sameLogged;
         static bool _warned;
 
         public static void Fix(StampParam p)
@@ -128,12 +127,7 @@ namespace CrimeSightRevival.Mods
             if (set == null) return;
             var list = set.registStampData;
             if (p.setId == set.SetId && place >= 0 && place < list.Count && list[place] != null && (int)list[place].Type == type)
-            {
-                // TEMPORARY, to find out why Amras's stamps showed as yours: remove once that's solved
-                if (_sameLogged++ < 20)
-                    Plugin.L.LogInfo($"[Stamps] stamp {type} from another player: same place here ({place})");
-                return;
-            }
+                return;     // same place here
             for (int i = 0; i < list.Count; i++)
             {
                 if (list[i] == null || (int)list[i].Type != type) continue;

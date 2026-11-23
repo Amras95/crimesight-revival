@@ -505,19 +505,32 @@ def _roster_watcher(ctx, cfg, url, steam_id, srv):
     El anfitrion, ademas, recoge lo que marca en el Selector de personajes del juego (srv: su servidor)."""
     gd = cfg["game_dir"]
     state = {"id": None, "disabled": None, "answer": None}
+    lock = threading.Lock()
+
+    def pick_up():
+        """What the host ticked in the Character Selection, for the server."""
+        with lock:
+            a = core.roster_answer(gd)
+            if not a or a[0] == state["answer"]:
+                return
+            state["answer"] = a[0]
+            core.room_disabled = srv.models.set_disabled(a[1])
+            c2 = core.load_config()
+            c2["roster_disabled"] = list(core.room_disabled)
+            core.write_config(c2)
+            cfg["roster_disabled"] = c2["roster_disabled"]
+        core.install_models(gd)
+        ctx.log(t("roster_saved"))
+
+    if srv is not None:
+        # The server also picks it up right before drawing a match's characters: checking every few seconds alone,
+        # a match started just after closing the Selector still used the old choice (e.g. a character you had just
+        # turned off was still in it).
+        srv.models.before_draw = pick_up
 
     def check():
         if srv is not None:
-            a = core.roster_answer(gd)
-            if a and a[0] != state["answer"]:
-                state["answer"] = a[0]
-                core.room_disabled = srv.models.set_disabled(a[1])
-                c2 = core.load_config()
-                c2["roster_disabled"] = list(core.room_disabled)
-                core.write_config(c2)
-                cfg["roster_disabled"] = c2["roster_disabled"]
-                core.install_models(gd)
-                ctx.log(t("roster_saved"))
+            pick_up()
         roster, disabled = core.roster_state(url, steam_id)
         if roster == "error":
             return
