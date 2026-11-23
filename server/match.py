@@ -169,8 +169,8 @@ IRENE_PICK_PINGS = {27, 28, 29}   # pings de Irene sobre un personaje ("Aqui tie
                                   # registrar): Moriarty IA lo movera este turno
 IRENE_PLACE_PINGS = {26, 27, 28, 30}   # despues, un ping de Irene en el suelo: a donde lo lleva
 IRENE_KILLER_STAMP = 38         # el sticker de Irene "Aqui tienes a tu asesino!" (es un sticker, no un ping)
-# Canal privado de Irene y Moriarty: los pings de Irene (26-30), los stickers que responden a ellos y su sticker
-# solo los ve el bando de Moriarty (Stamp.IsShowCheck). NO_PING: pingType de un sticker que no responde a un ping.
+# Canal privado de Irene y Moriarty: la fila de arriba de los pings de los dos (26-30, IRENE_1-5), los stickers que
+# responden a ellos y el sticker de Irene solo los ve el bando de Moriarty (Stamp.IsShowCheck). NO_PING: pingType de un sticker que no responde a un ping.
 IRENE_PINGS = range(26, 31)
 NO_PING = 34
 IRENE_MAX_PICKS = 2
@@ -300,10 +300,6 @@ class Hub:
             self.deferred.append((topic, kw, snap, exclude, eligible))
             return
         self.next_pub += 1
-        if isinstance(kw, dict) and kw.get("tag") == "ping" and topic.startswith("crimesight.room."):
-            room = self.rooms.get(topic[len("crimesight.room."):])
-            if room is not None:
-                room.note_ping(kw, eligible)
         details = {"var": var} if var is not None else {}
         for s in list(self.sessions):
             if s is exclude or (eligible is not None and s.player_id not in eligible):
@@ -730,37 +726,7 @@ class Room:
         if (tag == "stamp" and (typ == IRENE_KILLER_STAMP or ping in IRENE_PINGS)) or \
                 (tag == "ping" and typ in IRENE_PINGS):
             return "moriarty"
-        if tag == "stamp" and ping != NO_PING and self.answers_private_ping(kw, ping):
-            return "moriarty"
         return None
-
-    def note_ping(self, kw, eligible):
-        """Remembers who received each player's last ping of each type, to know who may see the replies."""
-        try:
-            key = (int(kw.get("id", -1)), int(kw.get("type", -1)))
-        except (TypeError, ValueError):
-            return
-        pings = self.__dict__.setdefault("ping_audience", {})
-        pings[key] = None if eligible is None else frozenset(eligible)
-
-    def answers_private_ping(self, kw, ping):
-        """A stamp that answers a ping only Moriarty's side received (for example Moriarty AI's "I'll control X",
-        which only goes to Irene) is private too: Sherlock's side never saw the ping, so they shouldn't see the reply."""
-        pings = self.__dict__.get("ping_audience") or {}
-        senders = set()
-        try:
-            senders.add(int(kw.get("pingPlayerId", -1)))
-        except (TypeError, ValueError):
-            pass
-        name = kw.get("pingPlayerName")
-        if name:
-            senders |= {self.member_index(p) for p, m in self.members.items() if m.get("name") == name}
-        team = self.team_members("moriarty")
-        for who in senders:
-            seen = pings.get((who, ping), "unknown")
-            if seen not in ("unknown", None) and team and seen <= team:
-                return True
-        return False
 
     def team_members(self, team, eligible=None):
         return {p for p in self.members if self.side(p) == team and (eligible is None or p in eligible)}
@@ -946,6 +912,10 @@ class Room:
         targets = None if eligible is None else set(eligible) | {sess.player_id}
         await self.hub.emit(self.topic, msg, var=self.vars, eligible=targets)
 
+    def bot_ping_audience(self, bot, typ):
+        """Who sees an AI's ping: everyone, like a person's pings, except the private top row (Moriarty's side only)."""
+        return self.team_members("moriarty") if typ in IRENE_PINGS else None
+
     async def bot_announce(self, delay=None):
         """Como haria una persona, cada IA avisa a sus companeros humanos con un ping de que personajes
         va a mover este turno ("Yo controlare a X"). Asi sabes que hace tu companero IA, y las pistas del
@@ -973,7 +943,7 @@ class Room:
                    "posposX": px, "posposY": py, "posposZ": pz,
                    "callposposX": cx, "callposposY": 0, "callposposZ": cz,
                    "name": self.members[bot]["name"], "obj": "", "ignore": 0}
-            await self.hub.emit(self.topic, msg, var=self.vars, eligible=set(mates) | {bot})
+            await self.hub.emit(self.topic, msg, var=self.vars, eligible=self.bot_ping_audience(bot, PING_SEARCH))
             log.info("Sala %s turno %s: Watson IA senala la comida del mueble %s", self.id, self.turn, obj)
             await asyncio.sleep(random.uniform(0.4, 0.9))
         for bot, orders in list((self.bot_orders or {}).items()):
@@ -984,7 +954,7 @@ class Room:
             if not mates:
                 continue
             idx = self.member_index(bot)
-            typ = 26 if self.members[bot]["role"] == ROLE_IRENE else 1
+            typ = 26 if team == "moriarty" else 1   # Moriarty's side: the command ping of its private top row
             done = pinged.setdefault(bot, set())
             for o in orders:
                 pawn = int(o.get("pawnId", -1))
@@ -996,7 +966,7 @@ class Room:
                        "posposX": round(x * 10), "posposY": 15, "posposZ": round(z * 10),
                        "callposposX": round(x * 10), "callposposY": 0, "callposposZ": round(z * 10),
                        "name": self.members[bot]["name"], "obj": "pawn%02d" % (pawn + 1), "ignore": 0}
-                await self.hub.emit(self.topic, msg, var=self.vars, eligible=set(mates) | {bot})
+                await self.hub.emit(self.topic, msg, var=self.vars, eligible=self.bot_ping_audience(bot, typ))
                 await asyncio.sleep(random.uniform(0.4, 0.9))
 
     async def _bot_heartbeat(self):
