@@ -107,38 +107,63 @@ namespace CrimeSightRevival.Mods
 
     // ---------------------------------------------------------------- stamps from other players
     // A stamp message says which stamp it is twice: its type, and its place in the sender's stamp list
-    // (setIndex/dataIndex). The game shows the one at that place in ITS OWN list. Mod stamps are added to those
-    // lists, and for a few seconds after someone joins a room the lists can differ (a game that hasn't loaded
-    // the room's mods yet): the place then points at another stamp, e.g. one of yours instead of theirs. Here,
-    // for mod stamps, the place is worked out again from the type, in this game's own list, just before the game
-    // shows a received stamp. (Checking the network message itself didn't work: stamps don't come through there.)
+    // (setId/dataIndex). The game shows the one at that place in ITS OWN list. Mod stamps all go into set 0 (see
+    // Ensure), sorted by type, so if two games' lists differ (different mods loaded at that moment), the place
+    // points at another stamp, e.g. one of yours instead of theirs. Just before the game shows a received mod
+    // stamp, its place is worked out again from its type in this game's set 0. If this game doesn't have that
+    // stamp at all (the sender's mods were declined or aren't loaded yet), the game's first default stamp is
+    // shown instead. (The network message itself can't be fixed: stamps don't come through there.)
     static class StampPlace
     {
-        const int FirstModType = 1000;
+        static readonly HashSet<int> _logged = new();
+        static int _sameLogged;
         static bool _warned;
 
         public static void Fix(StampParam p)
         {
             if (p == null) return;
-            int type = (int)p.type;
-            if (type < FirstModType) return;
-            var sets = StampManager.Instance?.registStampSet;
-            if (sets == null) return;
-            int place = p.dataIndex;
-            foreach (var set in sets)
+            int type = (int)p.type, place = p.dataIndex;
+            if (type < LiveMods.FIRST_TYPE) return;
+            var set = ModSet();
+            if (set == null) return;
+            var list = set.registStampData;
+            if (p.setId == set.SetId && place >= 0 && place < list.Count && list[place] != null && (int)list[place].Type == type)
             {
-                if (set == null || set.SetId != p.setId || set.registStampData == null) continue;
-                var list = set.registStampData;
-                if (place >= 0 && place < list.Count && list[place] != null && (int)list[place].Type == type) return;   // same place here
-                for (int i = 0; i < list.Count; i++)
-                {
-                    if (list[i] == null || (int)list[i].Type != type) continue;
-                    p.dataIndex = i;
-                    Plugin.L.LogInfo($"[Stamps] stamp {type} from another player: place {place} -> {i}");
-                    return;
-                }
-                return;     // this game doesn't have that stamp (yet): left as it is
+                // TEMPORARY, to find out why Amras's stamps showed as yours: remove once that's solved
+                if (_sameLogged++ < 20)
+                    Plugin.L.LogInfo($"[Stamps] stamp {type} from another player: same place here ({place})");
+                return;
             }
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i] == null || (int)list[i].Type != type) continue;
+                Plugin.L.LogInfo($"[Stamps] stamp {type} from another player: place {place} -> {i}");
+                p.setId = set.SetId;
+                p.dataIndex = i;
+                return;
+            }
+            for (int i = 0; i < list.Count; i++)
+            {
+                var d = list[i];
+                if (d == null || (int)d.Type >= LiveMods.FIRST_TYPE) continue;
+                if (_logged.Add(type))
+                    Plugin.L.LogInfo($"[Stamps] stamp {type} from another player isn't in this game: shown as default stamp {(int)d.Type}");
+                p.type = d.Type;
+                p.facetype = d.FaceType;
+                p.typeInt = d.GetTypeInt();
+                p.setId = set.SetId;
+                p.dataIndex = i;
+                return;
+            }
+        }
+
+        static StampSet ModSet()
+        {
+            var sets = StampManager.Instance?.registStampSet;
+            if (sets == null) return null;
+            foreach (var set in sets)
+                if (set != null && set.SetId == 0 && set.registStampData != null) return set;
+            return null;
         }
 
         public static void Warn(Exception e)
@@ -192,7 +217,7 @@ namespace CrimeSightRevival.Mods
         // Dentro de BepInEx, en la carpeta del juego: asi el lanzador y el plugin la ven igual en
         // Windows y con Proton (Linux / Steam Deck), donde la carpeta de usuario es la de Wine.
         public static readonly string LiveDir = Path.Combine(BepInEx.Paths.BepInExRootPath, "csr_live");
-        const int FIRST_TYPE = 1000;
+        internal const int FIRST_TYPE = 1000;
 
         float _next;
         DateTime _seen = DateTime.MinValue;
