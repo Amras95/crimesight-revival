@@ -33,7 +33,7 @@ Play CRIMESIGHT (Konami, 2022) again after its official servers shut down.
 > **Stamp and avatar mods:** tested solo, with and without hot reload. Downloading the host's mods when
 > joining their room is tested locally, not yet between two people.
 >
-> **Scenario creator:** tested solo. Sharing scenarios with the room hasn't been tested between two people
+> **Scenario Creator:** tested solo. Sharing scenarios with the room hasn't been tested between two people
 > yet.
 >
 > **3D models, new characters and Character Selection:** tested solo. Sharing them with the room hasn't
@@ -127,7 +127,7 @@ mods\
   mod.json         the name and author shown for your mods, and your stamp messages
   models\          your 3D models, skeletons, animations and images
   cursor\          your custom cursor
-  stages\          the scenarios you save in the Scenario creator
+  stages\          the scenarios you save in the Scenario Creator
 ```
 
 - **Any image works.** They're adjusted to the game's size automatically (128×128 stamps with their white
@@ -203,9 +203,9 @@ A model can also be a **new character** (**Mods → Models → New characters**)
 **Mods → Custom cursor → Choose image…** turns any image into the game's mouse cursor; then pick its click
 point (tip or centre). Only you see it, and it needs hot reload.
 
-## Scenario creator
+## Scenario Creator
 
-**Mods → Scenario creator** lets you rearrange the rooms of one of the game's scenarios and save it as a
+**Mods → Scenario Creator** lets you rearrange the rooms of one of the game's scenarios and save it as a
 new one. The original scenarios are never changed. Playing them needs hot reload.
 
 - Move, rotate, remove or repeat rooms; swap doors for furniture or secret passages; choose which windows
@@ -246,7 +246,7 @@ new one. The original scenarios are never changed. Playing them needs hot reload
 - New stamp and avatar mods, shared with the room, with hot reload.
 - 3D models, custom animations, new characters and Character Selection, shared with the room.
 - Custom cursor.
-- Scenario creator, with scenarios shared with the room.
+- Scenario Creator, with scenarios shared with the room.
 - The AI players often reply to your stamps; for your own stamps, they go by each one's **Counts as…**
   setting.
 - Sherlock and Watson see each other's icon in the player list, and an AI Watson pings each new food spot

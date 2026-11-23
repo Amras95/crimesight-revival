@@ -135,7 +135,7 @@ namespace CrimeSightRevival.Mods
         // ---------------------------------------------------------------- escenario de pruebas
         static readonly string[] TestName =
         {   // ja, en, fr, it, de, es, pt, ru, ko, zh-CN, zh-TW (orden de TextManager)
-            "テスト用ステージ (CSR)", "Test stage (CSR)", "Scénario de test (CSR)", "Scenario di prova (CSR)",
+            "テスト用ステージ (CSR)", "Test Stage (CSR)", "Scénario de test (CSR)", "Scenario di prova (CSR)",
             "Testszenario (CSR)", "Escenario de pruebas (CSR)", "Cenário de testes (CSR)", "Тестовый сценарий (CSR)",
             "테스트 스테이지 (CSR)", "测试场景 (CSR)", "測試場景 (CSR)",
         };
