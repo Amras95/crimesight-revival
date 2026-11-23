@@ -300,6 +300,10 @@ class Hub:
             self.deferred.append((topic, kw, snap, exclude, eligible))
             return
         self.next_pub += 1
+        if isinstance(kw, dict) and kw.get("tag") == "ping" and topic.startswith("crimesight.room."):
+            room = self.rooms.get(topic[len("crimesight.room."):])
+            if room is not None:
+                room.note_ping(kw, eligible)
         details = {"var": var} if var is not None else {}
         for s in list(self.sessions):
             if s is exclude or (eligible is not None and s.player_id not in eligible):
@@ -398,6 +402,12 @@ class Hub:
             # that answer those pings): the game sends them to everyone and each game hides them, but the replies
             # still showed on Sherlock's side. Only Moriarty's side gets them now.
             eligible = room.team_members("moriarty", eligible) | {sess.player_id}
+        if room is not None and kw.get("tag") == "stamp" and room.phase in IN_MATCH and \
+                str(kw.get("pingType", NO_PING)) not in ("", str(NO_PING)):
+            names = sorted(room.members.get(p, {}).get("name", p) for p in eligible) if eligible is not None else "todos"
+            log.info("Sala %s: %s answers ping %s of %r (pingPlayerId %s, parentCreateId %s) -> seen by %s", room.id,
+                     room.members.get(sess.player_id, {}).get("name", "?"), kw.get("pingType"), kw.get("pingPlayerName"),
+                     kw.get("pingPlayerId"), kw.get("parentCreateId"), names)
         if room is not None and "tag" in kw:
             # Quien ve cada mensaje lo decide el juego con estas opciones: se apunta una vez por
             # papel, tipo de mensaje y opciones, para poder comprobar que el reparto es el del original
@@ -720,7 +730,37 @@ class Room:
         if (tag == "stamp" and (typ == IRENE_KILLER_STAMP or ping in IRENE_PINGS)) or \
                 (tag == "ping" and typ in IRENE_PINGS):
             return "moriarty"
+        if tag == "stamp" and ping != NO_PING and self.answers_private_ping(kw, ping):
+            return "moriarty"
         return None
+
+    def note_ping(self, kw, eligible):
+        """Remembers who received each player's last ping of each type, to know who may see the replies."""
+        try:
+            key = (int(kw.get("id", -1)), int(kw.get("type", -1)))
+        except (TypeError, ValueError):
+            return
+        pings = self.__dict__.setdefault("ping_audience", {})
+        pings[key] = None if eligible is None else frozenset(eligible)
+
+    def answers_private_ping(self, kw, ping):
+        """A stamp that answers a ping only Moriarty's side received (for example Moriarty AI's "I'll control X",
+        which only goes to Irene) is private too: Sherlock's side never saw the ping, so they shouldn't see the reply."""
+        pings = self.__dict__.get("ping_audience") or {}
+        senders = set()
+        try:
+            senders.add(int(kw.get("pingPlayerId", -1)))
+        except (TypeError, ValueError):
+            pass
+        name = kw.get("pingPlayerName")
+        if name:
+            senders |= {self.member_index(p) for p, m in self.members.items() if m.get("name") == name}
+        team = self.team_members("moriarty")
+        for who in senders:
+            seen = pings.get((who, ping), "unknown")
+            if seen not in ("unknown", None) and team and seen <= team:
+                return True
+        return False
 
     def team_members(self, team, eligible=None):
         return {p for p in self.members if self.side(p) == team and (eligible is None or p in eligible)}
