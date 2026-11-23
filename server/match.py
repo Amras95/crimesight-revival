@@ -393,6 +393,11 @@ class Hub:
             base = eligible if eligible is not None else {s.player_id for s in self.sessions}
             eligible = {p for p in base if room.authrole(p) not in roles}
         echo = room is not None and "Control" in kw
+        if room is not None and "tag" in kw and room.phase in IN_MATCH and room.private_team(sess, kw) == "moriarty":
+            # Private channel of Moriarty and Irene (Irene's pings, her "Here's your killer!" stamp and the stamps
+            # that answer those pings): the game sends them to everyone and each game hides them, but the replies
+            # still showed on Sherlock's side. Only Moriarty's side gets them now.
+            eligible = room.team_members("moriarty", eligible) | {sess.player_id}
         if room is not None and "tag" in kw:
             # Quien ve cada mensaje lo decide el juego con estas opciones: se apunta una vez por
             # papel, tipo de mensaje y opciones, para poder comprobar que el reparto es el del original
