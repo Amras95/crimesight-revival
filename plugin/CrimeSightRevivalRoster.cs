@@ -92,7 +92,7 @@ namespace CrimeSightRevival.Mods
             {
                 Read();
                 ApplyText();
-                if (Time.unscaledTime >= _nextSprites) { _nextSprites = Time.unscaledTime + 3f; ApplySprites(); ApplyBorrow(); }
+                if (Time.unscaledTime >= _nextSprites) { _nextSprites = Time.unscaledTime + 3f; PutBackCopies(); ApplySprites(); ApplyBorrow(); }
                 if (Time.unscaledTime >= _nextTalk) { _nextTalk = Time.unscaledTime + 5f; ApplyTalkPics(); }
                 CacheOriginals();
             }
@@ -611,6 +611,7 @@ namespace CrimeSightRevival.Mods
 
         static void RestoreSprites()
         {
+            var old = new List<UnityEngine.Object>();
             foreach (var sw in _swapped.Values)
             {
                 try
@@ -622,11 +623,11 @@ namespace CrimeSightRevival.Mods
                     }
                 }
                 catch { }
+                old.AddRange(sw.made);
             }
-            PutBackCopies();
-            foreach (var sw in _swapped.Values)
-                foreach (var o in sw.made) if (o != null) UnityEngine.Object.Destroy(o);
             _swapped.Clear();
+            PutBackCopies();
+            foreach (var o in old) if (o != null) UnityEngine.Object.Destroy(o);
         }
 
         static void RememberGame(string key, string f, Sprite s)
@@ -641,10 +642,19 @@ namespace CrimeSightRevival.Mods
             return _gameSprites.TryGetValue(key, out var m) && m.TryGetValue(f, out s) && s != null;
         }
 
-        /// <summary>Every copy of a character's data still showing a picture made here gets the game's own back.</summary>
+        /// <summary>Every copy of a character's data still showing a picture made here for an earlier match gets the game's
+        /// own back. It runs when a match's characters change and then every few seconds: the game makes some copies
+        /// later, while the next match loads, from data it kept from the earlier one. The pictures of the current
+        /// match's new characters are left alone.</summary>
         static void PutBackCopies()
         {
             if (_ours.Count == 0) return;
+            var live = new HashSet<IntPtr>();
+            foreach (var sw in _swapped.Values)
+            {
+                foreach (var o in sw.made) if ((object)o != null) live.Add(o.Pointer);
+                try { if (sw.panel && (object)sw.d?.namePanelTexture != null) live.Add(sw.d.namePanelTexture.Pointer); } catch { }
+            }
             int n = 0;
             try
             {
@@ -655,12 +665,12 @@ namespace CrimeSightRevival.Mods
                     foreach (var ft in SpriteFields)
                     {
                         var s = GetSp(d, ft.name);
-                        if ((object)s == null || !_ours.Contains(s.Pointer) || !GameSprite(d.name, ft.name, out var g)) continue;
+                        if ((object)s == null || !_ours.Contains(s.Pointer) || live.Contains(s.Pointer) || !GameSprite(d.name, ft.name, out var g)) continue;
                         SetSp(d, ft.name, g);
                         n++;
                     }
                     var t = d.namePanelTexture;
-                    if ((object)t != null && _ours.Contains(t.Pointer) && _gamePanel.TryGetValue(d.name, out var gp) && gp != null)
+                    if ((object)t != null && _ours.Contains(t.Pointer) && !live.Contains(t.Pointer) && _gamePanel.TryGetValue(d.name, out var gp) && gp != null)
                     {
                         d.namePanelTexture = gp;
                         RefreshNamePanels(d, gp);
