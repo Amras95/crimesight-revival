@@ -95,7 +95,25 @@ def load_config():
     return cfg
 
 
+# Settings changed only straight in the file (load, change, save at once: characters, model and animation
+# swaps, the Character Selection). The launcher's own copy of the settings, loaded when it opened, has old values
+# for these: saving that copy used to put them back (e.g. a new character vanished when the game was launched).
+FILE_KEYS = ("characters", "anim_swaps", "model_swaps", "roster_disabled")
+
+
 def save_config(cfg):
+    """Saves the launcher's copy of the settings. FILE_KEYS keep what's in the file (and the copy gets them too)."""
+    disk = load_config()
+    for k in FILE_KEYS:
+        if k in disk:
+            cfg[k] = disk[k]
+        else:
+            cfg.pop(k, None)
+    write_config(cfg)
+
+
+def write_config(cfg):
+    """Writes the settings as they are: only for a copy just loaded from the file (see FILE_KEYS)."""
     path = os.path.join(app_dir(), "config.json")
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -1184,7 +1202,7 @@ def set_anim_swap(slot, kind, name):
     if not cur:
         sw.pop(slot, None)
     cfg["anim_swaps"] = sw
-    save_config(cfg)
+    write_config(cfg)
 
 
 # ---------------------------------------------------------------- personajes nuevos (slots)
@@ -1278,7 +1296,7 @@ def save_character(c):
              "talk": {k: str(v).strip()[:240] for k, v in (c.get("talk") or {}).items() if k in TALK_KEYS and str(v).strip()}}
     lst = [x for x in lst if x.get("id") != cid] + [entry]
     cfg["characters"] = lst
-    save_config(cfg)
+    write_config(cfg)
     return cid
 
 
@@ -1286,7 +1304,7 @@ def delete_character(cid):
     cfg = load_config()
     cfg["characters"] = [x for x in (cfg.get("characters") or []) if isinstance(x, dict) and x.get("id") != cid]
     cfg["roster_disabled"] = [x for x in (cfg.get("roster_disabled") or []) if x != cid]
-    save_config(cfg)
+    write_config(cfg)
 
 
 def _image_file(name, src):
@@ -1316,7 +1334,7 @@ def set_model_swap(slot, target):
     else:
         sw[slot] = target
     cfg["model_swaps"] = sw
-    save_config(cfg)
+    write_config(cfg)
     return model_swaps()
 
 

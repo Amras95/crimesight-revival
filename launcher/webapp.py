@@ -579,7 +579,6 @@ class Api:
             core.install_models(self._cfg.get("game_dir") or "")
         except OSError as e:
             return {"error": t("err_unexpected", err=e)}
-        self._cfg["anim_swaps"] = core.load_config().get("anim_swaps") or {}
         return self.models_state()
 
     def models_anims_open(self):
@@ -595,7 +594,6 @@ class Api:
             core.install_models(self._cfg.get("game_dir") or "")
         except OSError as e:
             return {"error": t("err_unexpected", err=e)}
-        self._cfg["model_swaps"] = core.load_config().get("model_swaps") or {}   # que no lo pise otro guardado
         return self.models_state()
 
     # ---------------------------------------------------------------- creador de escenarios
