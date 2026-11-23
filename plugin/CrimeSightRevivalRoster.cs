@@ -92,7 +92,7 @@ namespace CrimeSightRevival.Mods
             {
                 Read();
                 ApplyText();
-                if (Time.unscaledTime >= _nextSprites) { _nextSprites = Time.unscaledTime + 3f; PutBackCopies(); ApplySprites(); ApplyBorrow(); }
+                if (Time.unscaledTime >= _nextSprites) { _nextSprites = Time.unscaledTime + 3f; ApplySprites(); ApplyBorrow(); }
                 if (Time.unscaledTime >= _nextTalk) { _nextTalk = Time.unscaledTime + 5f; ApplyTalkPics(); }
                 CacheOriginals();
             }
@@ -351,11 +351,9 @@ namespace CrimeSightRevival.Mods
             public readonly List<UnityEngine.Object> made = new();
         }
         static readonly Dictionary<IntPtr, Swapped> _swapped = new();
-        // Pictures made here (portraits and name plates), and the game's own ones for each character. A copy of a
-        // character's data made while it had a new character's pictures (the game makes some) carries them too:
-        // taking "the original" from such a copy would keep the new character's picture, and it showed as a white
-        // portrait (destroyed picture) and the new name at their feet in later matches. So originals always come
-        // from the game's own pictures, and every copy is put back, not only the one that was changed.
+        // Pictures made here (portraits and name plates), and the game's own ones for each character: an original is
+        // never taken from a picture made here (e.g. a rematch with the same new character), and the game's own ones
+        // are kept loaded while swapped out (see Keep).
         static readonly HashSet<IntPtr> _ours = new();
         static readonly Dictionary<string, Dictionary<string, Sprite>> _gameSprites = new();   // character -> field -> the game's
         static readonly Dictionary<string, Texture> _gamePanel = new();                         // character -> the game's name plate
@@ -400,7 +398,7 @@ namespace CrimeSightRevival.Mods
                 {
                     var o = d.namePanelTexture;
                     if (_ours.Contains(o.Pointer)) { if (!_gamePanel.TryGetValue(Pawns[i], out o) || o == null) continue; }
-                    else _gamePanel[Pawns[i]] = o;
+                    else { _gamePanel[Pawns[i]] = o; Keep(o); }
                     int w = Math.Min(1024, Math.Max(64, o.width)), h = Math.Min(512, Math.Max(16, o.height));
                     var p = PanelFor(e.name, w, h);
                     if (p != null)
@@ -454,6 +452,7 @@ namespace CrimeSightRevival.Mods
                     _talkMade[mk] = ns;
                 }
                 if (ns == null) continue;
+                Keep(sp);
                 _talkSwapped[d.Pointer] = (d, sp);
                 d.CharaImage = ns;
                 n++;
@@ -611,7 +610,6 @@ namespace CrimeSightRevival.Mods
 
         static void RestoreSprites()
         {
-            var old = new List<UnityEngine.Object>();
             foreach (var sw in _swapped.Values)
             {
                 try
@@ -623,63 +621,37 @@ namespace CrimeSightRevival.Mods
                     }
                 }
                 catch { }
-                old.AddRange(sw.made);
+                foreach (var o in sw.made) if (o != null) UnityEngine.Object.Destroy(o);
             }
             _swapped.Clear();
-            PutBackCopies();
-            foreach (var o in old) if (o != null) UnityEngine.Object.Destroy(o);
         }
 
         static void RememberGame(string key, string f, Sprite s)
         {
+            Keep(s);
             if (!_gameSprites.TryGetValue(key, out var m)) _gameSprites[key] = m = new Dictionary<string, Sprite>();
             m[f] = s;
+        }
+
+        /// <summary>The game's own picture, swapped out for a new character's, is kept loaded. While swapped out nothing
+        /// in the game uses it, and Unity unloads unused pictures when a match loads: putting it back afterwards then
+        /// put back a deleted picture (a white portrait), and the name plate couldn't be put back at all.</summary>
+        static void Keep(UnityEngine.Object o)
+        {
+            try
+            {
+                if ((object)o == null || o == null) return;
+                o.hideFlags |= HideFlags.DontUnloadUnusedAsset;
+                var sp = o.TryCast<Sprite>();
+                if (sp != null && sp.texture != null) sp.texture.hideFlags |= HideFlags.DontUnloadUnusedAsset;
+            }
+            catch { }
         }
 
         static bool GameSprite(string key, string f, out Sprite s)
         {
             s = null;
             return _gameSprites.TryGetValue(key, out var m) && m.TryGetValue(f, out s) && s != null;
-        }
-
-        /// <summary>Every copy of a character's data still showing a picture made here for an earlier match gets the game's
-        /// own back. It runs when a match's characters change and then every few seconds: the game makes some copies
-        /// later, while the next match loads, from data it kept from the earlier one. The pictures of the current
-        /// match's new characters are left alone.</summary>
-        static void PutBackCopies()
-        {
-            if (_ours.Count == 0) return;
-            var live = new HashSet<IntPtr>();
-            foreach (var sw in _swapped.Values)
-            {
-                foreach (var o in sw.made) if ((object)o != null) live.Add(o.Pointer);
-                try { if (sw.panel && (object)sw.d?.namePanelTexture != null) live.Add(sw.d.namePanelTexture.Pointer); } catch { }
-            }
-            int n = 0;
-            try
-            {
-                foreach (var o in Resources.FindObjectsOfTypeAll(Il2CppType.Of<PawnTypeData>()))
-                {
-                    var d = o.TryCast<PawnTypeData>();
-                    if (d == null || Array.IndexOf(Pawns, d.name) < 0) continue;
-                    foreach (var ft in SpriteFields)
-                    {
-                        var s = GetSp(d, ft.name);
-                        if ((object)s == null || !_ours.Contains(s.Pointer) || live.Contains(s.Pointer) || !GameSprite(d.name, ft.name, out var g)) continue;
-                        SetSp(d, ft.name, g);
-                        n++;
-                    }
-                    var t = d.namePanelTexture;
-                    if ((object)t != null && _ours.Contains(t.Pointer) && !live.Contains(t.Pointer) && _gamePanel.TryGetValue(d.name, out var gp) && gp != null)
-                    {
-                        d.namePanelTexture = gp;
-                        RefreshNamePanels(d, gp);
-                        n++;
-                    }
-                }
-            }
-            catch (Exception e) { Warn("copies", "[Personajes] " + e.Message); }
-            if (n > 0) Plugin.L.LogInfo($"[Personajes] {n} picture(s) of a previous new character put back in copies of the game's data");
         }
 
         internal static Texture2D LoadImage(string path)

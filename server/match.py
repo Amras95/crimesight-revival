@@ -170,7 +170,8 @@ IRENE_PICK_PINGS = {27, 28, 29}   # pings de Irene sobre un personaje ("Aqui tie
 IRENE_PLACE_PINGS = {26, 27, 28, 30}   # despues, un ping de Irene en el suelo: a donde lo lleva
 IRENE_KILLER_STAMP = 38         # el sticker de Irene "Aqui tienes a tu asesino!" (es un sticker, no un ping)
 # Canal privado de Irene y Moriarty: la fila de arriba de los pings de los dos (26-30, IRENE_1-5), los stickers que
-# responden a ellos y el sticker de Irene solo los ve el bando de Moriarty (Stamp.IsShowCheck). NO_PING: pingType de un sticker que no responde a un ping.
+# responden a ellos y el sticker de Irene solo los ve el bando de Moriarty. NO_PING: pingType de un sticker que no
+# responde a un ping.
 IRENE_PINGS = range(26, 31)
 NO_PING = 34
 IRENE_MAX_PICKS = 2
@@ -394,16 +395,9 @@ class Hub:
             eligible = {p for p in base if room.authrole(p) not in roles}
         echo = room is not None and "Control" in kw
         if room is not None and "tag" in kw and room.phase in IN_MATCH and room.private_team(sess, kw) == "moriarty":
-            # Private channel of Moriarty and Irene (Irene's pings, her "Here's your killer!" stamp and the stamps
-            # that answer those pings): the game sends them to everyone and each game hides them, but the replies
-            # still showed on Sherlock's side. Only Moriarty's side gets them now.
+            # Private channel of Moriarty and Irene (see private_team): the game sends it to everyone and each game
+            # hides it, but replies to it still showed on Sherlock's side. Only Moriarty's side gets it now.
             eligible = room.team_members("moriarty", eligible) | {sess.player_id}
-        if room is not None and kw.get("tag") == "stamp" and room.phase in IN_MATCH and \
-                str(kw.get("pingType", NO_PING)) not in ("", str(NO_PING)):
-            names = sorted(room.members.get(p, {}).get("name", p) for p in eligible) if eligible is not None else "todos"
-            log.info("Sala %s: %s answers ping %s of %r (pingPlayerId %s, parentCreateId %s) -> seen by %s", room.id,
-                     room.members.get(sess.player_id, {}).get("name", "?"), kw.get("pingType"), kw.get("pingPlayerName"),
-                     kw.get("pingPlayerId"), kw.get("parentCreateId"), names)
         if room is not None and "tag" in kw:
             # Quien ve cada mensaje lo decide el juego con estas opciones: se apunta una vez por
             # papel, tipo de mensaje y opciones, para poder comprobar que el reparto es el del original
@@ -715,9 +709,9 @@ class Room:
         return modpack.MEANS.get(means, stamp)
 
     def private_team(self, sess, kw):
-        """Bando que puede ver un mensaje privado, o None si lo ve todo el mundo. Como en el juego
-        (Stamp.IsShowCheck), solo son privados del bando de Moriarty el sticker de Irene "Aqui tienes a tu
-        asesino!", sus pings y los stickers que responden a sus pings; el resto de stickers los ve todo el mundo."""
+        """Bando que puede ver un mensaje privado, o None si lo ve todo el mundo. Solo son privados del bando de
+        Moriarty la fila de arriba de pings de Moriarty e Irene (Orden, Moverse, Buscar, "Aqui tienes a tu asesino!"),
+        el sticker de Irene "Aqui tienes a tu asesino!" y los stickers que responden a esos pings."""
         try:
             typ, ping = int(kw.get("type", -1)), int(kw.get("pingType", NO_PING))
         except (TypeError, ValueError):
@@ -1305,6 +1299,12 @@ class Room:
         mr = getattr(self.hub, "model_room", None)
         if mr is None:
             return
+        try:
+            before = getattr(mr, "before_draw", None)
+            if before is not None:
+                before()            # the host's latest Character Selection (set by the launcher)
+        except Exception:  # noqa: BLE001
+            log.exception("No pude leer el Selector de personajes")
         try:
             r = mr.draw()
             self.hub.roster_seq = getattr(self.hub, "roster_seq", 0) + 1
