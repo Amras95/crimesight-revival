@@ -351,6 +351,14 @@ namespace CrimeSightRevival.Mods
             public readonly List<UnityEngine.Object> made = new();
         }
         static readonly Dictionary<IntPtr, Swapped> _swapped = new();
+        // Pictures made here (portraits and name plates), and the game's own ones for each character. A copy of a
+        // character's data made while it had a new character's pictures (the game makes some) carries them too:
+        // taking "the original" from such a copy would keep the new character's picture, and it showed as a white
+        // portrait (destroyed picture) and the new name at their feet in later matches. So originals always come
+        // from the game's own pictures, and every copy is put back, not only the one that was changed.
+        static readonly HashSet<IntPtr> _ours = new();
+        static readonly Dictionary<string, Dictionary<string, Sprite>> _gameSprites = new();   // character -> field -> the game's
+        static readonly Dictionary<string, Texture> _gamePanel = new();                         // character -> the game's name plate
         static readonly Dictionary<string, Texture2D> _images = new();      // imagen (ruta / "auto:modelo") -> textura legible
         static readonly HashSet<string> _imageAsked = new();
         static readonly Dictionary<string, Texture2D> _panels = new();      // "nombre|w|h" -> placa
@@ -391,10 +399,13 @@ namespace CrimeSightRevival.Mods
                 if (!sw.panel && e.name != null && d.namePanelTexture != null)
                 {
                     var o = d.namePanelTexture;
+                    if (_ours.Contains(o.Pointer)) { if (!_gamePanel.TryGetValue(Pawns[i], out o) || o == null) continue; }
+                    else _gamePanel[Pawns[i]] = o;
                     int w = Math.Min(1024, Math.Max(64, o.width)), h = Math.Min(512, Math.Max(16, o.height));
                     var p = PanelFor(e.name, w, h);
                     if (p != null)
                     {
+                        _ours.Add(p.Pointer);
                         sw.panelOrig = o;
                         d.namePanelTexture = p;
                         sw.panel = true;
@@ -578,8 +589,11 @@ namespace CrimeSightRevival.Mods
                     {
                         var o = GetSp(sw.d, f);
                         if (o == null) continue;
+                        if (_ours.Contains(o.Pointer)) { if (!GameSprite(sw.key, f, out o)) continue; }
+                        else RememberGame(sw.key, f, o);
                         var s = Fitted(sw.img, o, tint, sw.made);
                         if (s == null) continue;
+                        _ours.Add(s.Pointer);
                         sw.orig[f] = o;
                         SetSp(sw.d, f, s);
                         sw.done++;
@@ -608,9 +622,54 @@ namespace CrimeSightRevival.Mods
                     }
                 }
                 catch { }
-                foreach (var o in sw.made) if (o != null) UnityEngine.Object.Destroy(o);
             }
+            PutBackCopies();
+            foreach (var sw in _swapped.Values)
+                foreach (var o in sw.made) if (o != null) UnityEngine.Object.Destroy(o);
             _swapped.Clear();
+        }
+
+        static void RememberGame(string key, string f, Sprite s)
+        {
+            if (!_gameSprites.TryGetValue(key, out var m)) _gameSprites[key] = m = new Dictionary<string, Sprite>();
+            m[f] = s;
+        }
+
+        static bool GameSprite(string key, string f, out Sprite s)
+        {
+            s = null;
+            return _gameSprites.TryGetValue(key, out var m) && m.TryGetValue(f, out s) && s != null;
+        }
+
+        /// <summary>Every copy of a character's data still showing a picture made here gets the game's own back.</summary>
+        static void PutBackCopies()
+        {
+            if (_ours.Count == 0) return;
+            int n = 0;
+            try
+            {
+                foreach (var o in Resources.FindObjectsOfTypeAll(Il2CppType.Of<PawnTypeData>()))
+                {
+                    var d = o.TryCast<PawnTypeData>();
+                    if (d == null || Array.IndexOf(Pawns, d.name) < 0) continue;
+                    foreach (var ft in SpriteFields)
+                    {
+                        var s = GetSp(d, ft.name);
+                        if ((object)s == null || !_ours.Contains(s.Pointer) || !GameSprite(d.name, ft.name, out var g)) continue;
+                        SetSp(d, ft.name, g);
+                        n++;
+                    }
+                    var t = d.namePanelTexture;
+                    if ((object)t != null && _ours.Contains(t.Pointer) && _gamePanel.TryGetValue(d.name, out var gp) && gp != null)
+                    {
+                        d.namePanelTexture = gp;
+                        RefreshNamePanels(d, gp);
+                        n++;
+                    }
+                }
+            }
+            catch (Exception e) { Warn("copies", "[Personajes] " + e.Message); }
+            if (n > 0) Plugin.L.LogInfo($"[Personajes] {n} picture(s) of a previous new character put back in copies of the game's data");
         }
 
         internal static Texture2D LoadImage(string path)

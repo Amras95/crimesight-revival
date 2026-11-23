@@ -2405,29 +2405,33 @@ class Room:
     def record_result(self, selections):
         self.log_call("accusations", [(s["player_id"], s["killer"], self.members.get(s["player_id"], {}).get("bot"))
                                       for s in selections])
-        """Fin por deduccion: si alguien del bando de Sherlock (Sherlock o Watson) acierta, gana su bando; si no,
-        empate (no hubo asesinato). Asi lo ensena el propio juego: con Watson acertando y Sherlock IA fallando, la
-        pantalla final daba victoria. Acusar bien da ademas los puntos de la accion a quien acerto."""
+        """Fin por deduccion: si alguien del bando de Sherlock (Sherlock o Watson) acierta, su bando gana y Moriarty
+        pierde; si nadie acierta, empate (no hubo asesinato). Each of them gets their own result, as the game's end
+        screen shows it: whoever accused the villain wins, a teammate who accused someone else draws (seen in a
+        4-player match). Acusar bien da ademas los puntos de la accion a quien acerto."""
         right = [s["player_id"] for s in selections if s["killer"] == self.killer
                  and self.members.get(s["player_id"], {}).get("role") in (ROLE_DETECTIVE, ROLE_WATSON)]
         extra = {pid: [ACT_DEDUCED] for pid in right}
-        self.conclude("sherlock" if right else "draw", extra)
+        wrong = {pid for pid, m in self.members.items()
+                 if m.get("role") in (ROLE_DETECTIVE, ROLE_WATSON) and pid not in right} if right else set()
+        self.conclude("sherlock" if right else "draw", extra, draws=wrong)
 
-    def conclude(self, winner, extra=None, quitter=None):
+    def conclude(self, winner, extra=None, quitter=None, draws=None):
         """winner: "sherlock", "moriarty" o "draw". extra: acciones con puntos, por rol o por jugador.
-        quitter: the player who forfeited or left, or a set of them (a team that voted to forfeit)."""
+        quitter: the player who forfeited or left, or a set of them (a team that voted to forfeit).
+        draws: players on the winning side who still only draw (Sherlock or Watson who accused the wrong person)."""
         if self.recorded:
             return
         self.recorded = True
         ml = getattr(self, "mlog", None)
         reason = "abandon" if quitter else ("kill" if ml is not None and ml.rec.get("kill") else "deduction")
         try:
-            self._record_players(winner, extra or {}, quitter, reason)
+            self._record_players(winner, extra or {}, quitter, reason, draws or set())
         finally:
             self.log_call("finish", winner, reason)     # se guarda el registro con lo anotado en los perfiles
         self.hub.api.s.save()
 
-    def _record_players(self, winner, extra, quitter, reason):
+    def _record_players(self, winner, extra, quitter, reason, draws=frozenset()):
         quitters = {quitter} if isinstance(quitter, str) else set(quitter or ())
         for pid, m in self.members.items():
             if m.get("bot"):
@@ -2435,6 +2439,8 @@ class Room:
             role = int(m["role"])
             side = "sherlock" if role in (ROLE_DETECTIVE, ROLE_WATSON) else "moriarty"
             outcome = "draw" if winner == "draw" else ("win" if side == winner else "lose")
+            if pid in draws:
+                outcome = "draw"
             if pid in quitters:
                 outcome = "abandon"
             acts = list(extra.get(role, [])) + list(extra.get(pid, [])) + sorted(self.events.get(pid, ()))
