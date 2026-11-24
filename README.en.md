@@ -249,8 +249,9 @@ new one. The original scenarios are never changed. Playing them needs hot reload
 - Scenario Creator, with scenarios shared with the room.
 - The AI players often reply to your stamps; for your own stamps, they go by each one's **Counts as…**
   setting.
-- Sherlock and Watson see each other's icon in the player list, and an AI Watson pings each new food spot
-  it finds.
+- New room setting, **Reveal Partner (Detective Team)** (off, as in the original game): if the host turns it
+  on, Sherlock and Watson see each other's icon in the player list.
+- An AI Watson pings each new food spot it finds.
 - In the game: a **Revival Guide** (in the Play menu) that explains what Revival adds, and **Revival
   Credits** (in the Options window).
 - Controller support (Xbox, PlayStation, Switch, Steam Deck) with hot reload turned on. The button layout
