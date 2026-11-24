@@ -97,7 +97,19 @@ class Api:
         if _browser:        # los avisos de "cargando" llegan por otro camino y pueden adelantar a esta respuesta
             js("loading", None)
         self._bep_auto()
+        self._refresh_servers()
         return state
+
+    def _refresh_servers(self):
+        """Gets the community servers from GitHub in the background; the list updates if it changed."""
+        def run():
+            new = core.fetch_public_servers()
+            if new is None or new == self._cfg.get("public_servers"):
+                return
+            self._cfg["public_servers"] = new
+            core.save_config(self._cfg)
+            js("state", self._state(with_art=False))
+        threading.Thread(target=run, daemon=True).start()
 
     def _check_update(self):
         """Mira si hay una version nueva del lanzador. No se instala sola: se ofrece con sus novedades."""
@@ -176,7 +188,7 @@ class Api:
         sid, name = self._steam
         st = {"account": name or (sid and f"Steam {sid}") or "", "steam_id": sid,
               "record": core.local_record(sid) if sid else {},
-              "game_dir": self._cfg.get("game_dir"), "servers": self._cfg.get("servers", []),
+              "game_dir": self._cfg.get("game_dir"), "servers": core.server_list(self._cfg),
               "port": self._cfg.get("port", core.DEFAULT_PORT), "last_friend": self._cfg.get("last_friend", ""),
               "lang": i18n.get_lang(), "i18n": i18n.table(), "version": VERSION, "kofi": KOFI,
               "backup_dir": self._cfg.get("backup_dir", "")}

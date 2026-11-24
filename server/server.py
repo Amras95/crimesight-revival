@@ -357,13 +357,44 @@ async def handle_match(request):
 
 
 async def handle_roster(request):
-    """GET /revival/roster?platform_id=... -> reparto de personajes de la partida de ese jugador (o null)."""
+    """GET /revival/roster?platform_id=... -> reparto de personajes de la partida de ese jugador (o null).
+    Also says which characters are off in that player's room, the room's id and whether the player created it."""
     platform_id = str(request.query.get("platform_id", ""))
     if not platform_id.isdigit():
         return web.json_response({"error": "platform_id"}, status=400)
     pid, _ = derived_ids(3, platform_id)
-    return web.json_response({"roster": request.app["hub"].roster_for(pid, request.remote or ""),
-                              "disabled": sorted(request.app["models"].disabled)})
+    room = request.app["hub"].room_of(pid, request.remote or "")
+    disabled = room.disabled if room is not None and room.disabled is not None else request.app["models"].disabled
+    return web.json_response({"roster": getattr(room, "roster", None) if room is not None else None,
+                              "disabled": sorted(disabled),
+                              "room": room.id if room is not None else None,
+                              "owner": room is not None and room.owner == pid})
+
+
+MAX_SELECT = 200
+
+
+async def handle_roster_select(request):
+    """POST /revival/roster/select {"platform_id", "disabled": [...]}: the Character Selection of a room, sent by
+    the launcher of the player who created it (on a server nobody hosts from their launcher)."""
+    if not _password_ok(request):
+        return web.json_response({"error": "password"}, status=403)
+    try:
+        body = await request.json()
+        platform_id = str(body.get("platform_id", ""))
+        ids = body.get("disabled") or []
+        if not platform_id.isdigit() or not isinstance(ids, list) or len(ids) > MAX_SELECT:
+            raise ValueError
+        ids = {str(i)[:64] for i in ids}
+    except (ValueError, TypeError, AttributeError):
+        return web.json_response({"error": "bad_request"}, status=400)
+    pid, _ = derived_ids(3, platform_id)
+    room = request.app["hub"].room_of(pid, request.remote or "")
+    if room is None or room.owner != pid:
+        return web.json_response({"error": "not_owner"}, status=403)
+    room.disabled = ids
+    log.info("Room %s: Character Selection changed (%d off)", room.id, len(ids))
+    return web.json_response({"disabled": sorted(ids)})
 
 
 async def handle_info(request):
@@ -524,14 +555,47 @@ async def _stage_watch(app):
     task.cancel()
 
 
+IDLE_RESET = 120      # seconds with nobody connected before a standalone server drops the players' mods
+
+
+@web.middleware
+async def _seen(request, handler):
+    """Remembers the last time anyone (a game or a launcher) talked to the server."""
+    request.app["last_seen"] = time.time()
+    return await handler(request)
+
+
+async def _idle_reset(app):
+    """Standalone server: once nobody has been connected for a while, the players' mods and models go away
+    (when someone hosts from their launcher, they only last for that session anyway)."""
+    async def loop():
+        while True:
+            await asyncio.sleep(15)
+            try:
+                if app["hub"].sessions or time.time() - app.get("last_seen", 0) < IDLE_RESET:
+                    continue
+                mods = app["room"].reset_players()
+                models = app["models"].reset_players()
+                if mods or models:
+                    log.info("Nobody connected: players' mods and models removed")
+            except Exception:  # noqa: BLE001
+                log.exception("Could not remove the players' mods")
+    task = asyncio.ensure_future(loop())
+    yield
+    task.cancel()
+
+
 def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", data_dir=None, mods=None,
-              mods_dir=None, owner="", player_mods="ask", mod_names=None, stages=None, stages_dir=None):
+              mods_dir=None, owner="", player_mods="ask", mod_names=None, stages=None, stages_dir=None,
+              idle_reset=False):
     """player_mods: "ask" (el anfitrion decide desde el lanzador), "accept" (se aceptan solos) o
-    "ignore" (servidor dedicado sin nadie que conteste)."""
+    "ignore" (servidor dedicado sin nadie que conteste).
+    idle_reset: standalone server, drop the players' mods when nobody is left."""
     data_dir = data_dir or DATA_DIR
     os.makedirs(data_dir, exist_ok=True)
     cscrypto._keys()  # falla pronto si no hay claves
-    app = web.Application(client_max_size=8 * 1024 * 1024)
+    app = web.Application(client_max_size=8 * 1024 * 1024, middlewares=[_seen])
+    app["last_seen"] = time.time()
     api = Api(Store(os.path.join(data_dir, "db.json")), public_url)
     match.DEFAULT_AI_DIFFICULTY = ai_difficulty
     api.hub = match.Hub(api)
@@ -545,6 +609,7 @@ def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", 
     app.router.add_post("/revival/mods/offer", handle_mods_offer)
     app.router.add_get("/revival/models", handle_models)
     app.router.add_get("/revival/roster", handle_roster)
+    app.router.add_post("/revival/roster/select", handle_roster_select)
     app.router.add_get("/revival/models/file/{sha:[0-9a-f]{64}}", handle_model_file)
     app.router.add_post("/revival/models/offer", handle_models_offer)
     app.router.add_get("/revival/models/offer/{oid:[0-9a-f]{12}}", handle_models_offer_state)
@@ -562,6 +627,8 @@ def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", 
         offers_dir=None if player_mods == "ignore" else os.path.join(data_dir, "models_offers"),
         auto_accept=player_mods == "accept")
     api.hub.model_room = app["models"]  # cada partida sortea que personajes salen
+    if idle_reset:
+        app.cleanup_ctx.append(_idle_reset)
     return app
 
 
@@ -654,7 +721,8 @@ def main():
     data_dir = a.data_dir or DATA_DIR
     setup_logging(data_dir, a.debug)
     app = build_app(a.port, a.password, a.public_url, a.ai_difficulty, data_dir, mods_dir=a.mods_dir,
-                    player_mods="accept" if a.accept_player_mods else "ignore", stages_dir=a.stages_dir)
+                    player_mods="accept" if a.accept_player_mods else "ignore", stages_dir=a.stages_dir,
+                    idle_reset=True)
     log.info("CRIMESIGHT Revival escuchando en http://%s:%d", a.host, a.port)
     web.run_app(app, host=a.host, port=a.port, print=None, access_log=None)
 

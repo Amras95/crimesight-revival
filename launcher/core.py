@@ -1662,13 +1662,64 @@ def download_models(url, password, expected_hash, progress=None):
 
 
 def roster_state(url, steam_id):
-    """Reparto de personajes de tu partida en ese servidor y los personajes desactivados de la sala."""
+    """Reparto de personajes de tu partida en ese servidor y los personajes desactivados de la sala.
+    Also the room's id and whether you created it: (roster, disabled, room id, owner)."""
     try:
         with urllib.request.urlopen(url + "/revival/roster?platform_id=" + str(steam_id or ""), timeout=6) as r:
             a = json.loads(r.read(1 << 20))
-        return a.get("roster"), list(a.get("disabled") or [])
+        return a.get("roster"), list(a.get("disabled") or []), a.get("room"), a.get("owner") is True
     except (urllib.error.URLError, OSError, ValueError):
-        return "error", []
+        return "error", [], None, False
+
+
+SERVERS_URL = "https://raw.githubusercontent.com/{repo}/main/servers.json"
+MAX_PUBLIC_SERVERS = 20
+
+
+def fetch_public_servers(timeout=8):
+    """The community servers listed in servers.json on GitHub (edited there, no new launcher needed).
+    Returns the list, or None if it couldn't be read (the launcher keeps the last one it got)."""
+    from version import REPO
+    req = urllib.request.Request(SERVERS_URL.format(repo=REPO), headers={"User-Agent": "CrimeSightRevival-Launcher"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            data = json.loads(r.read(64 * 1024))
+    except (urllib.error.URLError, OSError, ValueError):
+        return None
+    servers = data.get("servers") if isinstance(data, dict) else None
+    if not isinstance(servers, list):
+        return None
+    out = []
+    for s in servers:
+        if not isinstance(s, dict):
+            continue
+        name, address = str(s.get("name") or "").strip()[:60], str(s.get("address") or "").strip()[:200]
+        if name and address:
+            out.append({"name": name, "address": address, "password": str(s.get("password") or "")[:100]})
+    return out[:MAX_PUBLIC_SERVERS]
+
+
+def server_list(cfg):
+    """Servers shown under "Custom server": the community ones first (marked "official"), then your own.
+    A community server you saved yourself (same name or address) only shows once, as yours."""
+    own = [s for s in (cfg.get("servers") or []) if isinstance(s, dict)]
+    names = {s.get("name") for s in own}
+    addrs = {str(s.get("address") or "").strip().lower() for s in own}
+    public = [dict(s, official=True) for s in (cfg.get("public_servers") or [])
+              if isinstance(s, dict) and s.get("name") not in names and str(s.get("address") or "").strip().lower() not in addrs]
+    return public + own
+
+
+def roster_select(url, password, steam_id, disabled):
+    """Sends your Character Selection for the room you created on that server. Returns the room's list,
+    or None if the server didn't take it (older server, or you're not the room's creator)."""
+    body = json.dumps({"platform_id": str(steam_id or ""), "disabled": list(disabled or [])}).encode("utf-8")
+    try:
+        with _http(url + "/revival/roster/select", password, data=body, method="POST", timeout=6,
+                   headers={"Content-Type": "application/json"}) as r:
+            return list(json.loads(r.read(1 << 20)).get("disabled") or [])
+    except (urllib.error.URLError, OSError, ValueError):
+        return None
 
 
 def roster_answer(game_dir):

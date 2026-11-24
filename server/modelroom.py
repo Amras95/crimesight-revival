@@ -189,7 +189,19 @@ class ModelRoom:
                 out.append({"id": cid, "role": "pawn", "name": c.get("name", ""), "enabled": cid not in self.disabled})
             return modelpack.fill_enabled(out)
 
-    def draw(self):
-        """Reparto de una partida nueva (lo pide la sala al empezar la cuenta atras)."""
+    def draw(self, disabled=None):
+        """Reparto de una partida nueva (lo pide la sala al empezar la cuenta atras).
+        disabled: the room's own Character Selection (None: the server's)."""
         with self.lock:
-            return modelpack.draw(self.ms, self.disabled, self.rng)
+            return modelpack.draw(self.ms, self.disabled if disabled is None else disabled, self.rng)
+
+    def reset_players(self):
+        """Drops every player's models (standalone server with nobody left). True if there were any."""
+        with self.lock:
+            if not self.pending and not self.accepted:
+                return False
+            self.pending, self.accepted = {}, {}
+            if self.offers_dir:
+                shutil.rmtree(self.offers_dir, ignore_errors=True)
+            self.ms = self._build()
+            return True
