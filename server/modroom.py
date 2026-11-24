@@ -100,6 +100,17 @@ class ModRoom:
             log.info("%s ofrece %d stickers y %d avatares", entry["player"], summary["stickers"], summary["avatars"])
             return "pending"
 
+    def reset_players(self):
+        """Drops every player's mods (standalone server with nobody left). True if there were any."""
+        with self.lock:
+            if not self.pending and not self.accepted:
+                return False
+            self.pending, self.accepted = {}, {}
+            if self.offers_dir:
+                shutil.rmtree(self.offers_dir, ignore_errors=True)
+            self.rs = self._build()
+            return True
+
     def pending_list(self):
         with self.lock:
             return [{"id": k, "player": v["player"], **v["summary"]} for k, v in self.pending.items()]

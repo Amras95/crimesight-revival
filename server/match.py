@@ -273,9 +273,14 @@ class Hub:
 
     def roster_for(self, pid, remote):
         """Reparto de personajes de la sala de un jugador (None si aun no ha empezado ninguna partida)."""
+        room = self.room_of(pid, remote)
+        return getattr(room, "roster", None) if room is not None else None
+
+    def room_of(self, pid, remote):
+        """The room a player is in, only if asked from the same place as their game (None otherwise)."""
         for sess in self.sessions:
             if sess.player_id == pid and sess.remote == remote and sess.room is not None:
-                return getattr(sess.room, "roster", None)
+                return sess.room
         return None
 
     def match_state(self, pid, remote):
@@ -508,6 +513,7 @@ class Room:
         self.hub, self.id = hub, rid
         self.topic = f"crimesight.room.{rid}"
         self.owner = owner.player_id
+        self.disabled = None       # this room's Character Selection (None: the server's own choice)
         self.members = {}          # player_id -> {"name", "role"}
         self.sessions = {}         # player_id -> Session
         self.settings = {"capacity": 1, "private": True, "stage": "", "time_limit": 180, "max_turn": 10}
@@ -1306,7 +1312,7 @@ class Room:
         except Exception:  # noqa: BLE001
             log.exception("No pude leer el Selector de personajes")
         try:
-            r = mr.draw()
+            r = mr.draw(self.disabled)
             self.hub.roster_seq = getattr(self.hub, "roster_seq", 0) + 1
             r["id"] = "%s-%d" % (self.id, self.hub.roster_seq)
             self.roster = r

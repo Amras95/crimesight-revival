@@ -520,7 +520,7 @@ const PANELS={
       <div class="field" style="flex:1"><label>${esc(T('address'))}</label><input id="saddr" placeholder="${esc(T('server_ph'))}"></div>
       <div class="field"><label>${esc(T('password'))}</label><input id="spw" type="password" style="width:150px"></div>
       <button class="btn ghost small" onclick="saveServer()">${esc(T('save'))}</button>
-      <button class="btn ghost small" onclick="deleteServer()">${esc(T('delete'))}</button></div>
+      <button class="btn ghost small" id="sdel" onclick="deleteServer()">${esc(T('delete'))}</button></div>
     <button class="btn" onclick="start('server')">${esc(T('connect_btn'))}</button>`,
 };
 
@@ -529,7 +529,7 @@ function selectMode(m){
   document.querySelectorAll('.card').forEach(c=>c.classList.toggle('sel',c.dataset.mode===m));
   const color=getComputedStyle(document.querySelector(`.card[data-mode="${m}"]`)).getPropertyValue('--c');
   $('#panel').style.setProperty('--c',color);$('#session').style.setProperty('--c',color);
-  if(!BUSY) $('#panel').innerHTML=PANELS[m]();
+  if(!BUSY){$('#panel').innerHTML=PANELS[m](); if(m==='server') autoPickServer()}
 }
 document.querySelectorAll('.card').forEach(c=>c.addEventListener('click',()=>{ if(!BUSY) selectMode(c.dataset.mode)}));
 
@@ -561,9 +561,15 @@ function stopSession(){api('stop');$('#stopbtn').disabled=true}
 function copyAddr(){api('copy',$('#addrtxt').textContent);toast(T('copied'))}
 async function pickGame(){const s=await api('pick_game');if(s)render(s)}
 async function restoreGame(){const t=await api('restore');if(t)toast(t)}
-function pickSaved(){const n=$('#saved').value;const s=(STATE.servers||[]).find(x=>x.name===n);if(!s)return;
+let LASTSRV='';   // last server picked or saved, so it stays selected when the panel is redrawn
+function pickSaved(){const n=$('#saved').value;const s=(STATE.servers||[]).find(x=>x.name===n);
+  $('#sdel').disabled=!!(s&&s.official);   // community servers come from GitHub: they can't be deleted here
+  if(!s)return;LASTSRV=s.name;
   $('#sname').value=s.name;$('#saddr').value=s.address;$('#spw').value=s.password||''}
-async function saveServer(){const s=await api('save_server',$('#sname').value,$('#saddr').value,$('#spw').value);if(s){render(s);toast(T('server_saved'))}}
+function autoPickServer(){const L=STATE.servers||[];if(!L.length)return;
+  const s=L.find(x=>x.name===LASTSRV)||L.find(x=>x.official)||L[0];$('#saved').value=s.name;pickSaved()}
+async function saveServer(){LASTSRV=($('#sname').value||$('#saddr').value).trim();
+  const s=await api('save_server',$('#sname').value,$('#saddr').value,$('#spw').value);if(s){render(s);toast(T('server_saved'))}}
 async function deleteServer(){const s=await api('delete_server',$('#saved').value);if(s)render(s)}
 
 function renderBackup(){const d=STATE&&STATE.backup_dir;const e=$('#backupdir');

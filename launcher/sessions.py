@@ -321,13 +321,14 @@ def join(ctx, cfg, steam_id, address, password=""):
     ctx.log(t("record", **core.sync_profile(url, steam_id, password)))
     stages = _stages(ctx, cfg, url, password, steam_id, room=True)
     _first(ctx, stages)
+    roster = _roster_watcher(ctx, cfg, url, steam_id, None, password)
     try:
         # los escenarios se miran cada 3 s (la sala no deja empezar hasta tenerlos); los mods y modelos, cada 9
         _play(ctx, gd, url, rs, watch=_both(_every(3, _room_watcher(ctx, cfg, url, password, rs)),
                                             _every(3, _room_models_watcher(ctx, cfg, url, password, rm, offer)),
-                                            _roster_watcher(ctx, cfg, url, steam_id, None),
-                                            stages, _host_gone_watcher(ctx, url, steam_id)), every=3)
+                                            roster, stages, _host_gone_watcher(ctx, url, steam_id)), every=3)
     finally:
+        roster.stop()
         _models_room_end(gd)                           # vuelven tus modelos
         core.clear_temp_models()
         try:                                           # vuelven tus escenarios a la lista del juego
@@ -500,12 +501,16 @@ def _models_room_end(gd):
         log.warning("No pude volver a tus modelos: %s", e)
 
 
-def _roster_watcher(ctx, cfg, url, steam_id, srv):
+def _roster_watcher(ctx, cfg, url, steam_id, srv, password=""):
     """Reparto de personajes de cada partida (lo sortea el servidor al empezar la cuenta atras): se lo pasa al juego.
-    El anfitrion, ademas, recoge lo que marca en el Selector de personajes del juego (srv: su servidor)."""
+    El anfitrion, ademas, recoge lo que marca en el Selector de personajes del juego (srv: su servidor).
+    On someone else's server, whoever created the room decides its Character Selection: their launcher sends it
+    (check.stop() ends the quick check of the Selector)."""
     gd = cfg["game_dir"]
-    state = {"id": None, "disabled": None, "answer": None}
+    state = {"id": None, "disabled": None, "answer": None, "owner": False, "room": None, "pushed": None,
+             "seen": (core.roster_answer(gd) or (None,))[0]}
     lock = threading.Lock()
+    stop = threading.Event()
 
     def pick_up():
         """What the host ticked in the Character Selection, for the server."""
@@ -528,12 +533,56 @@ def _roster_watcher(ctx, cfg, url, steam_id, srv):
         # turned off was still in it).
         srv.models.before_draw = pick_up
 
+    def send(ids, save):
+        """Room creator on someone else's server: the room's Character Selection goes to the server."""
+        done = core.roster_select(url, password, steam_id, ids)
+        if done is None:
+            return
+        with lock:
+            core.room_disabled = done
+            state["disabled"] = done
+            if save:                                    # your choice is kept for the next room you create
+                c2 = core.load_config()
+                c2["roster_disabled"] = list(done)
+                core.write_config(c2)
+                cfg["roster_disabled"] = c2["roster_disabled"]
+        if core.room_models is not None and core.live_mode(gd):
+            core.install_models(gd)
+        if save:
+            ctx.log(t("roster_saved"))
+
+    def quick():
+        """Checks the Selector 4 times a second, so a match started right after saving uses the new choice."""
+        while not stop.wait(0.25):
+            try:
+                a = core.roster_answer(gd)
+                if not a or a[0] == state["seen"]:
+                    continue
+                state["seen"] = a[0]
+                if state["owner"]:
+                    send(a[1], True)
+            except Exception:  # noqa: BLE001
+                log.exception("Fallo enviando el Selector de personajes")
+
+    if srv is None:
+        threading.Thread(target=quick, daemon=True).start()
+
     def check():
         if srv is not None:
             pick_up()
-        roster, disabled = core.roster_state(url, steam_id)
+        roster, disabled, room, owner = core.roster_state(url, steam_id)
         if roster == "error":
             return
+        if srv is None:
+            if owner and room is not None and room != state["pushed"]:
+                # a room you just created starts with your last Character Selection
+                state["pushed"] = room
+                send(cfg.get("roster_disabled") or [], False)
+                return
+            if owner != state["owner"] or room != state["room"]:
+                state["owner"], state["room"] = owner, room
+                core.room_host = owner                  # the Selector can be changed only by the room's creator
+                state["disabled"] = None                # rewrite the Selector's list below
         rid = (roster or {}).get("id")
         if rid != state["id"] or disabled != state["disabled"]:
             state["id"], state["disabled"] = rid, disabled
@@ -542,6 +591,7 @@ def _roster_watcher(ctx, cfg, url, steam_id, srv):
                 core.room_disabled = disabled
             if core.room_models is not None and core.live_mode(gd):
                 core.install_models(gd)
+    check.stop = stop.set
     return check
 
 
