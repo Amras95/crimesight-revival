@@ -89,9 +89,9 @@ namespace CrimeSightRevival.Mods
                 "• {H}Con otra persona en tu equipo{/H}: se le pregunta primero y tiene 20 segundos para contestar. Si dice que no o no contesta, la partida sigue.\n" +
                 "• {H}Si sales de la partida{/H}: te llevas la derrota y, si quedan otras personas, una IA ocupa tu lugar hasta el final. Si no queda nadie más, cuenta como rendirse.\n\n" +
                 "Si el anfitrión cierra el juego, la victoria de los invitados se guarda igualmente en su PC (si tienen internet).",
-            "En la sala, {H}«Modificar ajustes del juego»{/H} tiene dos ajustes más que el original:\n\n" +
-                "• {H}Máximo de turnos{/H}: de 1 a 99 (por defecto 10). Útil en mapas grandes y escenarios propios.\n" +
-                "• {H}Límite de tiempo{/H}: de 60 a 999 segundos en cualquier sala, para jugar con calma.\n\n" +
+            "En la sala, {H}«Modificar ajustes del juego»{/H} cambia dos ajustes respecto al original:\n\n" +
+                "• {H}Máximo de turnos{/H}: el original lo escondía; ahora se ve, de 1 a 99 (por defecto 10). Útil en mapas grandes y escenarios propios.\n" +
+                "• {H}Límite de tiempo{/H}: de 60 a 999 segundos en cualquier sala (en las públicas antes llegaba solo a 180), para jugar con calma.\n\n" +
                 "Los elige el anfitrión y se aplican a todos.",
             "En el lanzador, abre {H}Mods{/H} para convertir cualquier imagen en un sticker, un avatar o un cursor.\n\n" +
                 "• {H}Stickers{/H}: una lámina con varios stickers se separa en stickers sueltos, sin fondo. Puedes añadir a cada uno un texto para el registro de la partida.\n" +
@@ -148,9 +148,9 @@ namespace CrimeSightRevival.Mods
                 "• {H}With another person on your team{/H}: they're asked first and have 20 seconds to answer. If they say no or don't answer, the match goes on.\n" +
                 "• {H}If you leave the match{/H}: you get the loss and, if other people are still playing, an AI takes your place until the end. If no one else is left, it counts as forfeiting.\n\n" +
                 "If the host closes the game, the guests' win is still recorded on their PC (if they're online).",
-            "In the room, {H}\"Edit Game Settings\"{/H} has two more options than the original:\n\n" +
-                "• {H}Max. turns{/H}: from 1 to 99 (10 by default). Handy for big maps and custom scenarios.\n" +
-                "• {H}Time Limit{/H}: from 60 to 999 seconds in any room, to play at your own pace.\n\n" +
+            "In the room, {H}\"Edit Game Settings\"{/H} works differently from the original in two settings:\n\n" +
+                "• {H}Max. Turns{/H}: the original hid it; now it's shown, from 1 to 99 (10 by default). Handy for big maps and custom scenarios.\n" +
+                "• {H}Time Limit{/H}: from 60 to 999 seconds in any room (public rooms used to stop at 180), to play at your own pace.\n\n" +
                 "The host sets them, and they apply to everyone.",
             "In the launcher, open {H}Mods{/H} to turn any image into a stamp, an avatar or a cursor.\n\n" +
                 "• {H}Stamps{/H}: a sheet of several stamps is split into separate stamps, with the background removed. You can add a caption to each one for the match log.\n" +
@@ -230,7 +230,7 @@ namespace CrimeSightRevival.Mods
                 "• ゲームを閉じるか{H}「セッションを終了」{/H}を押すと、セッションが終わります。\n" +
                 "• 上の{H}ベル{/H}は新しいバージョンのお知らせです：押すと更新します。\n" +
                 "• 対戦数、勝利数、ポイントはPCに保存されます。",
-            "{PAGE}使えるボタンは、画面上でその横にアイコンが表示されます。\n\n" +
+            "{PAGE}画面上の操作できる場所には、使うボタンのアイコンが表示されます。\n\n" +
                 "• {H}メニュー{/H}：{START}で決定、{B}で戻る・閉じる。\n\n" +
                 "• {H}ルーム{/H}：\n" +
                 "<indent=5.5em>{Y}でプレイヤーを選択。\n<size=40%>\n</size>" +
@@ -262,9 +262,9 @@ namespace CrimeSightRevival.Mods
                 "• {H}チームに他の人がいる場合{/H}：先にその人に確認し、20秒以内に答えてもらいます。断るか答えがなければ、対戦は続きます。\n" +
                 "• {H}対戦から退出した場合{/H}：あなたは敗北となり、他の人がまだプレイしていれば、最後までAIがあなたの代わりを務めます。誰も残っていなければ、降参と同じ扱いです。\n\n" +
                 "ホストがゲームを閉じても、ゲストの勝利はそれぞれのPCに記録されます（インターネットに接続していれば）。",
-            "ルームの{H}「ゲーム設定変更」{/H}には、オリジナルより設定が2つ多くあります：\n\n" +
-                "• {H}最大ターン数{/H}：1〜99（標準は10）。広いマップやオリジナルステージに便利です。\n" +
-                "• {H}制限時間{/H}：どのルームでも60〜999秒。じっくり遊べます。\n\n" +
+            "ルームの{H}「ゲーム設定変更」{/H}では、2つの設定がオリジナルと異なります：\n\n" +
+                "• {H}最大ターン数{/H}：オリジナルでは隠れていましたが、表示されるようになりました。1〜99（標準は10）。広いマップやオリジナルステージに便利です。\n" +
+                "• {H}制限時間{/H}：どのルームでも60〜999秒（以前は公開ルームでは180秒まで）。じっくり遊べます。\n\n" +
                 "ホストが決め、全員に適用されます。",
             "ランチャーで{H}MOD{/H}を開くと、どんな画像もスタンプ、アバター、カーソルにできます。\n\n" +
                 "• {H}スタンプ{/H}：複数のスタンプが並んだ画像は、背景を消して1つずつに分けられます。それぞれに対戦ログ用のテキストを付けられます。\n" +
@@ -341,12 +341,12 @@ namespace CrimeSightRevival.Mods
                 "Votre partenaire IA joue en Difficile (ou en Expert si vos adversaires sont en Expert ou Cauchemar).",
             "Pour abandonner pendant la phase d'ordre, ouvrez le menu {H}\"Configuration\"{/H} et choisissez {H}\"Abandonner\"{/H}. C'est possible dans tous les rôles dès le premier tour, et cela compte comme une défaite.\n\n" +
                 "• {H}Avec une autre personne dans votre équipe{/H} : on lui demande d'abord, et elle a 20 secondes pour répondre. Si elle refuse ou ne répond pas, la partie continue.\n" +
-                "• {H}Si vous quittez la partie{/H} : vous prenez la défaite et, s'il reste d'autres personnes, une IA vous remplace jusqu'à la fin. S'il ne reste personne, cela compte comme un abandon.\n\n" +
+                "• {H}Si vous quittez la partie{/H} : la défaite vous est attribuée et, s'il reste d'autres personnes, une IA vous remplace jusqu'à la fin. S'il ne reste personne, cela compte comme un abandon.\n\n" +
                 "Si l'hôte ferme le jeu, la victoire des invités est quand même enregistrée sur leur PC (s'ils sont en ligne).",
-            "Dans le salon, {H}\"Modifier les paramètres de partie\"{/H} propose deux options de plus que l'original :\n\n" +
-                "• {H}Tours max{/H} : de 1 à 99 (10 par défaut). Pratique pour les grandes cartes et les scénarios perso.\n" +
-                "• {H}Limite de temps{/H} : de 60 à 999 secondes dans tous les salons, pour jouer à votre rythme.\n\n" +
-                "L'hôte les choisit, et elles s'appliquent à tous.",
+            "Dans le salon, {H}\"Modifier les paramètres de partie\"{/H} change deux paramètres par rapport à l'original :\n\n" +
+                "• {H}Tours max{/H} : l'original le cachait ; il est maintenant affiché, de 1 à 99 (10 par défaut). Pratique pour les grandes cartes et les scénarios perso.\n" +
+                "• {H}Limite de temps{/H} : de 60 à 999 secondes dans tous les salons (les salons publics s'arrêtaient à 180), pour jouer à votre rythme.\n\n" +
+                "L'hôte les choisit, et ils s'appliquent à tous.",
             "Dans le lanceur, ouvrez {H}Mods{/H} pour transformer n'importe quelle image en sticker, en avatar ou en curseur.\n\n" +
                 "• {H}Stickers{/H} : une planche de plusieurs stickers est découpée en stickers séparés, sans fond. Vous pouvez ajouter à chacun un texte pour le journal de la partie.\n" +
                 "• {H}Avatars{/H} : l'image remplit le cadre choisi, sans vide.\n" +
@@ -424,9 +424,9 @@ namespace CrimeSightRevival.Mods
                 "• {H}Con un'altra persona nella tua squadra{/H}: prima viene chiesto a lei, che ha 20 secondi per rispondere. Se dice di no o non risponde, la partita continua.\n" +
                 "• {H}Se esci dalla partita{/H}: la sconfitta va a te e, se restano altre persone, un'IA prende il tuo posto fino alla fine. Se non resta nessun altro, conta come forfait.\n\n" +
                 "Se l'host chiude il gioco, la vittoria degli ospiti viene comunque registrata sul loro PC (se sono online).",
-            "Nella stanza, {H}\"Modifica impostazioni gioco\"{/H} ha due opzioni in più rispetto all'originale:\n\n" +
-                "• {H}Numero max turni{/H}: da 1 a 99 (10 di base). Utile per mappe grandi e scenari personalizzati.\n" +
-                "• {H}Limite di tempo{/H}: da 60 a 999 secondi in qualsiasi stanza, per giocare con calma.\n\n" +
+            "Nella stanza, {H}\"Modifica impostazioni gioco\"{/H} cambia due impostazioni rispetto all'originale:\n\n" +
+                "• {H}Numero max turni{/H}: l'originale lo nascondeva; ora è visibile, da 1 a 99 (10 di base). Utile per mappe grandi e scenari personalizzati.\n" +
+                "• {H}Limite di tempo{/H}: da 60 a 999 secondi in qualsiasi stanza (nelle stanze pubbliche prima si arrivava solo a 180), per giocare con calma.\n\n" +
                 "Le sceglie l'host e valgono per tutti.",
             "Nel launcher, apri {H}Mod{/H} per trasformare qualsiasi immagine in uno sticker, un avatar o un cursore.\n\n" +
                 "• {H}Sticker{/H}: un foglio con più sticker viene diviso in sticker singoli, senza sfondo. A ognuno puoi aggiungere un testo per il registro della partita.\n" +
@@ -505,9 +505,9 @@ namespace CrimeSightRevival.Mods
                 "• {H}Mit einer anderen Person im Team{/H}: Sie wird zuerst gefragt und hat 20 Sekunden für die Antwort. Sagt sie Nein oder antwortet nicht, geht das Spiel weiter.\n" +
                 "• {H}Wenn du das Spiel verlässt{/H}: Du bekommst die Niederlage, und wenn noch andere Personen spielen, übernimmt eine KI bis zum Ende deinen Platz. Ist sonst niemand mehr da, zählt es als Aufgeben.\n\n" +
                 "Schließt der Host das Spiel, wird der Sieg der Gäste trotzdem auf ihrem PC gespeichert (wenn sie online sind).",
-            "Im Raum hat {H}„Spieleinstellungen bearbeiten“{/H} zwei Optionen mehr als das Original:\n\n" +
-                "• {H}Max. Runden{/H}: 1 bis 99 (Standard: 10). Praktisch für große Karten und eigene Szenarien.\n" +
-                "• {H}Zeitlimit{/H}: 60 bis 999 Sekunden in jedem Raum, um in Ruhe zu spielen.\n\n" +
+            "Im Raum sind bei {H}„Spieleinstellungen bearbeiten“{/H} zwei Einstellungen anders als im Original:\n\n" +
+                "• {H}Max. Runden{/H}: Das Original hat sie versteckt; jetzt wird sie angezeigt, 1 bis 99 (Standard: 10). Praktisch für große Karten und eigene Szenarien.\n" +
+                "• {H}Zeitlimit{/H}: 60 bis 999 Sekunden in jedem Raum (öffentliche Räume gingen früher nur bis 180), um in Ruhe zu spielen.\n\n" +
                 "Der Host legt sie fest, und sie gelten für alle.",
             "Öffne im Launcher {H}Mods{/H}, um jedes Bild in einen Sticker, einen Avatar oder einen Cursor zu verwandeln.\n\n" +
                 "• {H}Sticker{/H}: Ein Bogen mit mehreren Stickern wird in einzelne Sticker ohne Hintergrund zerlegt. Zu jedem kannst du einen Text für das Spielprotokoll hinzufügen.\n" +
@@ -586,9 +586,9 @@ namespace CrimeSightRevival.Mods
                 "• {H}Com outra pessoa na sua equipe{/H}: ela é consultada primeiro e tem 20 segundos para responder. Se disser não ou não responder, a partida continua.\n" +
                 "• {H}Se você sair da partida{/H}: a derrota fica com você e, se ainda houver outras pessoas, uma IA assume seu lugar até o final. Se não sobrar mais ninguém, conta como desistência.\n\n" +
                 "Se o anfitrião fechar o jogo, a vitória dos convidados é registrada mesmo assim no PC deles (se estiverem on-line).",
-            "Na sala, {H}\"Editar configurações do jogo\"{/H} tem duas opções a mais que o original:\n\n" +
-                "• {H}Máximo de rodadas{/H}: de 1 a 99 (10 por padrão). Útil em mapas grandes e cenários próprios.\n" +
-                "• {H}Limite de tempo{/H}: de 60 a 999 segundos em qualquer sala, para jogar com calma.\n\n" +
+            "Na sala, {H}\"Editar configurações do jogo\"{/H} muda duas opções em relação ao original:\n\n" +
+                "• {H}Máximo de rodadas{/H}: o original a escondia; agora ela aparece, de 1 a 99 (10 por padrão). Útil em mapas grandes e cenários próprios.\n" +
+                "• {H}Limite de tempo{/H}: de 60 a 999 segundos em qualquer sala (nas salas públicas ia só até 180), para jogar com calma.\n\n" +
                 "O anfitrião define as duas, e elas valem para todos.",
             "No inicializador, abra {H}Mods{/H} para transformar qualquer imagem em emoji, avatar ou cursor.\n\n" +
                 "• {H}Emojis{/H}: uma folha com vários emojis é separada em emojis avulsos, sem fundo. Você pode adicionar a cada um deles um texto para o registro da partida.\n" +
@@ -608,7 +608,7 @@ namespace CrimeSightRevival.Mods
             "Afastar", "Girar · Aba", "Registro", "Configurações",
             "Próximo personagem", "Personagem anterior", "Remover vagas", "Cursor",
             "Aproximar", "Girar · Aba", "Fim da rodada · OK", "Suspeitos",
-            "Emojis", "Cancelar · Voltar", "Clicar", "Câmera",
+            "Emojis", "Cancelar · Voltar", "Clique", "Câmera",
         };
 
         static readonly string[] TitlesRu =
@@ -667,9 +667,9 @@ namespace CrimeSightRevival.Mods
                 "• {H}Если в вашей команде есть другой человек{/H}: сначала спрашивают его, и у него 20 секунд на ответ. Если он откажется или не ответит, партия продолжится.\n" +
                 "• {H}Если вы выйдете из партии{/H}: вам засчитают поражение, и если остались другие люди, ваше место до конца займет ИИ. Если больше никого нет, это то же самое, что сдаться.\n\n" +
                 "Если хост закроет игру, победа гостей все равно сохранится на их ПК (если они в сети).",
-            "В комнате в окне {H}«Изменить настройки игры»{/H} на две настройки больше, чем в оригинале:\n\n" +
-                "• {H}Макс. ходов{/H}: от 1 до 99 (по умолчанию 10). Удобно для больших карт и своих сценариев.\n" +
-                "• {H}Лимит времени{/H}: от 60 до 999 секунд в любой комнате, чтобы играть без спешки.\n\n" +
+            "В комнате в окне {H}«Изменить настройки игры»{/H} две настройки работают иначе, чем в оригинале:\n\n" +
+                "• {H}Макс. ходов{/H}: в оригинале эта настройка была скрыта; теперь она видна, от 1 до 99 (по умолчанию 10). Удобно для больших карт и своих сценариев.\n" +
+                "• {H}Лимит времени{/H}: от 60 до 999 секунд в любой комнате (в публичных раньше было максимум 180), чтобы играть без спешки.\n\n" +
                 "Их выбирает хост, и они действуют для всех.",
             "В лаунчере откройте {H}Моды{/H}, чтобы превратить любое изображение в шаблон, аватар или курсор.\n\n" +
                 "• {H}Шаблоны{/H}: лист с несколькими шаблонами делится на отдельные шаблоны без фона. К каждому можно добавить текст для журнала партии.\n" +
@@ -679,7 +679,7 @@ namespace CrimeSightRevival.Mods
                 "Моды никогда не меняют оригинальные шаблоны и аватары игры, в том числе платные.",
             "В лаунчере откройте {H}Моды → «Редактор сценариев»{/H}, чтобы переставить комнаты сценария и сохранить его как новый.\n\n" +
                 "• Перемещайте, поворачивайте, убирайте или повторяйте комнаты, выбирайте двери, окна для собак, газ и стартовые клетки.\n" +
-                "• Нажмите {H}«Быстрый тест»{/H}, чтобы опробовать его в сценарии {H}«Тестовый сценарий (CSR)»{/H} без сохранения.\n" +
+                "• Нажмите {H}«Быстрый тест»{/H}, чтобы без сохранения опробовать его: он появится как {H}«Тестовый сценарий (CSR)»{/H}.\n" +
                 "• Сохраненные сценарии появляются в списке сценариев комнаты, и перед началом все в комнате получают сценарии хоста.\n\n" +
                 "Все игроки в комнате должны включить в лаунчере {H}Моды → «Горячая перезагрузка»{/H}.",
         };
@@ -716,7 +716,7 @@ namespace CrimeSightRevival.Mods
                 "• 게임을 닫거나 {H}'세션 종료'{/H}를 누르면 세션이 끝납니다.\n" +
                 "• 위쪽의 {H}종{/H}은 새 버전을 알려 줍니다: 누르면 업데이트합니다.\n" +
                 "• 대전 수, 승리, 포인트는 PC에 저장됩니다.",
-            "{PAGE}사용할 수 있는 버튼은 화면에서 옆에 아이콘이 표시됩니다.\n\n" +
+            "{PAGE}화면에서 조작할 수 있는 곳에는 사용할 버튼의 아이콘이 표시됩니다.\n\n" +
                 "• {H}메뉴{/H}: {START}로 결정, {B}로 뒤로 가기·닫기.\n\n" +
                 "• {H}방{/H}:\n" +
                 "<indent=2.4em>{Y}로 플레이어 선택.\n<size=40%>\n</size>" +
@@ -726,7 +726,7 @@ namespace CrimeSightRevival.Mods
                 "• {H}설정과 프로필{/H}: {LB}와 {RB}로 탭 전환, {Y}로 아바타 변경.\n\n" +
                 "• {H}대전{/H}: {B}로 대화 건너뛰기.\n\n" +
                 "• {H}속도{/H}: {LS}(왼쪽 스틱)를 누르면 커서 속도, {RS}(오른쪽 스틱)를 누르면 카메라 속도가 바뀝니다: 느림, 보통, 빠름(컨트롤러가 1, 2, 3번 진동).\n\n" +
-                "Steam Input을 통해 Xbox, PlayStation, Switch, Steam Deck 컨트롤러를 지원합니다. 버튼 아이콘은 사용하는 컨트롤러에 맞게 표시됩니다.",
+                "Steam 입력을 통해 Xbox, PlayStation, Switch, Steam Deck 컨트롤러를 지원합니다. 버튼 아이콘은 사용하는 컨트롤러에 맞게 표시됩니다.",
             "방에서 AI의 {H}'추방'{/H}을 누르면 난이도를 고르거나, {H}모든 AI{/H}에 적용하거나, {H}자리를 비워{/H} 다른 플레이어를 받을 수 있습니다.\n\n" +
                 "• {H}쉬움{/H}: 실수를 합니다. 배우기에 좋습니다.\n" +
                 "• {H}보통{/H}: 무리하지 않고 생각하며 플레이합니다.\n" +
@@ -748,9 +748,9 @@ namespace CrimeSightRevival.Mods
                 "• {H}팀에 다른 사람이 있으면{/H}: 먼저 그 사람에게 묻고, 그 사람은 20초 안에 답해야 합니다. 거절하거나 답이 없으면 대전은 계속됩니다.\n" +
                 "• {H}대전에서 나가면{/H}: 당신은 패배로 처리되고, 다른 사람이 남아 있으면 끝날 때까지 AI가 당신 자리를 맡습니다. 아무도 남지 않으면 기권으로 처리됩니다.\n\n" +
                 "호스트가 게임을 닫아도 게스트의 승리는 각자의 PC에 기록됩니다(인터넷에 연결되어 있으면).",
-            "방의 {H}'게임 설정 변경'{/H}에는 원작보다 설정이 2개 더 있습니다:\n\n" +
-                "• {H}최대 턴 수{/H}: 1~99(기본 10). 큰 맵과 나만의 스테이지에 유용합니다.\n" +
-                "• {H}제한 시간{/H}: 어떤 방에서든 60~999초. 여유롭게 플레이할 수 있습니다.\n\n" +
+            "방의 {H}'게임 설정 변경'{/H}에서는 설정 2개가 원작과 다릅니다:\n\n" +
+                "• {H}최대 턴 수{/H}: 원작에서는 숨겨져 있었지만 이제 표시됩니다. 1~99(기본 10). 큰 맵과 나만의 스테이지에 유용합니다.\n" +
+                "• {H}제한 시간{/H}: 어떤 방에서든 60~999초(예전에는 공개 방에서 180초까지). 여유롭게 플레이할 수 있습니다.\n\n" +
                 "호스트가 정하며 모두에게 적용됩니다.",
             "런처에서 {H}모드{/H}를 열면 어떤 이미지든 스탬프, 아바타, 커서로 만들 수 있습니다.\n\n" +
                 "• {H}스탬프{/H}: 여러 스탬프가 담긴 이미지는 배경 없이 하나씩 나뉩니다. 각각에 대전 기록용 텍스트를 붙일 수 있습니다.\n" +
@@ -797,7 +797,7 @@ namespace CrimeSightRevival.Mods
                 "• 关闭游戏或点击{H}“结束会话”{/H}即结束会话。\n" +
                 "• 顶部出现{H}铃铛{/H}表示有新版本：点击即可更新。\n" +
                 "• 你的对局数、胜场和积分保存在你的电脑上。",
-            "{PAGE}每个可用按钮的图标都会显示在屏幕上的相应位置旁。\n\n" +
+            "{PAGE}屏幕上可操作的地方会显示对应按钮的图标。\n\n" +
                 "• {H}菜单{/H}：{START}确认，{B}返回或关闭。\n\n" +
                 "• {H}房间{/H}：\n" +
                 "<indent=4.4em>{Y}选择玩家。\n<size=40%>\n</size>" +
@@ -826,12 +826,12 @@ namespace CrimeSightRevival.Mods
                 "{ST_NOSUS}  把{H}“声称不是杀手。”{/H}放在同一角色上：Sherlock就不再怀疑该角色。\n\n" +
                 "你的AI搭档以困难难度游玩（若对手为专家或噩梦，则为专家）。",
             "要在指令阶段认输，请打开{H}“系统设置”{/H}菜单并选择{H}“认输”{/H}。任何身份从第一回合起都可以认输，计为失败。\n\n" +
-                "• {H}队伍中有其他玩家时{/H}：会先询问对方，对方有20秒回答。若对方拒绝或未回答，对局继续。\n" +
-                "• {H}如果你退出对局{/H}：你会被记为失败；若仍有其他玩家，AI会接替你的位置直到结束。若没有其他人，则视为认输。\n\n" +
+                "• {H}队伍中有其他真人玩家时{/H}：会先询问对方，对方有20秒回答。若对方拒绝或未回答，对局继续。\n" +
+                "• {H}如果你退出对局{/H}：你会被记为失败；若仍有其他真人玩家，AI会接替你的位置直到结束。若没有其他人，则视为认输。\n\n" +
                 "如果房主关闭游戏，客人的胜利仍会记录在他们的电脑上（需联网）。",
-            "在房间中，{H}“变更游戏设置”{/H}比原版多两个选项：\n\n" +
-                "• {H}最大回合数{/H}：1到99（默认10）。适合大地图和自制场景。\n" +
-                "• {H}限制时间{/H}：任何房间都可设为60到999秒，慢慢玩。\n\n" +
+            "在房间中，{H}“变更游戏设置”{/H}有两个设置与原版不同：\n\n" +
+                "• {H}最大回合数{/H}：原版中被隐藏，现在会显示，可设为1到99（默认10）。适合大地图和自制场景。\n" +
+                "• {H}限制时间{/H}：任何房间都可设为60到999秒（原本公开房间最多只能设到180秒），慢慢玩。\n\n" +
                 "由房主设定，对所有人生效。",
             "在启动器中打开{H}模组{/H}，可以把任何图片变成表情、头像或光标。\n\n" +
                 "• {H}表情{/H}：包含多个表情的图片会被拆分成单独的表情并去除背景。可为每个表情添加用于对局记录的文字。\n" +
@@ -870,7 +870,7 @@ namespace CrimeSightRevival.Mods
 
         static readonly string[] PagesZhTw =
         {
-            "{H}CRIMESIGHT Revival{/H}透過社群伺服器讓線上對戰重新復活，並加入新功能。本指南說明這些功能的用法。\n\n" +
+            "{H}CRIMESIGHT Revival{/H}透過社群伺服器讓線上對戰復活，並加入新功能。本指南說明這些功能的用法。\n\n" +
                 "• 從{H}啟動器{/H}遊玩：與AI對戰、和好友一起，或在社群伺服器上。\n" +
                 "• 支援控制器、五種AI難度、自製貼圖、頭像與場景等。\n\n" +
                 "Revival不含任何Konami檔案：你需要在Steam上擁有CRIMESIGHT。",
@@ -878,7 +878,7 @@ namespace CrimeSightRevival.Mods
                 "• 關閉遊戲或點擊{H}「結束工作階段」{/H}即結束工作階段。\n" +
                 "• 上方出現{H}鈴鐺{/H}表示有新版本：點擊即可更新。\n" +
                 "• 你的對戰數、勝場與點數都儲存在你的電腦上。",
-            "{PAGE}每個可用按鈕的圖示都會顯示在畫面上的旁邊。\n\n" +
+            "{PAGE}畫面上可操作的地方會顯示對應按鈕的圖示。\n\n" +
                 "• {H}選單{/H}：{START}確認，{B}返回或關閉。\n\n" +
                 "• {H}房間{/H}：\n" +
                 "<indent=4.4em>{Y}選擇玩家。\n<size=40%>\n</size>" +
@@ -901,18 +901,18 @@ namespace CrimeSightRevival.Mods
                 "• {H}殺害{/H}：把貼圖放在兇手身上，並把{H}「移動」{/H}放在目標所在的格子。若兇手持有武器且本回合能抵達，就會出手。請先確認沒有目擊者。\n" +
                 "• 把{H}「我要指揮……」{/H}放在角色上：Moriarty本回合不會動該角色。\n" +
                 "• 若你不下指示，Moriarty會自行行動，在不被看見時出手。\n\n" +
-                "你的AI夥伴以困難遊玩（若對手為專家或噩夢，則為專家）。",
+                "你的AI夥伴以困難難度遊玩（若對手為專家或噩夢，則為專家）。",
             "如果你扮演Watson，而Sherlock由AI操控，你可以用貼圖引導他：\n\n" +
                 "{ST_SUS}  把{H}「懷疑是兇手。」{/H}（或{H}「危險」{/H}Ping）放在角色上：Sherlock會每回合把同一房間的人從該角色身邊帶開，最後指認該角色。他會回答「了解」。\n\n" +
                 "{ST_NOSUS}  把{H}「澄清不是兇手。」{/H}放在同一角色上：Sherlock便不再懷疑該角色。\n\n" +
-                "你的AI夥伴以困難遊玩（若對手為專家或噩夢，則為專家）。",
+                "你的AI夥伴以困難難度遊玩（若對手為專家或噩夢，則為專家）。",
             "要在指令階段投降，請開啟{H}「系統設定」{/H}選單並選擇{H}「投降」{/H}。任何角色從第一回合起都能投降，並記為敗北。\n\n" +
-                "• {H}隊伍中有其他玩家時{/H}：會先詢問對方，對方有20秒可以回答。若對方拒絕或未回答，對戰繼續。\n" +
-                "• {H}如果你退出對戰{/H}：你會記為敗北；若還有其他玩家，AI會接替你的位置直到結束。若沒有其他人，則視為投降。\n\n" +
+                "• {H}隊伍中有其他真人玩家時{/H}：會先詢問對方，對方有20秒可以回答。若對方拒絕或未回答，對戰繼續。\n" +
+                "• {H}如果你退出對戰{/H}：你會記為敗北；若還有其他真人玩家，AI會接替你的位置直到結束。若沒有其他人，則視為投降。\n\n" +
                 "如果房主關閉遊戲，客人的勝利仍會記錄在他們的電腦上（需連上網路）。",
-            "在房間中，{H}「變更遊戲設定」{/H}比原版多了兩個選項：\n\n" +
-                "• {H}最多回合數{/H}：1到99（預設10）。適合大地圖與自製場景。\n" +
-                "• {H}限制時間{/H}：任何房間都能設為60到999秒，慢慢遊玩。\n\n" +
+            "在房間中，{H}「變更遊戲設定」{/H}有兩個設定與原版不同：\n\n" +
+                "• {H}最多回合數{/H}：原版中被隱藏，現在會顯示，可設為1到99（預設10）。適合大地圖與自製場景。\n" +
+                "• {H}限制時間{/H}：任何房間都能設為60到999秒（原本公開房間最多只能設到180秒），慢慢遊玩。\n\n" +
                 "由房主設定，套用到所有人。",
             "在啟動器中開啟{H}模組{/H}，就能把任何圖片做成貼圖、頭像或游標。\n\n" +
                 "• {H}貼圖{/H}：含有多張貼圖的圖片會被拆成單張貼圖並去除背景。可為每張貼圖加上用於對戰記錄的文字。\n" +
