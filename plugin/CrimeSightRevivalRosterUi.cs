@@ -92,7 +92,12 @@ namespace CrimeSightRevival.Mods
 
         public static void Frame()
         {
-            if (_root != null) { WindowFrame(); return; }
+            if (_root != null)
+            {
+                if (!_host) WatchHost();
+                if (_root != null) WindowFrame();
+                return;
+            }
             if (Time.unscaledTime >= _nextLook)
             {
                 _nextLook = Time.unscaledTime + 0.15f;                // como los iconos del mando (Pad.UiScan)
@@ -559,10 +564,42 @@ namespace CrimeSightRevival.Mods
             return g;
         }
 
+        // Opened read-only just before the launcher knew you created the room: as soon as its list says you can
+        // change it, the window opens again, editable (no need to close it and open it again).
+        static DateTime _poolTime;
+        static float _nextPoolLook;
+        static bool _reopening;
+
+        static DateTime PoolStamp()
+        {
+            try { return File.GetLastWriteTimeUtc(PoolFile); } catch { return default; }
+        }
+
+        static void WatchHost()
+        {
+            if (Time.unscaledTime < _nextPoolLook) return;
+            _nextPoolLook = Time.unscaledTime + 0.25f;
+            var t = PoolStamp();
+            if (t == _poolTime) return;
+            _poolTime = t;
+            try
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(PoolFile, Encoding.UTF8));
+                if (!doc.RootElement.TryGetProperty("host", out var h) || h.ValueKind != JsonValueKind.True) return;
+            }
+            catch { return; }
+            _reopening = true;
+            try { Open(); } finally { _reopening = false; }
+            Plugin.L.LogInfo("[Selector] you created this room: now editable");
+        }
+
         static void Open()
         {
             Close();
+            var stamp = PoolStamp();             // before reading: a change made meanwhile is still seen
             if (!ReadPool()) return;
+            _poolTime = stamp;
+            _nextPoolLook = Time.unscaledTime + 0.25f;
             try
             {
                 try { _lang = Math.Max(0, Math.Min(10, (int)TextManager.Instance.GetLangType())); } catch { _lang = 1; }
@@ -584,7 +621,7 @@ namespace CrimeSightRevival.Mods
                 if (!BuildNative()) BuildOwn();
                 SetStatus(null);
                 Fill();
-                Sfx(AudioManager.PlayOutGameWindowOpen);
+                if (!_reopening) Sfx(AudioManager.PlayOutGameWindowOpen);
                 Plugin.L.LogInfo($"[Selector] abierto ({_items.Count} personajes, {(_host ? "anfitrion" : "solo ver")})");
             }
             catch (Exception e)
