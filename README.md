@@ -253,8 +253,9 @@ como uno nuevo. Los escenarios originales no se tocan. Para jugarlos hace falta 
 - Creador de escenarios, con escenarios compartidos con la sala.
 - Las IA a menudo contestan a tus stickers; con los tuyos propios, se guían por lo que elijas en
   **Equivale a…**.
-- Sherlock y Watson ven el icono del otro en la lista de jugadores, y Watson IA señala cada sitio nuevo con
-  comida que descubre.
+- Nuevo ajuste de sala, **Revelar compañero (equipo detective)** (desactivado, como en el juego original): si
+  el anfitrión lo activa, Sherlock y Watson ven el icono del otro en la lista de jugadores.
+- Watson IA señala cada sitio nuevo con comida que descubre.
 - Dentro del juego: una **Guía Revival** (en el menú Jugar) que explica lo que añade Revival, y los
   **Créditos Revival** (en la ventana de Opciones).
 - Controles con mando (Xbox, PlayStation, Switch, Steam Deck), con la recarga en caliente activada. Los

@@ -1180,6 +1180,19 @@ class Room:
 
     async def announce_enter(self, sess):
         await self.control("Enter", {"PlayerId": sess.player_id, "PlayerName": sess.name, "RandomSeed": "random_seed"})
+        await self.send_partner_icons()
+
+    async def send_partner_icons(self, pids=None):
+        """Room setting "Reveal Partner (Detective Team)" (off by default, as in the original game): the plugin shows it in
+        the Match Settings window and, when it is on, adds Watson's icon for Sherlock and Sherlock's for Watson in
+        the player list. Games without the plugin ignore it."""
+        on = self.settings.get("partner_icons")
+        on = on.strip().lower() in ("1", "true") if isinstance(on, str) else bool(on)
+        data = {"Show": "1" if on else "0"}       # as text: the plugin reads every value as text
+        if pids is None:
+            await self.control("CsrPartnerIcons", data)
+        else:
+            await self.control_to(pids, "CsrPartnerIcons", data)
 
     # ---- procedimientos de sala
     async def p_CreateRoom(self, sess, p):
@@ -1220,6 +1233,7 @@ class Room:
         self.clamp_turns()
         self.refresh_vars()
         await self.control("ChangeSettings", None)
+        await self.send_partner_icons()
         return rc({})
 
     async def p_Kick(self, sess, p):
@@ -1476,6 +1490,7 @@ class Room:
         if "prepare" in self.pending and self._complete("prepare"):
             self.pending.pop("prepare", None)
             self.phase = "playing"
+            await self.send_partner_icons(self.humans())     # before the roles, so the player list is right at once
             # Cada jugador recibe lo que sabe su papel (GameManager.SelectOpenWeapon/SelectOpenFood)
             for pid in self.humans():
                 await self.control_to([pid], "RoleData", self.role_data(pid))

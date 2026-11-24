@@ -10,6 +10,8 @@
 // AI takeover: when a player leaves mid-match and other people are still playing, the server gives their role to an
 // AI and sends "CsrReplaced". Here the other players get a short notice at the top of the screen (and a line in the
 // in-game log), and the name in the player list gets the same "(AI)" mark the server now uses for that player.
+//
+// The server also sends "CsrPartnerIcons" here (the room's "Reveal Partner (Detective Team)" setting, see Partner.cs).
 using System;
 using System.Collections.Generic;
 using HarmonyLib;
@@ -39,7 +41,8 @@ namespace CrimeSightRevival.Mods
         }
 
         // ---------------------------------------------------------------- messages from the server
-        static readonly string[] Commands = { "CsrSurrenderVote", "CsrSurrenderWait", "CsrSurrenderVoteEnd", "CsrReplaced" };
+        static readonly string[] Commands = { "CsrSurrenderVote", "CsrSurrenderWait", "CsrSurrenderVoteEnd", "CsrReplaced",
+                                                     "CsrPartnerIcons" };
         static readonly Queue<(string cmd, Dictionary<string, string> data)> _queue = new();
 
         // The command can come as the first argument, as a key of the dictionary or inside its "Control" entry
@@ -106,6 +109,7 @@ namespace CrimeSightRevival.Mods
                     case "CsrSurrenderVote": OpenVote(Get(data, "PlayerName")); break;
                     case "CsrSurrenderWait": Notify(Text(Waiting)); break;
                     case "CsrSurrenderVoteEnd": EndVote(Get(data, "Result"), Get(data, "PlayerName")); break;
+                    case "CsrPartnerIcons": PartnerIcon.FromServer(Get(data, "Show")); break;
                     case "CsrReplaced":
                         _renamed[Get(data, "PlayerId")] = Get(data, "NewName");
                         Notify(string.Format(Text(Replaced), Get(data, "PlayerName")));
