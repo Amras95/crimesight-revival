@@ -1,12 +1,12 @@
 """
-Actualizacion del lanzador.
+Launcher update.
 
-Al abrirse, el .exe mira las releases del repositorio oficial en GitHub. Si hay una mas nueva, el
-lanzador la ofrece con sus novedades (las notas de cada release que aun no tienes) y el jugador
-decide si actualiza o no. Al aceptar: descarga el .exe, comprueba su huella SHA-256 (la que publica
-GitHub para cada archivo), se sustituye a si mismo y se vuelve a abrir. Solo funciona en la version
-compilada; desde Python no hace nada. Si algo falla (sin internet, GitHub caido...), se sigue con la
-version actual.
+On opening, the .exe checks the official repository's releases on GitHub. If there is a newer one, the
+launcher offers it with its release notes (the notes of each release you don't have yet) and the player
+decides whether to update. On accepting: it downloads the .exe, checks its SHA-256 fingerprint (the one GitHub
+publishes for each file), replaces itself and reopens. It only works in the
+compiled version; from Python it does nothing. If something fails (no internet, GitHub down...), it carries on with the
+current version.
 """
 import hashlib, json, os, re, subprocess, sys, time, urllib.request
 
@@ -15,7 +15,7 @@ import netssl
 netssl.install()
 
 API = f"https://api.github.com/repos/{REPO}/releases?per_page=30"
-MAX_NOTES = 12             # versiones de las que se ensenan las novedades, como mucho
+MAX_NOTES = 12             # versions whose release notes are shown, at most
 UA = {"User-Agent": "CrimeSightRevival-Launcher", "Accept": "application/vnd.github+json"}
 
 
@@ -31,7 +31,7 @@ def frozen():
 
 
 def cleanup_old():
-    """Borra la copia vieja que deja una actualizacion anterior."""
+    """Deletes the old copy left by a previous update."""
     if not frozen():
         return
     old = sys.executable + ".old"
@@ -45,9 +45,9 @@ def cleanup_old():
 
 
 def notes(body, lang="en"):
-    """Las novedades que cuenta el texto de una release, en el idioma del lanzador si las trae.
-    Van entre <!-- changes --> y <!-- /changes --> (las escribe tools/release_notes.py), con un bloque
-    "### Español" y otro "### English"; en las releases antiguas, tras "Cambios / Changes:"."""
+    """The release notes in a release's text, in the launcher's language if it has them.
+    They go between <!-- changes --> and <!-- /changes --> (tools/release_notes.py writes them), with a
+    "### Español" block and an "### English" one; in old releases, after the "Cambios / Changes:" heading."""
     body = (body or "").replace("\r\n", "\n")
     m = re.search(r"<!--\s*changes\s*-->(.*?)<!--\s*/changes\s*-->", body, re.S)
     if m:
@@ -65,9 +65,9 @@ def notes(body, lang="en"):
 
 
 def pick(releases, current, lang="en"):
-    """De la lista de releases de GitHub: {"version", "url", "sha256", "notes": [{"version", "date",
-    "text"}]} si hay alguna mas nueva que current (con las novedades de todas las que faltan, la mas
-    nueva primero), o None."""
+    """From the GitHub release list: {"version", "url", "sha256", "notes": [{"version", "date",
+    "text"}]} if there is one newer than current (with the notes of all the missing ones, the
+    newest first), or None."""
     newer = []
     for rel in releases if isinstance(releases, list) else []:
         v = _parse(rel.get("tag_name"))
@@ -79,9 +79,9 @@ def pick(releases, current, lang="en"):
     latest = newer[-1][1]
     asset = next((a for a in latest.get("assets", []) if a.get("name") == ASSET), None)
     if asset is None:
-        return None                      # aun se esta compilando para este sistema
+        return None                      # still being built for this system
     seen, out = set(), []
-    for v, rel in newer:                 # de la mas antigua a la mas nueva: lo repetido solo sale una vez
+    for v, rel in newer:                 # oldest to newest: repeated lines only show once
         text = notes(rel.get("body"), lang)
         if text and text not in seen:
             seen.add(text)
@@ -94,7 +94,7 @@ def pick(releases, current, lang="en"):
 
 
 def check(lang="en"):
-    """Devuelve la actualizacion disponible (ver pick) o None."""
+    """Returns the available update (see pick) or None."""
     if not frozen():
         return None
     try:
@@ -106,7 +106,7 @@ def check(lang="en"):
 
 
 def apply(update, progress=lambda pct: None):
-    """Descarga e instala la actualizacion y abre la version nueva. Lanza OSError/ValueError si falla."""
+    """Downloads and installs the update and opens the new version. Raises OSError/ValueError if it fails."""
     exe = sys.executable
     new, old = exe + ".new", exe + ".old"
     req = urllib.request.Request(update["url"], headers={"User-Agent": UA["User-Agent"]})
@@ -130,7 +130,7 @@ def apply(update, progress=lambda pct: None):
         os.remove(old)
     if os.name != "nt":
         os.chmod(new, 0o755)
-    os.replace(exe, old)        # Windows deja renombrar el .exe en uso (y Linux tambien)
+    os.replace(exe, old)        # Windows allows renaming the .exe in use (and Linux too)
     os.replace(new, exe)
     flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     subprocess.Popen([exe], close_fds=True, creationflags=flags, env=fresh_env())
@@ -138,9 +138,9 @@ def apply(update, progress=lambda pct: None):
 
 
 def fresh_env():
-    """Entorno para abrir otro .exe de PyInstaller desde este. Sin esto, el nuevo hereda las variables
-    _PYI_* y usa la carpeta temporal del viejo, que se borra al cerrarse: le faltan sus librerias
-    (por ejemplo las de cifrado) y el servidor no entiende al juego."""
+    """Environment to open another PyInstaller .exe from this one. Without this, the new one inherits the
+    _PYI_* variables and uses the old one's temp folder, which is deleted when it closes: it lacks its libraries
+    (for example the crypto ones) and the server doesn't understand the game."""
     env = {k: v for k, v in os.environ.items() if not k.upper().startswith(("_PYI_", "_MEIPASS"))}
     env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
     return env

@@ -1,8 +1,9 @@
-// CRIMESIGHT Revival - "Rendirse" para salir de una partida contra la IA.
+// CRIMESIGHT Revival - "Forfeit" to leave a match against the AI.
 //
-// El juego ya trae un boton "Rendirse" en los ajustes de la partida, pero solo lo ensena a Moriarty
-// y a partir del turno 4 (y nunca en las salas de entrenamiento). Now it is shown to every role from the
-// first turn, in every online match, during the command phase only (as the game's Forfeit window says). With a person on your team, the server asks them first (vote, see
+// The game already has a "Forfeit" button in the match settings, but it only shows it to Moriarty
+// and from turn 4 on (and never in training rooms). Now it is shown to every role from the
+// first turn, in every online match, during the command phase only (as the game's Forfeit window says). With a person
+// on your team, the server asks them first (vote, see
 // CrimeSightRevivalTeam.cs); otherwise your side forfeits right away.
 using System;
 using System.Collections.Generic;
@@ -33,7 +34,7 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[Salir] " + m?.Name + ": " + e.Message); }
         }
 
-        // La unica persona de la sala (las IAs del servidor tienen ids "bot0001"...)
+        // The only person in the room (the server's AIs have ids "bot0001"...)
         static bool Alone()
         {
             try
@@ -62,9 +63,9 @@ namespace CrimeSightRevival.Mods
             catch { }
         }
 
-        // Al rendirse alguien, el juego decide la pantalla de resultados dando por hecho que se ha rendido
-        // Moriarty: el bando de Moriarty pierde y el de Sherlock gana. El servidor de Revival dice que
-        // bando gana de verdad (csr_winner) y aqui se corrige el resultado si hace falta.
+        // When someone forfeits, the game decides the results screen assuming it was
+        // Moriarty who forfeited: Moriarty's side loses and Sherlock's wins. The Revival server says which
+        // side really wins (csr_winner) and the result is corrected here if needed.
         static string _winner;
         static ResultInfo.StateType? _state;
 
@@ -99,16 +100,16 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[Salir] " + e.Message); }
         }
 
-        // El aviso del juego al rendirse ("Moriarty ha abandonado su perverso plan.") se cambia por uno
-        // con quien ha sido de verdad. Si es Moriarty rindiendose, se deja el del juego.
+        // The game's notice on forfeiting ("Moriarty has abandoned his devious plan.") is swapped for one
+        // with who it really was. If it is Moriarty forfeiting, the game's is left.
         const string NoticeId = "ctg_name_info_game_end_surrender";
         static string _original;
         static readonly Dictionary<string, string> RoleNames = new()
         {
             ["detective"] = "Sherlock", ["criminal"] = "Moriarty", ["irene"] = "Irene", ["watson"] = "Watson",
         };
-        // orden de idiomas del juego: japones, ingles, frances, italiano, aleman, espanol, portugues, ruso,
-        // coreano, chino simplificado, chino tradicional
+        // game language order: Japanese, English, French, Italian, German, Spanish, Portuguese, Russian,
+        // Korean, Simplified Chinese, Traditional Chinese
         static readonly string[] Surrendered =
         {
             "{0}が降参しました。", "{0} has surrendered.", "{0} a abandonné.", "{0} si è arreso.",
@@ -139,7 +140,7 @@ namespace CrimeSightRevival.Mods
             if (text != null) tm.LangText[NoticeId] = text;
         }
 
-        // Despues de que el juego guarde el resultado, se corrige escribiendolo directamente
+        // After the game saves the result, it is corrected by writing it directly
         static void AfterResult(ResultInfo __instance)
         {
             try
@@ -147,15 +148,15 @@ namespace CrimeSightRevival.Mods
                 if (__instance == null || UnityEngine.Time.unscaledTime > _winnerUntil) return;
                 var type = __instance.resultType;
                 if (type != ResultInfo.ResultType.WIN && type != ResultInfo.ResultType.LOSE) return;
-                bool moriartySide = type == ResultInfo.ResultType.LOSE;     // asi lo decide el juego
+                bool moriartySide = type == ResultInfo.ResultType.LOSE;     // that is how the game decides it
                 bool moriartyWins;
-                if (_iSurrendered) moriartyWins = !moriartySide;           // te has rendido tu: gana el otro bando
+                if (_iSurrendered) moriartyWins = !moriartySide;           // you forfeited: the other side wins
                 else if (_winner != null) moriartyWins = _winner == "moriarty";
                 else return;
                 bool won = moriartySide == moriartyWins;
                 __instance.resultType = won ? ResultInfo.ResultType.WIN : ResultInfo.ResultType.LOSE;
-                // y el cartel de quien gana ("Sherlock logra la victoria" / el de Moriarty), que el juego pone
-                // a continuacion dando por hecho que ha ganado Sherlock
+                // and the banner of who wins ("Sherlock achieves victory" / Moriarty's), which the game sets
+                // next assuming Sherlock won
                 _state = moriartyWins ? ResultInfo.StateType.KILL_SUCCESS : ResultInfo.StateType.ARREST_SUCCESS;
                 Plugin.L.LogInfo("[Salir] resultado: " + (won ? "victoria" : "derrota") + ", gana " + (moriartyWins ? "Moriarty" : "Sherlock"));
                 _iSurrendered = false; _winner = null;
@@ -163,7 +164,7 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[Salir] resultado: " + e.Message); }
         }
 
-        // "Rendirse" del juego: solo deja a Moriarty, desde el turno 4 y fuera del entrenamiento. Here the server
+        // The game's "Forfeit": it only allows Moriarty, from turn 4 and outside training. Here the server
         // is told the same thing the game would tell it, for any role and turn. It ends the match, or first asks
         // a teammate who is a person (then the match only ends if they agree).
         static bool BeforeRun()

@@ -1,26 +1,26 @@
 """
-CRIMESIGHT Revival - creador de escenarios: lee las piezas de los escenarios del juego.
+CRIMESIGHT Revival - stage creator: reads the pieces of the game's stages.
 
-De la copia del juego del jugador (nunca se reparte nada de Konami) saca, para cada escenario:
-las habitaciones (posicion, giro, tamano y huecos de sus paredes), las piezas que tapan esos
-huecos (puertas, estanterias, ventanas, puerta principal), los puntos de interes (lobos, gas,
-pasadizos) y las casillas de salida. Tambien las mallas de navegacion (NAV_*), que el plugin
-necesita en version legible para reconstruir la navegacion.
+From the player's copy of the game (nothing from Konami is ever distributed) it takes, for each stage:
+the rooms (position, rotation, size and gaps in their walls), the pieces covering those
+gaps (doors, shelves, windows, main door), the points of interest (wolves, gas,
+passages) and the starting squares. Also the navigation meshes (NAV_*), which the plugin
+needs in a readable version to rebuild navigation.
 
-El juego trabaja con casillas de 6x6 unidades: la casilla (i, j) tiene su centro en (6i, 6j);
-x de -6 a 6 y z de 0 a 9. Las habitaciones ocupan 1, 2, 3, 4 o 6 casillas.
+The game works with 6x6-unit squares: square (i, j) has its centre at (6i, 6j);
+x from -6 to 6 and z from 0 to 9. Rooms take 1, 2, 3, 4 or 6 squares.
 
-  read_game(game_dir)  -> datos en bruto (con UnityPy; tarda unos segundos)
-  build_catalog(raw)   -> catalogo para el editor y para stagelayout
-  load(game_dir)       -> catalogo, con cache en la carpeta de datos del lanzador
+  read_game(game_dir)  -> raw data (with UnityPy; takes a few seconds)
+  build_catalog(raw)   -> catalogue for the editor and for stagelayout
+  load(game_dir)       -> catalogue, cached in the launcher's data folder
 """
 import base64, json, math, os, struct
 
 GRID = 6.0
-MIN_X, MAX_X, MIN_Z, MAX_Z = -6, 6, 0, 9          # limites de la cuadricula del juego (13 x 10)
+MIN_X, MAX_X, MIN_Z, MAX_Z = -6, 6, 0, 9          # limits of the game's grid (13 x 10)
 DATA = "CrimeSight_Data"
 CATALOG_VERSION = 3
-RAW_SCRIPTS = ("Stage", "Room")                    # componentes cuyos datos se leen a mano
+RAW_SCRIPTS = ("Stage", "Room")                    # components whose data is read by hand
 PIECE_SCRIPTS = ("Door", "OutDoor", "Shelf", "WindowShelf")
 
 
@@ -28,7 +28,7 @@ class StageDataError(RuntimeError):
     pass
 
 
-# ---------------------------------------------------------------- lectura del juego (UnityPy)
+# ---------------------------------------------------------------- reading the game (UnityPy)
 def _scripts_map(data_dir):
     import UnityPy
     env = UnityPy.load(os.path.join(data_dir, "globalgamemanagers.assets"))
@@ -86,7 +86,7 @@ def _read_level(path, scripts):
 
 
 def _mesh_data(mesh):
-    """Vertices y triangulos de una malla (lista plana de floats / de indices)."""
+    """Vertices and triangles of a mesh (flat list of floats / of indices)."""
     from UnityPy.helpers.MeshHelper import MeshHandler
     h = MeshHandler(mesh)
     h.process()
@@ -99,7 +99,7 @@ def _mesh_data(mesh):
 
 
 def _stage_files(data_dir):
-    """Escenas de escenarios (Stage_Yokn, Stage_Yokn_v1030...) -> archivo levelN, segun la lista del juego."""
+    """Stage scenes (Stage_Yokn, Stage_Yokn_v1030...) -> levelN file, according to the game's list."""
     import re, UnityPy
     out = {}
     try:
@@ -111,7 +111,7 @@ def _stage_files(data_dir):
                         out[scene] = f"level{i}"
     except Exception:  # noqa: BLE001
         out = {}
-    if not out:                                     # sin la lista: los archivos cuya raiz es un escenario
+    if not out:                                     # without the list: the files whose root is a stage
         for n in sorted((n for n in os.listdir(data_dir) if n.startswith("level") and n[5:].isdigit()),
                         key=lambda n: int(n[5:])):
             with open(os.path.join(data_dir, n), "rb") as f:
@@ -122,7 +122,7 @@ def _stage_files(data_dir):
 
 
 def read_game(game_dir, progress=None):
-    """Lee los escenarios de la copia del juego. Devuelve {"levels": {escena: {...}}, "nav": {malla: {v, t}}}."""
+    """Reads the stages from the game copy. Returns {"levels": {scene: {...}}, "nav": {mesh: {v, t}}}."""
     import UnityPy
     data_dir = os.path.join(game_dir, DATA)
     say = progress or (lambda pct: None)
@@ -139,7 +139,7 @@ def read_game(game_dir, progress=None):
         say(5 + 35 * (k + 1) // len(files))
     if not levels:
         raise StageDataError("No encuentro los escenarios en esta copia del juego.")
-    # mallas de navegacion: nombre y geometria
+    # navigation meshes: name and geometry
     need = {}
     for lv in levels.values():
         for g in lv["gos"].values():
@@ -169,7 +169,7 @@ def read_game(game_dir, progress=None):
     return {"levels": levels, "nav": nav}
 
 
-# ---------------------------------------------------------------- geometria
+# ---------------------------------------------------------------- geometry
 def qmul(a, b):
     ax, ay, az, aw = a
     bx, by, bz, bw = b
@@ -185,13 +185,13 @@ def qrot(q, v):
 
 
 def q_yaw(q):
-    """Giro sobre el eje vertical, en grados (0 = mirando a +z, 90 = a +x)."""
+    """Rotation about the vertical axis, in degrees (0 = facing +z, 90 = +x)."""
     f = qrot(q, [0, 0, 1])
     return round(math.degrees(math.atan2(f[0], f[2])), 2) % 360
 
 
 def rot_xz(x, z, yaw):
-    """Gira un punto local (x, z) el angulo yaw (grados) como lo hace Unity sobre el eje Y."""
+    """Rotates a local point (x, z) by the yaw angle (degrees) the way Unity does about the Y axis."""
     a = math.radians(yaw)
     c, s = math.cos(a), math.sin(a)
     return x * c + z * s, -x * s + z * c
@@ -202,7 +202,7 @@ def norm_yaw(a):
 
 
 class Level:
-    """Jerarquia de un escenario con posiciones en el mundo."""
+    """Hierarchy of a stage with world positions."""
 
     def __init__(self, lv):
         self.gos = {int(k): v for k, v in lv["gos"].items()}
@@ -289,7 +289,7 @@ class _Reader:
 
 
 def _stage_fields(L):
-    """Campos del componente Stage: localizadores de lobos, gas y pasadizos, y casillas de salida."""
+    """Fields of the Stage component: wolf, gas and passage locators, and starting squares."""
     r = _Reader(base64.b64decode(L.gos[L.root]["c"]["MB:Stage"][0]["raw"]))
     r.header()
     r.string()                  # stageNamelangId
@@ -315,7 +315,7 @@ def _room_entrance(L, gid):
 
 
 def id_to_cell(gid):
-    """Id de casilla del juego -> (i, j). id = 10*i + j con i >= 0, 10*i - j con i < 0."""
+    """Game square id -> (i, j). id = 10*i + j with i >= 0, 10*i - j with i < 0."""
     a = abs(gid)
     return (-(a // 10), a % 10) if gid < 0 else (a // 10, a % 10)
 
@@ -325,7 +325,7 @@ def cell_to_id(i, j):
 
 
 def edge_of(x, z):
-    """Punto medio de arista entre casillas mas cercano a (x, z): (ex, ez) en unidades del mundo."""
+    """Midpoint of the edge between squares closest to (x, z): (ex, ez) in world units."""
     best = None
     ci, cj = round(x / GRID), round(z / GRID)
     for di in (-1, 0, 1):
@@ -339,8 +339,8 @@ def edge_of(x, z):
 
 
 def edge_cells(ex, ez):
-    """Las dos casillas que separa una arista y su normal (de la primera a la segunda)."""
-    if ex % 6:                  # arista vertical: separa casillas en x
+    """The two squares an edge separates and its normal (from the first to the second)."""
+    if ex % 6:                  # vertical edge: separates squares in x
         return ((ex - 3) // 6, ez // 6), ((ex + 3) // 6, ez // 6), (1, 0)
     return (ex // 6, (ez - 3) // 6), (ex // 6, (ez + 3) // 6), (0, 1)
 
@@ -353,7 +353,7 @@ def _inside(px, pz, a, b, c):
 
 
 def _flat_tris(mesh):
-    """Triangulos de una malla vistos desde arriba (sin los verticales)."""
+    """Triangles of a mesh seen from above (without the vertical ones)."""
     v, t = mesh["v"], mesh["t"]
     pts = [(v[i], v[i + 2]) for i in range(0, len(v), 3)]
     out = []
@@ -365,7 +365,7 @@ def _flat_tris(mesh):
 
 
 def _outline(tris):
-    """Aristas del borde de una malla plana (las que solo tocan un triangulo): son las paredes."""
+    """Border edges of a flat mesh (the ones touching only one triangle): they are the walls."""
     cnt = {}
     for tri in tris:
         for k in range(3):
@@ -378,13 +378,13 @@ def _outline(tris):
 
 
 def _local_cells(w, d):
-    """Casillas de una habitacion de w x d con el pivote en su centro: centros locales (x, z)."""
+    """Squares of a w x d room with the pivot at its centre: local centres (x, z)."""
     return [(GRID * (i - (w - 1) / 2), GRID * (j - (d - 1) / 2)) for i in range(w) for j in range(d)]
 
 
-# ---------------------------------------------------------------- catalogo
+# ---------------------------------------------------------------- catalogue
 def _room_type(L, gid, nav):
-    """Datos de un tipo de habitacion, en coordenadas locales."""
+    """Data of a room type, in local coordinates."""
     box = L.gos[gid]["c"]["BoxCollider"][0]
     w, d = round(box["size"][0] / GRID), round(box["size"][2] / GRID)
     floor, block = [], []
@@ -403,7 +403,7 @@ def _room_type(L, gid, nav):
             tris.append(tuple(pts))
         (floor if g["name"].startswith("NAV_FLOOR") else block).extend(tris)
     cells = _local_cells(w, d)
-    child = set()                                   # casillas de las habitaciones interiores
+    child = set()                                   # squares of the interior rooms
     for c in L.children(gid):
         if L.has(c, "MB:Room") and L.gos[c]["c"].get("BoxCollider"):
             cb = L.gos[c]["c"]["BoxCollider"][0]
@@ -421,7 +421,7 @@ def _room_type(L, gid, nav):
         for nx, nz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             mx, mz = cx + 3 * nx, cz + 3 * nz
             other = (cx + 6 * nx, cz + 6 * nz)
-            if other not in cellset:                # arista del perimetro
+            if other not in cellset:                # perimeter edge
                 edges.append({"x": mx, "z": mz, "nx": nx, "nz": nz, "open": covered(mx - 0.15 * nx, mz - 0.15 * nz)})
             elif (nx > 0 or nz > 0) and ((cx, cz) in child) != (other in child):
                 if covered(mx - 0.15 * nx, mz - 0.15 * nz) and covered(mx + 0.15 * nx, mz + 0.15 * nz):
@@ -437,7 +437,7 @@ def _piece_kind(L, gid):
         return None
     parent = L.parent(gid)
     if parent is not None and L.gos[parent]["name"].startswith("Out_door"):
-        return None                                 # forma parte de la puerta principal
+        return None                                 # part of the main door
     if "MB:Door" in g["c"]:
         return "door"
     if "MB:WindowShelf" in g["c"]:
@@ -492,7 +492,7 @@ def _build_stage(scene, lv, nav, types):
         p = {"name": g["name"], "kind": kind, "model": g["name"].split(" (")[0], "x": x, "y": y, "z": z,
              "yaw": norm_yaw(yaw), "edge": [ex, ez], "breakable": kind == "window" and "roken" in names}
         if ra is not None and ra == rb:
-            p["where"] = "inner"                    # pared interior de una habitacion: va con ella
+            p["where"] = "inner"                    # a room's interior wall: goes with it
             owner = ra
         elif ra is None or rb is None:
             p["where"] = "ext"
@@ -500,7 +500,7 @@ def _build_stage(scene, lv, nav, types):
         else:
             p["where"] = "int"
             owner = None
-            # lado al que da la pieza: un mueble tiene el cuerpo hacia delante y el pivote 0,1 por detras
+            # side the piece faces: a piece of furniture has its body forward and the pivot 0.1 behind
             fx, fz = rot_xz(0, 1, p["yaw"])
             p["side"] = 1 if fx * n[0] + fz * n[1] > 0 else -1
         if owner is not None:
@@ -537,20 +537,20 @@ def _signature(game_dir):
     sig = [CATALOG_VERSION]
     for n in sorted(os.listdir(data_dir)):
         if n == "resources.assets" or (n.startswith("level") and n[5:].isdigit()):
-            orig = os.path.join(data_dir, n + ".original")      # con mods sin BepInEx, el original
+            orig = os.path.join(data_dir, n + ".original")      # with mods without BepInEx, the original
             st = os.stat(orig if os.path.isfile(orig) else os.path.join(data_dir, n))
             sig.append([n, st.st_size])
     return sig
 
 
 def _source(game_dir, name):
-    """Los mods sin BepInEx reescriben algunos archivos: se lee siempre el original si existe."""
+    """Mods without BepInEx rewrite some files: the original is always read if it exists."""
     p = os.path.join(game_dir, DATA, name)
     return p + ".original" if os.path.isfile(p + ".original") else p
 
 
 def load(game_dir, cache_dir, progress=None):
-    """Catalogo de escenarios (de la cache si el juego no ha cambiado). Tambien deja navsrc.json."""
+    """Stage catalogue (from the cache if the game hasn't changed). Also leaves navsrc.json."""
     os.makedirs(cache_dir, exist_ok=True)
     cpath, npath = os.path.join(cache_dir, "catalog.json"), os.path.join(cache_dir, "navsrc.json")
     sig = _signature(game_dir)

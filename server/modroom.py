@@ -1,13 +1,13 @@
 """
-CRIMESIGHT Revival - los mods de una sala: los del anfitrion + los que acepte de cada jugador.
+CRIMESIGHT Revival - a room's mods: the host's plus the ones they accept from each player.
 
-Al unirse, cada jugador descarga los mods de la sala y, si tiene mods propios, se los ofrece al
-anfitrion (POST /revival/mods/offer). Al anfitrion le sale un aviso ("Raven lleva 4 mods, los
-descargas?"); si acepta, pasan a formar parte de la sala y les llegan a todos (en caliente con el
-plugin de BepInEx). Todo es temporal: al cerrar el servidor se borra.
+When joining, each player downloads the room's mods and, if they have mods of their own, offers them to the
+host (POST /revival/mods/offer). The host gets a prompt ("Raven brings 4 mods, download them?"); if they
+accept, the mods become part of the room and reach everyone (hot-loaded with the BepInEx plugin). Everything
+is temporary: it is deleted when the server closes.
 
-En un servidor dedicado (sin anfitrion que conteste) los mods de los jugadores se ignoran, salvo
-que se arranque con --accept-player-mods.
+On a dedicated server (no host to answer) the players' mods are ignored, unless it is started with
+--accept-player-mods.
 """
 import hashlib, logging, os, shutil, threading
 
@@ -20,7 +20,7 @@ MAX_OFFERS = 16
 class ModRoom:
     def __init__(self, folders=None, mods_dir=None, owner="", offers_dir=None, auto_accept=False, names=None):
         self.lock = threading.Lock()
-        self.names = dict(names or {})       # carpeta -> nombre que ensenar (p. ej. "Carpeta principal")
+        self.names = dict(names or {})       # folder -> name to show (e.g. "Main folder")
         self.owner = owner or ""
         self.base = list(folders or []) + modpack.list_folders(mods_dir)
         self.offers_dir = offers_dir
@@ -32,7 +32,7 @@ class ModRoom:
             shutil.rmtree(offers_dir, ignore_errors=True)
         self.rs = self._build()
 
-    # ------------------------------------------------------------ conjunto de la sala
+    # ------------------------------------------------------------ the room's set
     def _build(self):
         loaded = []
         for f in self.base:
@@ -52,7 +52,7 @@ class ModRoom:
         return rs
 
     def set_base(self, folders, names=None):
-        """Los mods del anfitrion cambiaron (recarga en caliente)."""
+        """The host's mods changed (hot reload)."""
         with self.lock:
             self.base = list(folders)
             if names:
@@ -66,9 +66,9 @@ class ModRoom:
                 self._pack = modpack.pack(self.rs)
             return self._pack
 
-    # ------------------------------------------------------------ mods de los jugadores
+    # ------------------------------------------------------------ the players' mods
     def offer(self, data, player):
-        """Un jugador ofrece sus mods. Devuelve 'pending', 'accepted', 'known' o 'ignored'."""
+        """A player offers their mods. Returns 'pending', 'accepted', 'known' or 'ignored'."""
         if not self.offers_dir:
             return "ignored"
         oid = hashlib.sha1(data).hexdigest()[:12]
@@ -81,7 +81,7 @@ class ModRoom:
                 return "ignored"
         folder = os.path.join(self.offers_dir, oid)
         shutil.rmtree(folder, ignore_errors=True)
-        folders = modpack.unpack(data, folder)          # valida todo (lanza ModError si no vale)
+        folders = modpack.unpack(data, folder)          # checks everything (raises ModError if it is not valid)
         mods = [modpack.load_mod(f) for f in folders]
         with self.lock:
             have = {m["uid"] for m in self.rs["mods"]}

@@ -1,28 +1,28 @@
 """
-CRIMESIGHT Revival - paquetes de mods de apariencia (stickers y avatares nuevos).
+CRIMESIGHT Revival - appearance mod packs (new stickers and avatars).
 
-Un mod es una carpeta normal con imagenes (no hace falta comprimir nada):
+A mod is a normal folder with images (nothing needs zipping):
 
     mods/
-      MiPack/
-        stamps/     gato.png, ok.png ...
-        avatars/    yo.png ...
-        mod.json    (opcional) {"name": "Mi pack", "author": "Amras"}
+      MyPack/
+        stamps/     cat.png, ok.png ...
+        avatars/    me.png ...
+        mod.json    (optional) {"name": "My pack", "author": "Amras"}
 
-Las imagenes se ajustan solas: los stickers a 128x128 con el borde blanco del juego, y los
-avatares a 256x256 con el dibujo centrado como los iconos originales. Los mods solo ANADEN
-huecos nuevos; nunca tocan stickers ni avatares del juego (tampoco los de pago).
+The images adjust themselves: stickers to 128x128 with the game's white border, and
+avatars to 256x256 with the drawing centred like the original icons. Mods only ADD
+new slots; they never touch the game's stickers or avatars (not the paid ones either).
 
-Cuando alguien se une a una sala con mods, el lanzador descarga el paquete del anfitrion como
-mods temporales ("<id>+temp") y los borra al cerrar la sesion. Por la red viaja un zip interno,
-pero el jugador nunca tiene que comprimir ni descomprimir nada.
+When someone joins a room with mods, the launcher downloads the host's pack as
+temporary mods ("<id>+temp") and deletes them when the session closes. An internal zip travels over the network,
+but the player never has to zip or unzip anything.
 """
 import hashlib, io, json, os, re, shutil, zipfile
 
 STICKER_SIZE = 128
 STICKER_MARGIN = 7
 AVATAR_SIZE = 256
-AVATAR_BOX = (40, 33, 176)          # x, y y lado de la zona donde dibujan los iconos originales (la que se ve)
+AVATAR_BOX = (40, 33, 176)          # x, y and side of the area where the original icons draw (the visible one)
 KINDS = ("stickers", "avatars")
 # Folder of each kind on disk. Stickers are called "stamps" like in the game, but the kind keeps its old
 # name inside the program and in the zip sent over the network, so older launchers and servers still
@@ -30,13 +30,13 @@ KINDS = ("stickers", "avatars")
 DIRS = {"stickers": "stamps", "avatars": "avatars"}
 OLD_DIRS = ("stickers",)
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif")
-MAX_STICKERS = 60                   # por sala
+MAX_STICKERS = 60                   # per room
 MAX_AVATARS = 30
-MAX_INPUT_BYTES = 20 * 1024 * 1024  # por imagen original (puede ser una lamina con muchos stickers)
-MAX_PIECES = 64                     # piezas por lamina
+MAX_INPUT_BYTES = 20 * 1024 * 1024  # per original image (it can be a sheet with many stickers)
+MAX_PIECES = 64                     # pieces per sheet
 MAX_PACK_BYTES = 24 * 1024 * 1024
 TEMP_SUFFIX = "+temp"
-FIRST_TYPE, LAST_TYPE = 1000, 4095  # tipos de sticker libres (el juego usa 0-38)
+FIRST_TYPE, LAST_TYPE = 1000, 4095  # free sticker types (the game uses 0-38)
 AVATAR_PREFIX = "Icon_CSR_"
 
 
@@ -44,7 +44,7 @@ class ModError(ValueError):
     pass
 
 
-# ------------------------------------------------------------------ imagenes
+# ------------------------------------------------------------------ images
 def _open(data):
     from PIL import Image
     Image.MAX_IMAGE_PIXELS = 40_000_000
@@ -77,27 +77,27 @@ def _png(img):
 
 
 def normalize(kind, data):
-    """PNG final listo para el juego (el tamano y la colocacion de los originales)."""
+    """Final PNG ready for the game (the size and placement of the originals)."""
     return _normalize_img(kind, _open(data))
 
 
 def normalize_many(kind, data):
-    """Una imagen cualquiera -> lista de PNG finales. Si es una lamina con varios stickers se
-    separa sola, y si no tiene transparencia se le quita el fondo (ver modimage)."""
+    """Any image -> list of final PNGs. If it is a sheet with several stickers it is
+    split automatically, and if it has no transparency its background is removed (see modimage)."""
     import modimage
     if len(data) > MAX_INPUT_BYTES:
         raise ModError("imagen demasiado grande (maximo 20 MB)")
     img = _open(data)
     if kind == "avatars" and not modimage._has_alpha(img) and not _plain_border(img):
-        # una foto o un dibujo que llega a los bordes: se usa entera. Quitarle el "fondo" le abria
-        # agujeros (zonas claras tocando el borde) que en el juego se ven como huecos grises.
+        # a photo or a drawing that reaches the edges: it is used whole. Removing its "background" would open
+        # holes in it (light areas touching the edge) that show as grey gaps in the game.
         return [_normalize_img(kind, img)]
     pieces = modimage.extract(img)[:MAX_PIECES]
     return [_normalize_img(kind, p) for p in pieces]
 
 
 def _plain_border(img, tol=18, share=0.9):
-    """True si el borde de la imagen es casi todo de un mismo color (un personaje sobre fondo liso)."""
+    """True if the image's border is almost all the same colour (a character over a plain background)."""
     rgb = img.convert("RGB")
     w, h = rgb.size
     k = min(1.0, 256 / max(w, h))
@@ -128,7 +128,7 @@ def _normalize_img(kind, img):
 
 
 def _cut_off(img):
-    """True si el dibujo llega hasta los bordes (una foto, o un busto cortado en cuadrado)."""
+    """True if the drawing reaches the edges (a photo, or a bust cut to a square)."""
     a = img.getchannel("A").point(lambda v: 255 if v > 64 else 0)
     bbox = a.getbbox()
     if not bbox:
@@ -142,8 +142,8 @@ def _cut_off(img):
 
 
 def _place(img, k):
-    """La imagen escalada por k y centrada en la zona visible (si es alta, se sube un poco: las caras
-    suelen estar arriba). Devuelve el lienzo final."""
+    """The image scaled by k and centred in the visible area (if it is tall, it moves up a bit: faces
+    are usually at the top). Returns the final canvas."""
     from PIL import Image
     x, y, side = AVATAR_BOX
     im = img.resize((max(1, round(img.width * k)), max(1, round(img.height * k))), Image.LANCZOS)
@@ -155,14 +155,14 @@ def _place(img, k):
 
 
 def _coverage(canvas):
-    """Parte de la zona visible que queda cubierta (0..1)."""
+    """Share of the visible area that ends up covered (0..1)."""
     x, y, side = AVATAR_BOX
     a = canvas.getchannel("A").crop((x, y, x + side, y + side)).point(lambda v: 255 if v > 64 else 0)
     return a.histogram()[255] / float(side * side)
 
 
 def _trim_border(img, tol=14, share=0.97):
-    """Quita los bordes lisos de una foto (marcos, franjas de color), que en el juego se ven como huecos."""
+    """Removes a photo's plain edges (frames, colour strips), which show as gaps in the game."""
     rgb = img.convert("RGB")
     w, h = rgb.size
     px = rgb.load()
@@ -189,9 +189,9 @@ def _trim_border(img, tol=14, share=0.97):
 
 
 def _frame_fill(img):
-    """Fotos y bustos en la zona que ensena el juego (AVATAR_BOX). Se acerca lo justo para que no
-    queden huecos: se prueba desde "entera" hasta "cubre la zona" y se queda con el primer zoom que
-    tapa practicamente todo (lo que no se puede tapar, como los hombros de un busto, se deja)."""
+    """Photos and busts in the area the game shows (AVATAR_BOX). It zooms in just enough to leave no
+    gaps: it tries from "whole" up to "covers the area" and keeps the first zoom that
+    covers practically everything (what can't be covered, like a bust's shoulders, is left)."""
     bbox = img.getchannel("A").point(lambda v: 255 if v > 64 else 0).getbbox()
     if bbox:
         img = img.crop(bbox)
@@ -205,7 +205,7 @@ def _frame_fill(img):
     if _coverage(_place(img, lo)) >= target:
         hi = lo
     else:
-        for _ in range(12):                 # busqueda binaria del zoom minimo
+        for _ in range(12):                 # binary search for the minimum zoom
             mid = (lo + hi) / 2
             if _coverage(_place(img, mid)) >= target:
                 hi = mid
@@ -216,9 +216,9 @@ def _frame_fill(img):
 
 
 def _extend(canvas, strip=4):
-    """Algunos marcos (el rombo, el hexagono) ensenan algo mas que la zona AVATAR_BOX. Por cada lado en
-    el que la imagen esta cortada (una foto, o la ropa de un busto que acaba en seco) se estiran sus
-    ultimas filas hasta el borde, asi parece que sigue. Lo de dentro no cambia; lo estirado se suaviza."""
+    """Some frames (the diamond, the hexagon) show a bit more than the AVATAR_BOX area. For each side
+    where the image is cut (a photo, or a bust's clothes ending abruptly) its
+    last rows are stretched to the edge, so it looks like it goes on. The inside doesn't change; the stretched part is smoothed."""
     from PIL import Image, ImageFilter
     W, H = canvas.size
     a = canvas.getchannel("A").point(lambda v: 255 if v > 200 else 0)
@@ -247,7 +247,7 @@ def _extend(canvas, strip=4):
     if l > 0 and cut((l, y) for y in range(t, b)):
         piece = out.crop((l, 0, l + strip, H)).resize((l, H), Image.BILINEAR)
         layer = Image.new("RGBA", (W, H)); layer.paste(piece, (0, 0)); layer.alpha_composite(out); out = layer
-    # solo se suaviza lo anadido (fuera del recuadro de la imagen), no el contorno del dibujo
+    # only what was added is smoothed (outside the image's box), not the drawing's outline
     outside = Image.new("L", (W, H), 255)
     outside.paste(0, (l, t, r, b))
     out.paste(out.filter(ImageFilter.GaussianBlur(2)), (0, 0), outside)
@@ -256,7 +256,7 @@ def _extend(canvas, strip=4):
 
 
 def sticker_background(png):
-    """Silueta blanca algo mas grande que el dibujo: el borde que llevan los stickers del juego."""
+    """White silhouette a bit bigger than the drawing: the border the game's stickers have."""
     from PIL import Image, ImageFilter
     fg = _open(png)
     a = fg.getchannel("A").point(lambda v: 255 if v > 24 else 0)
@@ -273,7 +273,7 @@ def check_normalized(kind, png):
         raise ModError("imagen con un tamano inesperado")
 
 
-# ------------------------------------------------------------------ carpetas de mods
+# ------------------------------------------------------------------ mod folders
 def _slug(text, n=24):
     s = re.sub(r"[^A-Za-z0-9]+", "-", text or "").strip("-")
     return (s[:n] or "mod").lower()
@@ -291,17 +291,17 @@ def _read_meta(folder):
     return {}
 
 
-# ------------------------------------------------------------------ textos de los stickers
-# Lo que sale en el registro de la partida al mandar un sticker ("Amras: <texto>") y su nombre en
-# el menu. Por defecto es el nombre del archivo ("01_buenas noches.png" -> "Buenas noches"); en
-# mod.json se puede poner otro, o uno por idioma: "texts": {"01_saludo": {"es": "Hola", "en": "Hi"}}
+# ------------------------------------------------------------------ sticker texts
+# What shows in the match log when sending a sticker ("Amras: <text>") and its name in
+# the menu. By default it is the file name ("01_good night.png" -> "Good night"); in
+# mod.json another one can be set, or one per language: "texts": {"01_greeting": {"es": "Hola", "en": "Hi"}}
 LANGS = {"ja": "Japanese", "en": "English", "fr": "French", "it": "Italian", "de": "German", "es": "Spanish",
          "pt": "Portuguese", "ru": "Russian", "ko": "Korean", "zh-CN": "Chinese-cn", "zh-TW": "Chinese-tw"}
 MAX_TEXT = 40
 
 
-# A que sticker del juego equivale cada sticker de un mod (opcional): las IA le contestan como a ese.
-# En mod.json: "means": {"01_saludo": "hello"}. Nombre -> tipo de sticker del juego (Stamp.Type).
+# Which game sticker each mod sticker is equivalent to (optional): the AIs reply to it as to that one.
+# In mod.json: "means": {"01_greeting": "hello"}. Name -> game sticker type (Stamp.Type).
 MEANS = {"hello": 28, "good": 8, "roger": 0, "why": 1, "no_way": 2, "relieved": 4, "frightened": 5,
          "scream": 32, "worried": 31, "please": 34, "hold_on": 37, "smirk": 29, "suspicious": 30,
          "killer_no_suspicion": 24, "killer_suspicion": 25, "target_no_suspicion": 26, "target_suspicion": 27}
@@ -313,12 +313,12 @@ def means_value(v):
 
 
 def clean_text(text):
-    text = re.sub(r"[\x00-\x1f{}<>]", "", str(text or ""))   # sin llaves: el juego usa {player}
+    text = re.sub(r"[\x00-\x1f{}<>]", "", str(text or ""))   # without braces: the game uses {player}
     return re.sub(r"\s+", " ", text).strip()[:MAX_TEXT]
 
 
 def text_value(v):
-    """Texto de mod.json: una cadena, o un diccionario por idioma. Devuelve str o dict limpio."""
+    """mod.json text: a string, or a dictionary per language. Returns a clean str or dict."""
     if isinstance(v, dict):
         out = {k: clean_text(x) for k, x in v.items() if k in LANGS and clean_text(x)}
         return out or None
@@ -327,7 +327,7 @@ def text_value(v):
 
 
 def text_for_game(text):
-    """{idioma del juego: texto} con los 11 idiomas (los que falten usan el primero que haya)."""
+    """{game language: text} with the 11 languages (the missing ones use the first available)."""
     if isinstance(text, dict):
         first = next(iter(text.values()))
         return {LANGS[k]: text.get(k) or text.get("en") or first for k in LANGS}
@@ -345,7 +345,7 @@ _CACHE = {}
 
 
 def _cached(path, kind, data):
-    """Separar laminas y quitar fondos tarda un poco: se recuerda mientras el archivo no cambie."""
+    """Splitting sheets and removing backgrounds takes a while: it is remembered while the file doesn't change."""
     key = (path, kind, len(data), hashlib.sha1(data).hexdigest())
     if key not in _CACHE:
         if len(_CACHE) > 400:
@@ -355,9 +355,9 @@ def _cached(path, kind, data):
 
 
 def load_mod(folder, owner=""):
-    """Lee una carpeta de mod. Devuelve el mod con sus imagenes ya ajustadas (en memoria).
-    owner (la cuenta de Steam del dueno) forma parte del id: asi la "Carpeta principal" de dos
-    jugadores distintos no choca cuando sus mods se juntan en una sala."""
+    """Reads a mod folder. Returns the mod with its images already adjusted (in memory).
+    owner (the owner's Steam account) is part of the id: that way the "Main folder" of two
+    different players doesn't clash when their mods come together in a room."""
     meta = _read_meta(folder)
     texts = meta.get("texts") if isinstance(meta.get("texts"), dict) else {}
     means = meta.get("means") if isinstance(meta.get("means"), dict) else {}
@@ -372,7 +372,7 @@ def load_mod(folder, owner=""):
             try:
                 with open(path, "rb") as f:
                     data = f.read()
-                if temp:                      # ya viene ajustada del anfitrion: se usa tal cual
+                if temp:                      # already adjusted by the host: used as it is
                     check_normalized(kind, data)
                     pngs = [data]
                 else:
@@ -384,9 +384,9 @@ def load_mod(folder, owner=""):
             orig_stem = os.path.splitext(fname)[0]
             for n, png in enumerate(pngs, 1):
                 if temp:
-                    # ya viene con su nombre definitivo: recortarlo otra vez (stem[:36]) dejaba a todas
-                    # las piezas de una lamina con el mismo nombre ("..._01" -> "..."), asi que en la
-                    # sala tenian otros ids que en el PC de su dueno y no salian en su rueda
+                    # it already comes with its final name: trimming it again (stem[:36]) left all
+                    # the pieces of a sheet with the same name ("..._01" -> "..."), so in the
+                    # room they had other ids than on their owner's PC and didn't show in their wheel
                     piece = os.path.splitext(fname)[0]
                 else:
                     piece = stem if len(pngs) == 1 else f"{stem}_{n:02d}"
@@ -398,25 +398,25 @@ def load_mod(folder, owner=""):
                         if key and key in texts:
                             t = text_value(texts[key])
                             break
-                    it["text"] = t               # sin mensaje puesto, el sticker no saca ninguno
+                    it["text"] = t               # without a message set, the sticker shows none
                     keys = [k for k in (piece, orig_stem if len(pngs) == 1 else None, fname) if k and k in means]
                     it["means"] = means_value(means[keys[0]]) if keys else None
                 items[kind].append(it)
     base = os.path.basename(folder.rstrip("/\\"))
-    if temp:                                 # mod temporal descargado: conserva su id original
+    if temp:                                 # downloaded temporary mod: keeps its original id
         uid = base[:-len(TEMP_SUFFIX)]
     else:
-        # El id depende SOLO de la carpeta, no del contenido: asi, anadir imagenes, cambiar un
-        # mensaje o actualizar el lanzador no cambia los ids de los stickers/avatares que ya
-        # tenias puestos (si cambiaran, el juego los quitaria de la rueda y del avatar elegido).
+        # The id depends ONLY on the folder, not the content: that way, adding images, changing a
+        # message or updating the launcher doesn't change the ids of the stickers/avatars you already
+        # had set (if they changed, the game would remove them from the wheel and the chosen avatar).
         uid = f"{_slug(base)}-{hashlib.sha1((str(owner) + '/' + base.lower()).encode()).hexdigest()[:6]}"
     return {"uid": uid, "name": name, "author": author, "folder": folder, "temp": temp,
             "stickers": items["stickers"], "avatars": items["avatars"], "errors": errors}
 
 
 def set_text(folder, key, text):
-    """Guarda el mensaje de un sticker en el mod.json de su carpeta (vacio = sin
-    mensaje). Desde el lanzador se pueden poner signos que Windows no deja en los nombres (? : " *)."""
+    """Saves a sticker's message in its folder's mod.json (empty = no
+    message). From the launcher you can use characters Windows doesn't allow in names (? : " *)."""
     path = os.path.join(folder, "mod.json")
     meta = _read_meta(folder)
     texts = meta.get("texts") if isinstance(meta.get("texts"), dict) else {}
@@ -436,7 +436,7 @@ def set_text(folder, key, text):
 
 
 def set_means(folder, key, value):
-    """Guarda a que sticker del juego equivale un sticker (vacio = a ninguno: las IA no le contestan)."""
+    """Saves which game sticker a sticker is equivalent to (empty = none: the AIs don't reply to it)."""
     path = os.path.join(folder, "mod.json")
     meta = _read_meta(folder)
     means = meta.get("means") if isinstance(meta.get("means"), dict) else {}
@@ -456,8 +456,8 @@ def set_means(folder, key, value):
 
 
 def list_folders(mods_dir):
-    """Carpetas de mods. Si alguien pone stickers/ o avatars/ directamente en la carpeta de mods
-    (lo mas natural), la propia carpeta cuenta como un mod mas."""
+    """Mod folders. If someone puts stickers/ or avatars/ directly in the mods folder
+    (the most natural thing), the folder itself counts as one more mod."""
     if not mods_dir or not os.path.isdir(mods_dir):
         return []
     out = [mods_dir] if any(os.path.isdir(os.path.join(mods_dir, DIRS[k])) for k in KINDS) else []
@@ -468,7 +468,7 @@ def list_folders(mods_dir):
 
 
 def load_all(mods_dir, disabled=(), root_name=None, owner=""):
-    """Todos los mods de una carpeta (los desactivados se devuelven marcados)."""
+    """All the mods of a folder (the disabled ones are returned marked)."""
     out = []
     for folder in list_folders(mods_dir):
         m = load_mod(folder, owner)
@@ -479,12 +479,12 @@ def load_all(mods_dir, disabled=(), root_name=None, owner=""):
     return out
 
 
-# ------------------------------------------------------------------ conjunto de una sala
+# ------------------------------------------------------------------ a room's set
 def room_set(mods):
-    """Ordena los mods y asigna a cada imagen un id estable (igual en todos los PCs de la sala).
+    """Sorts the mods and gives each image a stable id (the same on every PC in the room).
 
-    Stickers: tipo = 1000.. segun el hash de "<uid>/<archivo>" (si choca, el siguiente libre).
-    Avatares: id de datos "Icon_CSR_<hash>". Cumple los limites por sala."""
+    Stickers: type = 1000.. according to the hash of "<uid>/<file>" (if it clashes, the next free one).
+    Avatars: data id "Icon_CSR_<hash>". Meets the per-room limits."""
     mods = sorted((m for m in mods if m["stickers"] or m["avatars"]), key=lambda m: m["uid"])
     seen, uniq = set(), []
     for m in mods:
@@ -524,15 +524,15 @@ def room_set(mods):
 
 
 def summary(rs):
-    """Lo que se ensena antes de unirse a una sala con mods."""
+    """What is shown before joining a room with mods."""
     return {"hash": rs["hash"], "stickers": len(rs["stickers"]), "avatars": len(rs["avatars"]),
             "mods": [{"uid": m["uid"], "name": m["name"], "author": m["author"],
                       "stickers": len(m["stickers"]), "avatars": len(m["avatars"])} for m in rs["mods"]]}
 
 
-# ------------------------------------------------------------------ envio por la red
+# ------------------------------------------------------------------ sending over the network
 def pack(rs):
-    """Zip interno con las imagenes ya ajustadas de la sala."""
+    """Internal zip with the room's already adjusted images."""
     buf = io.BytesIO()
     manifest = {"format": "crimesight-revival-mods", "version": 1, "hash": rs["hash"], "mods": []}
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as z:
@@ -554,8 +554,8 @@ _SAFE_FILE = re.compile(r"^[A-Za-z0-9_-]{1,40}\.png$")
 
 
 def unpack(data, dest_dir):
-    """Guarda un paquete descargado como carpetas de mods temporales ("<id>+temp").
-    Valida todo: nombres, tamanos e imagenes. Devuelve las carpetas creadas."""
+    """Saves a downloaded pack as temporary mod folders ("<id>+temp").
+    Validates everything: names, sizes and images. Returns the created folders."""
     if len(data) > MAX_PACK_BYTES:
         raise ModError("paquete de mods demasiado grande")
     try:
@@ -598,7 +598,7 @@ def unpack(data, dest_dir):
 
 
 def clear_temp(dest_dir):
-    """Borra los mods temporales descargados de otras salas."""
+    """Deletes the temporary mods downloaded from other rooms."""
     if not os.path.isdir(dest_dir):
         return 0
     n = 0

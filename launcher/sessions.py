@@ -1,11 +1,11 @@
 """
-Sesiones de juego del lanzador (las usan la interfaz web y la sencilla).
+Launcher game sessions (used by the web interface and the simple one).
 
-ctx tiene que ofrecer:
-  ctx.log(texto)            mensaje para el registro
-  ctx.set_address(texto)    direccion para pasar a los amigos ("" para borrarla)
-  ctx.cancelled()           True si el jugador pulso "Terminar sesion"
-  ctx.confirm_mods(info)    pregunta si descargar los mods de la sala (True = descargar y unirse)
+ctx has to offer:
+  ctx.log(text)             message for the log
+  ctx.set_address(text)     address to give to friends ("" to clear it)
+  ctx.cancelled()           True if the player pressed "End session"
+  ctx.confirm_mods(info)    asks whether to download the room's mods (True = download and join)
 """
 import logging, threading, time
 
@@ -17,7 +17,7 @@ log = logging.getLogger("crimesight")
 
 
 def _mods(ctx, game_dir, rs):
-    """Pone en el juego justo esos mods (los archivos solo se reescriben si cambia algo)."""
+    """Puts exactly those mods in the game (the files are only rewritten if something changes)."""
     def say(n_st, n_av):
         ctx.log(t("mods_installing", stickers=n_st, avatars=n_av))
     try:
@@ -31,7 +31,7 @@ def _mods(ctx, game_dir, rs):
 
 def _play(ctx, game_dir, url, rs=None, watch=None, every=3):
     if core.game_running():
-        # con el juego abierto no se pueden preparar sus archivos (y no se conectaria a esta sesion)
+        # with the game open its files can't be prepared (and it wouldn't connect to this session)
         raise ValueError(t("err_game_open"))
     core.unlock_game_files(game_dir)
     if rs is not None:
@@ -68,9 +68,9 @@ def _play(ctx, game_dir, url, rs=None, watch=None, every=3):
 
 
 def _own_watcher(ctx, cfg, rs, srv=None):
-    """Recarga en caliente de TUS mods mientras juegas solo (con el plugin de BepInEx): si cambias
-    imagenes o activas/desactivas un mod, el juego lo recibe (y el servidor, para que las IA sepan
-    a que sticker del juego equivale cada uno)."""
+    """Hot reload of YOUR mods while you play solo (with the BepInEx plugin): if you change
+    images or enable/disable a mod, the game receives it (and the server, so the AIs know
+    which game sticker each one is equivalent to)."""
     gd = cfg["game_dir"]
     state = {"hash": rs["hash"]}
 
@@ -89,9 +89,9 @@ def _own_watcher(ctx, cfg, rs, srv=None):
 
 
 def _host_watcher(ctx, cfg, srv):
-    """Anfitrion: tus cambios de mods llegan a la sala, y cuando un jugador trae mods te pregunta si
-    los descargas (si aceptas, los ve todo el mundo). Necesita la recarga en caliente: sin ella, el
-    juego de los que ya estan dentro no podria cambiar su lista de stickers."""
+    """Host: your mod changes reach the room, and when a player brings mods it asks you whether
+    to download them (if you accept, everyone sees them). Needs hot reload: without it, the
+    game of those already inside couldn't change its sticker list."""
     gd = cfg["game_dir"]
     room = srv.room
     state = {"own": room.rs["hash"], "room": room.rs["hash"], "asked": set()}
@@ -111,7 +111,7 @@ def _host_watcher(ctx, cfg, srv):
                 ctx.log(t("mods_offer_need_live", player=off["player"]))
                 room.answer(off["id"], False)
                 continue
-            auto = bool(cfg.get("guest_mods_always"))   # "Aceptar siempre": sin preguntar
+            auto = bool(cfg.get("guest_mods_always"))   # "Always accept": without asking
             ask = getattr(ctx, "confirm_offer", None)
             ok = auto or bool(ask and ask(off))
             room.answer(off["id"], ok)
@@ -126,7 +126,7 @@ def _host_watcher(ctx, cfg, srv):
 
 
 def _room_watcher(ctx, cfg, url, password, rs):
-    """En la sala de otro: si el anfitrion cambia sus mods, se bajan y se aplican en caliente."""
+    """In someone else's room: if the host changes their mods, they are downloaded and applied live."""
     gd = cfg["game_dir"]
     state = {"hash": rs["hash"], "warned": False}
 
@@ -152,10 +152,10 @@ def _room_watcher(ctx, cfg, url, password, rs):
 
 
 def _stages(ctx, cfg, url, password, steam_id, srv=None, room=False):
-    """Escenarios del creador de escenarios. Solo / anfitrion: los tuyos activos se dejan listos en el
-    juego (y en la sala, para que se los bajen los demas). En la sala de otro: se bajan los suyos.
-    Siempre se le dice al servidor cuales tiene listos tu juego: solo deja jugar un escenario
-    personalizado si lo tienen todos. Devuelve la comprobacion que se repite durante la sesion."""
+    """Stage creator stages. Solo / host: your active ones are left ready in the
+    game (and in the room, for the others to download). In someone else's room: theirs are downloaded.
+    The server is always told which ones your game has ready: it only allows playing a custom
+    stage if everyone has it. Returns the check that repeats during the session."""
     gd = cfg["game_dir"]
     state = {"key": None, "warned": False, "fails": 0}
 
@@ -179,7 +179,7 @@ def _stages(ctx, cfg, url, password, steam_id, srv=None, room=False):
         have = core.stage_publish(gd, stages) if live else {}
         seen = key if room else (srv.stages.key() if srv is not None else "")
         if not core.stage_report(url, password, steam_id, have, seen) and state["fails"] < 5:
-            state["fails"] += 1                 # el servidor no se ha enterado: se repite en la proxima pasada
+            state["fails"] += 1                 # the server didn't get it: repeated on the next pass
             return
         if room and have:
             ctx.log(t("stage_room_synced", n=len(have)))
@@ -188,9 +188,9 @@ def _stages(ctx, cfg, url, password, steam_id, srv=None, room=False):
 
 
 def _host_gone_watcher(ctx, url, steam_id):
-    """En la sala de otro: si el anfitrion desaparece a mitad de partida (cierra el lanzador, se queda sin
-    conexion...), su servidor ya no puede apuntar el resultado. Entonces cuenta como victoria para ti,
-    siempre que tu si tengas internet (si el que se ha caido eres tu, no)."""
+    """In someone else's room: if the host disappears mid-match (closes the launcher, loses
+    connection...), their server can no longer record the result. Then it counts as a win for you,
+    as long as you do have internet (if the one who dropped is you, no)."""
     state = {"match": None, "fails": 0}
 
     def check():
@@ -218,7 +218,7 @@ def _both(*checks):
 
 
 def _every(n, check):
-    """La comprobacion solo se hace una de cada n veces."""
+    """The check is only done once every n times."""
     count = [0]
 
     def run():
@@ -229,7 +229,7 @@ def _every(n, check):
 
 
 def _first(ctx, check):
-    """Primera pasada de los escenarios, antes de abrir el juego (si falla, se juega sin ellos)."""
+    """First stage pass, before opening the game (if it fails, play goes on without them)."""
     try:
         check()
     except Exception as e:  # noqa: BLE001
@@ -241,11 +241,11 @@ def solo(ctx, cfg):
     gd = cfg["game_dir"]
     port = int(cfg.get("port", core.DEFAULT_PORT))
     rs = core.my_room_set(cfg)
-    # el servidor tambien tiene tus mods: las IA miran a que sticker del juego equivale cada uno
+    # the server also has your mods: the AIs check which game sticker each one is equivalent to
     srv = core.LocalServer(public=False, port=port, mods=[m["folder"] for m in rs["mods"]],
                            names={m["folder"]: m["name"] for m in rs["mods"]}).start()
     ctx.log(t("srv_local_on"))
-    _models_room_start(cfg, srv)                        # tus modelos y personajes nuevos, como en tu sala
+    _models_room_start(cfg, srv)                        # your models and new characters, as in your room
     try:
         url = f"http://127.0.0.1:{port}"
         steam_id = core.steam_account()[0]
@@ -270,7 +270,7 @@ def host(ctx, cfg, port):
     rs = core.my_room_set(cfg)
     srv = core.LocalServer(public=True, port=port, mods=[m["folder"] for m in rs["mods"]], player_mods="ask",
                            names={m["folder"]: m["name"] for m in rs["mods"]}).start()
-    _models_room_start(cfg, srv)                           # tus modelos y personajes son los de la sala
+    _models_room_start(cfg, srv)                           # your models and characters are the room's
     mapping = upnp.PortMapping(port)
     try:
         ctx.log(t("host_upnp"))
@@ -291,8 +291,8 @@ def host(ctx, cfg, port):
                                             _roster_watcher(ctx, cfg, url, steam_id, srv), stages))
     finally:
         mapping.close()
-        _models_room_end(gd)                           # los de los invitados eran solo para esta sala
-        if srv.room.accepted:                      # los mods de los jugadores eran solo para esta sala
+        _models_room_end(gd)                           # the guests' ones were only for this room
+        if srv.room.accepted:                      # the players' mods were only for this room
             try:
                 _mods(ctx, gd, core.my_room_set(cfg))
             except ValueError as e:
@@ -316,29 +316,29 @@ def join(ctx, cfg, steam_id, address, password=""):
     rm = _room_models(ctx, url, password, info.get("models"))
     rs = _offer_own(ctx, cfg, url, password, rs)
     rm, offer = _offer_own_models(ctx, url, password, rm)
-    core.room_models = rm                              # el juego ve los modelos de la sala (los tuyos, apartados)
+    core.room_models = rm                              # the game sees the room's models (yours, set aside)
     ctx.log(t("syncing"))
     ctx.log(t("record", **core.sync_profile(url, steam_id, password)))
     stages = _stages(ctx, cfg, url, password, steam_id, room=True)
     _first(ctx, stages)
     roster = _roster_watcher(ctx, cfg, url, steam_id, None, password)
     try:
-        # los escenarios se miran cada 3 s (la sala no deja empezar hasta tenerlos); los mods y modelos, cada 9
+        # stages are checked every 3 s (the room doesn't allow starting until it has them); mods and models, every 9
         _play(ctx, gd, url, rs, watch=_both(_every(3, _room_watcher(ctx, cfg, url, password, rs)),
                                             _every(3, _room_models_watcher(ctx, cfg, url, password, rm, offer)),
                                             roster, stages, _host_gone_watcher(ctx, url, steam_id)), every=3)
     finally:
         roster.stop()
-        _models_room_end(gd)                           # vuelven tus modelos
+        _models_room_end(gd)                           # your models come back
         core.clear_temp_models()
-        try:                                           # vuelven tus escenarios a la lista del juego
+        try:                                           # your stages come back to the game's list
             core.stage_publish(gd, core.stage_own(cfg.get("stages_disabled", [])))
         except Exception:  # noqa: BLE001
             log.exception("No pude restaurar tus escenarios")
         if core.clear_temp_mods():
             ctx.log(t("mods_temp_cleared"))
         try:
-            _mods(ctx, gd, core.my_room_set(cfg))  # vuelven tus mods (o el juego sin mods)
+            _mods(ctx, gd, core.my_room_set(cfg))  # your mods come back (or the game without mods)
         except ValueError as e:
             ctx.log(f"✗ {e}")
         try:
@@ -349,13 +349,13 @@ def join(ctx, cfg, steam_id, address, password=""):
 
 
 def _room_mods(ctx, cfg, url, password, info, models=None):
-    """Mods de la sala a la que te unes. En la sala de otro solo valen los suyos (todos los
-    jugadores tienen que tener exactamente los mismos), asi que los tuyos se apartan un rato.
-    Si la sala tambien tiene modelos 3D, se pregunta una sola vez por todo."""
+    """Mods of the room you join. In someone else's room only theirs count (every
+    player must have exactly the same ones), so yours are set aside for a while.
+    If the room also has 3D models, it asks only once about everything."""
     import modpack
     need = bool(info and info.get("hash"))
     mine = core.my_room_set(cfg)
-    if need and info["hash"] == mine["hash"]:          # la sala usa justo tus mods: no hay nada que bajar
+    if need and info["hash"] == mine["hash"]:          # the room uses exactly your mods: there is nothing to download
         need = False
     if need or (models and models.get("hash")):
         ask = getattr(ctx, "confirm_mods", None)
@@ -378,7 +378,7 @@ def _mb(n):
 
 
 def _room_models(ctx, url, password, info):
-    """Modelos 3D y animaciones de la sala a la que te unes (se bajan solo los archivos que no tengas)."""
+    """3D models and animations of the room you join (only the files you don't have are downloaded)."""
     if not info or not info.get("hash"):
         return {"hash": "", "swaps": {}, "anims": {}, "files": {}}
     return core.download_models(url, password, info["hash"],
@@ -386,8 +386,8 @@ def _room_models(ctx, url, password, info):
 
 
 def _offer_own_models(ctx, url, password, room, wait=60):
-    """Ofrece tus modelos al anfitrion. Primero solo la lista: si acepta, se suben los archivos que le falten y
-    se espera a que entren en la sala. Devuelve (modelos de la sala, oferta aun sin contestar o None)."""
+    """Offers your models to the host. First only the list: if they accept, the files they are missing are uploaded and
+    it waits for them to enter the room. Returns (the room's models, offer still unanswered or None)."""
     own = core.my_model_set()
     if not own["hash"]:
         return room, None
@@ -415,7 +415,7 @@ def _offer_own_models(ctx, url, password, room, wait=60):
 
 
 def _upload_and_wait(ctx, url, password, room, oid, own, need, wait=30):
-    """Oferta aceptada: sube lo que pide el anfitrion y baja la sala cuando ya los incluye."""
+    """Accepted offer: uploads what the host asks for and downloads the room once it includes them."""
     if need:
         ctx.log(t("models_uploading", mb=_mb(sum(own["files"][s]["size"] for s in need if s in own["files"]))))
         try:
@@ -439,8 +439,8 @@ def _upload_and_wait(ctx, url, password, room, oid, own, need, wait=30):
 
 
 def _room_models_watcher(ctx, cfg, url, password, rm, offer=None):
-    """En la sala de otro: si cambian los modelos de la sala, se bajan los nuevos y se aplican en caliente. Si el
-    anfitrion acepta tu oferta tarde (con el juego ya abierto), se suben entonces."""
+    """In someone else's room: if the room's models change, the new ones are downloaded and applied live. If the
+    host accepts your offer late (with the game already open), they are uploaded then."""
     gd = cfg["game_dir"]
     state = {"hash": rm.get("hash", ""), "warned": False, "offer": offer, "busy": False}
 
@@ -482,7 +482,7 @@ def _room_models_watcher(ctx, cfg, url, password, rm, offer=None):
 
 
 def _models_room_start(cfg, srv):
-    """Anfitrion o en solitario: tus modelos y personajes nuevos son los de la sala, y tu decides el Selector."""
+    """Host or solo: your models and new characters are the room's, and you decide the Selector."""
     srv.models.set_base(core.my_model_set())
     core.room_disabled = srv.models.set_disabled(core.load_config().get("roster_disabled") or [])
     core.room_host = True
@@ -502,8 +502,8 @@ def _models_room_end(gd):
 
 
 def _roster_watcher(ctx, cfg, url, steam_id, srv, password=""):
-    """Reparto de personajes de cada partida (lo sortea el servidor al empezar la cuenta atras): se lo pasa al juego.
-    El anfitrion, ademas, recoge lo que marca en el Selector de personajes del juego (srv: su servidor).
+    """Character cast of each match (the server draws it when the countdown starts): it is passed to the game.
+    The host, also, collects what they tick in the game's Character Selector (srv: their server).
     On someone else's server, whoever created the room decides its Character Selection: their launcher sends it
     (check.stop() ends the quick check of the Selector)."""
     gd = cfg["game_dir"]
@@ -612,8 +612,8 @@ def _roster_watcher(ctx, cfg, url, steam_id, srv, password=""):
 
 
 def _host_models_watcher(ctx, cfg, srv):
-    """Anfitrion: tus cambios de modelos llegan a la sala, y cuando un jugador trae modelos te pregunta si los
-    aceptas (como con los stickers). El juego del anfitrion ve los de la sala (los tuyos + los aceptados)."""
+    """Host: your model changes reach the room, and when a player brings models it asks you whether to
+    accept them (like with stickers). The host's game sees the room's (yours + the accepted ones)."""
     gd = cfg["game_dir"]
     room = srv.models
     state = {"own": room.base.get("hash", ""), "room": room.ms["hash"], "asked": set()}
@@ -651,12 +651,12 @@ def _host_models_watcher(ctx, cfg, srv):
 
 
 def _offer_own(ctx, cfg, url, password, room, wait=60):
-    """Ofrece tus mods al anfitrion: si los acepta, los veis todos en la sala. Devuelve los mods con
-    los que se entra en la sala.
+    """Offers your mods to the host: if they accept them, you all see them in the room. Returns the mods
+    the room is joined with.
 
-    Se espera a que el anfitrion conteste ANTES de abrir el juego: si el juego arrancara con los mods
-    de la sala sin los tuyos, al no encontrar tus stickers los quitaria de tu rueda (y lo guarda), y
-    cuando llegaran despues ya no estarian puestos: solo verias los del anfitrion."""
+    It waits for the host to answer BEFORE opening the game: if the game started with the room's mods
+    without yours, not finding your stickers it would remove them from your wheel (and save that), and
+    when they arrived later they would no longer be set: you would only see the host's."""
     own = core.my_room_set(cfg)
     have = {m["uid"] for m in room.get("mods", [])}
     if not own["hash"] or all(m["uid"] in have for m in own["mods"]):
@@ -684,7 +684,7 @@ def _offer_own(ctx, cfg, url, password, room, wait=60):
             if mine <= {m["uid"] for m in new.get("mods", [])}:
                 ctx.log(t("mods_offer_ok"))
                 return new
-            room = new                    # el anfitrion cambio otra cosa: se sigue esperando
+            room = new                    # the host changed something else: still waiting
         time.sleep(2)
     ctx.log(t("mods_offer_timeout"))
     return room

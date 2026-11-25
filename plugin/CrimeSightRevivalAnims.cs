@@ -1,11 +1,13 @@
-// CRIMESIGHT Revival - animaciones propias en lugar de las del juego (reposo, andar y correr) para cada personaje.
+// CRIMESIGHT Revival - custom animations instead of the game's (idle, walk and run) for each character.
 //
-// En models.json: "anims": { "PawnTypeData_A": { "idle": "<nombre>", "walk": "<nombre>", "run": "<nombre>" } }, con
-// cada animacion en csr_live/anims/<nombre>.glb (el lanzador la copia, o la convierte si es .fbx). Sirve cualquier
-// animacion humanoide (Mixamo, VRChat, Blender...): se adapta al esqueleto del juego con Humanoid.PrepareAnim.
-// El juego sigue decidiendo que hace cada personaje (ControllerMixerPlayable, un Animator por Playables); cuando lo que suena es un reposo, un paso o
-// una carrera, despues de sus animaciones (LateUpdate) se ponen los giros de la propia, con un fundido corto.
-// Va sobre los huesos del juego, o sobre el esqueleto propio si el personaje lleva un modelo adaptado.
+// In models.json: "anims": { "PawnTypeData_A": { "idle": "<name>", "walk": "<name>", "run": "<name>" } }, with
+// each animation in csr_live/anims/<name>.glb (the launcher copies it, or converts it if it is .fbx). Any
+// humanoid animation works (Mixamo, VRChat, Blender...): it is adapted to the game's skeleton with
+// Humanoid.PrepareAnim.
+// The game still decides what each character does (ControllerMixerPlayable, an Animator through Playables); when what
+// is playing is an idle, a step or
+// a run, after its animations (LateUpdate) the custom one's rotations are applied, with a short fade.
+// It goes over the game's bones, or over the custom skeleton if the character has an adapted model.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,7 +22,7 @@ namespace CrimeSightRevival.Mods
 
         class AnimFile { public string sig; public Glb.Model model; }
         static readonly Dictionary<string, AnimFile> _animFiles = new();
-        static readonly Dictionary<string, Humanoid.AnimMap> _animMaps = new();     // "nombre|personaje|firma"
+        static readonly Dictionary<string, Humanoid.AnimMap> _animMaps = new();     // "name|character|signature"
         static readonly HashSet<string> _animFailed = new();
 
         class Driver
@@ -28,7 +30,7 @@ namespace CrimeSightRevival.Mods
             public GameObject root; public string key; public ControllerMixerPlayable cmp;
             public Applied applied; public bool built;
             public readonly Dictionary<string, Transform> targets = new();
-            public readonly Dictionary<string, Quaternion> restRot = new();       // reposo de cada hueso del juego (espacio del modelo)
+            public readonly Dictionary<string, Quaternion> restRot = new();       // rest of each game bone (model space)
             public Vector3 hipsRest; public float hipK = 1f;
             public Humanoid.AnimMap map, fading; public float start, w;
             public string lastClip;
@@ -110,7 +112,8 @@ namespace CrimeSightRevival.Mods
             _drivers[id] = new Driver { root = root, key = key, cmp = cmp };
         }
 
-        /// <summary>Lo que hace ahora el personaje: la animacion del juego con mas peso -> idle / walk / run (o null).</summary>
+        /// <summary>What the character is doing now: the game animation with the most weight -> idle / walk / run (or
+        /// null).</summary>
         static string Kind(Driver d)
         {
             string best = CurrentClip(d.cmp, out _)?.name;
@@ -188,7 +191,7 @@ namespace CrimeSightRevival.Mods
             foreach (var (g, m) in _rot)
             {
                 if (!d.targets.TryGetValue(g, out var tr) || tr == null || !d.restRot.TryGetValue(g, out var r0)) continue;
-                // m es un giro por filas en el espacio del modelo: columnas (m0 m3 m6), (m1 m4 m7), (m2 m5 m8)
+                // m is a row-major rotation in model space: columns (m0 m3 m6), (m1 m4 m7), (m2 m5 m8)
                 Glb.Quat((float)m[0], (float)m[3], (float)m[6], (float)m[1], (float)m[4], (float)m[7], (float)m[2], (float)m[5], (float)m[8], q);
                 var world = new Quaternion(q[0], q[1], q[2], q[3]) * r0;
                 var parentWorld = tr.parent != null ? toRoot * tr.parent.rotation : Quaternion.identity;

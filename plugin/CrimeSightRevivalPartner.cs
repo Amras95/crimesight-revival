@@ -1,10 +1,13 @@
 // CRIMESIGHT Revival - Sherlock and Watson can see each other's icon in the player list (room setting).
 //
 // In the player list (bottom right) the original game shows your own icon, Irene's to Moriarty and Moriarty's to
-// Irene (Hud.SetPlayersInfoRoleIrene/Moriarty), but never Watson's to Sherlock or Sherlock's to Watson. That stays the
+// Irene (Hud.SetPlayersInfoRoleIrene/Moriarty), but never Watson's to Sherlock or Sherlock's to Watson. That stays
+// the
 // default. The host can turn on "Reveal Partner (Detective Team)" in the room's Match Settings: then, each time the
-// game fills in the icons (Hud.SetPlayersInfoRoleAll/Own), Sherlock gets Watson's icon and Watson gets Sherlock's, the
-// same way the game does it for Irene. Neither game knows who the other one is, so they are found in the room's member list
+// game fills in the icons (Hud.SetPlayersInfoRoleAll/Own), Sherlock gets Watson's icon and Watson gets Sherlock's,
+// the
+// same way the game does it for Irene. Neither game knows who the other one is, so they are found in the room's
+// member list
 // (each member carries its role).
 //
 // The setting travels with the room settings as "partner_icons" (RoomSettings.GetParam). The Revival server keeps it
@@ -12,10 +15,10 @@
 // and when a match starts. The row in the window is a copy of the "Increase Action Speed" row (Off / On), with
 // Sherlock's diamond icon.
 //
-// El mapa de muebles para la Watson IA: cada turno el juego manda al servidor un resumen de la partida
-// (GameManager.CreateServerReferenceData), pero los muebles solo salen en las casillas a las que llega cada personaje.
-// Se anade al principio "searchMap": [[mueble, casilla, x, y, z], ...] con TODOS los muebles del escenario, para
-// que la Watson IA pueda senalar con un ping de "Registrar" justo encima de cualquier sitio con comida que descubra.
+// The furniture map for the AI Watson: every turn the game sends the server a summary of the match
+// (GameManager.CreateServerReferenceData), but furniture only shows on the squares each character can reach.
+// "searchMap": [[furniture, square, x, y, z], ...] with ALL the stage's furniture is added at the start, so
+// the AI Watson can point with a "Search" ping right above any spot with food it discovers.
 using System;
 using System.Text;
 using HarmonyLib;
@@ -38,8 +41,8 @@ namespace CrimeSightRevival.Mods
             {
                 var post = new HarmonyMethod(typeof(PartnerIcon).GetMethod(nameof(AfterRoleAll),
                     System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic));
-                // SetPlayersInfoRoleOwn: lo llama el juego al empezar la partida y en cada fase de ordenes;
-                // SetPlayersInfoRoleAll: al repartir los papeles
+                // SetPlayersInfoRoleOwn: the game calls it when the match starts and in each orders phase;
+                // SetPlayersInfoRoleAll: when dealing the roles
                 foreach (var name in new[] { nameof(Hud.SetPlayersInfoRoleAll), nameof(Hud.SetPlayersInfoRoleOwn) })
                 {
                     var m = AccessTools.DeclaredMethod(typeof(Hud), name);
@@ -112,7 +115,7 @@ namespace CrimeSightRevival.Mods
             return -1;
         }
 
-        /// <summary>Numero de jugador de Watson segun la lista de la sala (el servidor manda el papel de cada uno).</summary>
+        /// <summary>Watson's player number according to the room list (the server sends each one's role).</summary>
         static int WatsonIndex(NetworkManager nm)
         {
             var members = nm.GetCurrentRoom()?.Members;
@@ -152,6 +155,7 @@ namespace CrimeSightRevival.Mods
         static int _iconTries;
         static Toggle _off, _on;
         static bool _setting, _warned;
+        static bool _sound;                       // the copied buttons already play the game's click sound
 
         public static void Init(Harmony h)
         {
@@ -274,15 +278,25 @@ namespace CrimeSightRevival.Mods
                 _row = null;
                 return;
             }
+            _sound = false;
             foreach (var tg in new[] { _off, _on })
             {
                 tg.group = null;                                 // not tied to the speed buttons
-                tg.onValueChanged = new Toggle.ToggleEvent();    // drop the copied calls to the speed setting
+                // Keep the copied persistent calls that play a sound (the click sound lives there) and switch off the
+                // rest (calls to the speed setting). Runtime listeners are not copied by Instantiate.
+                var ev = tg.onValueChanged;
+                int n = ev.GetPersistentEventCount();
+                for (int i = 0; i < n; i++)
+                {
+                    string m = ev.GetPersistentMethodName(i) ?? "";
+                    if (m.StartsWith("Play", StringComparison.Ordinal)) _sound = true;
+                    else ev.SetPersistentListenerState(i, UnityEngine.Events.UnityEventCallState.Off);
+                }
             }
             _off.onValueChanged.AddListener(DelegateSupport.ConvertDelegate<UnityEngine.Events.UnityAction<bool>>(
-                new Action<bool>(v => { if (v && !_setting) Choose(false); })));
+                new Action<bool>(v => { if (v && !_setting) Choose(false, true); })));
             _on.onValueChanged.AddListener(DelegateSupport.ConvertDelegate<UnityEngine.Events.UnityAction<bool>>(
-                new Action<bool>(v => { if (v && !_setting) Choose(true); })));
+                new Action<bool>(v => { if (v && !_setting) Choose(true, true); })));
         }
 
         /// <summary>Sherlock's diamond icon instead of the copied speed icon.</summary>
@@ -325,11 +339,16 @@ namespace CrimeSightRevival.Mods
             return null;
         }
 
-        static void Choose(bool v)
+        /// <summary>A change in the window. Like the game's own buttons, any change turns "Apply" on (comparing with the
+        /// room's value failed when the server's answer to the last "Apply" had not arrived yet).</summary>
+        static void Choose(bool v, bool click = false)
         {
+            bool changed = v != _chosen;
             _chosen = v;
             Show();
-            try { if (_win != null && v != PartnerIcon.RoomValue) _win.SetApplyButtonEnable(true); } catch { }
+            try { if (_win != null) _win.SetApplyButtonEnable(true); } catch { }
+            if (click && changed && !_sound)
+                try { AudioManager.PlayToggleCheck(true); } catch { }
         }
 
         /// <summary>Both buttons show _chosen.</summary>
@@ -361,7 +380,7 @@ namespace CrimeSightRevival.Mods
                     if (_off.interactable != src.interactable) _off.interactable = src.interactable;
                 }
                 // a click the buttons' own event missed: the clicked one turned on while the other one still is
-                if (_off.isOn && _on.isOn) Choose(!_chosen);
+                if (_off.isOn && _on.isOn) Choose(!_chosen, true);
                 else if (_off.isOn == _chosen || _on.isOn != _chosen) Show();
             }
             catch (Exception e)
@@ -391,9 +410,9 @@ namespace CrimeSightRevival.Mods
     static class WatsonFoodPing
     {
         const string LogSearch = "ctg_name_log_ping_search";               // "{player}: Searching."
-        static readonly string[] Lines = { "ctg_talk_watson_newFoodDetected_mc01_p010_v10",   // primera comida
-                                           "ctg_talk_watson_newFoodDetected_mc02_p010_v10" }; // las siguientes
-        static string _room;          // sala de la partida en curso (para saber cual es la primera comida)
+        static readonly string[] Lines = { "ctg_talk_watson_newFoodDetected_mc01_p010_v10",   // first food
+                                           "ctg_talk_watson_newFoodDetected_mc02_p010_v10" }; // the following ones
+        static string _room;          // room of the current match (to know which is the first food)
         static bool _said, _busy, _warned;
 
         public static void Init(Harmony h)
@@ -408,7 +427,8 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[Watson] " + e.Message); }
         }
 
-        /// <summary>Nombre de la Watson IA de la sala (las IA tienen un id que empieza por "bot", or a player an AI took over), o null.</summary>
+        /// <summary>Name of the room's AI Watson (AIs have an id starting with "bot", or a player an AI took over),
+        /// or null.</summary>
         static string AiWatsonName(out string room)
         {
             room = null;
@@ -424,8 +444,8 @@ namespace CrimeSightRevival.Mods
             return null;
         }
 
-        // El aviso de un ping se escribe metiendo el nombre de quien lo manda en "{player}: Searching."; si es la
-        // Watson IA, lo que va detras del nombre pasa a ser su frase
+        // A ping's notice is written by putting the sender's name into "{player}: Searching."; if it is the
+        // AI Watson, what follows the name becomes its line
         static void AfterMacro(TextManager __instance, ref string __0, ref string __1, ref string __2, ref string __result)
         {
             if (_busy || string.IsNullOrEmpty(__0) || string.IsNullOrEmpty(__2)) return;
@@ -433,18 +453,18 @@ namespace CrimeSightRevival.Mods
             {
                 _busy = true;
                 string id = LogSearch;
-                if (__0 != __instance.GetLangText(ref id)) return;           // no es el aviso de "Registrar"
+                if (__0 != __instance.GetLangText(ref id)) return;           // it isn't the "Search" notice
                 string name = AiWatsonName(out string room);
                 if (string.IsNullOrEmpty(name) || !__2.Contains(name)) return;
                 string token = (__1 ?? "").StartsWith("{") ? __1 : "{" + __1 + "}";
                 int at = __0.IndexOf(token, StringComparison.Ordinal);
                 if (at < 0) return;
-                if (room != _room) { _room = room; _said = false; }          // partida nueva: otra vez la primera
+                if (room != _room) { _room = room; _said = false; }          // new match: the first one again
                 string lineId = _said ? Lines[1] : Lines[0];
                 string line = __instance.GetLangText(ref lineId);
-                if (string.IsNullOrEmpty(line) || line == lineId) return;   // sin traduccion: se deja el original
+                if (string.IsNullOrEmpty(line) || line == lineId) return;   // no translation: the original is left
                 _said = true;
-                // lo que separa el nombre del texto en este idioma (": ", "：", ...)
+                // what separates the name from the text in this language (": ", "：", ...)
                 string tail = __0.Substring(at + token.Length);
                 int k = 0;
                 while (k < tail.Length && !char.IsLetterOrDigit(tail[k])) k++;
@@ -490,19 +510,37 @@ namespace CrimeSightRevival.Mods
                     if (so == null) continue;
                     if (!first) extra.Append(',');
                     first = false;
-                    // [mueble, casilla, x, y, z]: posicion en el mundo x10 (como los pings), encima del mueble
+                    // [furniture, square, x, y, z]: world position x10 (like the pings), above the furniture
                     var pos = so.transform.position;
                     var rend = so.GetComponentInChildren<UnityEngine.Renderer>();
-                    if (rend != null) { var bb = rend.bounds; pos = new UnityEngine.Vector3(bb.center.x, bb.max.y, bb.center.z); }  // encima
+                    if (rend != null) { var bb = rend.bounds; pos = new UnityEngine.Vector3(bb.center.x, bb.max.y, bb.center.z); }  // above
                     extra.Append('[').Append(so.UniqId).Append(',').Append(so.GetGridId())
                          .Append(',').Append(UnityEngine.Mathf.RoundToInt(pos.x * 10))
                          .Append(',').Append(UnityEngine.Mathf.RoundToInt(pos.y * 10))
                          .Append(',').Append(UnityEngine.Mathf.RoundToInt(pos.z * 10)).Append(']');
                 }
-                if (first) return;                       // sin muebles (no es una partida)
+                if (first) return;                       // no furniture (it isn't a match)
                 extra.Append("],");
+                // The type of each item of the match (Item.Type: 0 miss, 1 food, 2 weapon... 9 memo), in the order of the
+                // match list the server deals out: the server needs it to know which items are notes (memos).
+                try
+                {
+                    var list = ItemManager.Instance?.GetMatchItemList()?.TryCast<Il2CppSystem.Collections.Generic.List<Item>>();
+                    if (list != null && list.Count > 0)
+                    {
+                        extra.Append("\"itemTypes\":[");
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            if (i > 0) extra.Append(',');
+                            var it = list[i];
+                            extra.Append(it != null ? (int)it.itemType : -1);
+                        }
+                        extra.Append("],");
+                    }
+                }
+                catch { }
                 string s = isb.ToString();
-                int start = s.IndexOf('{');              // el resumen es un objeto JSON: se mete justo al abrirlo
+                int start = s.IndexOf('{');              // the summary is a JSON object: inserted right as it opens
                 if (start < 0) return;
                 isb.Clear();
                 isb.Append(s.Substring(0, start + 1) + extra + s.Substring(start + 1));

@@ -1,15 +1,15 @@
-"""CRIMESIGHT Revival - pasa un modelo .fbx a .glb (glTF binario) para ponerlo en un personaje.
+"""CRIMESIGHT Revival - converts a .fbx model to .glb (binary glTF) to put it on a character.
 
-Solo Python (y Pillow, que ya va con el lanzador, para texturas que no sean PNG ni JPG). Lee FBX binario y de
-texto (ASCII) de 6.1 en adelante: la jerarquia de huesos en la postura de enlace (bind pose), las mallas con sus
-normales, UV y materiales, los pesos de la piel, y las texturas de color (dentro del .fbx o junto a el). El
-esqueleto se queda como viene: el plugin lo reconoce y lo adapta al del juego (CrimeSightRevivalHumanoid.cs).
+Python only (and Pillow, which already ships with the launcher, for textures that aren't PNG or JPG). Reads binary and
+text (ASCII) FBX from 6.1 on: the bone hierarchy in the bind pose, the meshes with their
+normals, UVs and materials, the skin weights, and the colour textures (inside the .fbx or next to it). The
+skeleton stays as it comes: the plugin recognises it and adapts it to the game's (CrimeSightRevivalHumanoid.cs).
 """
 import io, json, math, os, struct, zlib
 from array import array
 
-# ------------------------------------------------------------------------------------------ avisos
-# Los avisos y errores van como (clave, datos) para que el lanzador los traduzca (i18n: models_<clave>).
+# ------------------------------------------------------------------------------------------ notices
+# Notices and errors go as (key, data) so the launcher translates them (i18n: models_<key>).
 class FbxError(ValueError):
     def __init__(self, key, **kw):
         super().__init__("%s %s" % (key, kw))
@@ -21,7 +21,7 @@ def note(notes, key, **kw):
         notes.append((key, kw))
 
 
-# ------------------------------------------------------------------------------------------ leer el .fbx
+# ------------------------------------------------------------------------------------------ reading the .fbx
 class Node:
     __slots__ = ("name", "props", "children")
 
@@ -101,7 +101,7 @@ def _read_binary(data):
 
 
 def _read_ascii(text):
-    """FBX de texto: 'Nombre: prop, prop { hijos }'."""
+    """Text FBX: 'Name: prop, prop { children }'."""
     i, n = 0, len(text)
 
     def skip():
@@ -157,11 +157,11 @@ def _read_ascii(text):
             j = text.index(":", i)
             name = text[i:j].strip(); i = j + 1
             props, children = [], []
-            more = False                                 # una coma al final de la linea: sigue en la siguiente
+            more = False                                 # a comma at the end of the line: it continues on the next one
             while True:
                 while i < n and (text[i] in " \t" or (more and text[i] in "\r\n")):
                     i += 1
-                if i < n and text[i] in "\r\n":                  # una cadena que sigue en la linea siguiente
+                if i < n and text[i] in "\r\n":                  # a string that continues on the next line
                     j = i
                     while j < n and text[j] in " \t\r\n":
                         j += 1
@@ -177,7 +177,7 @@ def _read_ascii(text):
                     children = block()
                     break
                 props.append(value())
-            # arrays "Name: *N { a: ... }" quedan como una lista en props
+            # arrays "Name: *N { a: ... }" end up as a list in props
             out.append(Node(name, props, children))
 
     root = []
@@ -190,7 +190,7 @@ def _read_ascii(text):
             break
         i_before = i
         nodes = block_one = None
-        # el nivel superior se lee como un bloque sin llaves
+        # the top level is read as a block without braces
         i = i_before
         root = block()
         break
@@ -209,7 +209,7 @@ def read_fbx(data):
     return _read_ascii(data.decode("utf-8", "replace"))
 
 
-# ------------------------------------------------------------------------------------------ matrices (columnas)
+# ------------------------------------------------------------------------------------------ matrices (column-major)
 def mat_id():
     return [1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0]
 
@@ -269,7 +269,7 @@ _ORDERS = ["XYZ", "XZY", "YZX", "YXZ", "ZXY", "ZYX", "XYZ"]
 
 
 def mat_euler(deg, order=0):
-    """Euler de FBX en grados: el primer eje del orden se aplica primero."""
+    """FBX Euler in degrees: the first axis of the order is applied first."""
     rot = {"X": _rx(math.radians(deg[0])), "Y": _ry(math.radians(deg[1])), "Z": _rz(math.radians(deg[2]))}
     m = mat_id()
     for ax in _ORDERS[order if 0 <= order < len(_ORDERS) else 0]:
@@ -290,7 +290,7 @@ def normal_matrix(m):
     return [inv[0], inv[4], inv[8], 0, inv[1], inv[5], inv[9], 0, inv[2], inv[6], inv[10], 0, 0, 0, 0, 1]
 
 
-# ------------------------------------------------------------------------------------------ la escena
+# ------------------------------------------------------------------------------------------ the scene
 def _props70(node):
     out = {}
     if node is None:
@@ -314,9 +314,9 @@ def _vec(v, default):
 def _clean_name(raw):
     if isinstance(raw, bytes):
         raw = raw.decode("utf-8", "replace")
-    if "\x00\x01" in raw:                     # binario: "Nombre\x00\x01Clase"
+    if "\x00\x01" in raw:                     # binary: "Name\x00\x01Class"
         return raw.split("\x00\x01")[0]
-    if "::" in raw:                           # texto: "Clase::Nombre"
+    if "::" in raw:                           # text: "Class::Name"
         return raw.split("::", 1)[1]
     return raw
 
@@ -338,7 +338,7 @@ class Obj:
         self.node = node
         self.id = node.props[0]
         self.cls = node.name
-        if v6:                                   # FBX 6: sin id, el nombre es la clave ("Nombre\x00\x01Clase", tipo)
+        if v6:                                   # FBX 6: without an id, the name is the key ("Name\x00\x01Class", type)
             self.name = _clean_name(node.props[0]) if node.props else ""
             self.sub = node.props[1] if len(node.props) > 1 else ""
         else:
@@ -347,15 +347,15 @@ class Obj:
         if isinstance(self.sub, bytes):
             self.sub = self.sub.decode("utf-8", "replace")
         self.props = _props70(node)
-        self.parent = None          # Model padre
-        self.children = []          # Model hijos
-        self.src = []               # objetos conectados a este (hijos en el grafo)
-        self.dst = []               # a los que se conecta
-        self.srcp = []              # (objeto, propiedad) conexiones OP
+        self.parent = None          # parent Model
+        self.children = []          # child Models
+        self.src = []               # objects connected to this one (children in the graph)
+        self.dst = []               # the ones it connects to
+        self.srcp = []              # (object, property) OP connections
 
 
 def convert(path, notes=None):
-    """Lee un .fbx y devuelve los bytes del .glb. notes: lista donde dejar avisos."""
+    """Reads a .fbx and returns the .glb bytes. notes: list to leave notices in."""
     notes = notes if notes is not None else []
     with open(path, "rb") as f:
         data = f.read()
@@ -363,21 +363,21 @@ def convert(path, notes=None):
     if version < 6100:
         raise FbxError("fbx_old")
 
-    # sistema de ejes y unidades
+    # axis system and units
     v6 = version < 7000
     gnode = root.find("GlobalSettings") or (root.find("Objects").find("GlobalSettings") if root.find("Objects") else None)
     gs = _props70(gnode)
     up_ax, up_sg = int(gs.get("UpAxis", 1)), int(gs.get("UpAxisSign", 1))
     fr_ax, fr_sg = int(gs.get("FrontAxis", 2)), int(gs.get("FrontAxisSign", 1))
-    unit = float(gs.get("UnitScaleFactor", 1.0)) / 100.0             # a metros
+    unit = float(gs.get("UnitScaleFactor", 1.0)) / 100.0             # to metres
     e = [(1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)]
     u = [x * up_sg for x in e[up_ax]]
     fwd = [x * fr_sg for x in e[fr_ax]]
     if up_ax == fr_ax:
         fwd = [0.0, 0.0, 1.0] if up_ax != 2 else [0.0, -1.0, 0.0]
     rgt = [u[1] * fwd[2] - u[2] * fwd[1], u[2] * fwd[0] - u[0] * fwd[2], u[0] * fwd[1] - u[1] * fwd[0]]
-    # filas: la nueva X es la derecha, Y arriba, Z delante (glTF mira a +Z, la X es la izquierda del modelo... da igual:
-    # el plugin lo orienta por los huesos; lo que importa es que sea un giro)
+    # rows: the new X is right, Y up, Z forward (glTF faces +Z, X is the model's left... it doesn't matter:
+    # the plugin orients it by the bones; what matters is that it is a rotation)
     axis = [rgt[0], u[0], fwd[0], 0, rgt[1], u[1], fwd[1], 0, rgt[2], u[2], fwd[2], 0, 0, 0, 0, 1]
     axis = mat_mul(mat_s(unit, unit, unit), axis)
 
@@ -408,11 +408,11 @@ def convert(path, notes=None):
 
     models = [o for o in objs.values() if o.cls == "Model"]
 
-    # transformaciones locales y globales (escena tal cual)
+    # local and global transforms (scene as is)
     parts_of = {}
 
     def local(o, t=None, r=None, s=None):
-        """L = T * Roff * Rp * Rpre * R * Rpost^-1 * Rp^-1 * Soff * Sp * S * Sp^-1 (con T, R o S animados si se dan)."""
+        """L = T * Roff * Rp * Rpre * R * Rpost^-1 * Rp^-1 * Soff * Sp * S * Sp^-1 (with T, R or S animated if given)."""
         p = o.props
         if o.id not in parts_of:
             pre = mat_euler(_vec(p.get("PreRotation"), (0, 0, 0)))
@@ -447,13 +447,13 @@ def convert(path, notes=None):
         m = mat_mul(m, mat_euler(_vec(p.get("GeometricRotation"), (0, 0, 0))))
         return mat_mul(m, mat_s(*_vec(p.get("GeometricScaling"), (1, 1, 1))))
 
-    # postura de enlace: la del BindPose y la de los clusters (la de los huesos al pegarles la malla)
+    # bind pose: the BindPose's and the clusters' (the bones' when the mesh was attached to them)
     bind = {}
     for o in objs.values():
         if o.cls == "Pose" and (o.sub == "BindPose" or "bind" in str(o.name).lower()):
             for pn in o.node.all("PoseNode"):
                 nid = pn.find("Node")
-                v = _arr(pn, "Matrix")                   # una lista de 16, o 16 numeros sueltos segun el exportador
+                v = _arr(pn, "Matrix")                   # a list of 16, or 16 loose numbers depending on the exporter
                 if nid is not None and nid.props and v is not None and len(v) == 16:
                     bind.setdefault(nid.props[0], [float(x) for x in v])
     clusters = []
@@ -468,7 +468,8 @@ def convert(path, notes=None):
             tl, tr = _arr(o.node, "TransformLink"), _arr(o.node, "Transform")
             if tl is not None and len(tl) == 16:
                 bind[bone.id] = [float(x) for x in tl]
-            # "Transform" es la malla vista desde el hueso al enlazarla: la malla en el mundo es TransformLink * Transform
+            # "Transform" is the mesh seen from the bone when binding it: the mesh in the world is TransformLink *
+            # Transform
             mesh_bind = None
             if tr is not None and len(tr) == 16 and tl is not None and len(tl) == 16:
                 mesh_bind = mat_mul([float(x) for x in tl], [float(x) for x in tr])
@@ -478,14 +479,14 @@ def convert(path, notes=None):
     for o in models:
         if o.sub in ("LimbNode", "Limb", "Root") or (o.sub == "Null" and any(c.id in bones for c in _desc(o))):
             bones.add(o.id)
-    # tambien los padres de los huesos (hasta la raiz) para que la jerarquia quede entera
+    # also the bones' parents (up to the root) so the hierarchy stays complete
     for bid in list(bones):
         o = objs[bid].parent
         while o is not None and o.cls == "Model" and o.sub != "Mesh":
             bones.add(o.id); o = o.parent
 
     def bind_global(o):
-        """Postura de enlace del hueso: la del cluster / BindPose, o la de su padre por su local."""
+        """The bone's bind pose: the cluster's / BindPose's, or its parent's times its local."""
         if o.id in bind:
             return bind[o.id]
         if o.parent is not None and o.parent.id in bones:
@@ -498,7 +499,7 @@ def convert(path, notes=None):
     bone_list = [o for o in models if o.id in bones]
     order = sorted(bone_list, key=lambda o: _depth(o))
     names = {}
-    for o in order:                                                  # nombres unicos
+    for o in order:                                                  # unique names
         nm = o.name or "hueso"
         k = 1
         while nm in names.values():
@@ -506,10 +507,10 @@ def convert(path, notes=None):
         names[o.id] = nm
     bidx = {o.id: i for i, o in enumerate(order)}
 
-    # mallas
+    # meshes
     meshes = []
     images, image_of = [], {}
-    # imagenes incluidas en el .fbx por nombre de archivo (a veces una textura apunta a una copia sin contenido)
+    # images embedded in the .fbx by file name (sometimes a texture points to an empty copy)
     embedded = {}
     for v in [x for x in objs.values() if x.cls == "Video"]:
         c = v.node.find("Content")
@@ -522,7 +523,7 @@ def convert(path, notes=None):
     fbx_dir = os.path.dirname(os.path.abspath(path))
     for o in models:
         geoms = [s for s in o.src if s.cls == "Geometry" and (s.sub == "Mesh" or s.node.find("Vertices") is not None)]
-        if not geoms and o.node.find("Vertices") is not None:      # FBX 6: la malla va dentro del propio modelo
+        if not geoms and o.node.find("Vertices") is not None:      # FBX 6: the mesh goes inside the model itself
             geoms = [o]
         if not geoms:
             continue
@@ -552,7 +553,7 @@ def convert(path, notes=None):
                         if prim["image"] >= 0:
                             prim["color"] = [1.0, 1.0, 1.0, 1.0]
             meshes.append(m)
-    # nodos de huesos (postura de enlace, ya en ejes glTF y metros)
+    # bone nodes (bind pose, already in glTF axes and metres)
     ax_inv = mat_inv(axis)
     node_glob = {o.id: _unscaled(mat_mul(mat_mul(axis, bind_global(o)), ax_inv)) for o in order}
     anims = _bake_anims(objs, order, local, g, axis, ax_inv, node_glob)
@@ -565,12 +566,12 @@ FBX_TICKS = 46186158000.0
 
 
 def _bake_anims(objs, order, local, g, axis, ax_inv, node_glob, fps=30.0):
-    """Cada AnimationStack, a 30 fotogramas por segundo: posicion y giro local de cada hueso (en la misma escena sin
-    escala que el reposo)."""
+    """Each AnimationStack, at 30 frames per second: local position and rotation of each bone (in the same unscaled
+    scene as the rest pose)."""
     out = []
     bone_ids = {o.id for o in order}
     for st in [o for o in objs.values() if o.cls == "AnimationStack"]:
-        curves = {}                                                  # (modelo, "T"/"R"/"S") -> [cx, cy, cz, defaults]
+        curves = {}                                                  # (model, "T"/"R"/"S") -> [cx, cy, cz, defaults]
         t0, t1 = None, None
         for layer in [x for x in st.src if x.cls == "AnimationLayer"]:
             for cn in [x for x in layer.src if x.cls == "AnimationCurveNode"]:
@@ -654,7 +655,7 @@ def _curve_at(ch, t, default):
 
 
 def _trs(m):
-    """Posicion y giro (x, y, z, w) de una matriz sin escala."""
+    """Position and rotation (x, y, z, w) of an unscaled matrix."""
     c0, c1, c2 = (m[0], m[1], m[2]), (m[4], m[5], m[6]), (m[8], m[9], m[10])
     tr = c0[0] + c1[1] + c2[2]
     if tr > 0:
@@ -674,8 +675,8 @@ def _trs(m):
 
 
 def _unscaled(m):
-    """La misma postura sin escala (los huesos de 100 de Blender en cm): giro limpio + posicion. La malla ya esta en
-    su sitio, asi que da igual para la piel y cualquier programa la lee bien."""
+    """The same pose without scale (Blender's 100 bones in cm): clean rotation + position. The mesh is already in
+    its place, so it doesn't matter for the skin and any program reads it fine."""
     x = [m[0], m[1], m[2]]; y = [m[4], m[5], m[6]]
 
     def nrm(v):
@@ -719,16 +720,16 @@ def _texture_for(mat):
 
 
 def _image(tex, fbx_dir, notes, embedded=None):
-    """Bytes PNG/JPEG de una textura: la que va dentro del .fbx o el archivo que nombra (buscandolo cerca)."""
+    """PNG/JPEG bytes of a texture: the one inside the .fbx or the file it names (searching nearby)."""
     raw, fname = None, None
     for v in [s for s in tex.src if s.cls == "Video"]:
         c = v.node.find("Content")
         if c is not None and c.props and isinstance(c.props[0], (bytes, bytearray)) and len(c.props[0]) > 16:
             raw = bytes(c.props[0])
-        elif c is not None and c.props and all(isinstance(x, str) for x in c.props):     # FBX de texto: base64
+        elif c is not None and c.props and all(isinstance(x, str) for x in c.props):     # Text FBX: base64
             import base64
             parts = [x.strip() for x in c.props if x.strip()]
-            for attempt in ("".join(parts), None):                  # entero, o trozo a trozo (cada uno con su relleno)
+            for attempt in ("".join(parts), None):                  # whole, or chunk by chunk (each with its padding)
                 try:
                     b = base64.b64decode(attempt) if attempt is not None else b"".join(base64.b64decode(x) for x in parts)
                 except ValueError:
@@ -850,7 +851,7 @@ def _mesh(geo_obj, model, mats, clusters, bidx, bind_global, g, geometric, axis,
         if isinstance(mapping, bytes): mapping = mapping.decode()
         mat_layer = (mapping, _arr(ml, "Materials"))
 
-    # pesos por punto de control
+    # weights per control point
     ncp = len(verts) // 3
     weights = [[] for _ in range(ncp)]
     mesh_bind = None
@@ -873,7 +874,7 @@ def _mesh(geo_obj, model, mats, clusters, bidx, bind_global, g, geometric, axis,
         to_world = mat_mul(mesh_bind if mesh_bind is not None else g(model), geometric(model))
     else:
         to_world = mat_mul(g(model), geometric(model))
-        # si cuelga de un hueso, va pegada a el
+        # if it hangs from a bone, it is stuck to it
         o = model.parent
         while o is not None and o.id not in bidx:
             o = o.parent
@@ -886,7 +887,7 @@ def _mesh(geo_obj, model, mats, clusters, bidx, bind_global, g, geometric, axis,
     m = mat_mul(axis, to_world)
     nm = normal_matrix(m)
 
-    # esquinas -> vertices unicos por (punto, normal, uv, material)
+    # corners -> unique vertices by (point, normal, uv, material)
     prims = {}
     poly, corner, start = 0, 0, 0
     n = len(pvi)
@@ -928,14 +929,14 @@ def _mesh(geo_obj, model, mats, clusters, bidx, bind_global, g, geometric, axis,
                     l = math.sqrt(x * x + y * y + z * z) or 1.0
                     pr["nrm"].extend((x / l, y / l, z / l))
                 if tt is not None:
-                    pr["uv"].extend((tt[0], 1.0 - tt[1]))               # glTF: V hacia abajo
+                    pr["uv"].extend((tt[0], 1.0 - tt[1]))               # glTF: V down
                 ws = sorted(weights[cp], key=lambda x: -x[1])[:4] if cp < ncp else []
                 tot = sum(x[1] for x in ws)
                 jj = [x[0] for x in ws] + [0] * (4 - len(ws))
                 ww = [x[1] / tot for x in ws] + [0.0] * (4 - len(ws)) if tot > 0 else [1.0, 0, 0, 0]
                 pr["j"].extend(jj); pr["w"].extend(ww)
             ids.append(vi)
-        for k in range(1, len(ids) - 1):                             # abanico
+        for k in range(1, len(ids) - 1):                             # fan
             pr["idx"].extend((ids[0], ids[k], ids[k + 1]))
         start, poly = end + 1, poly + 1
     out = []
@@ -949,7 +950,7 @@ def _mesh(geo_obj, model, mats, clusters, bidx, bind_global, g, geometric, axis,
     return {"name": model.name or "malla", "prims": out, "skinned": skinned}
 
 
-# ------------------------------------------------------------------------------------------ escribir el .glb
+# ------------------------------------------------------------------------------------------ writing the .glb
 def _write_glb(order, names, node_glob, meshes, images, notes, anims=()):
     buf = bytearray()
     views, accessors = [], []

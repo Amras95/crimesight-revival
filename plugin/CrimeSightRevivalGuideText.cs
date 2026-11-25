@@ -1,14 +1,16 @@
-// CRIMESIGHT Revival - textos de la Guia Revival (ver CrimeSightRevivalGuide.cs).
+// CRIMESIGHT Revival - texts of the Revival Guide (see CrimeSightRevivalGuide.cs).
 //
-// Una pagina por tema (las flechas de pagina del juego van con el dialogo de un personaje, que la guia no usa).
-// En los textos:
-//   {A} {B} {X} {Y} {LB} {RB} {LT} {RT} {LBRB} {LTRT} {START} {BACK} {LS} {RS} {DPAD} {DUP} {DDOWN} {DLEFT} {DRIGHT}: icono del boton del
-//   mando que se usa (Xbox, PlayStation o Switch); {ST_IRENE} {ST_SUS} {ST_NOSUS}: la imagen del sticker del juego
-//   ("Aqui tienes a tu asesino", "Sospecho que es el asesino", "No creo que sea el asesino");
-//   {H}...{/H}: resaltado en verde.
+// One page per topic (the game's page arrows go with a character's dialogue, which the guide doesn't use).
+// In the texts:
+//   {A} {B} {X} {Y} {LB} {RB} {LT} {RT} {LBRB} {LTRT} {START} {BACK} {LS} {RS} {DPAD} {DUP} {DDOWN} {DLEFT} {DRIGHT}:
+//   icon of the
+//   button of the gamepad in use (Xbox, PlayStation or Switch); {ST_IRENE} {ST_SUS} {ST_NOSUS}: the game's sticker
+//   image
+//   ("Here is your killer", "I suspect they are the killer", "I don't think they are the killer");
+//   {H}...{/H}: highlighted in green.
 // One version per game language, in TextManager order: ja, en, fr, it, de, es, pt, ru, ko, zh-CN, zh-TW.
-// {PAGE} parte un tema en varias paginas (se pasan con las flechas de la pantalla).
-// Algunas paginas llevan una captura arriba, de lado a lado, y el texto debajo (ver Images y tools/guide_images.py).
+// {PAGE} splits a topic into several pages (turned with the screen's arrows).
+// Some pages have a screenshot on top, from side to side, and the text below (see Images and tools/guide_images.py).
 namespace CrimeSightRevival.Mods
 {
     static class GuideText
@@ -181,16 +183,16 @@ namespace CrimeSightRevival.Mods
         };
         public static string Help(int lang) => Helps[L(lang)];
 
-        // Tema -> captura (nombre en GuideImages) que sale encima del texto
+        // Topic -> screenshot (name in GuideImages) shown above the text
         static readonly System.Collections.Generic.Dictionary<int, string> Images = new()
         {
-            [1] = "launcher",         // El lanzador
+            [1] = "launcher",         // The launcher
         };
 
-        // Lo que hace cada boton, al final de su linea en el dibujo del mando (pagina "Mando"): primero los 8 de la
-        // izquierda (LT, LB, Back, cruceta arriba / derecha / izquierda / abajo, stick izquierdo) y luego los 8 de la
-        // derecha (RT, RB, Start, Y, X, B, A, stick derecho). Cortos para que se lean bien; lo de la sala y los menus va
-        // en la segunda pagina.
+        // What each button does, at the end of its line in the gamepad drawing ("Gamepad" page): first the 8 on the
+        // left (LT, LB, Back, D-pad up / right / left / down, left stick) and then the 8 on the
+        // right (RT, RB, Start, Y, X, B, A, right stick). Short so they read well; the room and menu ones go
+        // on the second page.
         static readonly string[] PadEs =
         {
             "Alejar", "Girar · Pestaña", "Registro", "Ajustes",
@@ -941,7 +943,7 @@ namespace CrimeSightRevival.Mods
 
         public static string[] PadLabels(int lang) => PadAll[L(lang)];
 
-        /// <summary>La captura de la pagina, o null si no tiene.</summary>
+        /// <summary>The page's screenshot, or null if it has none.</summary>
         public static string Image(int t) => Images.TryGetValue(t, out var n) ? n : null;
 
         public static int Count => TitlesEs.Length;

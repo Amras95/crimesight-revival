@@ -1,13 +1,13 @@
 """
-CRIMESIGHT Revival - lanzador.
+CRIMESIGHT Revival - launcher.
 
-Cuatro formas de jugar:
-  - Jugar solo: servidor en este PC, partidas contra la IA.
-  - Ser anfitrion: servidor en este PC abierto a tus amigos (intenta abrir el puerto solo).
-  - Unirme a un amigo: te conectas al PC de un amigo que hace de anfitrion.
-  - Servidor propio: te conectas a un servidor montado por alguien (por ejemplo, en un VPS).
+Four ways to play:
+  - Play solo: server on this PC, matches against the AI.
+  - Host: server on this PC open to your friends (it tries to open the port by itself).
+  - Join a friend: you connect to the PC of a friend acting as host.
+  - Own server: you connect to a server set up by someone (for example, on a VPS).
 
-Este proyecto solo ofrece la herramienta; no gestiona ni aloja servidores.
+This project only offers the tool; it doesn't run or host servers.
 """
 import os, queue, sys, threading, traceback
 import tkinter as tk
@@ -89,7 +89,7 @@ class App:
         root.protocol("WM_DELETE_WINDOW", self.on_close)
         root.after(200, self.pump)
 
-    # ---------------------------------------------------------------- pestañas
+    # ---------------------------------------------------------------- tabs
     def tab_solo(self, nb):
         f = ttk.Frame(nb, padding=10)
         nb.add(f, text="Jugar solo")
@@ -153,7 +153,7 @@ class App:
         ttk.Button(row, text="Guardar", command=self.save_server).pack(side="left", padx=4)
         ttk.Button(row, text="Borrar", command=self.delete_server).pack(side="left")
 
-    # ---------------------------------------------------------------- utilidades de interfaz
+    # ---------------------------------------------------------------- interface helpers
     def log(self, text):
         self.q.put(("log", text))
 
@@ -259,7 +259,7 @@ class App:
         else:
             self.log("El juego ya estaba en su estado original.")
 
-    # ---------------------------------------------------------------- progreso
+    # ---------------------------------------------------------------- progress
     def auto_backup(self):
         try:
             added = core.backup_now(self.cfg, self.steam_id)
@@ -308,7 +308,7 @@ class App:
         self.cancel = True
         self.root.after(300, self.root.destroy)
 
-    # ---------------------------------------------------------------- acciones
+    # ---------------------------------------------------------------- actions
     def run(self, fn, *args):
         if self.busy:
             return
@@ -339,7 +339,7 @@ class App:
                 self.q.put(("idle", None))
         threading.Thread(target=work, daemon=True).start()
 
-    # contexto para sessions.py
+    # context for sessions.py
     def set_address(self, addr):
         self.q.put(("addr", addr))
 
@@ -373,7 +373,7 @@ class App:
 
 
 class GuiLogHandler(__import__("logging").Handler):
-    """Lleva al lanzador las lineas importantes del servidor (partidas, resultados, sincronizacion)."""
+    """Brings to the launcher the important server lines (matches, results, sync)."""
     KEYS = ("empieza la partida", "GANA", "PIERDE", "EMPATA", "ABANDONA", "Perfil sincronizado",
             "la victima ha muerto", "turno final", "aparece")
 

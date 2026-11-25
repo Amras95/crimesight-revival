@@ -1,13 +1,13 @@
-// CRIMESIGHT Revival - plugin OPCIONAL de BepInEx: stickers y avatares de mods en caliente.
+// CRIMESIGHT Revival - OPTIONAL BepInEx plugin: mod stickers and avatars, live.
 //
-// Sin este plugin, el lanzador mete los mods en los archivos del juego antes de abrirlo (hay que
-// reiniciar para cambiarlos). Con BepInEx instalado, el lanzador deja el juego original y escribe
-// el conjunto de mods de la sala en BepInEx\csr_live\live.json (en la carpeta del juego). Este plugin
-// lo vigila y, fuera de las partidas, crea en memoria los stickers y avatares nuevos y los anade a
-// las listas del juego (los del juego no se tocan). Si cambia mientras juegas, se aplica al volver
-// al menu, para que todos los jugadores tengan siempre la misma lista.
+// Without this plugin, the launcher puts the mods into the game's files before opening it (a
+// restart is needed to change them). With BepInEx installed, the launcher leaves the game original and writes
+// the room's mod set in BepInEx\csr_live\live.json (in the game folder). This plugin
+// watches it and, outside matches, creates the new stickers and avatars in memory and adds them to
+// the game's lists (the game's own aren't touched). If it changes while you play, it is applied when going back
+// to the menu, so every player always has the same list.
 //
-// No toca el servidor: solo anade huecos de apariencia (and makes a mod stamp received from another
+// It doesn't touch the server: it only adds appearance slots (and makes a mod stamp received from another
 // player show the right stamp, see StampPlace).
 using System;
 using System.Collections.Generic;
@@ -48,15 +48,17 @@ namespace CrimeSightRevival.Mods
             Roster.Init(h);
             PartnerIcon.Init(h);
             Team.Init(h);
+            QuickRematch.Init(h);
+            ResultNames.Init(h);
             L.LogInfo("Mods en caliente activos. Carpeta: " + LiveMods.LiveDir);
         }
     }
 
-    // ---------------------------------------------------------------- enganches
-    // El juego monta la rueda de stickers y busca el avatar elegido justo al cargar cada escena. Si
-    // nuestros stickers/avatares no estan en ese momento, pone otros en su lugar (y parece que se han
-    // "quitado"). Por eso, ademas de comprobarlo cada segundo, se meten justo cuando el juego registra
-    // sus listas o va a leerlas.
+    // ---------------------------------------------------------------- hooks
+    // The game builds the sticker wheel and looks up the chosen avatar right when each scene loads. If
+    // our stickers/avatars aren't there at that moment, it puts others in their place (and they look
+    // "removed"). That is why, besides checking every second, they are inserted right when the game registers
+    // its lists or is about to read them.
     [HarmonyPatch]
     static class Hooks
     {
@@ -66,8 +68,8 @@ namespace CrimeSightRevival.Mods
         [HarmonyPrefix, HarmonyPatch(typeof(PingStampMenuBase), nameof(PingStampMenuBase.RefreshMenuStampReferenceSaveData))]
         static void BeforeStampMenu() => LiveMods.Instance?.Sync();
 
-        // Al crearse una rueda (al cargar cada escena) el juego pone el primer sticker de la lista en los huecos
-        // cuyo sticker guardado no esta: se rehace igual que al cambiar la lista, con el de por defecto.
+        // When a wheel is created (on loading each scene) the game puts the first sticker of the list in the slots
+        // whose saved sticker isn't there: it is rebuilt just like when the list changes, with the default one.
         [HarmonyPostfix, HarmonyPatch(typeof(PingStampMenuBase), "Start")]
         static void AfterMenuStart(PingStampMenuBase __instance) => LiveMods.RefreshMenu(__instance);
 
@@ -83,8 +85,8 @@ namespace CrimeSightRevival.Mods
         [HarmonyPrefix, HarmonyPatch(typeof(CursorAvatarManager), nameof(CursorAvatarManager.GetMyCursorAvatarData))]
         static void BeforeMyAvatar() => LiveMods.Instance?.Sync();
 
-        // Un sticker de mod sin mensaje no escribe nada en el registro de la partida: ni "Jugador: ..."
-        // al mandarlo, ni la linea de responder a un ping con el.
+        // A mod sticker without a message writes nothing in the match log: neither "Player: ..."
+        // when sending it, nor the line for answering a ping with it.
         [HarmonyPrefix, HarmonyPatch(typeof(StampManager), nameof(StampManager.CallStampInGameLog))]
         static bool BeforeStampLog(ref StampParam param) => !LiveMods.Silent(param?.logMsgId);
 
@@ -168,13 +170,13 @@ namespace CrimeSightRevival.Mods
         }
     }
 
-    // ---------------------------------------------------------------- formato de live.json
+    // ---------------------------------------------------------------- live.json format
     public class LiveSticker
     {
         public int type { get; set; }
         public string png { get; set; }
         public string bg { get; set; }
-        public string[] log { get; set; }      // 11 idiomas, en el orden de ConfigSystem.LangType
+        public string[] log { get; set; }      // 11 languages, in the order of ConfigSystem.LangType
         public string[] doc { get; set; }
     }
 
@@ -191,7 +193,7 @@ namespace CrimeSightRevival.Mods
         public List<LiveAvatar> avatars { get; set; } = new();
     }
 
-    // ---------------------------------------------------------------- componente que lo aplica
+    // ---------------------------------------------------------------- component that applies it
     public class LiveMods : MonoBehaviour
     {
         public LiveMods(IntPtr ptr) : base(ptr) { Instance = this; }
@@ -199,7 +201,7 @@ namespace CrimeSightRevival.Mods
         public static LiveMods Instance;
         int _syncFrame = -1;
 
-        // llamado desde los enganches (como mucho una vez por fotograma)
+        // called from the hooks (at most once per frame)
         public void Sync()
         {
             if (Time.frameCount == _syncFrame) return;
@@ -208,24 +210,24 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogError(e); }
         }
 
-        // Dentro de BepInEx, en la carpeta del juego: asi el lanzador y el plugin la ven igual en
-        // Windows y con Proton (Linux / Steam Deck), donde la carpeta de usuario es la de Wine.
+        // Inside BepInEx, in the game folder: that way the launcher and the plugin see it the same on
+        // Windows and with Proton (Linux / Steam Deck), where the user folder is Wine's.
         public static readonly string LiveDir = Path.Combine(BepInEx.Paths.BepInExRootPath, "csr_live");
         internal const int FIRST_TYPE = 1000;
 
         float _next;
         DateTime _seen = DateTime.MinValue;
-        LiveState _pending;                     // lo que pide el lanzador
+        LiveState _pending;                     // what the launcher asks for
         string _appliedHash = "";
         bool _waitLogged;
 
-        // objetos creados por nosotros (se destruyen al cambiar de conjunto)
+        // objects we created (destroyed when the set changes)
         readonly List<StampData> _stamps = new();
         readonly List<CursorAvatarData> _avatars = new();
         readonly Dictionary<string, string[]> _texts = new();
         readonly HashSet<int> _types = new();
         readonly HashSet<string> _avatarIds = new();
-        static readonly HashSet<string> _silent = new();   // textos de los stickers sin mensaje
+        static readonly HashSet<string> _silent = new();   // texts of the stickers without a message
 
         [HideFromIl2Cpp]
         internal static bool Silent(string msgId) => msgId != null && _silent.Contains(msgId);
@@ -301,10 +303,10 @@ namespace CrimeSightRevival.Mods
             }
         }
 
-        // ------------------------------------------------------------ crear / destruir
-        // objetos ya creados, por clave (tipo/id + huella de sus imagenes). Al cambiar el conjunto
-        // (p. ej. entran los mods de otro jugador) los que no cambian se REUTILIZAN: si se destruyeran
-        // y recrearan, el juego perderia la referencia al avatar elegido y volveria al de por defecto.
+        // ------------------------------------------------------------ create / destroy
+        // objects already created, by key (type/id + fingerprint of their images). When the set changes
+        // (e.g. another player's mods come in) the ones that don't change are REUSED: if they were destroyed
+        // and recreated, the game would lose the reference to the chosen avatar and go back to the default one.
         class Entry { public UnityEngine.Object Main; public readonly List<UnityEngine.Object> Assets = new(); }
         readonly Dictionary<string, Entry> _cache = new();
 
@@ -353,7 +355,7 @@ namespace CrimeSightRevival.Mods
                 if (s.doc != null) _texts[sd.DocMsgId] = s.doc;
                 if (s.log == null)
                 {
-                    // sin mensaje: texto vacio (para que no salga el id) y no se escribe en el registro
+                    // without a message: empty text (so the id doesn't show) and nothing is written to the log
                     _texts[sd.LogMsgId] = _texts[sd.DocMsgId] = new[] { "" };
                     _silent.Add(sd.LogMsgId); _silent.Add(sd.DocMsgId);
                 }
@@ -381,7 +383,7 @@ namespace CrimeSightRevival.Mods
                 _avatars.Add(e.Main.Cast<CursorAvatarData>());
                 _avatarIds.Add(a.id);
             }
-            Ensure();                                  // saca de las listas lo que ya no va (antes de destruirlo)
+            Ensure();                                  // takes out of the lists what no longer belongs (before destroying it)
             foreach (var kv in _cache)
                 if (!next.ContainsKey(kv.Key))
                     foreach (var o in kv.Value.Assets) if (o != null) UnityEngine.Object.Destroy(o);
@@ -411,19 +413,19 @@ namespace CrimeSightRevival.Mods
             return sp;
         }
 
-        // ------------------------------------------------------------ meterlos en las listas del juego
+        // ------------------------------------------------------------ putting them in the game's lists
         [HideFromIl2Cpp]
         static bool Ours(StampData d) =>
             d != null && (int)d.FaceType == 0 && (int)d.Type >= FIRST_TYPE;
 
 
-        // La rueda de stickers guarda "posicion en la lista" (no el sticker). Al cambiar la lista
-        // (entran los mods de otro jugador, que se intercalan al ordenar por tipo), las posiciones de
-        // los tuyos cambian: hay que volver a calcular la rueda desde tus ajustes, o saldrian otros.
-        // Se recalculan TODAS las ruedas, tambien las que estan cerradas (en la sala suele estarlo cuando
-        // llegan los mods de otro): antes solo se buscaban las visibles y la cerrada se quedaba con las
-        // posiciones viejas (usabas "tu" sticker y salia el de otro) hasta que empezaba la partida. Y por si
-        // acaso, al abrir una rueda se recalcula si los stickers han cambiado desde la ultima vez.
+        // The sticker wheel stores "position in the list" (not the sticker). When the list changes
+        // (another player's mods come in, interleaved when sorting by type), the positions of
+        // yours change: the wheel has to be recalculated from your settings, or others would show.
+        // ALL the wheels are recalculated, also the closed ones (in the room it usually is closed when
+        // another player's mods arrive): before, only the visible ones were looked for and the closed one kept the
+        // old positions (you used "your" sticker and someone else's showed) until the match started. And just
+        // in case, when a wheel opens it is recalculated if the stickers changed since the last time.
         static int _stampGen;
         static readonly Dictionary<IntPtr, int> _menuGen = new();
 
@@ -438,7 +440,7 @@ namespace CrimeSightRevival.Mods
             foreach (var o in found)
             {
                 var menu = o?.TryCast<PingStampMenuBase>();
-                if (menu == null || !menu.gameObject.scene.IsValid()) continue;     // los prefabs no
+                if (menu == null || !menu.gameObject.scene.IsValid()) continue;     // not the prefabs
                 RefreshMenu(menu);
             }
         }
@@ -448,9 +450,9 @@ namespace CrimeSightRevival.Mods
         {
             try
             {
-                // Igual que PingStampMenuBase.Start: primero las ruedas por defecto y, solo si el jugador ha
-                // personalizado la suya (ConfigSystem.isUseStampCustomize), encima la guardada. Sin ajustes
-                // guardados, cargar "la guardada" dejaba todos los huecos con el mismo sticker.
+                // Like PingStampMenuBase.Start: first the default wheels and, only if the player has
+                // customised theirs (ConfigSystem.isUseStampCustomize), the saved one on top. Without saved
+                // settings, loading "the saved one" left every slot with the same sticker.
                 var defaults = new List<StampReference>[4];
                 for (int p = 0; p < 4; p++)
                 {
@@ -467,9 +469,9 @@ namespace CrimeSightRevival.Mods
                     {
                         var preset = (StampManager.PresetType)p;
                         menu.RefreshMenuStampReferenceSaveData(ref preset);
-                        // Un sticker guardado que ahora no esta (un mod desactivado, o de alguien que no esta en
-                        // la sala) el juego lo cambia por el primero de la lista. Ese hueco lleva su sticker por
-                        // defecto; cuando vuelva el mod, la siguiente vez que se rehaga la rueda vuelve el suyo.
+                        // A saved sticker that isn't there now (a disabled mod, or from someone who isn't in
+                        // the room) is swapped by the game for the first in the list. That slot gets its default
+                        // sticker; when the mod comes back, the next time the wheel is rebuilt its own comes back.
                         var refs = PresetRefs(menu, p);
                         if (refs == null) continue;
                         for (int i = 0; i < refs.Count && i < defaults[p].Count; i++)
@@ -487,7 +489,7 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("No pude refrescar la rueda: " + e.Message); }
         }
 
-        // Las listas de cada pagina de la rueda (como en RefreshMenuStampReferenceDefault)
+        // The lists of each wheel page (like in RefreshMenuStampReferenceDefault)
         [HideFromIl2Cpp]
         static Il2CppSystem.Collections.Generic.List<StampReference> PresetRefs(PingStampMenuBase menu, int p) => p switch
         {
@@ -504,8 +506,8 @@ namespace CrimeSightRevival.Mods
             if (!_menuGen.TryGetValue(menu.Pointer, out var g) || g != _stampGen) RefreshMenu(menu);
         }
 
-        // cada segundo: las listas del juego tienen justo nuestros stickers/avatares (al cambiar de
-        // escena el juego vuelve a crear las suyas, asi que se comprueba siempre)
+        // every second: the game's lists have exactly our stickers/avatars (when the scene changes
+        // the game creates its own again, so it is always checked)
         void Ensure()
         {
             var sm = StampManager.Instance;
@@ -547,7 +549,7 @@ namespace CrimeSightRevival.Mods
                         }
                         else if (d.parts == CursorAvatarManager.Parts.ICON) icons = true;
                     }
-                    if (!icons) continue;              // la lista de marcos/fondos no se toca
+                    if (!icons) continue;              // the frames/backgrounds list isn't touched
                     foreach (var d in _avatars)
                         if (!present.Contains(d.Pointer)) list.Add(d);
                 }

@@ -1,10 +1,10 @@
-// CRIMESIGHT Revival - aviso de mods de un invitado dentro del juego.
+// CRIMESIGHT Revival - a guest's mods notice inside the game.
 //
-// Cuando alguien entra en tu sala con stickers o avatares propios, el lanzador te pregunta si los
-// descargas. Pero el anfitrion suele estar mirando el juego, no el lanzador, asi que el lanzador deja
-// tambien el aviso en csr_live/offer.json y aqui se ensena encima del juego con dos botones. La
-// respuesta va a csr_live/offer_answer.json y el lanzador la recoge (sirve contestar en cualquiera
-// de los dos sitios). Si el lanzador quita el aviso (contestado alli), la ventana se cierra sola.
+// When someone enters your room with their own stickers or avatars, the launcher asks you whether
+// to download them. But the host is usually looking at the game, not the launcher, so the launcher also leaves
+// the notice in csr_live/offer.json and here it is shown over the game with two buttons. The
+// answer goes to csr_live/offer_answer.json and the launcher picks it up (answering in either
+// place works). If the launcher removes the notice (answered there), the window closes by itself.
 using System;
 using System.IO;
 using System.Text.Json;
@@ -36,8 +36,8 @@ namespace CrimeSightRevival.Mods
         static RectTransform _yesRect, _noRect, _alwaysRect;
         static Image _yesImg, _noImg, _alwaysImg;
 
-        static Color _yesBase, _noBase, _alwaysBase;      // colores de los botones (del aspecto propio)
-        static GameWindow _gw;                             // ventana clonada del juego (null: aspecto propio)
+        static Color _yesBase, _noBase, _alwaysBase;      // button colours (from our own look)
+        static GameWindow _gw;                             // window cloned from the game (null: our own look)
 
         public static void Frame()
         {
@@ -77,7 +77,7 @@ namespace CrimeSightRevival.Mods
             bool overYes = _yesRect != null && RectTransformUtility.RectangleContainsScreenPoint(_yesRect, mouse, null);
             bool overNo = _noRect != null && RectTransformUtility.RectangleContainsScreenPoint(_noRect, mouse, null);
             bool overAlways = _alwaysRect != null && RectTransformUtility.RectangleContainsScreenPoint(_alwaysRect, mouse, null);
-            if (_gw != null) _gw.KeepTexts();       // con la ventana del juego, el brillo lo ponen sus botones
+            if (_gw != null) _gw.KeepTexts();       // with the game's window, its buttons provide the glow
             else
             {
                 if (_yesImg != null) _yesImg.color = overYes ? Skin.Hover(_yesBase) : _yesBase;
@@ -158,7 +158,7 @@ namespace CrimeSightRevival.Mods
                 scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
                 scaler.referenceResolution = new Vector2(1920, 1080);
                 scaler.matchWidthOrHeight = 0.5f;
-                _root.AddComponent<GraphicRaycaster>();     // tapa los clics al juego mientras esta abierto
+                _root.AddComponent<GraphicRaycaster>();     // blocks clicks to the game while it is open
 
                 var dim = Box("Dim", _root.transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
                 dim.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f);
@@ -201,7 +201,7 @@ namespace CrimeSightRevival.Mods
             {
                 Plugin.L.LogWarning("[Mods] no pude ensenar el aviso de mods: " + e.Message);
                 Hide();
-                _answeredId = m.id;        // no se reintenta en bucle: queda el aviso del lanzador
+                _answeredId = m.id;        // not retried in a loop: the launcher's notice stays
             }
         }
     }

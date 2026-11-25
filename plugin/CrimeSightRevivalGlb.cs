@@ -1,15 +1,17 @@
-// CRIMESIGHT Revival - lectura y escritura de modelos .glb (glTF binario), sin nada de Unity.
+// CRIMESIGHT Revival - reading and writing .glb models (binary glTF), with nothing from Unity.
 //
-// Read(): saca de un .glb lo que hace falta para vestir a un personaje del juego: las mallas en reposo (en la escena
-// del .glb), sus pesos por hueso, los huesos (nombre, padres y donde estan) y las texturas. El paso al esqueleto del
-// juego (que puede estar movido, a otra escala o con otras proporciones) lo hace CrimeSightRevivalModelsGlb.cs. Blender lo exporta tal cual
-// ("glTF Binary"). Lo que se pasa al sistema de Unity (posiciones, normales, UV, triangulos) ya va convertido:
-// glTF es diestro y Unity zurdo, asi que X cambia de signo, los triangulos se dan la vuelta y la V de las UV se
-// invierte.
-// WriteSkeleton(): escribe el esqueleto de un personaje (solo los huesos, con una malla minima para que Blender lo
-// importe como armadura) para que cada uno haga su modelo encima. No lleva nada del modelo del juego.
+// Read(): takes from a .glb what is needed to dress a game character: the meshes at rest (in the
+// .glb's scene), their weights per bone, the bones (name, parents and where they are) and the textures. The move to
+// the game's
+// skeleton (which can be moved, at another scale or with other proportions) is done by CrimeSightRevivalModelsGlb.cs.
+// Blender exports it as is
+// ("glTF Binary"). What is passed to Unity's system (positions, normals, UV, triangles) is already converted:
+// glTF is right-handed and Unity left-handed, so X changes sign, the triangles are flipped and the UVs' V is
+// inverted.
+// WriteSkeleton(): writes a character's skeleton (only the bones, with a minimal mesh so Blender
+// imports it as an armature) so each person can build their model over it. It carries nothing of the game's model.
 //
-// Las matrices son de 4x4 en columnas (como glTF): m[columna * 4 + fila].
+// The matrices are 4x4 column-major (like glTF): m[column * 4 + row].
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,56 +22,56 @@ namespace CrimeSightRevival.Mods
 {
     static class Glb
     {
-        // ------------------------------------------------------------ lo que sale de Read()
+        // ------------------------------------------------------------ what Read() returns
         public class Model
         {
             public readonly List<Part> parts = new();
-            public readonly List<Joint> joints = new();        // todos los huesos que usan las mallas
+            public readonly List<Joint> joints = new();        // every bone the meshes use
             public readonly List<Image> images = new();
-            public readonly List<string> notes = new();        // avisos para el registro
-            public readonly Dictionary<string, float[]> nodePos = new();   // posicion de cada nodo en la escena (Unity)
-            public bool proxy;          // adaptado (Humanoid): va con su propio esqueleto, con sus medidas, que copia los giros del juego
-            public readonly List<NodeInfo> nodes = new();      // todos los nodos (para animar): reposo en glTF
+            public readonly List<string> notes = new();        // notices for the log
+            public readonly Dictionary<string, float[]> nodePos = new();   // position of each node in the scene (Unity)
+            public bool proxy;          // adapted (Humanoid): goes with its own skeleton, with its measurements, which copies the game's rotations
+            public readonly List<NodeInfo> nodes = new();      // every node (to animate): rest in glTF
             public readonly List<Anim> anims = new();
         }
 
         public class NodeInfo
         {
             public string name; public int parent = -1;
-            public float[] t = { 0, 0, 0 }, r = { 0, 0, 0, 1 }, s = { 1, 1, 1 };   // reposo local (glTF)
+            public float[] t = { 0, 0, 0 }, r = { 0, 0, 0, 1 }, s = { 1, 1, 1 };   // local rest (glTF)
         }
 
-        /// <summary>Una animacion: curvas de posicion (0), giro (1) o escala (2) de los nodos.</summary>
+        /// <summary>An animation: position (0), rotation (1) or scale (2) curves of the nodes.</summary>
         public class Anim
         {
             public string name; public float duration;
             public readonly List<Channel> channels = new();
         }
 
-        public class Channel { public int node, path, interp; public float[] times, values; }   // interp: 0 lineal, 1 escalon, 2 cubica
+        public class Channel { public int node, path, interp; public float[] times, values; }   // interp: 0 linear, 1 step, 2 cubic
 
         public class Joint
         {
-            public string name;                               // "<root>": el propio modelo (piezas sin hueso)
-            public readonly List<string> ancestors = new();   // nombres de sus padres, del mas cercano al mas lejano
-            public float[] pos = { 0, 0, 0 };                 // donde esta en la escena del .glb, en reposo (Unity)
+            public string name;                               // "<root>": the model itself (pieces without a bone)
+            public readonly List<string> ancestors = new();   // names of its parents, from the closest to the farthest
+            public float[] pos = { 0, 0, 0 };                 // where it is in the .glb's scene, at rest (Unity)
         }
 
         public class Part
         {
             public string name;
-            public float[] pos, nrm, uv;                      // xyz, xyz, uv por vertice (espacio de Unity)
-            public int[] boneIdx;                             // 4 por vertice (indices de Model.joints)
-            public float[] boneW;                             // 4 por vertice, suman 1
-            public int[] tris;                                // ya con la vuelta de Unity
-            public int image = -1;                            // textura de color (Model.images) o -1
-            public float[] color = { 1, 1, 1, 1 };            // color base (si no hay textura, o multiplicado)
+            public float[] pos, nrm, uv;                      // xyz, xyz, uv per vertex (Unity space)
+            public int[] boneIdx;                             // 4 per vertex (indices of Model.joints)
+            public float[] boneW;                             // 4 per vertex, they add up to 1
+            public int[] tris;                                // already flipped for Unity
+            public int image = -1;                            // colour texture (Model.images) or -1
+            public float[] color = { 1, 1, 1, 1 };            // base colour (if there is no texture, or multiplied)
         }
 
         public class Image
         {
             public byte[] data; public string mime;
-            // ya descodificada en otro hilo (TexDec): RGBA32 de abajo a arriba con todos sus mipmaps, lista para subirla
+            // already decoded on another thread (TexDec): RGBA32 bottom to top with all its mipmaps, ready to upload
             public byte[] raw; public int rw, rh, rmips;
         }
 
@@ -144,18 +146,19 @@ namespace CrimeSightRevival.Mods
             oz = m[2] * x + m[6] * y + m[10] * z;
         }
 
-        /// <summary>Cambio de mano (glTF diestro <-> Unity zurdo): la X cambia de signo. Sirve en los dos sentidos.</summary>
+        /// <summary>Handedness change (right-handed glTF <-> left-handed Unity): X changes sign. Works both
+        /// ways.</summary>
         public static float[] Mirror(float[] m)
         {
             var r = (float[])m.Clone();
-            // S * M * S con S = diag(-1, 1, 1, 1): cambian de signo las celdas con exactamente un indice X
+            // S * M * S with S = diag(-1, 1, 1, 1): the cells with exactly one X index change sign
             for (int c = 0; c < 4; c++)
                 for (int rr = 0; rr < 4; rr++)
                     if ((c == 0) != (rr == 0)) r[c * 4 + rr] = -r[c * 4 + rr];
             return r;
         }
 
-        // ------------------------------------------------------------ lectura
+        // ------------------------------------------------------------ reading
         class Node
         {
             public string name; public int parent = -1; public int mesh = -1, skin = -1;
@@ -171,7 +174,7 @@ namespace CrimeSightRevival.Mods
             var model = new Model();
             var g = new Reader(root, bin, model);
 
-            // nodos y su posicion en la escena
+            // nodes and their position in the scene
             var nodes = new List<Node>();
             if (root.TryGetProperty("nodes", out var jn))
                 foreach (var n in jn.EnumerateArray())
@@ -197,9 +200,9 @@ namespace CrimeSightRevival.Mods
             }
             foreach (var n in nodes) model.nodePos[n.name] = new[] { -n.global[12], n.global[13], n.global[14] };
 
-            // huesos: los nodos de todas las pieles
+            // bones: the nodes of every skin
             var skins = new List<(int[] joints, float[][] ibm)>();
-            var jointOf = new Dictionary<int, int>();                 // nodo -> indice en model.joints
+            var jointOf = new Dictionary<int, int>();                 // node -> index in model.joints
             if (root.TryGetProperty("skins", out var js))
                 foreach (var s in js.EnumerateArray())
                 {
@@ -216,7 +219,7 @@ namespace CrimeSightRevival.Mods
                     skins.Add((j.ToArray(), ibm));
                 }
 
-            // mallas
+            // meshes
             for (int ni = 0; ni < nodes.Count; ni++)
             {
                 var node = nodes[ni];
@@ -232,8 +235,8 @@ namespace CrimeSightRevival.Mods
                     pi++;
                     if (part == null) continue;
                     int vc = part.pos.Length / 3;
-                    float[] bind;                                     // de la malla a la escena, en reposo
-                    int[] map;                                        // hueso de la piel -> hueso del modelo
+                    float[] bind;                                     // from the mesh to the scene, at rest
+                    int[] map;                                        // skin bone -> model bone
                     if (node.skin >= 0 && node.skin < skins.Count && joints0 != null)
                     {
                         var (sj, ibm) = skins[node.skin];
@@ -243,7 +246,7 @@ namespace CrimeSightRevival.Mods
                     }
                     else
                     {
-                        // pieza rigida (gafas, sombrero...): va pegada al hueso mas cercano por encima, o al modelo
+                        // rigid piece (glasses, hat...): stuck to the nearest bone above, or to the model
                         bind = node.global;
                         int anc = node.parent; while (anc >= 0 && !jointOf.ContainsKey(anc)) anc = nodes[anc].parent;
                         int j = anc >= 0 ? jointOf[anc] : RootJoint(model);
@@ -256,7 +259,7 @@ namespace CrimeSightRevival.Mods
                     model.parts.Add(part);
                 }
             }
-            // animaciones
+            // animations
             if (root.TryGetProperty("animations", out var jan))
                 foreach (var an in jan.EnumerateArray())
                 {
@@ -275,7 +278,7 @@ namespace CrimeSightRevival.Mods
                         string ip = Str(sm, "interpolation") ?? "LINEAR";
                         var c = new Channel { node = tn.GetInt32(), path = pth, times = times, interp = ip == "STEP" ? 1 : ip == "CUBICSPLINE" ? 2 : 0 };
                         int w = pth == 1 ? 4 : 3;
-                        if (c.interp == 2)                      // cubica: [entrada, valor, salida] por clave -> solo el valor
+                        if (c.interp == 2)                      // cubic: [in, value, out] per key -> only the value
                         {
                             c.values = new float[times.Length * w];
                             for (int k = 0; k < times.Length && (k * 3 + 2) * w <= vals.Length; k++) Array.Copy(vals, (k * 3 + 1) * w, c.values, k * w, w);
@@ -291,8 +294,9 @@ namespace CrimeSightRevival.Mods
             return model;
         }
 
-        // ------------------------------------------------------------ poses de una animacion
-        /// <summary>La matriz de cada nodo en la escena (glTF) en el instante t de la animacion (sin animacion: reposo).</summary>
+        // ------------------------------------------------------------ poses of an animation
+        /// <summary>Each node's matrix in the scene (glTF) at instant t of the animation (without an animation:
+        /// rest).</summary>
         public static float[][] Pose(Model m, Anim a, float time)
         {
             int n = m.nodes.Count;
@@ -338,7 +342,7 @@ namespace CrimeSightRevival.Mods
             else for (int k = 0; k < w; k++) dst[k] = c.values[lo * w + k] * (1 - f) + c.values[hi * w + k] * f;
         }
 
-        /// <summary>Posicion, giro (x y z w) y escala de una matriz.</summary>
+        /// <summary>Position, rotation (x y z w) and scale of a matrix.</summary>
         public static void Decompose(float[] m, float[] t, float[] q, float[] s)
         {
             t[0] = m[12]; t[1] = m[13]; t[2] = m[14];
@@ -352,7 +356,7 @@ namespace CrimeSightRevival.Mods
             Quat(m[0] / sx, m[1] / sx, m[2] / sx, m[4] / sy, m[5] / sy, m[6] / sy, m[8] / sz, m[9] / sz, m[10] / sz, q);
         }
 
-        /// <summary>Cuaternion de una matriz de giro dada por columnas (c0 = columna 0...).</summary>
+        /// <summary>Quaternion of a rotation matrix given by columns (c0 = column 0...).</summary>
         public static void Quat(float c0x, float c0y, float c0z, float c1x, float c1y, float c1z, float c2x, float c2y, float c2z, float[] q)
         {
             float tr = c0x + c1y + c2z;
@@ -385,12 +389,13 @@ namespace CrimeSightRevival.Mods
         {
             var n = nodes[i];
             if (n.global != null) return n.global;
-            n.global = Identity();                                        // por si hay un ciclo
+            n.global = Identity();                                        // in case there is a cycle
             n.global = n.parent >= 0 ? Mul(Global(nodes, n.parent), n.local) : n.local;
             return n.global;
         }
 
-        /// <summary>Pasa la pieza a la escena (posicion de reposo), al espacio de Unity, y deja 4 huesos por vertice.</summary>
+        /// <summary>Moves the piece to the scene (rest position), to Unity space, and leaves 4 bones per
+        /// vertex.</summary>
         static void Bake(Part p, float[] bind, int[] j0, float[] w0, int[] j1, float[] w1, int[] map)
         {
             int vc = p.pos.Length / 3;
@@ -407,7 +412,7 @@ namespace CrimeSightRevival.Mods
                 }
                 if (p.uv != null) p.uv[v * 2 + 1] = 1f - p.uv[v * 2 + 1];
             }
-            // pesos: los 4 mayores de los dos juegos, normalizados
+            // weights: the 4 biggest of the two sets, normalised
             p.boneIdx = new int[vc * 4]; p.boneW = new float[vc * 4];
             var cand = new List<(int j, float w)>(8);
             for (int v = 0; v < vc; v++)
@@ -426,7 +431,7 @@ namespace CrimeSightRevival.Mods
                     else { p.boneIdx[v * 4 + k] = k < cand.Count ? cand[k].j : (cand.Count > 0 ? cand[0].j : map[0]); p.boneW[v * 4 + k] = sum > 0 ? 0 : (k == 0 ? 1 : 0); }
                 }
             }
-            // triangulos al reves (por el cambio de mano)
+            // triangles flipped (because of the handedness change)
             for (int t = 0; t + 2 < p.tris.Length; t += 3) { int a = p.tris[t + 1]; p.tris[t + 1] = p.tris[t + 2]; p.tris[t + 2] = a; }
         }
 
@@ -523,7 +528,7 @@ namespace CrimeSightRevival.Mods
                 return r;
             }
 
-            /// <summary>Un accessor como floats (los normalizados, ya entre 0 y 1).</summary>
+            /// <summary>An accessor as floats (normalised ones, already between 0 and 1).</summary>
             public float[] Accessor(int index, out int comps)
             {
                 var a = root.GetProperty("accessors")[index];
@@ -533,7 +538,7 @@ namespace CrimeSightRevival.Mods
                 int ct = a.GetProperty("componentType").GetInt32();
                 bool norm = a.TryGetProperty("normalized", out var nn) && nn.GetBoolean();
                 var r = new float[count * comps];
-                if (!a.TryGetProperty("bufferView", out var bvp)) return r;   // todo ceros (sparse no se lee)
+                if (!a.TryGetProperty("bufferView", out var bvp)) return r;   // all zeros (sparse isn't read)
                 var v = root.GetProperty("bufferViews")[bvp.GetInt32()];
                 int size = ct switch { 5120 => 1, 5121 => 1, 5122 => 2, 5123 => 2, 5125 => 4, 5126 => 4, _ => 4 };
                 int baseOff = (v.TryGetProperty("byteOffset", out var vo) ? vo.GetInt32() : 0) + (a.TryGetProperty("byteOffset", out var ao) ? ao.GetInt32() : 0);
@@ -583,18 +588,18 @@ namespace CrimeSightRevival.Mods
             return r;
         }
 
-        // ------------------------------------------------------------ escritura del esqueleto
+        // ------------------------------------------------------------ writing the skeleton
         public class Bone
         {
-            public string name; public int parent = -1;        // indice en la lista (-1: cuelga del modelo)
-            public float[] pos, rot, scale;                    // locales, en Unity (rot: x y z w)
+            public string name; public int parent = -1;        // index in the list (-1: hangs from the model)
+            public float[] pos, rot, scale;                    // local, in Unity (rot: x y z w)
         }
 
-        /// <summary>El esqueleto como .glb: un nodo raiz (el modelo), los huesos con su postura de reposo y una malla
-        /// minima pegada al primer hueso (Blender necesita una malla con piel para crear la armadura).</summary>
+        /// <summary>The skeleton as .glb: a root node (the model), the bones with their rest pose and a minimal
+        /// mesh stuck to the first bone (Blender needs a skinned mesh to create the armature).</summary>
         public static byte[] WriteSkeleton(string rootName, List<Bone> bones)
         {
-            // posiciones en glTF (la X cambia de signo; el giro, la Y y la Z)
+            // positions in glTF (X changes sign; the rotation, Y and Z)
             var local = new float[bones.Count][];
             var nodesJson = new StringBuilder();
             var rootChildren = new List<int>();
@@ -614,7 +619,7 @@ namespace CrimeSightRevival.Mods
 
             var bin = new MemoryStream();
             void Align() { while (bin.Length % 4 != 0) bin.WriteByte(0); }
-            // malla minima: un triangulo diminuto en el primer hueso
+            // minimal mesh: a tiny triangle on the first bone
             float[] tri = new float[9];
             Point(global[0], 0, 0, 0, out tri[0], out tri[1], out tri[2]);
             tri[3] = tri[0] + 0.001f; tri[4] = tri[1]; tri[5] = tri[2];

@@ -1,9 +1,9 @@
-// CRIMESIGHT Revival - boton "Creditos Revival" en la ventana de Opciones.
+// CRIMESIGHT Revival - "Revival Credits" button in the Options window.
 //
-// Debajo de "Creditos del personal" se anade una copia de ese boton que abre una ventana con los creditos de
-// Revival. La ventana es una copia de la propia ventana de Opciones (mismo marco, titulo y boton de volver),
-// con los botones escondidos y el texto de los creditos en su sitio. Los nombres son enlaces: al pulsarlos
-// se abren en el navegador. Mientras esta abierta, la ventana de Opciones de debajo queda en pausa.
+// Below "Staff credits" a copy of that button is added that opens a window with the Revival
+// credits. The window is a copy of the Options window itself (same frame, title and back button),
+// with the buttons hidden and the credits text in their place. The names are links: clicking them
+// opens them in the browser. While it is open, the Options window below is paused.
 using System;
 using System.Collections.Generic;
 using HarmonyLib;
@@ -29,7 +29,7 @@ namespace CrimeSightRevival.Mods
             "커뮤니티 서버 참여하기", "加入我们的社区服务器", "加入我們的社群伺服器" };
         const string Discord = "https://discord.gg/uqndsJnR3r";
 
-        // enlaces de los nombres (id del <link> -> direccion)
+        // links of the names (<link> id -> address)
         static readonly Dictionary<string, string> Links = new()
         {
             ["amras_github"] = "https://github.com/Amras95",
@@ -66,7 +66,7 @@ namespace CrimeSightRevival.Mods
             try { return Math.Max(0, Math.Min(10, (int)TextManager.Instance.GetLangType())); } catch { return 1; }
         }
 
-        // ------------------------------------------------------------ el boton
+        // ------------------------------------------------------------ the button
         static OutGameOptionMainPopup _popup;
         static GameObject _button;
         static UnityEngine.Events.UnityAction _onOpen, _onClose;
@@ -103,14 +103,14 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[Creditos] boton: " + e); }
         }
 
-        /// <summary>Si los botones no estan en una lista automatica, el nuevo va un hueco por debajo de
-        /// "Creditos del personal" y los que estaban debajo bajan ese mismo hueco.</summary>
+        /// <summary>If the buttons aren't in an automatic list, the new one goes one slot below
+        /// "Staff credits" and the ones that were below move down by that same slot.</summary>
         static void MakeRoom(Transform list, Transform item, Transform copy, Button quit)
         {
             var it = item.TryCast<RectTransform>();
             var below = quit != null ? ItemOf(quit.transform, list)?.TryCast<RectTransform>() : null;
             if (it == null || below == null || below == item) return;
-            var step = below.anchoredPosition - it.anchoredPosition;          // el hueco entre dos botones
+            var step = below.anchoredPosition - it.anchoredPosition;          // the gap between two buttons
             var cr = copy.TryCast<RectTransform>();
             if (cr != null) cr.anchoredPosition = it.anchoredPosition + step;
             for (int i = 0; i < list.childCount; i++)
@@ -121,9 +121,9 @@ namespace CrimeSightRevival.Mods
             }
         }
 
-        /// <summary>Hace sitio a un boton mas: crecen la lista (TextArea), el marco (PopupBg) y la ventana
-        /// (set_popup); las dos que tienen Mask recortan lo que se sale. Todo esta centrado, asi que crece
-        /// igual por arriba y por abajo y nada se descoloca.</summary>
+        /// <summary>Makes room for one more button: the list (TextArea), the frame (PopupBg) and the window
+        /// (set_popup) grow; the two that have a Mask clip what sticks out. Everything is centred, so it grows
+        /// the same at the top and bottom and nothing gets misplaced.</summary>
         static void Grow(Transform list, Transform item)
         {
             var it = item.TryCast<RectTransform>();
@@ -137,7 +137,7 @@ namespace CrimeSightRevival.Mods
             Add(popup);
         }
 
-        // la animacion de abrir Opciones les vuelve a poner su alto: despues de ella se les suma otra vez
+        // the Options opening animation sets their height again: after it, it is added again
         static readonly List<(RectTransform r, float set)> _grown = new();
         static float _step;
 
@@ -150,15 +150,16 @@ namespace CrimeSightRevival.Mods
             _grown.Add((r, r.sizeDelta.y));
         }
 
-        /// <summary>Lo alto que hemos dejado una pieza de Opciones (o su alto, si no es de las que crecen).</summary>
+        /// <summary>How tall we left an Options piece (or its height, if it isn't one of the ones that
+        /// grow).</summary>
         static float Height(RectTransform r)
         {
             foreach (var g in _grown) if (g.r != null && g.r.Pointer == r.Pointer) return g.set;
             return r.sizeDelta.y;
         }
 
-        /// <summary>Cada fotograma, despues de las animaciones: si algo le ha cambiado el alto a una de las
-        /// piezas que crecieron, se le vuelve a sumar el boton nuevo.</summary>
+        /// <summary>Every frame, after the animations: if something changed the height of one of the
+        /// pieces that grew, the new button is added to it again.</summary>
         public static void Late()
         {
             for (int i = 0; i < _grown.Count; i++)
@@ -178,7 +179,7 @@ namespace CrimeSightRevival.Mods
             return f != null && f.enabled && f.verticalFit != ContentSizeFitter.FitMode.Unconstrained;
         }
 
-        // ------------------------------------------------------------ la ventana
+        // ------------------------------------------------------------ the window
         static GameObject _window;
         static TextMeshProUGUI _body, _join;
         static UnityEngine.Events.UnityAction _onJoin;
@@ -220,8 +221,8 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[Creditos] cerrar: " + e); }
         }
 
-        /// <summary>Copia la ventana de Opciones sin su codigo: se copia dentro de un objeto apagado para
-        /// que el del juego no llegue a arrancar en la copia, y se le quita antes de encenderla.</summary>
+        /// <summary>Copies the Options window without its code: it is copied inside a disabled object so
+        /// the game's never starts in the copy, and it is removed before enabling it.</summary>
         static void Build(OutGameOptionMainPopup p)
         {
             var src = p.gameObject.transform;
@@ -231,22 +232,22 @@ namespace CrimeSightRevival.Mods
             win.name = "CSR_RevivalCredits";
             var code = win.GetComponent<OutGameOptionMainPopup>();
             if (code != null) UnityEngine.Object.DestroyImmediate(code);
-            // sin registrarse en el juego como ventana suya (la esconderia o se haria pasar por Opciones) y sin
-            // sus animaciones de entrada y salida (la dejaban invisible la primera vez): se queda como se copio
+            // without registering in the game as one of its windows (it would hide it or pose as Options) and without
+            // its entry and exit animations (they left it invisible the first time): it stays as it was copied
             var reg = win.GetComponent<OutGameManagerPopupRegist>();
             if (reg != null) UnityEngine.Object.DestroyImmediate(reg);
             var prio = win.GetComponent<UiPriority>();
             if (prio != null) UnityEngine.Object.DestroyImmediate(prio);
             foreach (var an in win.GetComponentsInChildren<Animator>(true)) an.enabled = false;
             foreach (var sa in win.GetComponentsInChildren<SimpleAnimation>(true)) sa.enabled = false;
-            foreach (var (gr, _) in _grown)                                       // tan alta como Opciones
+            foreach (var (gr, _) in _grown)                                       // as tall as Options
             {
                 var w = gr != null ? Same(win.transform, src, gr)?.TryCast<RectTransform>() : null;
                 if (w != null) w.sizeDelta = new Vector2(w.sizeDelta.x, Height(gr));
             }
             var canvas = win.GetComponent<Canvas>();
             var ocanvas = p.GetComponent<Canvas>();
-            if (canvas != null && ocanvas != null) canvas.sortingOrder = ocanvas.sortingOrder + 1;     // encima de Opciones
+            if (canvas != null && ocanvas != null) canvas.sortingOrder = ocanvas.sortingOrder + 1;     // above Options
 
             var title = Same(win.transform, src, p.TitleTMP != null ? p.TitleTMP.transform : null)?.GetComponent<TextMeshProUGUI>();
             if (title != null) title.text = ButtonLabel[Lang()];
@@ -260,7 +261,7 @@ namespace CrimeSightRevival.Mods
                 try { UiBaseManager.SetBackButtonColor(back); UIScriptingHelper.SetMouseOverSoundEvent(back); } catch { }
             }
 
-            // los botones de Opciones (y el nuestro) se esconden; el texto ocupa su sitio
+            // the Options buttons (and ours) are hidden; the text takes their place
             var credit = p.CreditButton.transform;
             var list = Common(credit, p.QuitButton != null ? p.QuitButton.transform : credit.parent);
             var wlist = Same(win.transform, src, list);
@@ -281,7 +282,7 @@ namespace CrimeSightRevival.Mods
                     c.gameObject.SetActive(false);
                 }
 
-            // el boton del servidor de Discord: la copia del nuestro, donde estaba Salir
+            // the Discord server button: the copy of ours, where Quit was
             var quitItem = p.QuitButton != null && wlist != null ? Same(win.transform, src, ItemOf(p.QuitButton.transform, list)) : null;
             var joinItem = _button != null && quitItem != null ? Same(win.transform, src, _button.transform) : null;
             if (joinItem != null)
@@ -289,7 +290,7 @@ namespace CrimeSightRevival.Mods
                 joinItem.name = "CSR_JoinDiscordButton";
                 var le = joinItem.GetComponent<LayoutElement>();
                 if (le == null) le = joinItem.gameObject.AddComponent<LayoutElement>();
-                le.ignoreLayout = true;                                           // fuera de la lista: va donde estaba Salir
+                le.ignoreLayout = true;                                           // out of the list: goes where Quit was
                 var jr = joinItem.TryCast<RectTransform>(); var qr = quitItem.TryCast<RectTransform>();
                 if (jr != null && qr != null) jr.anchoredPosition = qr.anchoredPosition;
                 var jb = joinItem.GetComponentInChildren<Button>(true);
@@ -303,7 +304,7 @@ namespace CrimeSightRevival.Mods
                 _join = joinItem.GetComponentInChildren<TextMeshProUGUI>(true);
                 if (_join != null)
                 {
-                    _join.enableAutoSizing = true;                                // los idiomas con el texto mas largo
+                    _join.enableAutoSizing = true;                                // the languages with the longest text
                     _join.fontSizeMax = _join.fontSize; _join.fontSizeMin = _join.fontSize * 0.6f;
                     _join.enableWordWrapping = false;
                 }
@@ -319,7 +320,7 @@ namespace CrimeSightRevival.Mods
             if (min.x < max.x)
             {
                 var a = parent.InverseTransformPoint(min); var bb = parent.InverseTransformPoint(max);
-                if (joinItem != null && joinItem.parent.Pointer == parent.Pointer)              // el texto, por encima del boton
+                if (joinItem != null && joinItem.parent.Pointer == parent.Pointer)              // the text, above the button
                     a.y = joinItem.localPosition.y + (_step > 0f ? _step : 83f) * 0.5f;
                 r.localPosition = (a + bb) / 2f;
                 r.sizeDelta = new Vector2(Mathf.Abs(bb.x - a.x), Mathf.Abs(bb.y - a.y));
@@ -347,7 +348,7 @@ namespace CrimeSightRevival.Mods
             Application.OpenURL(Discord);
         }
 
-        /// <summary>Cada fotograma: los enlaces del texto, y si Opciones se cierra por su cuenta, la nuestra tambien.</summary>
+        /// <summary>Every frame: the text's links, and if Options closes by itself, ours too.</summary>
         public static void Frame()
         {
             if (!IsOpen) return;
@@ -366,8 +367,8 @@ namespace CrimeSightRevival.Mods
             }
         }
 
-        // ------------------------------------------------------------ utilidades
-        /// <summary>El objeto que contiene a los dos (la lista de botones).</summary>
+        // ------------------------------------------------------------ helpers
+        /// <summary>The object containing both (the button list).</summary>
         static Transform Common(Transform a, Transform b)
         {
             for (var t = a.parent; t != null; t = t.parent)
@@ -375,14 +376,14 @@ namespace CrimeSightRevival.Mods
             return a.parent;
         }
 
-        /// <summary>El hijo directo de la lista que contiene a t (el boton con su marco).</summary>
+        /// <summary>The direct child of the list that contains t (the button with its frame).</summary>
         static Transform ItemOf(Transform t, Transform list)
         {
             while (t != null && t.parent != list) t = t.parent;
             return t;
         }
 
-        /// <summary>En una copia de root, el objeto que corresponde a child.</summary>
+        /// <summary>In a copy of root, the object matching child.</summary>
         static Transform Same(Transform copy, Transform root, Transform child)
         {
             if (child == null) return null;

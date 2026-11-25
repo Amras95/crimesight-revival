@@ -1,13 +1,15 @@
-// CRIMESIGHT Revival - "Selector de personajes" en la sala de espera.
+// CRIMESIGHT Revival - "Character Selector" in the waiting room.
 //
-// Un boton (silueta de una persona y debajo "Selector de personajes") abre una ventana con todos los personajes
-// que pueden salir en la sala: los originales y los nuevos que trae cada jugador. Cada uno tiene su imagen, su
-// nombre debajo y una casilla a la izquierda para dejarlo salir o no; al pasar el raton por encima se ve su modelo
-// 3D a la derecha, girando. En cada partida salen 6 al azar entre los marcados (con la misma probabilidad), asi
-// que tiene que haber al menos 6 personajes y 1 traidor.
-// Lo decide el anfitrion: su eleccion va a csr_live/roster_select.json, el lanzador se la pasa al servidor y vale
-// para su sala (y la proxima vez). Los demas ven la ventana sin poder cambiarla.
-// La lista la escribe el lanzador en csr_live/roster_pool.json; sin ese archivo (sin lanzador nuevo) no hay boton.
+// A button (a person's silhouette with "Character Selector" below) opens a window with every character
+// that can appear in the room: the original ones and the new ones each player brings. Each one has its image, its
+// name below and a box on the left to let it appear or not; hovering over it shows its 3D model
+// on the right, spinning. In each match 6 are drawn at random among the ticked ones (with the same probability), so
+// there must be at least 6 characters and 1 traitor.
+// The host decides: their choice goes to csr_live/roster_select.json, the launcher passes it to the server and it
+// applies
+// to their room (and next time). The others see the window without being able to change it.
+// The launcher writes the list in csr_live/roster_pool.json; without that file (without a new launcher) there is no
+// button.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -22,7 +24,7 @@ namespace CrimeSightRevival.Mods
 {
     static class RosterUi
     {
-        // idiomas del juego: ja, en, fr, it, de, es, pt, ru, ko, zh-cn, zh-tw
+        // game languages: ja, en, fr, it, de, es, pt, ru, ko, zh-cn, zh-tw
         static readonly string[] TBtn = { "キャラクター選択", "Character Selection", "Sélection des personnages", "Selezione dei personaggi",
             "Figurenauswahl", "Selección de personajes", "Seleção de personagens", "Выбор персонажей", "캐릭터 선택", "角色选择", "角色選擇" };
         static readonly string[] THost = {
@@ -74,9 +76,9 @@ namespace CrimeSightRevival.Mods
         static string SelectFile => Path.Combine(LiveMods.LiveDir, "roster_select.json");
         static int _lang = 1;
 
-        // ------------------------------------------------------------ boton en la sala de espera
-        // Es una copia del boton "Manual online" de la cabecera de la sala (mismo aspecto y mismo lienzo), justo a
-        // su izquierda, con la silueta de una persona y el texto debajo. Si no se encuentra, va en una esquina.
+        // ------------------------------------------------------------ button in the waiting room
+        // It is a copy of the "Online manual" button in the room's header (same look and same canvas), right
+        // to its left, with a person's silhouette and the text below. If it isn't found, it goes in a corner.
         static GameObject _btnRoot;
         static RectTransform _btnRect;
         static RectTransform _manual;
@@ -87,7 +89,7 @@ namespace CrimeSightRevival.Mods
         static OutGameRoomWaitingMenuVer2 _menu;
         static bool _menuOpen;
         static bool _btnOver;
-        static bool _btnFaded;      // la sala se ve detras de una ventana: el boton se queda, como el del manual, sin pulsar
+        static bool _btnFaded;      // the room is seen behind a window: the button stays, like the manual's, unpressable
         static readonly Vector2 BtnSize = new Vector2(176, 118);
 
         public static void Frame()
@@ -100,11 +102,11 @@ namespace CrimeSightRevival.Mods
             }
             if (Time.unscaledTime >= _nextLook)
             {
-                _nextLook = Time.unscaledTime + 0.15f;                // como los iconos del mando (Pad.UiScan)
+                _nextLook = Time.unscaledTime + 0.15f;                // like the gamepad icons (Pad.UiScan)
                 _menuOpen = MenuVisible();
-                // La sala se ve aunque tenga una ventana encima (ajustes, confirmaciones, dificultad de la IA...): el
-                // boton se queda igual que el del manual de al lado (el juego oscurece los dos), sin poder pulsarse.
-                // Con una ventana encima solo si se ve el del manual: fuera de la sala el juego la deja cargada.
+                // The room shows even with a window on top (settings, confirmations, AI difficulty...): the
+                // button stays like the manual one next to it (the game darkens both), unpressable.
+                // With a window on top only if the manual one shows: outside the room the game leaves it loaded.
                 bool want = File.Exists(PoolFile) && (_menuOpen || (RoomShown() && ManualSeen(_manual != null ? _manual : FindManual())));
                 if (want && (_btnRoot == null || (!_ownCanvas && _manual == null) || (_ownCanvas && FindManual() != null))) MakeButton();
                 if (_btnRoot != null) _btnRoot.SetActive(want);
@@ -112,7 +114,7 @@ namespace CrimeSightRevival.Mods
                 if (want && _btnRoot != null) FadeButton(Covered());
             }
             if (_btnRoot == null || !_btnRoot.activeSelf || !_ownCanvas) return;
-            // en nuestro lienzo (sin el del juego): raton a mano
+            // on our canvas (without the game's): mouse by hand
             bool over = !_btnFaded && RectTransformUtility.RectangleContainsScreenPoint(_btnRect, Input.mousePosition, null);
             if (over && !_btnOver) Sfx(AudioManager.PlayOutGameMouseOverButton);
             _btnOver = over;
@@ -138,14 +140,14 @@ namespace CrimeSightRevival.Mods
             catch { _menu = null; return false; }
         }
 
-        /// <summary>La sala de espera se ve (aunque haya una ventana encima).</summary>
+        /// <summary>The waiting room is visible (even if there is a window on top).</summary>
         static bool RoomShown()
         {
             try { return _menu != null && _menu.gameObject.activeInHierarchy; }
             catch { _menu = null; return false; }
         }
 
-        /// <summary>El boton del manual se ve (activo y sin un CanvasGroup que lo oculte).</summary>
+        /// <summary>The manual button is visible (active and without a CanvasGroup hiding it).</summary>
         static bool ManualSeen(RectTransform m)
         {
             try
@@ -162,16 +164,18 @@ namespace CrimeSightRevival.Mods
             catch { return false; }
         }
 
-        /// <summary>Hay una ventana encima de la sala (o no es la pantalla activa): el boton no se puede pulsar.</summary>
+        /// <summary>There is a window over the room (or it isn't the active screen): the button can't be
+        /// pressed.</summary>
         static bool Covered()
         {
             if (!_menuOpen) return true;
             try { return _menu.IsOverlaySomeUI(); } catch { return true; }
         }
 
-        /// <summary>Con la sala tapada el boton no recibe clics y se ve exactamente como el del manual de al lado: estan
-        /// en el mismo sitio, asi que lo que el juego oscurece los oscurece a los dos, y ademas se copia lo que lleva el
-        /// del manual (su transparencia y si esta desactivado).</summary>
+        /// <summary>With the room covered the button takes no clicks and looks exactly like the manual one next to
+        /// it: they are
+        /// in the same place, so whatever the game darkens darkens both, and on top of that what the manual one has
+        /// is copied (its transparency and whether it is disabled).</summary>
         static void FadeButton(bool faded)
         {
             _btnFaded = faded;
@@ -194,7 +198,7 @@ namespace CrimeSightRevival.Mods
             if (cg.blocksRaycasts == faded) cg.blocksRaycasts = !faded;
         }
 
-        /// <summary>El boton "Manual online" de la sala (por su texto, en el idioma del juego).</summary>
+        /// <summary>The room's "Online manual" button (by its text, in the game's language).</summary>
         static float _nextWideSearch;
         static RectTransform FindManual()
         {
@@ -205,7 +209,7 @@ namespace CrimeSightRevival.Mods
                 if (lt != null && lt.ContainsKey("ctg_outgame_inTheRoom_button_onlineManual")) label = lt["ctg_outgame_inTheRoom_button_onlineManual"];
                 if (string.IsNullOrEmpty(label)) return null;
                 label = label.Trim();
-                // primero solo en el lienzo de la sala (buscar en todo el juego tarda)
+                // first only in the room's canvas (searching the whole game is slow)
                 if (_menu != null)
                     foreach (var t in _menu.transform.root.GetComponentsInChildren<TextMeshProUGUI>(false))
                     {
@@ -239,7 +243,7 @@ namespace CrimeSightRevival.Mods
             return false;
         }
 
-        /// <summary>"Selector de personajes" -> "Selector" arriba y "de personajes" debajo (la primera palabra sola).</summary>
+        /// <summary>"Character Selector" -> "Character" on top and "Selector" below (the first word alone).</summary>
         static string BtnText()
         {
             string t = TBtn[_lang];
@@ -265,13 +269,14 @@ namespace CrimeSightRevival.Mods
                 TMP_FontAsset font = srcLabel != null ? srcLabel.font : Skin.Get().Font;
                 Material fontMat = srcLabel != null ? srcLabel.fontSharedMaterial : null;
                 Color ink = srcLabel != null ? srcLabel.color : Color.black;
-                // la copia se hace dentro de un objeto apagado: asi los scripts del juego que lleva no llegan a arrancar
+                // the copy is made inside a disabled object: that way the game scripts it carries never start
                 var holder = new GameObject("CSR_Copia");
                 holder.SetActive(false);
                 holder.transform.SetParent(manual.parent, false);
                 var go = UnityEngine.Object.Instantiate(manual.gameObject, holder.transform, false);
                 go.name = "CSR_SelectorPersonajes";
-                // fuera textos y scripts del juego (el que pone "Manual online" y su accion); se quedan la imagen y el boton
+                // remove the game's texts and scripts (the one that sets "Online manual" and its action); the image
+                // and the button stay
                 foreach (var c in go.GetComponentsInChildren(Il2CppType.Of<TextMeshProUGUI>(), true))
                 {
                     try
@@ -330,14 +335,15 @@ namespace CrimeSightRevival.Mods
             }
         }
 
-        /// <summary>A la izquierda del manual, centrado en su altura (en el mismo contenedor, medido en su espacio).</summary>
+        /// <summary>To the left of the manual, centred on its height (in the same container, measured in its
+        /// space).</summary>
         static void Place(RectTransform rt, RectTransform manual)
         {
             var parent = manual.parent;
             var mr = manual.rect;
             Vector3 lo = parent.InverseTransformPoint(manual.TransformPoint(new Vector3(mr.xMin, mr.yMin, 0f)));
             Vector3 hi = parent.InverseTransformPoint(manual.TransformPoint(new Vector3(mr.xMax, mr.yMax, 0f)));
-            var right = new Vector2(Math.Min(lo.x, hi.x) - 14f, (lo.y + hi.y) / 2f);    // punto del contenedor
+            var right = new Vector2(Math.Min(lo.x, hi.x) - 14f, (lo.y + hi.y) / 2f);    // container point
             var pr = parent.GetComponent<RectTransform>();
             Vector2 pc = pr != null ? pr.rect.center : Vector2.zero;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
@@ -347,7 +353,7 @@ namespace CrimeSightRevival.Mods
             rt.anchoredPosition = right - pc;
         }
 
-        /// <summary>Sin el boton del manual: uno propio arriba a la derecha (donde suele estar).</summary>
+        /// <summary>Without the manual button: one of our own at the top right (where it usually is).</summary>
         static void OwnButton()
         {
             var sk = Skin.Get();
@@ -379,7 +385,7 @@ namespace CrimeSightRevival.Mods
             Plugin.L.LogInfo("[Selector] no encuentro \"Manual online\": boton propio arriba a la derecha");
         }
 
-        // ------------------------------------------------------------ ventana
+        // ------------------------------------------------------------ window
         const int Cols = 4, Rows = 2, PerPage = Cols * Rows;
         static GameObject _root;
         static Skin _sk;
@@ -422,7 +428,7 @@ namespace CrimeSightRevival.Mods
                         string S(string k) => e.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
                         var it = new Item { id = S("id"), key = S("key"), role = S("role") ?? "pawn", name = S("name"), image = S("image"), model = S("model"),
                                             animFrom = S("anim_from"), enabled = !e.TryGetProperty("enabled", out var en) || en.ValueKind != JsonValueKind.False };
-                        if (string.IsNullOrEmpty(it.id) || it.role != "pawn") continue;        // el traidor: mas adelante
+                        if (string.IsNullOrEmpty(it.id) || it.role != "pawn") continue;        // the traitor: further on
                         it.orig = it.id.StartsWith("orig:", StringComparison.Ordinal);
                         _items.Add(it);
                     }
@@ -444,7 +450,7 @@ namespace CrimeSightRevival.Mods
 
         static readonly Dictionary<string, Texture2D> _pics = new();
 
-        /// <summary>Imagen de la ficha: la del personaje, el retrato original guardado o la silueta.</summary>
+        /// <summary>Card image: the character's, the saved original portrait or the silhouette.</summary>
         static Texture2D PicOf(Item it)
         {
             if (_pics.TryGetValue(it.id, out var have) && have != null) return have;
@@ -458,23 +464,24 @@ namespace CrimeSightRevival.Mods
             else if (it.orig)
             {
                 t = ColorCard(it.key, out bool later) ?? Roster.LoadImage(Roster.MonoPath(it.key));
-                if (later) { _picsChanged = true; return t; }           // la de color, en otro fotograma
+                if (later) { _picsChanged = true; return t; }           // the colour one, in another frame
             }
             else if (!string.IsNullOrEmpty(it.image)) t = Roster.LoadImage(Path.Combine(LiveMods.LiveDir, it.image));
             if (t != null) _pics[it.id] = t;
-            return t;                                   // un personaje nuevo sin imagen: la silueta, hasta que le pongan una
+            return t;                                   // a new character without an image: the silhouette, until one is given
         }
 
-        /// <summary>La ficha sin marcar: en blanco y negro (la cara del juego en blanco y negro si aun no hay la de color).</summary>
+        /// <summary>The unticked card: in black and white (the game's black and white face if there is no colour one
+        /// yet).</summary>
         static Texture2D OffPic(Item it, Texture2D on)
         {
             if (on == null) return null;
-            if (it.orig && it.key != Roster.Traitor) return Roster.LoadImage(Roster.MonoPath(it.key)) ?? Gray(on);   // la del juego
+            if (it.orig && it.key != Roster.Traitor) return Roster.LoadImage(Roster.MonoPath(it.key)) ?? Gray(on);   // the game's
             return Gray(on);
         }
 
-        // donde cae el dibujo en color (el de los dialogos, la mitad de grande) dentro de la cara en blanco y negro del
-        // juego: escala y desplazamiento en pixeles (medido comparando los dos dibujos, que son el mismo)
+        // where the colour drawing (the dialogues', half as big) falls inside the game's black and white
+        // face: scale and offset in pixels (measured by comparing the two drawings, which are the same)
         static readonly Dictionary<string, (float s, float x, float y)> ColorFit = new()
         {
             ["PawnTypeData_A"] = (2.005f, -85, -3), ["PawnTypeData_B"] = (1.86f, -217, -2), ["PawnTypeData_C"] = (2.005f, -70, -3),
@@ -482,14 +489,14 @@ namespace CrimeSightRevival.Mods
         };
         static readonly Dictionary<string, Texture2D> _colorCards = new();
 
-        /// <summary>La cara del juego, en color: el dibujo en color puesto exactamente encima de la de blanco y negro
-        /// (mismo tamano y encuadre), con la forma de esta.</summary>
+        /// <summary>The game's face, in colour: the colour drawing placed exactly over the black and white one
+        /// (same size and framing), with its shape.</summary>
         static int _cardFrame;
         static Texture2D ColorCard(string key, out bool later)
         {
             later = false;
             if (_colorCards.TryGetValue(key, out var have) && have != null) return have;
-            if (_cardFrame == Time.frameCount) { later = File.Exists(Roster.ColorPath(key)); return null; }   // una por fotograma
+            if (_cardFrame == Time.frameCount) { later = File.Exists(Roster.ColorPath(key)); return null; }   // one per frame
             _cardFrame = Time.frameCount;
             var mono = Roster.LoadImage(Roster.MonoPath(key));
             var col = Roster.LoadImage(Roster.ColorPath(key));
@@ -501,7 +508,7 @@ namespace CrimeSightRevival.Mods
                 var px = new Color32[W * H];
                 for (int y = 0; y < H; y++)
                 {
-                    float cyTop = ((H - 1 - y) - fit.y) / fit.s;                  // filas contadas desde arriba
+                    float cyTop = ((H - 1 - y) - fit.y) / fit.s;                  // rows counted from the top
                     float cy = ch - 1 - cyTop;
                     for (int x = 0; x < W; x++)
                     {
@@ -522,12 +529,14 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[Selector] cara en color de " + key + ": " + e.Message); return null; }
         }
 
-        // fotos sacadas del modelo (el traidor original; personajes nuevos sin imagen): se guardan mientras dure el juego
+        // photos taken from the model (the original traitor; new characters without an image): kept while the game
+        // runs
         static readonly Dictionary<string, Texture2D> _autoPics = new();
         static readonly HashSet<string> _asked = new();
         static bool _picsChanged;
 
-        /// <summary>La cara del traidor original, sacada de su modelo (solo la primera vez: luego se guarda).</summary>
+        /// <summary>The original traitor's face, taken from its model (only the first time: then it is
+        /// saved).</summary>
         static void AskPic(Item it)
         {
             if (!it.orig || it.key != Roster.Traitor || !_asked.Add(it.key)) return;
@@ -540,7 +549,7 @@ namespace CrimeSightRevival.Mods
             if (!ok) _asked.Remove(it.key);
         }
 
-        // la misma imagen en blanco y negro (fichas sin marcar)
+        // the same image in black and white (unticked cards)
         static readonly Dictionary<IntPtr, Texture2D> _grays = new();
         static Texture2D Gray(Texture2D t)
         {
@@ -750,7 +759,7 @@ namespace CrimeSightRevival.Mods
                 cd.name = _sk.MakeText(cd.rect, "", 22, new Vector2(0, -114), new Vector2(216, 40), true);
                 cd.name.enableAutoSizing = true; cd.name.fontSizeMin = 12; cd.name.fontSizeMax = 22;
                 cd.name.raycastTarget = false;
-                cd.name.color = new Color(0.07f, 0.07f, 0.09f, 1f);        // negro: el fondo de la ventana es claro
+                cd.name.color = new Color(0.07f, 0.07f, 0.09f, 1f);        // black: the window background is light
                 cd.tag = _sk.MakeText(cd.rect, "", 16, new Vector2(0, -142), new Vector2(216, 24), false);
                 cd.tag.raycastTarget = false;
                 var boxR = ModOffer.Box("Box", cd.rect, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(26, -26), new Vector2(40, 40));
@@ -843,12 +852,12 @@ namespace CrimeSightRevival.Mods
             _prevRect.gameObject.SetActive(many); _nextRect.gameObject.SetActive(many); _pageLabel.gameObject.SetActive(many);
         }
 
-        /// <summary>La imagen entera dentro de su recuadro, sin deformarla (recortando lo que sobre).</summary>
-        // la base del hexagono de la ficha (medido en pantalla: el dibujo del boton deja margen arriba y abajo)
+        /// <summary>The whole image inside its box, without distorting it (cropping what is left over).</summary>
+        // the base of the card's hexagon (measured on screen: the button drawing leaves a margin above and below)
         const float HexBottom = -82f, PicWidth = 200f, PicMaxHeight = 250f;
 
-        /// <summary>La imagen entera, sin recortar, con su base sobre la base del hexagono (la cabeza puede salir por
-        /// arriba, como en las fichas del juego).</summary>
+        /// <summary>The whole image, uncropped, with its base on the hexagon's base (the head can stick out at
+        /// the top, like in the game's cards).</summary>
         static void BasePic(RawImage ri, Texture tex)
         {
             var rt = ri.rectTransform;
@@ -891,15 +900,15 @@ namespace CrimeSightRevival.Mods
             }
             if (over >= 0) _hover = over;
             if (_hover != _shown) ShowPreview(_hover);
-            else if (_waiting >= 0 && _waiting == _shown) ShowPreview(_shown);      // modelo preparandose
-            // los modelos de los personajes nuevos se preparan en segundo plano nada mas abrir la ventana
+            else if (_waiting >= 0 && _waiting == _shown) ShowPreview(_shown);      // model being prepared
+            // the new characters' models are prepared in the background as soon as the window opens
             for (int k = 0; k < _items.Count; k++)
             {
                 var pit = _items[k];
                 if (!pit.orig && !string.IsNullOrEmpty(pit.model) && !_prepared.Contains(pit.id))
                 {
                     if (Models.Prefit(pit.model, BaseOf(pit))) _prepared.Add(pit.id);
-                    break;                                          // uno por fotograma
+                    break;                                          // one per frame
                 }
             }
             if (_rig?.content != null)
@@ -997,7 +1006,7 @@ namespace CrimeSightRevival.Mods
             else if (!ready) _previewNote.text = TLoading[_lang];
         }
 
-        /// <summary>El modelo 3D de un personaje para la vista (se guarda mientras la ventana esta abierta).</summary>
+        /// <summary>A character's 3D model for the view (kept while the window is open).</summary>
         static GameObject ModelOf(Item it)
         {
             if (_models.TryGetValue(it.id, out var have) && have != null) return have;
@@ -1005,12 +1014,12 @@ namespace CrimeSightRevival.Mods
             GameObject go = null;
             try
             {
-                // en reposo, con la animacion del juego; un modelo propio, montado como en la partida
+                // at idle, with the game's animation; a custom model, assembled like in the match
                 Models.Preview pv = null;
                 if (it.orig) pv = Models.PreviewChar(it.key, null, Rig.Layer);
                 else if (!string.IsNullOrEmpty(it.model)) pv = Models.PreviewChar(BaseOf(it), it.model, Rig.Layer);
                 if (pv != null) { go = pv.holder; _pvs[it.id] = pv; }
-                else if (!it.orig && !string.IsNullOrEmpty(it.model)) go = Models.PreviewGlb(it.model, Rig.Layer, _made);   // quieto
+                else if (!it.orig && !string.IsNullOrEmpty(it.model)) go = Models.PreviewGlb(it.model, Rig.Layer, _made);   // still
             }
             catch (Exception e) { Plugin.L.LogWarning("[Selector] vista de " + it.id + ": " + e.Message); }
             if (go == null) { _noModel.Add(it.id); return null; }
@@ -1062,7 +1071,7 @@ namespace CrimeSightRevival.Mods
             _pics.Clear();
         }
 
-        // aviso corto arriba en el centro
+        // short notice at the top centre
         static GameObject _toast;
         static void Toast(string text)
         {
@@ -1088,7 +1097,7 @@ namespace CrimeSightRevival.Mods
             catch { }
         }
 
-        // ------------------------------------------------------------ dibujos (silueta, casilla, marca)
+        // ------------------------------------------------------------ drawings (silhouette, box, tick)
         static Texture2D _silhouette, _box, _tick;
 
         static Texture2D Draw(int n, Func<float, float, float> cover)
@@ -1106,7 +1115,7 @@ namespace CrimeSightRevival.Mods
             return t;
         }
 
-        /// <summary>Silueta de una persona (cabeza y hombros), blanca sobre transparente.</summary>
+        /// <summary>A person's silhouette (head and shoulders), white on transparent.</summary>
         internal static Texture2D Silhouette()
         {
             if (_silhouette != null) return _silhouette;
@@ -1114,7 +1123,7 @@ namespace CrimeSightRevival.Mods
             _silhouette = Draw(n, (x, y) =>
             {
                 float head = 24f - (float)Math.Sqrt((x - 64) * (x - 64) + (y - 86) * (y - 86));
-                // hombros: media elipse ancha abajo
+                // shoulders: wide half ellipse at the bottom
                 float dx = (x - 64) / 48f, dy = (y - 8) / 50f;
                 float body = (1f - (float)Math.Sqrt(dx * dx + dy * dy)) * 40f;
                 if (y > 58) body = Math.Min(body, 58 - y + 1);

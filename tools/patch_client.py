@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-CRIMESIGHT Revival - parcheador del cliente.
+CRIMESIGHT Revival - client patcher.
 
-Cambia la direccion del servidor oficial (ya cerrado) dentro de
-CrimeSight_Data/il2cpp_data/Metadata/global-metadata.dat por la de un
-servidor comunitario. Guarda una copia del original y se puede revertir.
+Replaces the address of the official server (now closed) inside
+CrimeSight_Data/il2cpp_data/Metadata/global-metadata.dat with a
+community server's. Keeps a copy of the original and can be reverted.
 
-Uso:
-  python patch_client.py "<carpeta del juego>"                      -> http://127.0.0.1:18080
-  python patch_client.py "<carpeta del juego>" --url http://192.168.1.50:18080   (sin limite de longitud)
-  python patch_client.py "<carpeta del juego>" --restore
+Usage:
+  python patch_client.py "<game folder>"                      -> http://127.0.0.1:18080
+  python patch_client.py "<game folder>" --url http://192.168.1.50:18080   (no length limit)
+  python patch_client.py "<game folder>" --restore
 """
 import argparse, os, shutil, struct, sys
 
@@ -37,7 +37,7 @@ def find_server_literal(buf, candidates):
 
 
 def patch(game_dir, url="http://127.0.0.1:18080"):
-    """Apunta el juego a 'url'. Devuelve un texto con lo hecho. Lanza ValueError si algo falla."""
+    """Points the game at 'url'. Returns a text with what was done. Raises ValueError if something fails."""
     meta = os.path.join(game_dir, META_REL)
     backup = meta + ".original"
     if not os.path.isfile(meta):
@@ -47,7 +47,7 @@ def patch(game_dir, url="http://127.0.0.1:18080"):
         raise ValueError("La URL debe empezar por http:// o https://")
     if not os.path.isfile(backup):
         shutil.copy2(meta, backup)
-    # Siempre partimos del original: se puede cambiar de servidor cuantas veces se quiera.
+    # We always start from the original: the server can be changed as many times as wanted.
     buf = bytearray(open(backup, "rb").read())
     hit = find_server_literal(buf, {ORIGINAL.encode()})
     if not hit:
@@ -58,8 +58,8 @@ def patch(game_dir, url="http://127.0.0.1:18080"):
         buf[data_pos:data_pos + old_len] = new + b"\x00" * (old_len - len(new))
         struct.pack_into("<I", buf, entry_pos, len(new))
     else:
-        # Direccion mas larga que la original: se anade al final del archivo y se apunta alli.
-        # (IL2CPP lee los textos como base_del_archivo + inicio_de_textos + indice.)
+        # Address longer than the original: it is appended at the end of the file and pointed to there.
+        # (IL2CPP reads the strings as file_base + strings_start + index.)
         _, _, _, data_off = literal_table(buf)
         while len(buf) % 8:
             buf.append(0)
@@ -80,7 +80,7 @@ def restore(game_dir):
 
 
 def current_url(game_dir):
-    """Direccion a la que apunta ahora el juego (None si no se puede leer)."""
+    """Address the game points to now (None if it can't be read)."""
     meta = os.path.join(game_dir, META_REL)
     src = meta + ".original" if os.path.isfile(meta + ".original") else meta
     if not os.path.isfile(meta):

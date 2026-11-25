@@ -1,15 +1,16 @@
-// CRIMESIGHT Revival - adaptar un modelo humanoide cualquiera al esqueleto de los personajes del juego (sin Unity).
+// CRIMESIGHT Revival - adapt any humanoid model to the skeleton of the game's characters (without Unity).
 //
-// Los modelos que circulan (Mixamo, VRChat/Unity, VRoid, Blender/Rigify, 3ds Max Biped, DAZ, MMD...) tienen su propio
-// esqueleto. Aqui se reconoce cada hueso por su nombre (cadera, columna, brazos, piernas, dedos...), y el modelo se
-// pasa al esqueleto del juego:
-//   1. Se gira, escala y coloca entero para que quede de pie, mirando hacia delante y con la altura del personaje.
-//   2. Cada brazo y pierna se gira hasta la postura del juego (T), aunque el modelo venga en A o con los codos
-//      doblados. Es como "aplicar una postura" en Blender: cada vertice sigue a sus huesos con sus pesos.
-//   3. Cada trozo se lleva a donde esta su hueso en el juego (por si tiene otras proporciones) y sus pesos pasan a
-//      los huesos del juego. Lo que no se reconoce (pelo, falda, giros, ayudantes...) va con el hueso reconocido
-//      mas cercano por encima (el pelo con la cabeza, la falda con la cadera).
-// Sale un Glb.Model con los nombres del juego que CrimeSightRevivalModelsGlb.cs pone como uno hecho a medida.
+// The models out there (Mixamo, VRChat/Unity, VRoid, Blender/Rigify, 3ds Max Biped, DAZ, MMD...) have their own
+// skeleton. Here each bone is recognised by its name (hips, spine, arms, legs, fingers...), and the model is
+// moved onto the game's skeleton:
+//   1. It is rotated, scaled and placed as a whole so it stands up, facing forward and with the character's height.
+//   2. Each arm and leg is rotated to the game's pose (T), even if the model comes in A or with the elbows
+//      bent. It is like "apply pose" in Blender: each vertex follows its bones with its weights.
+//   3. Each piece is taken to where its bone is in the game (in case it has other proportions) and its weights move
+//      to
+//      the game's bones. What isn't recognised (hair, skirt, twists, helpers...) goes with the nearest recognised
+//      bone above (hair with the head, skirt with the hips).
+// The result is a Glb.Model with the game's names that CrimeSightRevivalModelsGlb.cs sets up like a custom-made one.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,12 +19,13 @@ namespace CrimeSightRevival.Mods
 {
     static class Humanoid
     {
-        /// <summary>Un hueso del personaje del juego: donde esta en reposo (respecto a su modelo) y su padre.</summary>
+        /// <summary>A bone of the game character: where it is at rest (relative to its model) and its
+        /// parent.</summary>
         public class GameBone { public string name, parent; public double[] pos; }
 
         static readonly string[] Fingers = { "thumb", "index", "middle", "ring", "little" };
 
-        // ------------------------------------------------------------ los huesos del juego (c_hum_XX) por papel
+        // ------------------------------------------------------------ the game's bones (c_hum_XX) by role
         static readonly Dictionary<string, string> GameRoles = BuildGameRoles();
 
         static Dictionary<string, string> BuildGameRoles()
@@ -40,7 +42,8 @@ namespace CrimeSightRevival.Mods
                 d["lowerarm." + s] = $"SKL_0{a}2_{arm}FARM"; d["hand." + s] = $"SKL_0{a}3_{arm}HAND";
                 d["upperleg." + s] = $"SKL_0{l}0_{arm}THIGH"; d["lowerleg." + s] = $"SKL_0{l}1_{arm}LEG";
                 d["foot." + s] = $"SKL_0{l}2_{arm}FOOT"; d["toes." + s] = $"SKL_0{l}3_{arm}TOE";
-                // dedos: SKL_101_LF10.. pulgar F10-12, indice F21-23, corazon F31-33, anular F41-43, menique F51-53 (F40, la palma)
+                // fingers: SKL_101_LF10.. thumb F10-12, index F21-23, middle F31-33, ring F41-43, little F51-53 (F40,
+                // the palm)
                 var first = new[] { 10, 21, 31, 41, 51 };
                 var seq = new[] { 1, 4, 7, 11, 14 };
                 for (int f = 0; f < 5; f++)
@@ -50,7 +53,8 @@ namespace CrimeSightRevival.Mods
             return d;
         }
 
-        /// <summary>El papel de quien hereda si el juego no tiene ese hueso (los dedos van a la mano, etc.).</summary>
+        /// <summary>The role it inherits from if the game doesn't have that bone (fingers go to the hand,
+        /// etc.).</summary>
         static string RoleParent(string role)
         {
             string side = role.EndsWith(".L") ? ".L" : role.EndsWith(".R") ? ".R" : "";
@@ -78,7 +82,7 @@ namespace CrimeSightRevival.Mods
             return "hand" + side;
         }
 
-        // segmentos que se giran a la postura del juego: papel -> papel del hueso hijo que marca la direccion
+        // segments rotated to the game's pose: role -> role of the child bone that sets the direction
         static readonly (string role, string[] child)[] Aim =
         {
             ("shoulder", new[] { "upperarm" }), ("upperarm", new[] { "lowerarm" }), ("lowerarm", new[] { "hand", "middle1", "index1" }),
@@ -86,7 +90,7 @@ namespace CrimeSightRevival.Mods
             ("upperleg", new[] { "lowerleg" }), ("lowerleg", new[] { "foot", "toes" }), ("foot", new[] { "toes" }),
         };
 
-        // ------------------------------------------------------------ reconocer un hueso por su nombre
+        // ------------------------------------------------------------ recognise a bone by its name
         static readonly HashSet<string> Skip = new()
         {
             "twist", "roll", "ik", "fk", "pole", "target", "nub", "end", "tip", "helper", "hlp", "ctrl", "control", "corrective",
@@ -101,9 +105,11 @@ namespace CrimeSightRevival.Mods
             "bn", "b", "c", "sk", "skl", "deform", "pivot", "bind", "drv", "d",
         };
 
-        /// <summary>(papel sin lado, lado "L"/"R"/"") o null. Los papeles: hips, spine, neck, head, eye, shoulder, upperarm,
-        /// lowerarm, hand, upperleg, lowerleg, leg? (pierna sin saber si muslo o espinilla), foot, toes, y los dedos como
-        /// "finger:thumb" (su falange se decide por el orden en la cadena).</summary>
+        /// <summary>(role without side, side "L"/"R"/"") or null. The roles: hips, spine, neck, head, eye, shoulder,
+        /// upperarm,
+        /// lowerarm, hand, upperleg, lowerleg, leg? (leg without knowing whether thigh or shin), foot, toes, and the
+        /// fingers as
+        /// "finger:thumb" (its phalanx is decided by the order in the chain).</summary>
         internal static (string role, string side)? Classify(string name)
         {
             if (string.IsNullOrEmpty(name)) return null;
@@ -112,7 +118,7 @@ namespace CrimeSightRevival.Mods
             if (cut >= 0 && cut < n.Length - 1) n = n.Substring(cut + 1);
             foreach (char ch in n) if (ch >= 0x3040 && ch <= 0x9FFF) return ClassifyJp(n);
 
-            // palabras: "LeftUpperArm" "upper_arm.L" "Bip01 L UpperArm" "J_Bip_L_UpperArm" "lShldrBend"...
+            // words: "LeftUpperArm" "upper_arm.L" "Bip01 L UpperArm" "J_Bip_L_UpperArm" "lShldrBend"...
             var words = new List<string>();
             var cur = new System.Text.StringBuilder();
             void Flush() { if (cur.Length > 0) { words.Add(cur.ToString().ToLowerInvariant()); cur.Clear(); } }
@@ -149,14 +155,14 @@ namespace CrimeSightRevival.Mods
             if (j.Length == 0) return null;
             if (j.Contains("forehead")) return null;
 
-            // dedos
+            // fingers
             string finger = null;
             if (j.Contains("thumb")) finger = "thumb";
             else if (j.Contains("index") || j.Contains("pointer") || j.Contains("forefinger")) finger = "index";
             else if (j.Contains("middle")) finger = "middle";
             else if (j.Contains("ring")) finger = "ring";
             else if (j.Contains("pinky") || j.Contains("pinkie") || j.Contains("little") || j.Contains("small")) finger = "little";
-            else if (j.Contains("finger") && fingerDigit != null) finger = "finger" + fingerDigit[0];   // Biped: Finger0..4 (se ajusta luego)
+            else if (j.Contains("finger") && fingerDigit != null) finger = "finger" + fingerDigit[0];   // Biped: Finger0..4 (adjusted later)
             if (finger != null) return side.Length > 0 ? ("finger:" + finger, side) : null;
 
             if (j.Contains("eye")) return side.Length > 0 ? ("eye", side) : null;
@@ -191,7 +197,7 @@ namespace CrimeSightRevival.Mods
             else if (n.Contains("小指")) r = "finger:little";
             else if (n.Contains("目")) r = "eye";
             else if (n.Contains("下半身")) return side.Length == 0 ? ("hips", "") : null;
-            else if (n.Contains("上半身")) return null;                       // la columna sale de la cadena
+            else if (n.Contains("上半身")) return null;                       // the spine comes from the chain
             else if (n.Contains("手首")) r = "hand";
             else if (n.Contains("足首")) r = "foot";
             else if (n.Contains("首")) return side.Length == 0 ? ("neck", "") : null;
@@ -206,8 +212,9 @@ namespace CrimeSightRevival.Mods
             return side.Length > 0 ? (r, side) : null;
         }
 
-        /// <summary>Lo que se sabe de un esqueleto humanoide frente al del juego: papel de cada hueso, giro y escala
-        /// para ponerlo de pie como el del juego, y el giro de cada hueso hasta la postura T del juego.</summary>
+        /// <summary>What is known of a humanoid skeleton compared to the game's: role of each bone, rotation and
+        /// scale
+        /// to stand it up like the game's, and each bone's rotation to the game's T pose.</summary>
         internal class Fit
         {
             public Dictionary<string, string> parent, role, roleOf;
@@ -232,7 +239,7 @@ namespace CrimeSightRevival.Mods
             report = null;
             int Depth(string nm) { int d = 0; for (var p = parent.GetValueOrDefault(nm); p != null && d < 512; p = parent.GetValueOrDefault(p)) d++; return d; }
             bool IsAncestor(string a, string of) { for (var p = parent.GetValueOrDefault(of); p != null; p = parent.GetValueOrDefault(p)) if (p == a) return true; return false; }
-            // --- papeles por nombre (si dos huesos dicen lo mismo, gana el que mas malla mueve)
+            // --- roles by name (if two bones say the same, the one that moves the most mesh wins)
             var cand = new Dictionary<string, List<string>>();
             bool zeroBased = false;
             foreach (var nm in parent.Keys)
@@ -245,15 +252,15 @@ namespace CrimeSightRevival.Mods
                 if (!cand.TryGetValue(key, out var l)) cand[key] = l = new List<string>();
                 l.Add(nm);
             }
-            var role = new Dictionary<string, string>();                     // papel -> hueso del modelo
+            var role = new Dictionary<string, string>();                     // role -> model bone
             string Best(List<string> l) => l.OrderByDescending(x => weight.GetValueOrDefault(x)).ThenBy(Depth).First();
             foreach (var kv in cand)
             {
                 if (kv.Key.StartsWith("finger:")) continue;
                 role[kv.Key] = Best(kv.Value);
             }
-            // cadenas con nombres genericos ("arm_joint_L_1/2/3", "Leg_L_01/02/03"): todos dicen "brazo" o "pierna";
-            // si no hay antebrazo (o espinilla) con nombre, van por orden en la cadena
+            // chains with generic names ("arm_joint_L_1/2/3", "Leg_L_01/02/03"): they all say "arm" or "leg";
+            // if there is no named forearm (or shin), they go by order in the chain
             foreach (var s in new[] { "L", "R" })
             {
                 foreach (var (kind, seq) in new[] { ("upperarm", new[] { "shoulder", "upperarm", "lowerarm", "hand" }),
@@ -270,14 +277,14 @@ namespace CrimeSightRevival.Mods
                     for (int k = 0; k < chain.Count && k < names.Length; k++) role[names[k] + "." + s] = chain[k];
                 }
             }
-            foreach (var s in new[] { "L", "R" })                            // "leg": muslo si no hay otro muslo, si no espinilla
+            foreach (var s in new[] { "L", "R" })                            // "leg": thigh if there is no other thigh, otherwise shin
                 if (role.TryGetValue("leg?." + s, out var leg))
                 {
                     role.Remove("leg?." + s);
                     if (!role.ContainsKey("upperleg." + s)) role["upperleg." + s] = leg;
                     else if (!role.ContainsKey("lowerleg." + s)) role["lowerleg." + s] = leg;
                 }
-            // dedos: las falanges por orden en la cadena (las 3 primeras)
+            // fingers: the phalanxes by order in the chain (the first 3)
             foreach (var kv in cand)
             {
                 if (!kv.Key.StartsWith("finger:")) continue;
@@ -289,7 +296,8 @@ namespace CrimeSightRevival.Mods
                     f = Fingers[d];
                 }
                 var chain = kv.Value.Where(x => Depth(x) >= 0).OrderBy(Depth).ToList();
-                // si vienen de dos cadenas distintas (pulgar de la palma y otro hueso), la que tenga mas peso
+                // if they come from two different chains (thumb from the palm and another bone), the one with more
+                // weight
                 for (int k = 0; k < 3 && k < chain.Count; k++) role.TryAdd($"{f}{k + 1}.{s}", chain[k]);
             }
             if (!role.ContainsKey("hips") && role.TryGetValue("upperleg.L", out var ll) && role.TryGetValue("upperleg.R", out var lr))
@@ -297,7 +305,7 @@ namespace CrimeSightRevival.Mods
                 var h = Lca(ll, lr, parent);
                 if (h != null) role["hips"] = h;
             }
-            // cuello y cabeza que no se llamen asi (Rigify): por encima de los hombros, lo mas alto
+            // neck and head not named that way (Rigify): above the shoulders, the highest
             if (!role.ContainsKey("neck") && !role.ContainsKey("head") && role.TryGetValue("upperarm.L", out var al) && role.TryGetValue("upperarm.R", out var ar))
             {
                 var top = Lca(al, ar, parent);
@@ -316,14 +324,14 @@ namespace CrimeSightRevival.Mods
                     {
                         var path = new List<string>();
                         for (var p = best; p != null && p != top; p = parent.GetValueOrDefault(p)) path.Add(p);
-                        path.Reverse();                                     // de abajo a arriba
+                        path.Reverse();                                     // bottom to top
                         if (path.Count >= 2) { role["neck"] = path[0]; role["head"] = path[path.Count - 1] == best && path.Count > 1 ? path[path.Count - 2] : best; }
                         else role["head"] = best;
                         if (role["head"] == role.GetValueOrDefault("neck")) role.Remove("neck");
                     }
                 }
             }
-            // la columna: lo que hay entre la cadera y el cuello (sin la cadera)
+            // the spine: what is between the hips and the neck (without the hips)
             role.Remove("spine"); role.Remove("chest");
             var neckOrHead = role.GetValueOrDefault("neck") ?? role.GetValueOrDefault("head");
             if (neckOrHead != null && role.TryGetValue("hips", out var hips))
@@ -335,13 +343,13 @@ namespace CrimeSightRevival.Mods
                 spine.RemoveAll(x => role.ContainsValue(x));
                 if (spine.Count > 0) role["spine"] = spine[0];
                 if (spine.Count > 1) role["chest"] = spine[spine.Count - 1];
-                for (int k = 1; k < spine.Count - 1; k++) role["spine:" + k] = spine[k];      // las del medio, con la columna
+                for (int k = 1; k < spine.Count - 1; k++) role["spine:" + k] = spine[k];      // the middle ones, with the spine
             }
 
             bool arms = role.ContainsKey("upperarm.L") && role.ContainsKey("upperarm.R");
             bool legs = role.ContainsKey("upperleg.L") && role.ContainsKey("upperleg.R");
-            // un animal (zorro, perro...) tambien tiene "patas" y "cabeza": en un humanoide las piernas van hacia abajo,
-            // al lado contrario de la cabeza
+            // an animal (fox, dog...) also has "legs" and a "head": in a humanoid the legs go down,
+            // opposite the head
             if (legs && neckOrHead != null && role.TryGetValue("hips", out var hp0))
             {
                 string fl = role.GetValueOrDefault("foot.L") ?? role.GetValueOrDefault("lowerleg.L") ?? role["upperleg.L"];
@@ -362,7 +370,7 @@ namespace CrimeSightRevival.Mods
                 return null;
             }
 
-            // --- hueso del juego de cada papel (o el de su papel padre si el juego no lo tiene)
+            // --- game bone of each role (or its parent role's if the game doesn't have it)
             string GameFor(string r)
             {
                 if (r.StartsWith("spine:")) r = "spine";
@@ -371,18 +379,18 @@ namespace CrimeSightRevival.Mods
                 return null;
             }
             bool Exact(string r) => GameRoles.TryGetValue(r, out var g) && game.ContainsKey(g);
-            var roleOf = new Dictionary<string, string>();                    // hueso del modelo -> papel
+            var roleOf = new Dictionary<string, string>();                    // model bone -> role
             foreach (var kv in role) roleOf[kv.Value] = kv.Key;
             double[] G(string r) => game[GameFor(r)].pos;
 
-            // --- 1. girar, escalar y colocar entero
+            // --- 1. rotate, scale and place as a whole
             string top2 = role.GetValueOrDefault("head") ?? role["neck"];
             string topR = role.ContainsKey("head") ? "head" : "neck";
             var upS = Sub(pos[top2], pos[role["hips"]]); var upG = Sub(G(topR), G("hips"));
             double[] rightS, rightG;
             if (arms) { rightS = Sub(pos[role["upperarm.R"]], pos[role["upperarm.L"]]); rightG = Sub(G("upperarm.R"), G("upperarm.L")); }
             else { rightS = Sub(pos[role["upperleg.R"]], pos[role["upperleg.L"]]); rightG = Sub(G("upperleg.R"), G("upperleg.L")); }
-            // escala: la altura de los pies a la cabeza (la de la cadera a la cabeza falla con proporciones raras)
+            // scale: the height from the feet to the head (hips to head fails with odd proportions)
             double scale = Len(upG) / Math.Max(Len(upS), 1e-9);
             string footS = role.GetValueOrDefault("foot.L") ?? role.GetValueOrDefault("foot.R");
             if (footS != null)
@@ -398,9 +406,9 @@ namespace CrimeSightRevival.Mods
             var p0 = new Dictionary<string, double[]>();
             foreach (var kv in pos) p0[kv.Key] = T0(kv.Value);
 
-            // --- 2. brazos y piernas a la postura del juego (de padres a hijos)
+            // --- 2. arms and legs to the game's pose (parents to children)
             var order = parent.Keys.OrderBy(Depth).ToList();
-            var delta = new Dictionary<string, double[]>();                  // giro de cada hueso (en el espacio del modelo)
+            var delta = new Dictionary<string, double[]>();                  // rotation of each bone (in model space)
             var posed = new Dictionary<string, double[]>();
             int aimed = 0;
             foreach (var nm in order)
@@ -432,11 +440,11 @@ namespace CrimeSightRevival.Mods
                              hipS = hipS, hipG = hipG, scale = scale, arms = arms, legs = legs, aimed = aimed, game = game };
         }
 
-        // ------------------------------------------------------------ el paso al esqueleto del juego
+        // ------------------------------------------------------------ the move to the game's skeleton
         public static Glb.Model Retarget(Glb.Model src, Dictionary<string, GameBone> game, out string report)
         {
             report = null;
-            // --- huesos del modelo: padres, profundidad, posicion, peso
+            // --- model bones: parents, depth, position, weight
             var parent = new Dictionary<string, string>();
             var pos = new Dictionary<string, double[]>();
             foreach (var jt in src.joints)
@@ -467,9 +475,9 @@ namespace CrimeSightRevival.Mods
             double[] G(string r) => f.G(r);
             double[] T0(double[] v) => f.T0(v);
 
-            // --- 3. cada hueso del modelo -> hueso del juego, y como se mueven sus vertices
+            // --- 3. each model bone -> game bone, and how its vertices move
             string Up(string nm) { for (var x = nm; x != null; x = parent.GetValueOrDefault(x)) if (roleOf.ContainsKey(x)) return x; return null; }
-            // huesos reconocidos que cuelgan directamente de cada reconocido, y el segmento de cada uno (hasta su hijo)
+            // recognised bones hanging directly from each recognised one, and each one's segment (up to its child)
             var kids = new Dictionary<string, List<string>>();
             foreach (var b in roleOf.Keys) { var u = Up(parent.GetValueOrDefault(b)); if (u != null) { if (!kids.TryGetValue(u, out var l)) kids[u] = l = new List<string>(); l.Add(b); } }
             var mappedCache = new Dictionary<string, string>();
@@ -477,8 +485,8 @@ namespace CrimeSightRevival.Mods
             {
                 if (mappedCache.TryGetValue(nm, out var hit)) return hit;
                 var a = Up(nm);
-                // uno no reconocido (manga, ayudante) que esta sobre el segmento de un hijo reconocido de su padre
-                // (p. ej. colgado del hombro pero a lo largo del brazo) va con ese hijo
+                // an unrecognised one (sleeve, helper) lying on the segment of a recognised child of its parent
+                // (e.g. hanging from the shoulder but along the arm) goes with that child
                 if (a != null && a != nm && kids.TryGetValue(a, out var ks) && pos.TryGetValue(nm, out var pu))
                     foreach (var b in ks)
                     {
@@ -492,8 +500,8 @@ namespace CrimeSightRevival.Mods
                     }
                 return mappedCache[nm] = a;
             }
-            // el esqueleto propio del modelo: cada hueso del juego, donde lo tiene el modelo (o el del juego si no lo tiene),
-            // y todo un poco arriba o abajo para que los tobillos queden a la altura de los del juego (los pies en el suelo)
+            // the model's own skeleton: each game bone, where the model has it (or the game's if it doesn't),
+            // and everything a bit up or down so the ankles end up at the height of the game's (feet on the ground)
             var rig = new Dictionary<string, double[]>();
             foreach (var kv in role)
                 if (Exact(kv.Key) && !rig.ContainsKey(GameRoles[kv.Key])) rig[GameRoles[kv.Key]] = posed[kv.Value];
@@ -531,7 +539,7 @@ namespace CrimeSightRevival.Mods
                 jGame[j] = GameJoint(GameFor(r));
                 jDelta[j] = delta[m];
                 jFrom[j] = p0[m];
-                jTo[j] = Add(posed[m], lifted);                                     // v -> delta(v - p0[m]) + posed[m]: sus medidas
+                jTo[j] = Add(posed[m], lifted);                                     // v -> delta(v - p0[m]) + posed[m]: its measurements
             }
 
             foreach (var p in src.parts)
@@ -570,16 +578,17 @@ namespace CrimeSightRevival.Mods
                 }
                 outModel.parts.Add(q);
             }
-            foreach (var jt in outModel.joints.ToList()) foreach (var an in jt.ancestors) GameJoint(an);   // la cadena entera hasta la raiz
+            foreach (var jt in outModel.joints.ToList()) foreach (var an in jt.ancestors) GameJoint(an);   // the whole chain up to the root
             int known = roleOf.Count(kv => !kv.Value.StartsWith("spine:"));
             report = $"adaptado como humanoide: {known} huesos reconocidos ({(arms ? "brazos" : "sin brazos")}, {(legs ? "piernas" : "sin piernas")}, " +
                      $"{role.Keys.Count(k => k.Contains("1."))} dedos), {aimed} giros a la postura del juego, escala {scale:0.###}";
             return outModel;
         }
 
-        // ------------------------------------------------------------ animaciones de otro esqueleto
-        /// <summary>Una animacion (de un .glb/.fbx humanoide) lista para mover el esqueleto del juego: para cada hueso del
-        /// juego, que nodo la mueve y como pasar su giro (Q = pre * giro del nodo * post, en el espacio del modelo).</summary>
+        // ------------------------------------------------------------ animations from another skeleton
+        /// <summary>An animation (from a humanoid .glb/.fbx) ready to move the game's skeleton: for each game
+        /// bone, which node moves it and how to carry over its rotation (Q = pre * node rotation * post, in model
+        /// space).</summary>
         public class AnimMap
         {
             public Glb.Model src; public Glb.Anim anim;
@@ -588,7 +597,7 @@ namespace CrimeSightRevival.Mods
             public string report;
         }
 
-        /// <summary>El giro de una matriz de escena glTF, en Unity (filas), sin escala.</summary>
+        /// <summary>The rotation of a glTF scene matrix, in Unity (rows), without scale.</summary>
         static double[] RotU(float[] m)
         {
             var r = new double[9];
@@ -634,20 +643,20 @@ namespace CrimeSightRevival.Mods
             {
                 if (kv.Key.StartsWith("spine:") || !f.Exact(kv.Key) || !index.TryGetValue(kv.Value, out var ni)) continue;
                 var w0 = RotU(rest[ni]);
-                // Q(t) = R * W(t) * W0^-1 * R^-1 * aim^-1 : el giro desde su reposo, en el reposo en T del juego
+                // Q(t) = R * W(t) * W0^-1 * R^-1 * aim^-1 : the rotation from its rest, in the game's T rest
                 var post = Mul(Mul(Transpose(w0), rotT), Transpose(f.delta[kv.Value]));
                 m.bones.Add((GameRoles[kv.Key], ni, f.rot, post));
                 if (kv.Key == "hips") { m.hips = ni; m.hipRest = pos[kv.Value]; }
             }
-            // de padres a hijos (asi el plugin pone cada giro sobre el de su padre ya puesto)
+            // parents to children (so the plugin puts each rotation over its parent's, already set)
             int Depth(string g) { int d = 0; for (var p = game[g].parent; p != null && game.ContainsKey(p); p = game[p].parent) d++; return d; }
             m.bones.Sort((x, y) => Depth(x.game).CompareTo(Depth(y.game)));
             m.report = report = $"animacion adaptada: {m.bones.Count} huesos del juego movidos";
             return m;
         }
 
-        /// <summary>Los giros de la animacion en el instante t: hueso del juego -> giro en el espacio del modelo (filas),
-        /// que se aplica sobre su giro de reposo; y cuanto sube o baja la cadera (en metros del juego).</summary>
+        /// <summary>The animation's rotations at instant t: game bone -> rotation in model space (rows),
+        /// applied over its rest rotation; and how much the hips go up or down (in game metres).</summary>
         public static void SampleAnim(AnimMap m, float t, List<(string game, double[] q)> outRot, out double hipUp)
         {
             var gl = Glb.Pose(m.src, m.anim, t);
@@ -665,7 +674,7 @@ namespace CrimeSightRevival.Mods
             return null;
         }
 
-        // ------------------------------------------------------------ cuentas (matrices 3x3 por filas)
+        // ------------------------------------------------------------ maths (3x3 row matrices)
         static double[] D(float[] f) => new double[] { f[0], f[1], f[2] };
         static float[] F(double[] d) => new[] { (float)d[0], (float)d[1], (float)d[2] };
         static double[] Add(double[] a, double[] b) => new[] { a[0] + b[0], a[1] + b[1], a[2] + b[2] };
@@ -688,7 +697,7 @@ namespace CrimeSightRevival.Mods
         }
         static double[] Transpose(double[] m) => new[] { m[0], m[3], m[6], m[1], m[4], m[7], m[2], m[5], m[8] };
 
-        /// <summary>Base ortonormal (derecha, arriba, delante) en columnas, a partir de "arriba" y "derecha".</summary>
+        /// <summary>Orthonormal basis (right, up, forward) in columns, from "up" and "right".</summary>
         static double[] Frame(double[] up, double[] right)
         {
             var u = Norm(up);
@@ -697,7 +706,7 @@ namespace CrimeSightRevival.Mods
             return new[] { r[0], u[0], f[0], r[1], u[1], f[1], r[2], u[2], f[2] };
         }
 
-        /// <summary>El giro mas corto que lleva la direccion a hasta la b.</summary>
+        /// <summary>The shortest rotation taking direction a to b.</summary>
         static double[] FromTo(double[] a, double[] b)
         {
             a = Norm(a); b = Norm(b);

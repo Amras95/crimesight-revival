@@ -1,36 +1,36 @@
 """
-CRIMESIGHT Revival - escenarios del creador de escenarios en una sala.
+CRIMESIGHT Revival - stage creator stages in a room.
 
-El anfitrion pone en la sala sus escenarios activos. Al unirse, el lanzador de cada jugador se los
-baja (GET /revival/stages), los deja listos para su juego y avisa de cuales tiene
-(POST /revival/stages/have). Un escenario personalizado solo se juega si TODOS los jugadores de la
-sala lo tienen exactamente igual: si a alguien le falta (o no tiene el plugin), el servidor elige
-un escenario normal en su lugar, igual que hace con "Aleatorio". Asi nadie se queda en negro.
+The host puts their active stages in the room. On joining, each player's launcher
+downloads them (GET /revival/stages), gets them ready for their game and reports which it has
+(POST /revival/stages/have). A custom stage is only played if ALL the players in the
+room have it exactly the same: if someone is missing it (or doesn't have the plugin), the server picks
+a normal stage instead, just like it does with "Random". That way nobody is left with a black screen.
 
-Un escenario es la distribucion que guarda el creador (habitaciones, puertas cerradas, pasadizos,
-lobos, gas y salidas): un JSON pequeno. No lleva nada del juego.
+A stage is the layout the creator saves (rooms, closed doors, passages,
+wolves, gas and exits): a small JSON. It carries nothing from the game.
 
-Mientras a alguien le falta el escenario elegido, la sala no deja empezar: el jugador sale marcado
-("cargando escenario..." mientras su lanzador se lo baja, "sin el escenario" si no puede tenerlo).
+While someone is missing the chosen stage, the room doesn't allow starting: the player shows marked
+("loading stage..." while their launcher downloads it, "without the stage" if they can't have it).
 """
 import hashlib, json, os, threading, time
 
-PREFIX = "Stage_CSR_"               # nombre de escenario en el juego: Stage_CSR_<id>
-TEST_STAGE = "Stage_Yokn_CSRTest"   # "Escenario de pruebas": solo para una persona
+PREFIX = "Stage_CSR_"               # stage name in the game: Stage_CSR_<id>
+TEST_STAGE = "Stage_Yokn_CSRTest"   # "Test stage": only for one person
 MAX_STAGES = 20
 MAX_BYTES = 256 * 1024
 FIELDS = ("base", "rooms", "blocked", "byways", "wolves", "gas", "spawns")
-SYNC_GRACE = 30                     # segundos que se espera a que un lanzador se ponga al dia
+SYNC_GRACE = 30                     # seconds to wait for a launcher to catch up
 
 
 def layout_hash(layout):
-    """Huella de una distribucion (sin el nombre): dos jugadores tienen el mismo escenario si coincide."""
+    """Fingerprint of a layout (without the name): two players have the same stage if it matches."""
     core = {k: layout.get(k) for k in FIELDS}
     return hashlib.sha1(json.dumps(core, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:16]
 
 
 def load_dir(path):
-    """Escenarios de una carpeta (los .json que guarda el lanzador), para un servidor dedicado."""
+    """Stages from a folder (the .json files the launcher saves), for a dedicated server."""
     out = []
     if not path or not os.path.isdir(path):
         return out
@@ -51,9 +51,9 @@ class StageRoom:
     def __init__(self, stages=None):
         self.lock = threading.Lock()
         self.stages = {}        # id -> {"id", "name", "hash", "layout"}
-        self.have = {}          # jugador -> {id: huella}
-        self.seen = {}          # jugador -> lista de la sala (su huella) con la que se sincronizo
-        self.since = {}         # jugador -> cuando se le empezo a esperar
+        self.have = {}          # player -> {id: fingerprint}
+        self.seen = {}          # player -> room list (its fingerprint) it synced with
+        self.since = {}         # player -> when we started waiting for them
         self.changed = time.time()
         self.set(stages or [])
 
@@ -75,7 +75,7 @@ class StageRoom:
         return hashlib.sha1(json.dumps(pairs).encode()).hexdigest()[:16]
 
     def key(self):
-        """Huella de la lista de escenarios de la sala ("" si no hay ninguno)."""
+        """Fingerprint of the room's stage list ("" if there are none)."""
         with self.lock:
             return self._key()
 
@@ -98,8 +98,8 @@ class StageRoom:
             self.seen[str(player)] = None if seen is None else str(seen)[:40]
 
     def state(self, stage, player, now=None):
-        """"ok": ese jugador tiene el escenario; "sync": su lanzador aun se esta poniendo al dia;
-        "missing": no lo tiene ni lo va a tener (sin el plugin, o con un lanzador antiguo)."""
+        """"ok": that player has the stage; "sync": their launcher is still catching up;
+        "missing": they don't have it and won't (without the plugin, or with an old launcher)."""
         now = now or time.time()
         player = str(player)
         with self.lock:
@@ -108,10 +108,10 @@ class StageRoom:
                 self.since.pop(player, None)
                 return "ok"
             if mine is not None and self.seen.get(player) == self._key():
-                return "missing"                      # ya se sincronizo con esta lista y no lo tiene
+                return "missing"                      # already synced with this list and doesn't have it
             start = max(self.since.setdefault(player, now), self.changed)
             return "sync" if now - start < SYNC_GRACE else "missing"
 
     def ready(self, stage, players):
-        """Todos esos jugadores tienen ese escenario de la sala, y el mismo."""
+        """All those players have that room stage, and the same one."""
         return bool(players) and all(self.state(stage, p) == "ok" for p in players)

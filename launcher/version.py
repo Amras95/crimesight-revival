@@ -1,6 +1,6 @@
-# La version la escribe GitHub Actions al compilar cada release ("dev" = sin compilar).
+# The version is written by GitHub Actions when building each release ("dev" = not built).
 VERSION = "dev"
-# Repositorio del que el lanzador descarga sus actualizaciones.
+# Repository the launcher downloads its updates from.
 REPO = "Amras95/crimesight-revival"
-# Archivo de la release que corresponde a este sistema (Windows o Linux / Steam Deck).
+# Release file matching this system (Windows or Linux / Steam Deck).
 ASSET = "CrimeSightRevival.exe" if __import__("os").name == "nt" else "CrimeSightRevival-linux"

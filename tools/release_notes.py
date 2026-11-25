@@ -1,11 +1,11 @@
 """
-Texto de la release que publica GitHub Actions. El lanzador ensena sus novedades antes de actualizarse.
+Text of the release GitHub Actions publishes. The launcher shows its notes before updating.
 
-  python tools/release_notes.py <sha256 del .exe> <commit anterior> <archivo de salida>
+  python tools/release_notes.py <sha256 of the .exe> <previous commit> <output file>
 
-Las novedades salen del primer bloque de CHANGELOG.md (de su primer "## " al siguiente) si ese archivo
-cambia en la subida. Si no cambia, del mensaje del commit (variable de entorno COMMIT_MESSAGE): asi un
-arreglo rapido no repite las novedades de la version anterior.
+The notes come from the first block of CHANGELOG.md (from its first "## " to the next) if that file
+changes in the push. If it doesn't, from the commit message (COMMIT_MESSAGE environment variable): that way a
+quick fix doesn't repeat the previous version's notes.
 """
 import os, subprocess, sys
 
@@ -26,7 +26,7 @@ SHA-256: `{sha}`
 
 
 def split_block(text):
-    """(titulo, cuerpo) del primer bloque "## " de un registro de cambios."""
+    """(title, body) of the first "## " block of a changelog."""
     out, title = [], None
     for ln in (text or "").replace("\r\n", "\n").split("\n"):
         if ln.startswith("## "):
@@ -40,7 +40,7 @@ def split_block(text):
 
 
 def top_block(path):
-    """El primer bloque del registro de cambios, sin su titulo."""
+    """The first block of the changelog, without its title."""
     try:
         with open(path, encoding="utf-8") as f:
             return split_block(f.read())[1]
@@ -49,7 +49,7 @@ def top_block(path):
 
 
 def old_changelog(before):
-    """CHANGELOG.md tal como estaba en el commit anterior ("" si no se sabe)."""
+    """CHANGELOG.md as it was in the previous commit ("" if unknown)."""
     if not before or not before.strip("0"):
         return ""
     try:
@@ -60,8 +60,8 @@ def old_changelog(before):
 
 
 def only_new(block, old_block):
-    """Del bloque, solo las lineas que no estaban (con su "### idioma" delante). Si se va anadiendo
-    al mismo bloque en varias subidas, cada actualizacion ensena solo lo suyo y no todo otra vez."""
+    """From the block, only the lines that weren't there (with their "### language" in front). If lines keep being added
+    to the same block over several pushes, each update shows only its own and not everything again."""
     old = {ln.strip() for ln in old_block.split("\n") if ln.strip()}
     out, header, pending = [], None, []
     for ln in block.split("\n"):
@@ -76,7 +76,7 @@ def only_new(block, old_block):
 
 
 def changelog_changed(before):
-    """True / False si se sabe si CHANGELOG.md cambia en esta subida; None si no se puede saber."""
+    """True / False if it is known whether CHANGELOG.md changes in this push; None if it can't be known."""
     if not before or not before.strip("0"):
         return None
     try:
@@ -111,7 +111,7 @@ if __name__ == "__main__":
     out = sys.argv[3] if len(sys.argv) > 3 else "notas.md"
     try:
         text = build(sha, before, os.environ.get("COMMIT_MESSAGE"))
-    except Exception as e:  # noqa: BLE001  (una release sin notas es mejor que no publicar)
+    except Exception as e:  # noqa: BLE001  (a release without notes is better than not publishing)
         text = HEAD.format(sha=sha, changes=(os.environ.get("COMMIT_MESSAGE") or "-").strip())
         print("No pude preparar las notas:", e)
     with open(out, "w", encoding="utf-8", newline="\n") as f:

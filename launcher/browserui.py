@@ -1,20 +1,20 @@
 """
-CRIMESIGHT Revival - la misma interfaz, pero en el navegador del sistema (Linux / Steam Deck).
+CRIMESIGHT Revival - the same interface, but in the system browser (Linux / Steam Deck).
 
-En Windows la interfaz va dentro de una ventana propia (pywebview + WebView2). En Linux eso
-obligaria a instalar WebKitGTK o Qt, asi que se sirve la misma pagina desde un servidor local
-(solo 127.0.0.1, con un token secreto en la direccion) y se abre en el navegador:
+On Windows the interface goes inside its own window (pywebview + WebView2). On Linux that
+would require installing WebKitGTK or Qt, so the same page is served from a local server
+(only 127.0.0.1, with a secret token in the address) and opened in the browser:
 
-  POST /<token>/api/<metodo>   llama a Api.<metodo>(*args) y devuelve el resultado en JSON
-  GET  /<token>/events         espera (hasta 25 s) los avisos de Python para la pagina (ui.log...)
+  POST /<token>/api/<method>   calls Api.<method>(*args) and returns the result as JSON
+  GET  /<token>/events         waits (up to 25 s) for Python's notices for the page (ui.log...)
 
-Si se cierra la pestana y no hay ninguna sesion en marcha, el lanzador se cierra solo.
+If the tab is closed and no session is running, the launcher closes by itself.
 """
 import json, logging, os, secrets, shutil, subprocess, sys, threading, time, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 log = logging.getLogger("crimesight")
-IDLE_EXIT = 90          # segundos sin la pestana abierta (y sin sesion) antes de cerrarse
+IDLE_EXIT = 90          # seconds without the tab open (and without a session) before closing
 
 _events = []
 _cond = threading.Condition()
@@ -38,9 +38,9 @@ def _take(timeout=25):
         return out
 
 
-# ------------------------------------------------------------------ dialogos de archivos
+# ------------------------------------------------------------------ file dialogs
 def dialog(kind, save_filename=None, file_types=None):
-    """Selector de archivos nativo: zenity (GNOME/Steam Deck), kdialog (KDE) o tkinter."""
+    """Native file picker: zenity (GNOME/Steam Deck), kdialog (KDE) or tkinter."""
     if shutil.which("zenity"):
         cmd = ["zenity", "--file-selection"]
         if kind == "FOLDER_DIALOG":
@@ -85,7 +85,7 @@ def _run(cmd):
     return out or None
 
 
-# ------------------------------------------------------------------ servidor
+# ------------------------------------------------------------------ server
 def serve(api, ui_dir, busy=lambda: False):
     token = secrets.token_urlsafe(24)
     prefix = f"/{token}"
@@ -155,7 +155,7 @@ def serve(api, ui_dir, busy=lambda: False):
     print("CRIMESIGHT Revival:", url, flush=True)
     if not webbrowser.open(url):
         print("Abre esa direccion en tu navegador / Open that address in your browser.", flush=True)
-    # vive mientras la pestana siga abierta (sondea /events) o haya una sesion en marcha
+    # lives while the tab stays open (polls /events) or a session is running
     try:
         while True:
             time.sleep(5)

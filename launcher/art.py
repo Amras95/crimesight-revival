@@ -1,13 +1,13 @@
 """
-Ilustraciones del lanzador, sacadas de la instalacion del propio jugador.
+Launcher illustrations, taken from the player's own install.
 
-El lanzador no lleva ninguna imagen de Konami: la primera vez que se abre las lee de los archivos
-del juego que ya tiene el jugador y las guarda en su carpeta de datos (%APPDATA%\\CrimeSightRevival\\art).
+The launcher carries no Konami image: the first time it opens it reads them from the game files
+the player already has and saves them in its data folder (%APPDATA%\\CrimeSightRevival\\art).
 """
 import base64, json, os
 
 ART_VERSION = 2
-# nombre en el juego -> (archivo, tamano maximo)
+# name in the game -> (file, maximum size)
 WANTED = {
     "Result_ImgDirectingAi_Sherlock": ("sherlock.webp", 760),
     "Result_ImgDirectingAi_Moriarty": ("moriarty.webp", 760),
@@ -36,7 +36,7 @@ def ready(base):
 
 
 def extract(game_dir, base, log=lambda m: None):
-    """Lee las ilustraciones del juego. Devuelve True si las tiene todas."""
+    """Reads the game's illustrations. Returns True if it has all of them."""
     if ready(base):
         return True
     import UnityPy
@@ -74,7 +74,7 @@ def extract(game_dir, base, log=lambda m: None):
 
 
 def data_urls(base):
-    """Las ilustraciones como data: URLs para la interfaz web."""
+    """The illustrations as data: URLs for the web interface."""
     d = art_dir(base)
     out = {}
     for fn, _ in WANTED.values():

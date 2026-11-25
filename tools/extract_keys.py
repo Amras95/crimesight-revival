@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-CRIMESIGHT Revival - extractor de claves.
+CRIMESIGHT Revival - key extractor.
 
-El cliente cifra todo el trafico con AES-256-CBC. Las claves viajan dentro
-del propio juego (Resources/Keys). Este script las lee de TU instalacion y
-las guarda en server/keys.json para que el servidor local pueda hablar con
-el cliente. El proyecto no distribuye ninguna clave ni archivo de Konami.
+The client encrypts all traffic with AES-256-CBC. The keys travel inside
+the game itself (Resources/Keys). This script reads them from YOUR install and
+saves them in server/keys.json so the local server can talk to
+the client. The project distributes no key or Konami file.
 
-Requisitos: pip install UnityPy pycryptodome
-Uso:        python extract_keys.py "<carpeta del juego>"
+Requirements: pip install UnityPy pycryptodome
+Usage:        python extract_keys.py "<game folder>"
 """
 import json, os, sys
 
@@ -23,7 +23,7 @@ META_REL = os.path.join("CrimeSight_Data", "il2cpp_data", "Metadata", "global-me
 
 
 def _unwrap(mask: bytes, blob: bytes):
-    """Descifra una clave guardada en el juego; None si 'mask' no es la buena."""
+    """Decrypts a key stored in the game; None if 'mask' isn't the right one."""
     iv, ct = blob[:16], blob[16:]
     if len(ct) == 0 or len(ct) % 16:
         return None
@@ -36,9 +36,9 @@ def _unwrap(mask: bytes, blob: bytes):
 
 
 def _candidate_masks(game_dir):
-    """Las claves del juego estan protegidas con una mascara que el propio juego lleva como texto
-    (Crypto.LoadKeys). No se copia en este proyecto: se busca entre los textos de 32 caracteres de la
-    instalacion del jugador y se prueba cual descifra las claves."""
+    """The game's keys are protected with a mask the game itself carries as text
+    (Crypto.LoadKeys). It isn't copied into this project: it is searched for among the 32-character texts of the
+    player's install, trying which one decrypts the keys."""
     import struct
     meta = os.path.join(game_dir, META_REL)
     src = meta + ".original" if os.path.isfile(meta + ".original") else meta
@@ -51,7 +51,7 @@ def _candidate_masks(game_dir):
 
 
 def extract(game_dir):
-    """Lee las claves de la instalacion del jugador. Devuelve {"upstream": hex, "downstream": hex}."""
+    """Reads the keys from the player's install. Returns {"upstream": hex, "downstream": hex}."""
     assets = os.path.join(game_dir, "CrimeSight_Data", "resources.assets")
     if not os.path.isfile(assets):
         raise ValueError(f"No encuentro {assets}")

@@ -1,9 +1,9 @@
 """
-CRIMESIGHT Revival - lanzador con interfaz grafica (HTML con pywebview / WebView2).
+CRIMESIGHT Revival - launcher with a graphical interface (HTML with pywebview / WebView2).
 
-En Windows va en su propia ventana; en Linux / Steam Deck la misma interfaz se abre en el
-navegador (browserui.py). Si nada de eso funciona, se abre la interfaz sencilla (app.py).
-Este proyecto solo ofrece la herramienta; no gestiona ni aloja servidores.
+On Windows it runs in its own window; on Linux / Steam Deck the same interface opens in the
+browser (browserui.py). If none of that works, the simple interface opens (app.py).
+This project only offers the tool; it doesn't run or host servers.
 """
 import json, logging, os, re, sys, threading, time, traceback, webbrowser
 
@@ -23,12 +23,12 @@ STAGE_FILTER = "CRIMESIGHT Revival (*.csrstage)"
 ALL_FILTER = "All files (*.*)"
 IMAGE_FILTER = "Images (*.png;*.jpg;*.jpeg;*.gif;*.webp;*.bmp)"
 EXE_FILTER = "Executable (*.exe)"
-# Tipos de dialogo de pywebview (iguales en 5.x y 6.x; los nombres antiguos estan obsoletos)
+# pywebview dialog types (the same in 5.x and 6.x; the old names are deprecated)
 DIALOGS = {"OPEN_DIALOG": 10, "FOLDER_DIALOG": 20, "SAVE_DIALOG": 30}
 
 UI_DIR = os.path.join(getattr(sys, "_MEIPASS", HERE), "ui")
 _window = None
-_browser = False          # Linux / Steam Deck: la interfaz va en el navegador
+_browser = False          # Linux / Steam Deck: the interface goes in the browser
 
 
 def js(fn, *args):
@@ -44,7 +44,7 @@ def js(fn, *args):
 
 
 class Api:
-    """Metodos que la interfaz llama con window.pywebview.api.<metodo>()."""
+    """Methods the interface calls with window.pywebview.api.<method>()."""
 
     def __init__(self):
         self._cfg = core.load_config()
@@ -57,7 +57,7 @@ class Api:
         self._bep_lock = threading.Lock()
         self._bep_thread = None
 
-    # ---------------------------------------------------------------- estado
+    # ---------------------------------------------------------------- state
     def init(self):
         imported = core.import_old_data()
         self._steam = core.steam_account()
@@ -69,7 +69,7 @@ class Api:
         self._check_update()
         self._watch_updates()
         try:
-            core.mods_dir()               # la carpeta de mods ya preparada desde el principio
+            core.mods_dir()               # the mods folder already prepared from the start
             core.models_dir()             # and the READMEs of its folders, in the launcher's language
             core.cursor_dir()
         except OSError:
@@ -94,7 +94,7 @@ class Api:
             state["notice"] = notice
         if self._update:
             state["update"] = self._update_info()
-        if _browser:        # los avisos de "cargando" llegan por otro camino y pueden adelantar a esta respuesta
+        if _browser:        # the "loading" notices arrive another way and can overtake this reply
             js("loading", None)
         self._bep_auto()
         self._refresh_servers()
@@ -112,7 +112,7 @@ class Api:
         threading.Thread(target=run, daemon=True).start()
 
     def _check_update(self):
-        """Mira si hay una version nueva del lanzador. No se instala sola: se ofrece con sus novedades."""
+        """Checks whether there is a new launcher version. It doesn't install itself: it is offered with its release notes."""
         updater.cleanup_old()
         try:
             self._update = updater.check(i18n.get_lang())
@@ -125,8 +125,8 @@ class Api:
                 "skipped": self._cfg.get("update_skipped") == u["version"]}
 
     def _watch_updates(self, every=30 * 60):
-        """Con el lanzador abierto se vuelve a mirar cada media hora: si sale una version nueva, aparece
-        la campana (sin abrir ninguna ventana, que puede haber una partida en marcha)."""
+        """With the launcher open it checks again every half hour: if a new version comes out, the
+        bell appears (without opening any window, since a match may be under way)."""
         if getattr(self, "_watching", False) or not updater.frozen():
             return
         self._watching = True
@@ -144,9 +144,9 @@ class Api:
         threading.Thread(target=loop, daemon=True).start()
 
     def update_apply(self, force=False):
-        """El jugador acepta la actualizacion: se descarga, se instala y el lanzador se vuelve a abrir.
-        Si hay una sesion, el juego u otro lanzador abiertos, primero se pregunta; al confirmar se cierra
-        todo (la sesion termina como al pulsar "Terminar sesion") y se actualiza."""
+        """The player accepts the update: it is downloaded, installed and the launcher reopens.
+        If there is a session, the game or another launcher open, it asks first; on confirming everything
+        closes (the session ends as when pressing "End session") and it updates."""
         upd = self._update
         if not upd:
             return {"error": t("update_failed", err="-")}
@@ -175,7 +175,7 @@ class Api:
         return {"ok": True}
 
     def update_later(self):
-        """«Ahora no»: esa version no se vuelve a ofrecer sola (queda el aviso junto al numero de version)."""
+        """"Not now": that version isn't offered again by itself (the notice stays next to the version number)."""
         if self._update:
             self._cfg["update_skipped"] = self._update["version"]
             core.save_config(self._cfg)
@@ -196,7 +196,7 @@ class Api:
             st["art"] = art.data_urls(core.app_dir())
         return st
 
-    # ---------------------------------------------------------------- sesiones
+    # ---------------------------------------------------------------- sessions
     def start(self, mode, args):
         if self._busy:
             return {"error": t("err_busy")}
@@ -236,7 +236,7 @@ class Api:
             self._busy = False
             self._mode = None
             self._auto_backup()
-            self._update_lang()          # el juego pudo cambiar de idioma durante la partida
+            self._update_lang()          # the game may have changed language during the match
             js("state", self._state(with_art=False))
             js("busy", False)
 
@@ -251,7 +251,7 @@ class Api:
         self._cancel = True
         self.log(t("stopping"))
 
-    # contexto de sessions.py
+    # sessions.py context
     def log(self, text, kind=None):
         js("log", text, kind)
 
@@ -261,7 +261,7 @@ class Api:
     def cancelled(self):
         return self._cancel
 
-    # ---------------------------------------------------------------- utilidades
+    # ---------------------------------------------------------------- helpers
     def copy(self, text):
         core.copy_to_clipboard(text or "")
 
@@ -297,7 +297,7 @@ class Api:
             return None
         return t("restored") if core.restore_game(gd) else t("already_original")
 
-    # ---------------------------------------------------------------- progreso
+    # ---------------------------------------------------------------- progress
     def _dialog(self, kind, **kw):
         if _browser:
             import browserui
@@ -369,7 +369,7 @@ class Api:
         core.save_config(self._cfg)
         return {"msg": t("backup_removed"), "state": self._state(with_art=False)}
 
-    # ---------------------------------------------------------------- mods de apariencia
+    # ---------------------------------------------------------------- appearance mods
     def mods_list(self):
         import base64
         out = []
@@ -380,18 +380,18 @@ class Api:
                         "stickers": len(m["stickers"]), "avatars": len(m["avatars"]), "enabled": m["enabled"],
                         "errors": len(m["errors"]),
                         "thumbs": thumbs(m["stickers"] + m["avatars"], 5),
-                        "sticker_thumbs": thumbs(m["stickers"], 12),     # pestañas de la ventana de mods
+                        "sticker_thumbs": thumbs(m["stickers"], 12),     # tabs of the mods window
                         "avatar_thumbs": thumbs(m["avatars"], 12)})
         return {"dir": core.mods_dir(), "mods": out}
 
     def mods_stickers(self, folder):
-        """Stickers de un mod con su mensaje, para editarlos desde el lanzador."""
+        """A mod's stickers with their message, to edit them from the launcher."""
         import base64, modpack
         m = modpack.load_mod(core.mod_folder(folder))
         out = []
         for it in m["stickers"]:
             cur = it.get("text") or ""
-            if isinstance(cur, dict):            # textos por idioma puestos a mano en mod.json
+            if isinstance(cur, dict):            # per-language texts set by hand in mod.json
                 cur = cur.get(i18n.get_lang()) or next(iter(cur.values()), "")
             out.append({"key": it["key"], "text": cur, "means": it.get("means") or "",
                         "thumb": "data:image/png;base64," + base64.b64encode(it["png"]).decode()})
@@ -405,7 +405,7 @@ class Api:
             return {"error": str(e)}
 
     def mods_set_means(self, folder, key, value):
-        """A que sticker del juego equivale un sticker (para que las IA le contesten)."""
+        """Which game sticker a sticker is equivalent to (so the AIs reply to it)."""
         import modpack
         try:
             return {"ok": True, "means": modpack.set_means(core.mod_folder(folder), key, value) or ""}
@@ -418,13 +418,17 @@ class Api:
             off.append(folder)
         self._cfg["mods_disabled"] = off
         core.save_config(self._cfg)
+        try:                                   # your models follow the folder's switch too
+            core.install_models(self._cfg.get("game_dir") or "")
+        except OSError:
+            pass
         return True
 
     def mods_open(self):
         core.open_folder(core.mods_dir())
 
     def _cursor_apply(self):
-        try:                                   # si el juego ya esta abierto, se aplica en caliente
+        try:                                   # if the game is already open, it is applied live
             core.install_cursor(self._cfg.get("game_dir") or "")
         except (OSError, KeyError, TypeError):
             pass
@@ -464,15 +468,15 @@ class Api:
         core.cursor_remove()
         return self._cursor_apply()
 
-    # recarga en caliente (BepInEx): activada por defecto. El lanzador la instala sola al arrancar, salvo
-    # que el jugador la haya quitado (bep_removed en la configuracion, hasta que la vuelva a activar).
+    # hot reload (BepInEx): on by default. The launcher installs it by itself at startup, unless
+    # the player removed it (bep_removed in the config, until they turn it on again).
     def _bep_wanted(self):
         gd = self._cfg.get("game_dir")
         return core.is_game_dir(gd) and not self._cfg.get("bep_removed") and not core.live_mode(gd)
 
     def _bep_auto(self):
-        """Al abrir el lanzador (o al elegir la carpeta del juego) instala BepInEx si falta, sin esperar.
-        Con el juego abierto no: se intenta al empezar a jugar."""
+        """When the launcher opens (or the game folder is chosen) it installs BepInEx if missing, without waiting.
+        Not with the game open: it is tried when starting to play."""
         if not self._bep_wanted() or core.game_running():
             return
         if self._bep_thread is not None and self._bep_thread.is_alive():
@@ -481,12 +485,12 @@ class Api:
         self._bep_thread.start()
 
     def _bep_install(self, gd):
-        """Instala BepInEx y lo cuenta en el registro. Si falla, se juega sin el y se reintenta otra vez."""
+        """Installs BepInEx and records it in the log. If it fails, play goes on without it and it is retried later."""
         with self._bep_lock:
             if core.live_mode(gd):
                 return
             self.log(t("bep_installing_log"))
-            js("bepProgress", t("bep_installing_log"), None)      # aviso con barra en la ventana principal
+            js("bepProgress", t("bep_installing_log"), None)      # notice with a bar in the main window
             try:
                 core.install_bepinex(gd, progress=lambda pct: js("bepProgress", t("bep_installing", pct=pct), pct))
                 self.log(t("bep_ready_log"), "ok")
@@ -500,7 +504,7 @@ class Api:
                 js("bepDone", t("err_unexpected", err=e), True)
 
     def _bep_ready(self):
-        """Antes de abrir el juego: espera a la instalacion en marcha o la vuelve a intentar."""
+        """Before opening the game: waits for the running install or tries it again."""
         th = self._bep_thread
         if th is not None and th.is_alive():
             self.log(t("bep_wait"))
@@ -514,7 +518,7 @@ class Api:
     def bep_state(self):
         st = core.bepinex_state(self._cfg.get("game_dir"))
         st["busy"] = self._busy
-        if not core.IS_WINDOWS:          # Linux / Steam Deck: Proton necesita una opcion de lanzamiento
+        if not core.IS_WINDOWS:          # Linux / Steam Deck: Proton needs a launch option
             st["linux"] = True
             st["launch_ok"] = core.linux_launch_option_ok()
             st["launch_option"] = core.LINUX_LAUNCH_OPTION
@@ -525,10 +529,10 @@ class Api:
         if not gd:
             return {"error": t("err_no_game")}
         if self._bep_thread is not None and self._bep_thread.is_alive():
-            return {"ok": True}                  # ya se esta instalando: el aviso llega al terminar
+            return {"ok": True}                  # already installing: the notice comes when it finishes
         if self._busy or core.game_running():
             return {"error": t("bep_busy")}
-        self._cfg.pop("bep_removed", None)   # vuelve a instalarse sola
+        self._cfg.pop("bep_removed", None)   # it reinstalls itself
         core.save_config(self._cfg)
         self._bep_thread = threading.Thread(target=self._bep_install, args=(gd,), daemon=True)
         self._bep_thread.start()
@@ -544,14 +548,14 @@ class Api:
             core.uninstall_bepinex(gd)
         except OSError as e:
             return {"error": t("err_unexpected", err=e)}
-        self._cfg["bep_removed"] = True      # no se vuelve a instalar sola hasta que la activen
+        self._cfg["bep_removed"] = True      # it doesn't install itself again until they turn it on
         core.save_config(self._cfg)
         return {"ok": True, "msg": t("bep_removed")}
 
-    # ---------------------------------------------------------------- modelos 3D
+    # ---------------------------------------------------------------- 3D models
     def models_state(self):
         gd = self._cfg.get("game_dir") or ""
-        try:                                   # un .glb que se ha vuelto a exportar llega al juego al refrescar
+        try:                                   # a re-exported .glb reaches the game on refresh
             core.install_models(gd)
         except OSError:
             pass
@@ -566,16 +570,42 @@ class Api:
                 "anims": core.custom_anims(), "anim_swaps": core.anim_swaps(), "anim_kinds": list(core.ANIM_KINDS),
                 "anim_issues": {k: v for k, v in core.anim_issues.items() if v}}
 
-    # ---- personajes nuevos (slots del Selector de personajes)
+    # ---- new characters (Character Selector slots)
     def chars_state(self):
         return {"chars": core.characters(), "models": core.custom_models(), "anims": core.custom_anims(),
                 "images": list(core.custom_images()), "talk_keys": list(core.TALK_KEYS), "kinds": list(core.ANIM_KINDS),
                 "reactions": dict(core.TALK_REACTION)}
 
+    # ---- developer mode: choose killer and target (only in rooms you create)
+    def dev_roles_state(self):
+        if not core.dev_mode():
+            return {"dev": False}
+        cfg = core.load_config()
+        names = dict(core.MODEL_SLOTS)
+        opts = [{"id": "orig:" + k, "name": names.get(k) or k} for k, _ in core.MODEL_SLOTS if k.startswith("PawnTypeData_")]
+        opts += [{"id": c["id"], "name": c["name"] or c["model"] or c["id"], "new": True} for c in core.characters() if c["active"]]
+        return {"dev": True, "options": opts, "killer": cfg.get("dev_killer") or "", "target": cfg.get("dev_target") or ""}
+
+    def dev_roles_set(self, killer, target):
+        if not core.dev_mode():
+            return {"dev": False}
+        killer, target = str(killer or ""), str(target or "")
+        if killer and killer == target:
+            target = ""
+        cfg = core.load_config()
+        cfg["dev_killer"], cfg["dev_target"] = killer, target
+        core.save_config(cfg)
+        self._cfg["dev_killer"], self._cfg["dev_target"] = killer, target
+        return self.dev_roles_state()
+
     def chars_save(self, c):
         if not isinstance(c, dict) or not c.get("model"):
             return {"error": t("chars_need_model")}
         core.save_character(c)
+        return self.chars_state()
+
+    def chars_active(self, cid, on):
+        core.set_character_active(str(cid or ""), bool(on))
         return self.chars_state()
 
     def chars_delete(self, cid):
@@ -608,7 +638,7 @@ class Api:
             return {"error": t("err_unexpected", err=e)}
         return self.models_state()
 
-    # ---------------------------------------------------------------- creador de escenarios
+    # ---------------------------------------------------------------- stage creator
     STAGE_LABELS = {"Stage_Yokn": "01 · Lauriston Gardens", "Stage_Yokn_v1030": "02 · Briony Lodge",
                     "Stage_Yokn_v1040": "03 · Josiah Amberley", "Stage_Yokn_v1050": "04 · The Abbey Grange",
                     "Stage_Yokn_v1060": "05 · Lysander Stark"}
@@ -617,7 +647,7 @@ class Api:
         return core.stage_catalog(self._cfg.get("game_dir"))
 
     def stage_open(self):
-        """Datos para abrir el editor. La primera vez hay que leer el juego (tarda): se hace aparte."""
+        """Data to open the editor. The first time the game has to be read (slow): it is done separately."""
         gd = self._cfg.get("game_dir")
         if not getattr(self, "_stage_ready", False):
             if not getattr(self, "_stage_loading", False):
@@ -699,8 +729,8 @@ class Api:
         return {"ok": True, "id": sid, "layouts": self._stage_layouts(), "msg": t(msg, n=core.MAX_GAME_STAGES)}
 
     def _stage_publish(self):
-        """Tus escenarios activos -> lista de escenarios del juego (solo con el plugin). True si hay plugin.
-        En la sala de otro jugador no se toca: ahi mandan los escenarios de la sala."""
+        """Your active stages -> the game's stage list (only with the plugin). True if there is a plugin.
+        It isn't touched in another player's room: the room's stages rule there."""
         gd = self._cfg.get("game_dir")
         if not gd or not core.live_mode(gd):
             return False
@@ -764,7 +794,7 @@ class Api:
     def stage_delete(self, sid):
         try:
             core.stage_delete(sid)
-            self._stage_enable(sid, True)          # fuera de la lista de desactivados
+            self._stage_enable(sid, True)          # out of the disabled list
             self._stage_publish()
         except OSError as e:
             return {"error": t("err_unexpected", err=e)}
@@ -791,7 +821,7 @@ class Api:
         return {"ok": True, "msg": t("stage_test_off"), "active": ""}
 
     def answer_mods(self, ok):
-        if ok == "always":                      # "Aceptar siempre" en el aviso
+        if ok == "always":                      # "Always accept" in the notice
             self._set_guest_always(True)
             ok = True
         self._mods_answer = bool(ok)
@@ -802,12 +832,12 @@ class Api:
         core.save_config(self._cfg)
 
     def guest_mods(self, mode=None):
-        """Anfitrion: que hacer cuando un invitado trae mods ("ask" o "always")."""
+        """Host: what to do when a guest brings mods ("ask" or "always")."""
         if mode in ("ask", "always"):
             self._set_guest_always(mode == "always")
         return {"mode": "always" if self._cfg.get("guest_mods_always") else "ask"}
 
-    # contexto de sessions.py: unirse a una sala con mods / un jugador trae mods a tu sala
+    # sessions.py context: joining a room with mods / a player brings mods to your room
     def _ask(self, fn, info, poll=None):
         self._mods_answer = None
         self._mods_event.clear()
@@ -816,7 +846,7 @@ class Api:
             if self._cancel:
                 return False
             got = poll() if poll else None
-            if got is not None:                 # contestado desde el juego
+            if got is not None:                 # answered from the game
                 js("closeOffer")
                 return got
         return bool(self._mods_answer)
@@ -825,12 +855,12 @@ class Api:
         return self._ask("confirmMods", info)
 
     def confirm_offer(self, info):
-        """Un invitado trae mods: se pregunta en el lanzador y tambien dentro del juego (con el plugin)."""
+        """A guest brings mods: asked in the launcher and also inside the game (with the plugin)."""
         gd = self._cfg.get("game_dir") or ""
         oid = str(info.get("id", ""))
         shown = False
         try:
-            if info.get("text"):                # modelos 3D: el texto y el resumen ya vienen hechos
+            if info.get("text"):                # 3D models: the text and summary come ready-made
                 body = info["text"] + "\n\n" + "\n".join(m.get("text", "") for m in info.get("mods", []))
             else:
                 body = t("mods_offer_text", player=info.get("player", "?")) + "\n\n" + \
@@ -842,7 +872,7 @@ class Api:
             logging.getLogger("crimesight").warning("No pude llevar el aviso de mods al juego", exc_info=True)
         try:
             got = self._ask("confirmOffer", info, poll=(lambda: core.offer_answer(gd, oid)) if shown else None)
-            if got == "always":                 # "Aceptar siempre" desde el juego
+            if got == "always":                 # "Always accept" from the game
                 self._set_guest_always(True)
                 return True
             return bool(got)
@@ -867,7 +897,7 @@ class Api:
 
 
 class _GuiLog(logging.Handler):
-    """Lleva al lanzador, traducidas, las lineas del servidor que interesan al jugador."""
+    """Brings to the launcher, translated, the server lines the player cares about."""
 
     def emit(self, record):
         msg = record.getMessage()
@@ -899,7 +929,7 @@ def main():
                                     width=1280, height=780, min_size=(1100, 700), background_color="#07081a")
     try:
         webview.start(gui="edgechromium" if core.IS_WINDOWS else None, debug=False)
-    except Exception:  # noqa: BLE001  (sin WebView2: interfaz sencilla)
+    except Exception:  # noqa: BLE001  (without WebView2: simple interface)
         _window = None
         import app
         app.main()

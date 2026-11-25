@@ -1,9 +1,9 @@
-// CRIMESIGHT Revival - "Omitir" en los dialogos de los personajes (Sherlock, Moriarty...).
+// CRIMESIGHT Revival - "Skip" in the characters' dialogues (Sherlock, Moriarty...).
 //
-// El juego solo ensena su boton "Cerrar" en algunos momentos del dialogo, asi que para saltarlo habia que esperar
-// o pinchar en la caja de texto. Aqui el boton se ve siempre que hay un dialogo en pantalla, se llama "Omitir"
-// y cierra el dialogo entero (lo mismo que hacia "Cerrar"). Con el mando, B hace lo mismo.
-// Los consejos de los menus (y la Guia Revival, que los usa) no se tocan.
+// The game only shows its "Close" button at some moments of the dialogue, so to skip it you had to wait
+// or click the text box. Here the button shows whenever there is a dialogue on screen, it is called "Skip"
+// and it closes the whole dialogue (the same "Close" did). With a gamepad, B does the same.
+// The menu tips (and the Revival Guide, which uses them) aren't touched.
 using System;
 using HarmonyLib;
 using TMPro;
@@ -33,18 +33,18 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[Omitir] " + e.Message); }
         }
 
-        /// <summary>El dialogo de un personaje que se puede omitir ahora mismo (no los consejos de los menus).</summary>
+        /// <summary>The character dialogue that can be skipped right now (not the menu tips).</summary>
         internal static CharaTalkDialogue Current()
         {
             var d = CharaTalkDialogue.Instance;
             if (d == null || !d.gameObject.activeInHierarchy || d.isTips || d.isPreview) return null;
             int ph = (int)d.dialoguePhase;
-            if (ph < 2 || ph > 5) return null;                         // abriendose ... esperando: si; cerrandose: no
+            if (ph < 2 || ph > 5) return null;                         // opening ... waiting: yes; closing: no
             if (d.dialogueCanvas != null && !d.dialogueCanvas.enabled) return null;
             return d;
         }
 
-        /// <summary>Omitir: cierra el dialogo como su boton "Cerrar".</summary>
+        /// <summary>Skip: closes the dialogue like its "Close" button.</summary>
         internal static bool Close()
         {
             try
@@ -59,11 +59,11 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[Omitir] " + e.Message); return false; }
         }
 
-        // ---------------------------------------------------------------- lo que queda de la escena, al momento
-        // Al omitir un dialogo de una escena (las del final de la partida), la escena seguia su curso sin texto: unos
-        // segundos de pantalla negra o parpadeos. Si quien omite eres tu y hay una escena en marcha (PlayableDirector),
-        // el juego va 8 veces mas rapido hasta que la escena termina o sale otro dialogo (maximo 6 s), asi no se salta
-        // nada de lo que la escena hace (sus avisos al juego llegan igual, solo antes).
+        // ---------------------------------------------------------------- what is left of the scene, at once
+        // When skipping a scene's dialogue (the end-of-match ones), the scene went on without text: a few
+        // seconds of black screen or flicker. If you are the one skipping and a scene is running (PlayableDirector),
+        // the game runs 8 times faster until the scene ends or another dialogue shows (6 s at most), so nothing
+        // the scene does is skipped (its notices to the game arrive the same, only sooner).
         static bool _byUser;
         static float _rushUntil, _rushStart, _noScene;
         static bool _rushing;
@@ -102,7 +102,8 @@ namespace CrimeSightRevival.Mods
             return sb.ToString();
         }
 
-        /// <summary>Cada fotograma: vuelve a la velocidad normal en cuanto sale otro dialogo, acaba la escena o pasan 6 s.</summary>
+        /// <summary>Every frame: back to normal speed as soon as another dialogue shows, the scene ends or 6 s
+        /// pass.</summary>
         public static void Frame()
         {
             if (!_rushing) return;

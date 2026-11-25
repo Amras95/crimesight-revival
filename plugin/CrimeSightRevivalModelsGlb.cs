@@ -1,19 +1,20 @@
-// CRIMESIGHT Revival - modelos 3D propios (.glb) en lugar de los personajes del juego, y el esqueleto de cada
-// personaje para hacerlos.
+// CRIMESIGHT Revival - custom 3D models (.glb) instead of the game's characters, and each character's
+// skeleton to make them.
 //
-// En models.json, un modelo propio va como "custom:<nombre>" y su archivo esta en csr_live/models/<nombre>.glb (lo
-// copia el lanzador desde la carpeta de modelos del jugador). Se lee con Glb.Read y se pone en el personaje:
-//   - Las mallas se enganchan a los huesos del personaje por el nombre (el esqueleto que se exporta abajo tiene
-//     los nombres del juego). Un hueso que el juego no tiene se cambia por su padre mas cercano que si tenga.
-//   - Las mallas se recolocan sobre el esqueleto del juego en reposo, hueso a hueso: da igual si en Blender se
-//     movio la armadura, se exporto en centimetros o el modelo se hizo para otro personaje (se ajusta a sus
-//     proporciones). Solo cuenta donde esta cada hueso, no hacia donde mira, porque Blender cambia los ejes de
-//     los huesos al importarlos.
-//   - Los materiales son copias del material del propio personaje (el sombreado del juego) con la textura de
-//     color del .glb (o su color, si no tiene textura).
-// El esqueleto (csr_live/skeletons/<personaje>.glb) se escribe solo, una vez, desde el modelo del juego que tiene el
-// jugador: solo los huesos y una malla diminuta para que Blender lo abra como armadura. No lleva ni mallas ni
-// texturas del juego.
+// In models.json, a custom model goes as "custom:<name>" and its file is in csr_live/models/<name>.glb (the
+// launcher copies it from the player's models folder). It is read with Glb.Read and put on the character:
+//   - The meshes are hooked to the character's bones by name (the skeleton exported below has
+//     the game's names). A bone the game doesn't have is swapped for its closest parent that it does have.
+//   - The meshes are re-placed over the game's skeleton at rest, bone by bone: it doesn't matter if in Blender the
+//     armature was moved, it was exported in centimetres or the model was made for another character (it adjusts to
+//     its
+//     proportions). Only where each bone is counts, not where it points, because Blender changes the bones'
+//     axes when importing them.
+//   - The materials are copies of the character's own material (the game's shading) with the .glb's colour
+//     texture (or its colour, if it has no texture).
+// The skeleton (csr_live/skeletons/<character>.glb) is written by itself, once, from the game model the
+// player has: only the bones and a tiny mesh so Blender opens it as an armature. It carries no game meshes or
+// textures.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -30,16 +31,16 @@ namespace CrimeSightRevival.Mods
         class Custom
         {
             public string sig; public Glb.Model model; public Texture2D[] tex;
-            public readonly Dictionary<string, Mesh[]> meshes = new();      // por personaje (sus proporciones)
-            public readonly Dictionary<string, Glb.Model> fitted = new();   // adaptado a cada personaje (otro esqueleto) o null
+            public readonly Dictionary<string, Mesh[]> meshes = new();      // per character (its proportions)
+            public readonly Dictionary<string, Glb.Model> fitted = new();   // adapted to each character (another skeleton) or null
         }
 
         static readonly Dictionary<string, Custom> _custom = new();
-        static readonly HashSet<string> _customFailed = new();               // "id|firma" que no se pudieron leer
+        static readonly HashSet<string> _customFailed = new();               // "id|signature" that couldn't be read
 
         static string CustomPath(string id) => Path.Combine(LiveMods.LiveDir, "models", id + ".glb");
 
-        /// <summary>Firma del archivo de un modelo propio (tamano y fecha), para no reintentar uno que fallo.</summary>
+        /// <summary>Signature of a custom model's file (size and date), so as not to retry one that failed.</summary>
         static string CustomSig(string target)
         {
             try { var fi = new FileInfo(CustomPath(target.Substring(CustomPrefix.Length))); return fi.Exists ? fi.Length + ":" + fi.LastWriteTimeUtc.Ticks : "-"; }
@@ -52,7 +53,7 @@ namespace CrimeSightRevival.Mods
             try { var fi = new FileInfo(path); if (!fi.Exists) { Warn("nofile" + id, "[Modelos] no esta " + path); return null; } sig = fi.Length + ":" + fi.LastWriteTimeUtc.Ticks; }
             catch (Exception e) { Warn("nofile" + id, "[Modelos] " + id + ": " + e.Message); return null; }
             if (_custom.TryGetValue(id, out var have) && have.sig == sig) return have;
-            if (have != null)                                                   // el .glb cambio: fuera lo de antes
+            if (have != null)                                                   // the .glb changed: out with the old
             {
                 foreach (var ms in have.meshes.Values) foreach (var m in ms) if (m != null) UnityEngine.Object.Destroy(m);
                 foreach (var t in have.tex) if (t != null) UnityEngine.Object.Destroy(t);
@@ -68,7 +69,7 @@ namespace CrimeSightRevival.Mods
                 for (int i = 0; i < model.images.Count; i++)
                 {
                     var im = model.images[i];
-                    if (im.raw != null)                                         // ya descodificada en otro hilo
+                    if (im.raw != null)                                         // already decoded on another thread
                     {
                         Texture2D rt = null;
                         try
@@ -108,15 +109,15 @@ namespace CrimeSightRevival.Mods
             }
         }
 
-        /// <summary>Donde esta cada hueso del personaje en reposo, respecto a su modelo (del prefab del juego; si no
-        /// se encuentra, la postura de ahora, que vale peor).</summary>
+        /// <summary>Where each bone of the character is at rest, relative to its model (from the game's prefab; if it
+        /// isn't found, the current pose, which is worse).</summary>
         static Dictionary<string, Matrix4x4> RestPose(string key, GameObject root, out Dictionary<string, string> parents)
         {
             var rest = new Dictionary<string, Matrix4x4>();
             parents = new Dictionary<string, string>();
             GameObject prefab = null;
             try { prefab = key.StartsWith("PawnTypeData_") || key.StartsWith("ThreatTypeData_") ? Template(key) : null; } catch { }
-            var src = prefab != null ? (ModelRoot(prefab) ?? prefab) : root;      // el mismo nivel que el del personaje (c_hum_XX)
+            var src = prefab != null ? (ModelRoot(prefab) ?? prefab) : root;      // the same level as the character's (c_hum_XX)
             if (prefab == null) Warn("rest" + key, "[Modelos] no encuentro el modelo original de " + key + ": se usa su postura de ahora");
             var toRoot = src.transform.worldToLocalMatrix;
             foreach (var t in src.GetComponentsInChildren<Transform>(true))
@@ -139,7 +140,7 @@ namespace CrimeSightRevival.Mods
             foreach (var t in root.GetComponentsInChildren<Transform>(true)) if (!live.ContainsKey(t.name)) live[t.name] = t;
             var rest = RestPose(key, root, out var parents);
 
-            // un modelo con otro esqueleto (Mixamo, VRChat, un FBX cualquiera...): se adapta al del juego
+            // a model with another skeleton (Mixamo, VRChat, any FBX...): it is adapted to the game's
             int known = 0, named = 0;
             foreach (var jt in model.joints) if (jt.name != "<root>") { named++; if (live.ContainsKey(jt.name) && rest.ContainsKey(jt.name)) known++; }
             if (named > 0 && known < named * 0.5f)
@@ -160,14 +161,14 @@ namespace CrimeSightRevival.Mods
                 model = fit;
             }
 
-            // adaptado: su propio esqueleto, con sus medidas, que cada fotograma copia los giros del del juego (Late)
+            // adapted: its own skeleton, with its measurements, which copies the game's rotations every frame (Late)
             Dictionary<string, (Transform t, Matrix4x4 bind)> proxy = null;
             List<Link> links = null;
             var proxyTops = new List<GameObject>();
             List<Shoulder> shoulders = null;
             if (model.proxy) proxy = BuildProxy(root, model, rest, live, proxyTops, out links, out shoulders);
 
-            // huesos del .glb -> huesos del personaje (por nombre, o el padre mas cercano que exista)
+            // .glb bones -> character bones (by name, or the closest existing parent)
             int nj = model.joints.Count;
             var bones = new Transform[nj];
             var bind = new Matrix4x4[nj];
@@ -200,7 +201,7 @@ namespace CrimeSightRevival.Mods
                 if (name == jt.name) pairs.Add((pFile[j], pGame[j]));
             }
 
-            // escala: la del .glb respecto al juego (por si se exporto en centimetros)
+            // scale: the .glb's relative to the game (in case it was exported in centimetres)
             float s = 1f;
             if (pairs.Count >= 3)
             {
@@ -214,7 +215,7 @@ namespace CrimeSightRevival.Mods
             var delta = new Vector3[nj];
             for (int j = 0; j < nj; j++) delta[j] = pGame[j] - s * pFile[j];
 
-            // mallas para este personaje
+            // meshes for this character
             if (!c.meshes.TryGetValue(key, out var meshes))
             {
                 meshes = new Mesh[model.parts.Count];
@@ -228,7 +229,7 @@ namespace CrimeSightRevival.Mods
             int layer = root.layer;
             foreach (var smr in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
-                if (!Slot.IsMatch(smr.name.Replace("(Clone)", ""))) continue;          // sombras y demas: no se tocan
+                if (!Slot.IsMatch(smr.name.Replace("(Clone)", ""))) continue;          // shadows and the like: not touched
                 a.saved.Add(new Saved { smr = smr, mesh = smr.sharedMesh, mats = ToArr(smr.sharedMaterials), bones = ToArr(smr.bones),
                                         rootBone = smr.rootBone, enabled = smr.enabled, offscreen = smr.updateWhenOffscreen });
                 if (baseMat == null && smr.sharedMaterial != null) { baseMat = smr.sharedMaterial; layer = smr.gameObject.layer; }
@@ -264,12 +265,13 @@ namespace CrimeSightRevival.Mods
 
         static Vector3 V(float[] p) => new Vector3(p[0], p[1], p[2]);
 
-        /// <summary>Un hueso del esqueleto propio y el del juego del que copia: el giro siempre; la posicion, la raiz
-        /// (tal cual) y la cadera (a la escala de sus piernas), para que ande, se agache y salte igual.</summary>
-        internal class Link { public Transform own, game; public Vector3 ownRest, gameRest; public int mode; public float k; }
+        /// <summary>A bone of the custom skeleton and the game one it copies from: always the rotation; the position,
+        /// the root (in world space) and the hips (at the scale of its legs), so it walks, crouches and jumps the
+        /// same.</summary>
+        internal class Link { public Transform own, game; public Vector3 ownRest, gameRest, offPos; public Quaternion offRot = Quaternion.identity; public int mode; public float k; }
 
-        /// <summary>Hombro del esqueleto propio: la clavicula acompana un poco el giro del brazo (como en una persona y en
-        /// las animaciones de Mixamo). Si no, al bajar los brazos los hombros se quedan rectos, como en la T.</summary>
+        /// <summary>Custom skeleton shoulder: the clavicle follows the arm's rotation a bit (like in a person and in
+        /// Mixamo animations). Otherwise, when lowering the arms the shoulders stay straight, as in the T.</summary>
         internal class Shoulder { public Transform sh, ua; public Quaternion uaRest; public Vector3 dir; }
         const float ShoulderFollow = 0.3f;
 
@@ -280,7 +282,7 @@ namespace CrimeSightRevival.Mods
             links = new List<Link>();
             shoulders = new List<Shoulder>();
             var outp = new Dictionary<string, (Transform, Matrix4x4)>();
-            var world = new Dictionary<string, (Vector3 p, Quaternion r)>();          // reposo, respecto al modelo
+            var world = new Dictionary<string, (Vector3 p, Quaternion r)>();          // rest, relative to the model
             var order = new List<Glb.Joint>(model.joints);
             order.Sort((x, y) => x.ancestors.Count.CompareTo(y.ancestors.Count));
             float hipK = 1f;
@@ -303,12 +305,16 @@ namespace CrimeSightRevival.Mods
                 outp[jt.name] = (go.transform, Matrix4x4.TRS(P, R, Vector3.one).inverse);
                 if (live.TryGetValue(jt.name, out var g))
                 {
-                    // donde esta el del juego en reposo, respecto a su padre (del prefab)
+                    // where the game's one is at rest, relative to its parent (from the prefab)
                     Vector3 gameRest = g.localPosition;
                     if (rm != default && jt.ancestors.Count > 0 && rest.TryGetValue(jt.ancestors[0], out var prm))
                         gameRest = Quaternion.Inverse(prm.rotation) * (new Vector3(rm.m03, rm.m13, rm.m23) - new Vector3(prm.m03, prm.m13, prm.m23));
                     else if (rm != default) gameRest = new Vector3(rm.m03, rm.m13, rm.m23);
+                    // top bones follow the game's in world space: offset from the game bone at rest (model space)
+                    var gq = rm != default ? rm.rotation : Quaternion.identity;
+                    var gp = rm != default ? new Vector3(rm.m03, rm.m13, rm.m23) : Vector3.zero;
                     links.Add(new Link { own = go.transform, game = g, ownRest = go.transform.localPosition, gameRest = gameRest,
+                                         offPos = Quaternion.Inverse(gq) * (P - gp), offRot = Quaternion.Inverse(gq) * R,
                                          mode = par == null ? 2 : jt.name == "SKL_000_WAIST" ? 1 : 0, k = hipK });
                 }
             }
@@ -319,7 +325,7 @@ namespace CrimeSightRevival.Mods
             return outp;
         }
 
-        /// <summary>Despues de las animaciones: los esqueletos propios copian la postura de los del juego.</summary>
+        /// <summary>After the animations: the custom skeletons copy the pose of the game's.</summary>
         public static void Late()
         {
             LateBorrow();
@@ -337,12 +343,45 @@ namespace CrimeSightRevival.Mods
                 {
                     if (s.sh == null || s.ua == null) continue;
                     var uaWorld = s.ua.rotation;
-                    var now = uaWorld * s.dir;                               // hacia donde apunta el brazo
-                    var rest = s.sh.rotation * (s.uaRest * s.dir);           // hacia donde apuntaria en reposo
+                    var now = uaWorld * s.dir;                               // where the arm points
+                    var rest = s.sh.rotation * (s.uaRest * s.dir);           // where it would point at rest
                     var swing = Quaternion.FromToRotation(rest, now);
                     s.sh.rotation = Quaternion.Slerp(Quaternion.identity, swing, ShoulderFollow) * s.sh.rotation;
-                    s.ua.rotation = uaWorld;                                 // el brazo, igual que lo pone el juego
+                    s.ua.rotation = uaWorld;                                 // the arm, just as the game sets it
                 }
+            }
+        }
+
+        /// <summary>In the game's scenes, where the custom model ends up compared to where the original would be (to
+        /// compare): root, hips, head and hands of the game's and the custom one, and the other characters in the
+        /// scene.</summary>
+        static void SceneReport(Applied a)
+        {
+            if (a.root == null) return;
+            bool scene = InScene(a.root.transform);
+            if (!scene) { a.sceneLogAt = -1f; a.sceneLogs = 0; return; }
+            if (a.sceneLogAt < 0f) a.sceneLogAt = Time.unscaledTime;
+            float t = Time.unscaledTime - a.sceneLogAt;
+            if (a.sceneLogs >= 6 || t < a.sceneLogs * 1.0f) return;
+            a.sceneLogs++;
+            var sb = new System.Text.StringBuilder($"[Escena] {a.target} t={t:0.0}s");
+            string P(Vector3 v) => $"({v.x:0.00},{v.y:0.00},{v.z:0.00})";
+            foreach (var bone in new[] { "ROOT_c_hum", "SKL_000_WAIST", "SKL_004_HEAD", "SKL_013_LHAND", "SKL_023_RHAND", "SKL_032_LFOOT" })
+            {
+                Link l = null;
+                foreach (var x in a.links) if (x.game != null && x.game.name == bone) { l = x; break; }
+                if (l == null || l.own == null) continue;
+                var d = l.own.position - l.game.position;
+                sb.Append($" | {bone}: juego {P(l.game.position)} propio {P(l.own.position)} dif {d.magnitude:0.00}");
+            }
+            Plugin.L.LogInfo(sb.ToString());
+            if (a.sceneLogs == 1)
+            {
+                var o = new System.Text.StringBuilder("[Escena] personajes:");
+                foreach (var bt in _sceneBound)
+                    if (bt != null) o.Append($" {bt.name}{P(bt.position)}");
+                o.Append($" | {a.target} raiz {a.root.name}{P(a.root.transform.position)}");
+                Plugin.L.LogInfo(o.ToString());
             }
         }
 
@@ -354,10 +393,28 @@ namespace CrimeSightRevival.Mods
                 foreach (var l in a.links)
                 {
                     if (l.own == null || l.game == null) continue;
+                    if (l.mode == 2)
+                    {
+                        // the root, in world space: in the scenes the game can move the skeleton's root to another
+                        // spot (the target is taken next to the killer) without it showing in its local position
+                        var gr = l.game.rotation;
+                        l.own.SetPositionAndRotation(l.game.position + gr * Vector3.Scale(l.offPos, l.game.lossyScale), gr * l.offRot);
+                        continue;
+                    }
                     l.own.localRotation = l.game.localRotation;
-                    if (l.mode == 2) l.own.localPosition = l.ownRest + (l.game.localPosition - l.gameRest);
-                    else if (l.mode == 1) l.own.localPosition = l.ownRest + (l.game.localPosition - l.gameRest) * l.k;
+                    if (l.mode == 1)
+                    {
+                        // the hips: going down/up, at the scale of its legs (crouching, jumping); moving forward, as
+                        // is. In the scenes (attacking someone...) the game takes the character to its spot by moving
+                        // the hips: scaled, a model with shorter legs stopped before getting there.
+                        var d = l.game.localPosition - l.gameRest;
+                        var par = l.own.parent;
+                        var up = par != null ? Quaternion.Inverse(par.rotation) * Vector3.up : Vector3.up;
+                        float v = Vector3.Dot(d, up);
+                        l.own.localPosition = l.ownRest + d + up * (v * (l.k - 1f));
+                    }
                 }
+                try { SceneReport(a); } catch (Exception e) { Warn("scenerep", "[Escena] " + e.Message); }
             }
         }
 
@@ -371,7 +428,7 @@ namespace CrimeSightRevival.Mods
                 var pos = new Vector3(p.pos[v * 3], p.pos[v * 3 + 1], p.pos[v * 3 + 2]) * s;
                 int b0 = p.boneIdx[v * 4], b1 = p.boneIdx[v * 4 + 1], b2 = p.boneIdx[v * 4 + 2], b3 = p.boneIdx[v * 4 + 3];
                 float w0 = p.boneW[v * 4], w1 = p.boneW[v * 4 + 1], w2 = p.boneW[v * 4 + 2], w3 = p.boneW[v * 4 + 3];
-                pos += delta[b0] * w0 + delta[b1] * w1 + delta[b2] * w2 + delta[b3] * w3;       // a su sitio en el juego
+                pos += delta[b0] * w0 + delta[b1] * w1 + delta[b2] * w2 + delta[b3] * w3;       // to its place in the game
                 verts[v] = pos;
                 weights[v] = new BoneWeight { boneIndex0 = b0, boneIndex1 = b1, boneIndex2 = b2, boneIndex3 = b3, weight0 = w0, weight1 = w1, weight2 = w2, weight3 = w3 };
             }
@@ -401,7 +458,8 @@ namespace CrimeSightRevival.Mods
         static readonly Dictionary<string, Material> _customMats = new();
         static Texture2D _flatNormal;
 
-        /// <summary>Una copia del material del personaje (el sombreado del juego) con la textura o el color del .glb.</summary>
+        /// <summary>A copy of the character's material (the game's shading) with the .glb's texture or
+        /// colour.</summary>
         static Material MaterialFor(Material baseMat, Texture2D tex, float[] color, string id)
         {
             string key = (baseMat != null ? baseMat.GetInstanceID().ToString() : "-") + "|" + (tex != null ? tex.GetInstanceID().ToString() : string.Join(",", color));
@@ -449,7 +507,7 @@ namespace CrimeSightRevival.Mods
             return _flatNormal;
         }
 
-        // ------------------------------------------------------------ esqueletos para Blender
+        // ------------------------------------------------------------ skeletons for Blender
         const string SkeletonVersion = "2";
         static readonly (string key, string name)[] SkeletonOf =
         {
@@ -460,7 +518,7 @@ namespace CrimeSightRevival.Mods
         static bool _skeletonsDone;
         static float _skeletonsNext;
 
-        /// <summary>Escribe una vez el esqueleto de cada personaje en csr_live/skeletons (los que falten).</summary>
+        /// <summary>Writes each character's skeleton once in csr_live/skeletons (the missing ones).</summary>
         static void ExportSkeletons()
         {
             if (_skeletonsDone || Time.unscaledTime < _skeletonsNext) return;
@@ -500,7 +558,7 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Warn("skel", "[Modelos] esqueletos: " + e.Message); _skeletonsDone = true; }
         }
 
-        /// <summary>Los huesos que usan las mallas del modelo (y sus padres), en orden de padres a hijos.</summary>
+        /// <summary>The bones the model's meshes use (and their parents), in parent-to-child order.</summary>
         static List<Glb.Bone> SkeletonBones(GameObject prefab)
         {
             var used = new HashSet<int>();
@@ -514,7 +572,8 @@ namespace CrimeSightRevival.Mods
             {
                 if (!used.Contains(t.GetInstanceID())) continue;
                 int parent = t.parent != null && index.TryGetValue(t.parent.GetInstanceID(), out var pi) ? pi : -1;
-                // si cuelga de algo que no es hueso (entre el modelo y el hueso), su postura se toma respecto al modelo
+                // if it hangs from something that isn't a bone (between the model and the bone), its pose is taken
+                // relative to the model
                 var lp = t.localPosition; var lr = t.localRotation; var ls = t.localScale;
                 if (parent < 0 && t.parent != rootT)
                 {

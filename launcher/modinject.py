@@ -1,16 +1,16 @@
 """
-CRIMESIGHT Revival - instala los mods de apariencia en los archivos del juego.
+CRIMESIGHT Revival - installs the appearance mods into the game's files.
 
-Modo sin BepInEx: antes de abrir el juego se reconstruyen, partiendo SIEMPRE de los originales,
-los archivos que guardan los stickers y los avatares, anadiendo huecos nuevos al final de las
-listas (los del juego no se tocan). Cambiar de mods necesita volver a abrir el juego.
+Mode without BepInEx: before opening the game, the files that store the stickers and avatars are rebuilt,
+ALWAYS starting from the originals, adding new slots at the end of the
+lists (the game's own aren't touched). Changing mods needs the game to be reopened.
 
-  resources.assets      lista de stickers gratuitos (set 0) + stickers nuevos
-  sharedassets3.assets  datos de los avatares + avatares nuevos
-  level3 / level4       listas de iconos del menu y de la partida
+  resources.assets      list of free stickers (set 0) + new stickers
+  sharedassets3.assets  avatar data + new avatars
+  level3 / level4       icon lists of the menu and the match
 
-Se guarda una copia de cada original (<archivo>.original) y "Dejar el juego original" lo
-deshace todo. Los ajustes guardados (rueda de stickers, avatar) no se tocan nunca.
+A copy of each original is kept (<file>.original) and "Restore the original game"
+undoes everything. The saved settings (sticker wheel, avatar) are never touched.
 """
 import copy, json, os, shutil, struct, sys
 
@@ -24,26 +24,26 @@ DATA = "CrimeSight_Data"
 STATE = "csr_mods.json"
 FILES = ("resources.assets", "sharedassets3.assets", "level3", "level4")
 
-# Objetos del juego (version final de CRIMESIGHT; se comprueban antes de tocar nada)
-STAMP_SET0 = 20998            # StampSet 0 (stickers gratuitos), resources.assets
+# Game objects (final version of CRIMESIGHT; checked before touching anything)
+STAMP_SET0 = 20998            # StampSet 0 (free stickers), resources.assets
 STAMP_FIRST = "StampData_hello"
-QUAD_STICKER = 2681           # sprite 128x128 de 4 vertices ("batsu1_frame"): plantilla de malla
+QUAD_STICKER = 2681           # 128x128 4-vertex sprite ("batsu1_frame"): mesh template
 QUAD_STICKER_NAME = "batsu1_frame"
 AVATAR_TEMPLATE = "CursorAvatarDataIcon_WolfMan"
 QUAD_AVATAR_NAME = "CursorAvatarIcon_SecretSherlock"
 ICON_SETS = {"level3": (11627, "sharedassets3.assets"), "level4": (814, "sharedassets3.assets")}
-DEFAULT_STAMP = 28            # "hello": sustituye a un sticker de mod que ya no esta
-# Version de como se meten los mods: al cambiarla, los archivos se rehacen aunque los mods sean los mismos
-# (2: los stickers sin mensaje llevan textos vacios en vez de los de "Hola")
+DEFAULT_STAMP = 28            # "hello": replaces a mod sticker that is no longer there
+# Version of how the mods are inserted: when it changes, the files are rebuilt even if the mods are the same
+# (2: stickers without a message carry empty texts instead of the "Hello" ones)
 BUILD = 2
-TEXT_KEY = b"ctg_name_log_stamp_hello"   # el archivo de textos (TextAsset "ctg_name") que lo contiene
+TEXT_KEY = b"ctg_name_log_stamp_hello"   # the text file (TextAsset "ctg_name") that contains it
 
 
 class InjectError(RuntimeError):
     pass
 
 
-# ------------------------------------------------------------------ utilidades binarias
+# ------------------------------------------------------------------ binary helpers
 def _str_at(raw, off):
     n = struct.unpack_from("<i", raw, off)[0]
     return raw[off + 4:off + 4 + n].decode("utf-8", "replace"), off + 4 + ((n + 3) & ~3)
@@ -62,7 +62,7 @@ def _clone(sf, orig, new_id):
 
 
 def _add_image(sf, quad_sprite_id, img, name, tid, sid):
-    """Textura RGBA32 incrustada + sprite que la usa (malla de 4 vertices, sin recortes)."""
+    """Embedded RGBA32 texture + sprite using it (4-vertex mesh, no cropping)."""
     from UnityPy.enums import TextureFormat
     so = sf.objects[quad_sprite_id]
     sp = so.read()
@@ -96,7 +96,7 @@ def _mb_name(obj):
         return None, raw
 
 
-# ------------------------------------------------------------------ reconstruccion
+# ------------------------------------------------------------------ rebuild
 def _build_stickers(src, dst, stickers):
     from PIL import Image
     env, sf = _load(src)
@@ -139,10 +139,10 @@ def _build_stickers(src, dst, stickers):
 
 
 def _add_texts(sf, stickers):
-    """Anade al archivo de textos del juego el mensaje de cada sticker ("{player}: <texto>") y su
-    nombre, en los 11 idiomas. Devuelve {tipo: (id del mensaje, id del nombre)}.
-    Un sticker sin mensaje lleva textos vacios: si no, se quedaria con los del sticker que se copia
-    ("Hola"). Sin el plugin de BepInEx no se puede evitar la linea del registro, que sale vacia."""
+    """Adds each sticker's message ("{player}: <text>") and its name to the game's text file,
+    in the 11 languages. Returns {type: (message id, name id)}.
+    A sticker without a message carries empty texts: otherwise, it would keep the ones of the copied sticker
+    ("Hello"). Without the BepInEx plugin the log line can't be avoided, and it shows empty."""
     entries, ids = [], {}
     for s in stickers:
         log_id, doc_id = f"ctg_name_log_stamp_csr_{s['type']}", f"ctg_name_stamp_csr_{s['type']}"
@@ -169,7 +169,7 @@ def _add_texts(sf, stickers):
         t.m_Script = ("\ufeff" if bom else "") + json.dumps(data, ensure_ascii=False, indent=4)
         t.save()
         return ids
-    return {}         # no se encontro: se quedan con el texto de "hola"
+    return {}         # not found: they keep the "hello" text
 
 
 def _build_avatars(data_dir, orig, avatars):
@@ -220,8 +220,8 @@ def _build_avatars(data_dir, orig, avatars):
 
 
 def _write(path, data, tries=30, wait=0.5):
-    """Escribe a un .tmp y lo cambia por el original. Si el antivirus esta revisando el .tmp recien escrito
-    (o el original), Windows no deja renombrarlo ("Acceso denegado"): se reintenta unos segundos."""
+    """Writes to a .tmp and swaps it for the original. If the antivirus is scanning the freshly written .tmp
+    (or the original), Windows won't rename it ("Access denied"): it retries for a few seconds."""
     import time
     tmp = path + ".tmp"
     with open(tmp, "wb") as f:
@@ -240,7 +240,7 @@ def _write(path, data, tries=30, wait=0.5):
             time.sleep(wait)
 
 
-# ------------------------------------------------------------------ estado y originales
+# ------------------------------------------------------------------ state and originals
 def _data_dir(game_dir):
     return os.path.join(game_dir, DATA)
 
@@ -276,8 +276,8 @@ def current_hash(game_dir):
 
 
 def apply(game_dir, rs, log=None):
-    """Deja en el juego exactamente el conjunto de mods 'rs' (modpack.room_set). Devuelve True si
-    cambio algo. Con un conjunto vacio, vuelve a dejar los archivos originales."""
+    """Leaves exactly the mod set 'rs' (modpack.room_set) in the game. Returns True if
+    something changed. With an empty set, the original files are put back."""
     dd = _data_dir(game_dir)
     st = _state(dd)
     want = rs["hash"] if rs else ""
@@ -286,7 +286,7 @@ def apply(game_dir, rs, log=None):
     if st.get("hash", "") == want and st.get("build") == BUILD and all(
             os.path.isfile(os.path.join(dd, f)) and os.path.getsize(os.path.join(dd, f)) == n
             for f, n in st.get("sizes", {}).items()):
-        return False                       # ya estaban puestos (y nadie ha cambiado los archivos)
+        return False                       # already in place (and nobody changed the files)
 
     def orig(name):
         return os.path.join(dd, name + ".original")
@@ -310,13 +310,13 @@ def apply(game_dir, rs, log=None):
 
 
 def restore(game_dir, fix=True):
-    """Quita los mods: vuelve a poner los archivos originales. resources.assets.original lo
-    comparte con la linea de creditos, que se vuelve a anadir al abrir el juego."""
+    """Removes the mods: puts the original files back. resources.assets.original is
+    shared with the credits line, which is added again when opening the game."""
     dd = _data_dir(game_dir)
     changed = False
     for f in FILES:
         o, cur = os.path.join(dd, f + ".original"), os.path.join(dd, f)
-        # con mods el archivo crece; la linea de creditos no cambia el tamano de resources.assets
+        # with mods the file grows; the credits line doesn't change resources.assets' size
         if os.path.isfile(o) and (not os.path.isfile(cur) or os.path.getsize(o) != os.path.getsize(cur)):
             shutil.copy2(o, cur)
             changed = True
@@ -325,9 +325,9 @@ def restore(game_dir, fix=True):
     return changed
 
 
-# ------------------------------------------------------------------ ajustes guardados del juego
+# ------------------------------------------------------------------ the game's saved settings
 def _prefs_key(game_dir):
-    """Clave del registro donde Unity guarda los ajustes (PlayerPrefs): Software\\<empresa>\\<juego>."""
+    """Registry key where Unity stores the settings (PlayerPrefs): Software\\<company>\\<game>."""
     try:
         with open(os.path.join(_data_dir(game_dir), "app.info"), encoding="utf-8") as f:
             company, product = [ln.strip() for ln in f.read().splitlines()[:2]]
@@ -337,10 +337,10 @@ def _prefs_key(game_dir):
 
 
 def fix_prefs(game_dir, stickers, avatars):
-    """(Ya no se usa.) Cambiaba en los ajustes guardados los stickers/avatar de mods que no estaban.
-    No hace falta: si falta uno, el juego simplemente ensena otro en su hueco y, al volver el mod
-    (p. ej. al salir de la sala de otro jugador), vuelve a salir el tuyo. Reescribirlo hacia que se
-    perdiera para siempre."""
+    """(No longer used.) It changed, in the saved settings, the mod stickers/avatar that weren't there.
+    It isn't needed: if one is missing, the game simply shows another in its slot and, when the mod comes back
+    (e.g. when leaving another player's room), yours shows again. Rewriting it made it
+    get lost forever."""
     if sys.platform != "win32":
         return 0
     key = _prefs_key(game_dir)
@@ -369,6 +369,6 @@ def fix_prefs(game_dir, stickers, avatars):
             elif name.startswith("cursorAvatarIconName") and typ == winreg.REG_BINARY:
                 s = bytes(val).rstrip(b"\0").decode("utf-8", "replace")
                 if s.startswith(modpack.AVATAR_PREFIX) and s not in avatars:
-                    winreg.DeleteValue(h, name)        # el juego vuelve a su avatar por defecto
+                    winreg.DeleteValue(h, name)        # the game goes back to its default avatar
                     fixed += 1
     return fixed

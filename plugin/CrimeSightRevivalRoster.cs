@@ -1,18 +1,19 @@
-// CRIMESIGHT Revival - personajes nuevos en la partida (el reparto del Selector de personajes).
+// CRIMESIGHT Revival - new characters in the match (the Character Selector's cast).
 //
-// Al empezar la cuenta atras, el servidor sortea que personajes salen (originales y nuevos) y el lanzador escribe
-// csr_live/roster.json con lo que lleva cada sitio (A..F) en esta partida:
-//   { "id": "...", "positions": { "PawnTypeData_C": { "id", "name", "talk": {situacion: frase}, "image", "model" }, ... },
+// When the countdown starts, the server draws which characters appear (original and new) and the launcher writes
+// csr_live/roster.json with what each seat (A..F) has in this match:
+//   { "id": "...", "positions": { "PawnTypeData_C": { "id", "name", "talk": {situation: line}, "image", "model" },
+//   ... },
 //     "traitor": {...} | null }
-// Un sitio a null es el personaje original. El modelo 3D y las animaciones ya van en models.json (Models); aqui:
-//   - Nombre: el del original se cambia por el nuevo en todos los textos del juego (registro, dialogos, fichas).
-//   - Frases: las situaciones que el personaje nuevo tiene escritas sustituyen a las del original; las variantes
-//     de una situacion (con otro personaje, el primer dia...) usan la misma frase. Las demas se quedan.
-//   - Imagen: los retratos del personaje (fichas, iconos, resultados...) se hacen con la imagen del personaje, del
-//     mismo tamano que los originales (tenida de rojo / gris en los de herido / en coma). Sin imagen, se saca una
-//     del modelo 3D. La placa con el nombre sobre el tablero se rehace con el nombre nuevo.
-// Al cambiar el reparto (o al salir de la sala) todo vuelve a lo original. El juego no se entera: solo cambian
-// sus textos y sus imagenes, la forma de jugar de cada sitio es la del original.
+// A null seat is the original character. The 3D model and animations already go in models.json (Models); here:
+//   - Name: the original's is swapped for the new one in every game text (log, dialogues, cards).
+//   - Lines: the situations the new character has written replace the original's; the variants
+//     of a situation (with another character, the first day...) use the same line. The rest stay.
+//   - Image: the character's portraits (cards, icons, results...) are made with the character's image, the
+//     same size as the originals (tinted red / grey on the injured / coma ones). Without an image, one is taken
+//     from the 3D model. The name plate over the board is redone with the new name.
+// When the cast changes (or on leaving the room) everything goes back to the original. The game doesn't notice: only
+// its texts and images change, each seat plays the way the original does.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -40,11 +41,11 @@ namespace CrimeSightRevival.Mods
         static State _cur;
         static float _next, _nextSprites, _nextTalk;
 
-        // ------------------------------------------------------------ una sola frase en la presentacion
-        // En la presentacion de la partida algunos personajes hablan dos veces (una por cada companero al que saludan:
-        // pawnGameStart03, pawnGameStart06...). Un personaje nuevo tiene una sola frase para eso, asi que solo dice la
-        // primera; las demas no entran en la cola de dialogos del juego.
-        static readonly Dictionary<string, string> _introLine = new();   // "partida|posicion" -> su frase
+        // ------------------------------------------------------------ a single line in the introduction
+        // In the match introduction some characters speak twice (once per companion they greet:
+        // pawnGameStart03, pawnGameStart06...). A new character has a single line for that, so it only says the
+        // first; the rest don't enter the game's dialogue queue.
+        static readonly Dictionary<string, string> _introLine = new();   // "match|position" -> its line
 
         public static void Init(HarmonyLib.Harmony h)
         {
@@ -55,6 +56,13 @@ namespace CrimeSightRevival.Mods
                     System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
             }
             catch (Exception e) { Plugin.L.LogWarning("[Personajes] presentacion: " + e.Message); }
+            try
+            {
+                var m = HarmonyLib.AccessTools.DeclaredMethod(typeof(CharaTalkDialogue2way), "SetCharaImage");
+                if (m != null) h.Patch(m, prefix: new HarmonyLib.HarmonyMethod(typeof(Roster).GetMethod(nameof(BeforeSetCharaImage),
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Personajes] conversacion: " + e.Message); }
         }
 
         static bool BeforeOpenTalk(object[] __args, ref bool __result)
@@ -70,9 +78,11 @@ namespace CrimeSightRevival.Mods
                 int i = m.Groups[1].Value[0] - '1';
                 if (_cur.pos[i] == null) return true;
                 string k = _cur.id + "|" + i;
-                // Las frases se piden todas al empezar y el juego las pone en cola; al cerrarse una, saca la siguiente
-                // llamando OTRA VEZ a esta misma funcion. Por eso la frase elegida tiene que poder abrirse siempre, y las
-                // demas no se dejan entrar en la cola (asi la cola nunca llega a pedirlas).
+                // All the lines are requested at the start and the game queues them; when one closes, it takes out
+                // the next
+                // by calling THIS same function AGAIN. That is why the chosen line must always be able to open, and
+                // the
+                // rest aren't let into the queue (so the queue never gets to ask for them).
                 if (!_introLine.TryGetValue(k, out var chosen)) { _introLine[k] = name; return true; }
                 if (chosen == name) return true;
                 Plugin.L.LogInfo("[Personajes] presentacion: " + (_cur.pos[i].name ?? Pawns[i]) + " ya habla en " + chosen + ", se quita " + name);
@@ -135,7 +145,7 @@ namespace CrimeSightRevival.Mods
                 if (st.pos[i] != null) sb.Append(sb.Length > 0 ? ", " : "").Append(DefaultNames[i]).Append(" -> ").Append(st.pos[i].name ?? st.pos[i].id);
             if (st.traitor != null) sb.Append(sb.Length > 0 ? ", " : "").Append("traidor -> ").Append(st.traitor.id);
             Plugin.L.LogInfo("[Personajes] reparto " + st.id + ": " + sb);
-            foreach (var e in st.pos) if (e?.model != null) Models.Prefetch(e.model);      // se lee en otro hilo mientras carga la partida
+            foreach (var e in st.pos) if (e?.model != null) Models.Prefetch(e.model);      // read on another thread while the match loads
         }
 
         static string Str(JsonElement e, string k) =>
@@ -155,10 +165,10 @@ namespace CrimeSightRevival.Mods
             return en;
         }
 
-        // ------------------------------------------------------------ animaciones de otro personaje
+        // ------------------------------------------------------------ another character's animations
         static string _borrowSig = "";
-        /// <summary>Cada personaje nuevo se mueve como el personaje del juego que se le eligio en el lanzador, no como
-        /// el del sitio que ocupa (Models hace el cambio en cada fotograma).</summary>
+        /// <summary>Each new character moves like the game character chosen for it in the launcher, not like
+        /// the one of the seat it takes (Models does the swap every frame).</summary>
         static void ApplyBorrow()
         {
             var map = new Dictionary<string, string>();
@@ -175,14 +185,14 @@ namespace CrimeSightRevival.Mods
             Models.SetBorrow(map);
         }
 
-        // ------------------------------------------------------------ textos (nombres y frases)
+        // ------------------------------------------------------------ texts (names and lines)
         const string Mark = "csr_roster_mark";
-        static readonly Dictionary<string, string> _savedText = new();     // clave -> texto original
+        static readonly Dictionary<string, string> _savedText = new();     // key -> original text
         static IntPtr _textDict;
         static string _textSig = "";
         static readonly Regex TalkKey = new(@"^ctg_talk_pwPawn0([1-6])_(.+)_p\d+_v\d+$");
 
-        /// <summary>El nombre original del personaje de un sitio (aunque ahora lleve el de otro).</summary>
+        /// <summary>The original name of a seat's character (even if it now has someone else's).</summary>
         internal static string OrigName(int i)
         {
             string k = "ctg_name_pawn0" + (i + 1);
@@ -211,7 +221,8 @@ namespace CrimeSightRevival.Mods
             return sb.ToString();
         }
 
-        /// <summary>La situacion base de una frase: "pawnGameStart04_gt01" -> "pawnGameStart", "x_toPawn03" -> "x".</summary>
+        /// <summary>The base situation of a line: "pawnGameStart04_gt01" -> "pawnGameStart", "x_toPawn03" ->
+        /// "x".</summary>
         static string BaseSituation(string s)
         {
             s = Regex.Replace(s, @"_gt\d+$", "");
@@ -225,7 +236,7 @@ namespace CrimeSightRevival.Mods
             var tm = TextManager.Instance;
             var lt = tm != null ? tm.LangText : null;
             if (lt == null) return;
-            bool fresh = lt.Pointer != _textDict || !lt.ContainsKey(Mark);    // otro idioma: el juego recargo los textos
+            bool fresh = lt.Pointer != _textDict || !lt.ContainsKey(Mark);    // another language: the game reloaded the texts
             string want = TextSig(_cur);
             if (!fresh && want == _textSig) return;
             if (fresh) { _savedText.Clear(); _textDict = lt.Pointer; }
@@ -238,7 +249,7 @@ namespace CrimeSightRevival.Mods
             lt[Mark] = "1";
             if (want == "") return;
 
-            var names = new Dictionary<string, string>();                    // nombre original -> nuevo
+            var names = new Dictionary<string, string>();                    // original name -> new
             var newName = new string[6];
             for (int i = 0; i < 6; i++)
             {
@@ -294,8 +305,8 @@ namespace CrimeSightRevival.Mods
             Plugin.L.LogInfo($"[Personajes] textos: {changes.Count} cambiado(s) ({talks} frase(s) propias)");
         }
 
-        // ------------------------------------------------------------ imagenes de los personajes
-        // retratos de PawnTypeData: (nombre, tinte) 0 normal, 1 herido (rojo), 2 en coma (gris)
+        // ------------------------------------------------------------ character images
+        // PawnTypeData portraits: (name, tint) 0 normal, 1 injured (red), 2 coma (grey)
         static readonly (string name, int tint)[] SpriteFields =
         {
             ("charaInfoSprite", 0), ("charaInfoDamageSprite", 1), ("charaInfoComaSprite", 2), ("charaTelopSprite", 0),
@@ -357,9 +368,9 @@ namespace CrimeSightRevival.Mods
         static readonly HashSet<IntPtr> _ours = new();
         static readonly Dictionary<string, Dictionary<string, Sprite>> _gameSprites = new();   // character -> field -> the game's
         static readonly Dictionary<string, Texture> _gamePanel = new();                         // character -> the game's name plate
-        static readonly Dictionary<string, Texture2D> _images = new();      // imagen (ruta / "auto:modelo") -> textura legible
+        static readonly Dictionary<string, Texture2D> _images = new();      // image (path / "auto:model") -> readable texture
         static readonly HashSet<string> _imageAsked = new();
-        static readonly Dictionary<string, Texture2D> _panels = new();      // "nombre|w|h" -> placa
+        static readonly Dictionary<string, Texture2D> _panels = new();      // "name|w|h" -> plate
         static readonly HashSet<string> _panelAsked = new();
 
         static Dictionary<string, PawnTypeData> FindPawnData()
@@ -368,7 +379,7 @@ namespace CrimeSightRevival.Mods
             foreach (var o in Resources.FindObjectsOfTypeAll(Il2CppType.Of<PawnTypeData>()))
             {
                 var d = o.TryCast<PawnTypeData>();
-                if (d != null && Array.IndexOf(Pawns, d.name) >= 0) r[d.name] = d;   // si hay varias, la ultima
+                if (d != null && Array.IndexOf(Pawns, d.name) >= 0) r[d.name] = d;   // if there are several, the last one
             }
             return r;
         }
@@ -387,8 +398,9 @@ namespace CrimeSightRevival.Mods
                 if (!_swapped.TryGetValue(d.Pointer, out var sw)) _swapped[d.Pointer] = sw = new Swapped { d = d, key = Pawns[i] };
                 if (!sw.sprites && sw.todo == null)
                 {
-                    // su imagen, metida en la forma de cada retrato original; sin imagen, una silueta en esa forma.
-                    // Se hacen unos pocos por fotograma (SpriteJobs) para no dar tirones al empezar la partida.
+                    // its image, fitted into the shape of each original portrait; without an image, a silhouette in
+                    // that shape.
+                    // A few are made per frame (SpriteJobs) so the match start doesn't stutter.
                     sw.img = !string.IsNullOrEmpty(e.image) ? LoadImage(Path.Combine(LiveMods.LiveDir, e.image)) : null;
                     sw.who = e.name ?? e.id;
                     sw.todo = new Queue<(string, int)>();
@@ -413,12 +425,13 @@ namespace CrimeSightRevival.Mods
             }
         }
 
-        // ------------------------------------------------------------ retratos de los dialogos
-        // Las frases de cada personaje (HintTalkData) llevan su retrato (talk_chara_pawn0N, _impatient, _killer,
-        // talk_chara_2way_pawn0N). Con un personaje nuevo en ese sitio, sus dialogos llevan su imagen (o la silueta),
-        // en la forma del retrato original, igual que los demas retratos.
+        // ------------------------------------------------------------ dialogue portraits
+        // Each character's lines (HintTalkData) carry their portrait (talk_chara_pawn0N, _impatient, _killer,
+        // talk_chara_2way_pawn0N). With a new character in that seat, its dialogues carry its image (or the
+        // silhouette),
+        // in the shape of the original portrait, like the other portraits.
         static readonly Dictionary<IntPtr, (HintTalkData d, Sprite orig)> _talkSwapped = new();
-        static readonly Dictionary<string, Sprite> _talkMade = new();      // "sprite original|imagen" -> retrato
+        static readonly Dictionary<string, Sprite> _talkMade = new();      // "original sprite|image" -> portrait
         static readonly List<UnityEngine.Object> _talkObjs = new();
         static int _talkSeen = -1;
         static readonly Regex TalkSprite = new(@"^talk_chara_(?:2way_)?pawn0([1-6])");
@@ -428,8 +441,9 @@ namespace CrimeSightRevival.Mods
             bool any = false;
             if (_cur != null) foreach (var e in _cur.pos) any |= e != null;
             if (!any) { RestoreTalkPics(); return; }
+            try { Apply2way(CharaTalkDialogue2way.Instance); } catch (Exception ex) { Warn("2way", "[Personajes] conversacion: " + ex.Message); }
             var all = Resources.FindObjectsOfTypeAll(Il2CppType.Of<HintTalkData>());
-            if (all.Length == _talkSeen) return;                              // nada nuevo cargado
+            if (all.Length == _talkSeen) return;                              // nothing new loaded
             _talkSeen = all.Length;
             int n = 0;
             foreach (var o in all)
@@ -460,7 +474,7 @@ namespace CrimeSightRevival.Mods
             if (n > 0) Plugin.L.LogInfo($"[Personajes] {n} dialogo(s) con el retrato del personaje nuevo ({_talkMade.Count} imagen(es))");
         }
 
-        /// <summary>La imagen de una frase (por su nombre, ctg_talk_pwPawn0N_situacion_...): la suya o la principal.</summary>
+        /// <summary>A line's image (by its name, ctg_talk_pwPawn0N_situation_...): its own or the main one.</summary>
         static string TalkImageOf(Entry e, string dataName)
         {
             var m = dataName != null ? TalkKey.Match(dataName) : null;
@@ -468,16 +482,17 @@ namespace CrimeSightRevival.Mods
             {
                 string sit = BaseSituation(m.Groups[2].Value);
                 if (e.talkImages.TryGetValue(sit, out var p)) return p;
-                if (sit == "startAction")                                        // una sola frase para los tres estados
+                if (sit == "startAction")                                        // a single line for the three states
                     foreach (var k in new[] { "startAction_statusInjury", "startAction_statusHunger", "startAction_statusDying" })
                         if (e.talkImages.TryGetValue(k, out p)) return p;
             }
             return string.IsNullOrEmpty(e.image) ? null : e.image;
         }
 
-        /// <summary>Retrato de dialogo: la imagen entera (sin lo transparente de alrededor), lo mas grande que quepa en
-        /// el del juego, apoyada abajo y centrada; sin recortarla con la forma del original. Por abajo se desvanece como
-        /// los del juego (que se funden con el recuadro del texto, que queda por delante).</summary>
+        /// <summary>Dialogue portrait: the whole image (without the transparent area around it), as big as fits in
+        /// the game's, resting at the bottom and centred; without cutting it to the original's shape. At the bottom
+        /// it fades like
+        /// the game's (which blend into the text box, which stays in front).</summary>
         static Sprite FitContain(Texture2D img, Sprite orig, List<UnityEngine.Object> made)
         {
             var r = orig.rect;
@@ -492,7 +507,7 @@ namespace CrimeSightRevival.Mods
             float bw = x1 - x0 + 1, bh = y1 - y0 + 1;
             float k = Math.Min(w * 0.96f / bw, h * 0.98f / bh);
             float dw = bw * k, left = (w - dw) / 2f;
-            // cuanto se ve el original en cada fila (lo mas opaco de la fila): asi se desvanece por abajo
+            // how visible the original is on each row (the most opaque of the row): that's how it fades at the bottom
             var fade = new float[h];
             try
             {
@@ -510,7 +525,8 @@ namespace CrimeSightRevival.Mods
                     rowMax[y] = m / 255f;
                     if (rowMax[y] > top) top = rowMax[y];
                 }
-                // de abajo arriba, la curva solo sube (los huecos de la figura no cuentan): la parte de abajo que se funde
+                // from the bottom up, the curve only rises (the gaps in the figure don't count): the bottom part that
+                // fades
                 float run = 0;
                 for (int y = 0; y < h; y++)
                 {
@@ -544,8 +560,99 @@ namespace CrimeSightRevival.Mods
             return s;
         }
 
+        // ------------------------------------------------------------ conversation illustrations
+        // When two characters talk to each other (CharaTalkDialogue2way) they appear full-body on the sides. Those
+        // images aren't each line's: the window has its own table (charaImageFor2way, "ctg_name_pawn0N" ->
+        // CharaImagePawnA..F) and, for Berkeley on the left, RevCharaImagePawnB. With a new character in a seat,
+        // its table gets its image (whole, resting at the bottom) or, if it has none, the original's silhouette.
+        static IntPtr _2wayInst;
+        static readonly Sprite[] _2wayOrig = new Sprite[6];
+        static Sprite _2wayRevOrig;
+        static readonly List<UnityEngine.Object> _2wayObjs = new();
+        static readonly Dictionary<string, Sprite> _2wayMade = new();        // "original sprite|image" -> illustration
+
+        static Sprite Get2way(CharaTalkDialogue2way d, int i) => i switch
+        {
+            0 => d.CharaImagePawnA, 1 => d.CharaImagePawnB, 2 => d.CharaImagePawnC,
+            3 => d.CharaImagePawnD, 4 => d.CharaImagePawnE, _ => d.CharaImagePawnF,
+        };
+        static void Set2way(CharaTalkDialogue2way d, int i, Sprite sp)
+        {
+            switch (i)
+            {
+                case 0: d.CharaImagePawnA = sp; break; case 1: d.CharaImagePawnB = sp; break; case 2: d.CharaImagePawnC = sp; break;
+                case 3: d.CharaImagePawnD = sp; break; case 4: d.CharaImagePawnE = sp; break; default: d.CharaImagePawnF = sp; break;
+            }
+            var dict = d.charaImageFor2way;
+            string k = "ctg_name_pawn0" + (i + 1);
+            if (dict != null && sp != null) dict[k] = sp;
+        }
+
+        internal static void Apply2way(CharaTalkDialogue2way d)
+        {
+            if (d == null) return;
+            if (_2wayInst != d.Pointer) { Array.Clear(_2wayOrig, 0, 6); _2wayRevOrig = null; _2wayInst = d.Pointer; }
+            int n = 0;
+            for (int i = 0; i < 6; i++)
+            {
+                var e = _cur?.pos[i];
+                if (e == null)
+                {
+                    if (_2wayOrig[i] != null) { Set2way(d, i, _2wayOrig[i]); if (i == 1 && _2wayRevOrig != null) d.RevCharaImagePawnB = _2wayRevOrig; }
+                    continue;
+                }
+                var orig = _2wayOrig[i] ?? Get2way(d, i);
+                if (orig == null) continue;
+                string path = string.IsNullOrEmpty(e.image) ? null : e.image;
+                string mk = orig.Pointer + "|" + path;
+                if (!_2wayMade.TryGetValue(mk, out var ns))
+                {
+                    var img = path != null ? LoadImage(Path.Combine(LiveMods.LiveDir, path)) : null;
+                    try { ns = img != null ? FitContain(img, orig, _2wayObjs) : Fitted(null, orig, 0, _2wayObjs); }
+                    catch (Exception ex) { Warn("2wayfit", "[Personajes] conversacion: " + ex.Message); ns = null; }
+                    _2wayMade[mk] = ns;
+                }
+                if (ns == null) continue;
+                _2wayOrig[i] = orig;
+                if (i == 1 && _2wayRevOrig == null) _2wayRevOrig = d.RevCharaImagePawnB;
+                bool changed = Get2way(d, i)?.Pointer != ns.Pointer;
+                var dict = d.charaImageFor2way;
+                string k = "ctg_name_pawn0" + (i + 1);
+                if (!changed && dict != null && dict.ContainsKey(k) && dict[k]?.Pointer != ns.Pointer) changed = true;
+                if (i == 1 && d.RevCharaImagePawnB?.Pointer != ns.Pointer) { d.RevCharaImagePawnB = ns; changed = true; }
+                if (!changed) continue;
+                Set2way(d, i, ns);
+                n++;
+            }
+            if (n > 0) Plugin.L.LogInfo($"[Personajes] conversaciones: {n} ilustracion(es) del personaje nuevo");
+        }
+
+        static void BeforeSetCharaImage(CharaTalkDialogue2way __instance)
+        {
+            try { if (_cur != null) Apply2way(__instance); } catch (Exception ex) { Warn("2wayset", "[Personajes] conversacion: " + ex.Message); }
+        }
+
+        static void Restore2way()
+        {
+            try
+            {
+                var d = _2wayInst != IntPtr.Zero ? CharaTalkDialogue2way.Instance : null;
+                if (d != null && d.Pointer == _2wayInst)
+                {
+                    for (int i = 0; i < 6; i++) if (_2wayOrig[i] != null) Set2way(d, i, _2wayOrig[i]);
+                    if (_2wayRevOrig != null) d.RevCharaImagePawnB = _2wayRevOrig;
+                }
+            }
+            catch { }
+            Array.Clear(_2wayOrig, 0, 6); _2wayRevOrig = null; _2wayInst = IntPtr.Zero;
+            foreach (var o in _2wayObjs) if (o != null) UnityEngine.Object.Destroy(o);
+            _2wayObjs.Clear();
+            _2wayMade.Clear();
+        }
+
         static void RestoreTalkPics()
         {
+            Restore2way();
             foreach (var v in _talkSwapped.Values) try { if (v.d != null) v.d.CharaImage = v.orig; } catch { }
             _talkSwapped.Clear();
             foreach (var o in _talkObjs) if (o != null) UnityEngine.Object.Destroy(o);
@@ -554,7 +661,7 @@ namespace CrimeSightRevival.Mods
             _talkSeen = -1;
         }
 
-        /// <summary>Las placas con el nombre que ya estan en el tablero se repintan con la nueva.</summary>
+        /// <summary>The name plates already on the board are repainted with the new one.</summary>
         static void RefreshNamePanels(PawnTypeData d, Texture tex)
         {
             try
@@ -573,7 +680,7 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Warn("panel", "[Personajes] placa del nombre: " + e.Message); }
         }
 
-        /// <summary>Cada fotograma, retratos pendientes hasta ~8 ms.</summary>
+        /// <summary>Every frame, pending portraits up to ~8 ms.</summary>
         static void SpriteJobs()
         {
             if (_swapped.Count == 0) return;
@@ -662,7 +769,7 @@ namespace CrimeSightRevival.Mods
                 if (!File.Exists(path)) return null;
                 var t = new Texture2D(2, 2, TextureFormat.RGBA32, false) { name = "csr_roster_img", hideFlags = HideFlags.DontUnloadUnusedAsset };
                 if (!ImageConversion.LoadImage(t, File.ReadAllBytes(path), false)) { UnityEngine.Object.Destroy(t); return null; }
-                if (Math.Max(t.width, t.height) > 1024)                    // mas no hace falta (el retrato mas grande es de 920)
+                if (Math.Max(t.width, t.height) > 1024)                    // more isn't needed (the biggest portrait is 920)
                 {
                     float k = 1024f / Math.Max(t.width, t.height);
                     int w = Math.Max(1, (int)(t.width * k)), h = Math.Max(1, (int)(t.height * k));
@@ -680,17 +787,21 @@ namespace CrimeSightRevival.Mods
             catch (Exception ex) { Warn("img" + path, "[Personajes] " + path + ": " + ex.Message); return null; }
         }
 
-        /// <summary>Un sprite del mismo tamano y forma que el original, con la imagen recortada para llenarlo (centrada
-        /// a lo ancho, tirando hacia arriba, donde suele estar la cara) y tenida si es de herido o en coma.</summary>
-        // ------------------------------------------------------------ fondo de las fotos de resultados
-        // Result_SSKiller_* / Result_SSTarget_* son la figura del personaje sobre un fondo: degradado gris con la arana
-        // (asesino) o la diana (objetivo) a la derecha. Para un personaje nuevo se rehace ese fondo sin nadie a partir
-        // de las seis fotos del juego (en cada una el personaje tapa una parte distinta):
-        //   - el degradado sale de las primeras columnas (libres en todas);
-        //   - el dibujo es lo que en al menos 2 fotos tiene su color y no el del fondo, en trozos grandes que se ven
-        //     claros en casi todas; lo que tapan los personajes se completa con su simetria (la arana es simetrica de
-        //     izquierda a derecha; la diana tambien de arriba abajo).
-        // Se guarda en csr_live/cache/bg_<campo>.png (solo en este PC).
+        /// <summary>A sprite of the same size and shape as the original, with the image cropped to fill it (centred
+        /// horizontally, leaning up, where the face usually is) and tinted if it is injured or in a coma.</summary>
+        // ------------------------------------------------------------ background of the result photos
+        // Result_SSKiller_* / Result_SSTarget_* are the character's figure over a background: grey gradient with the
+        // spider
+        // (killer) or the bullseye (target) on the right. For a new character that background is rebuilt with nobody,
+        // from
+        // the game's six photos (in each one the character covers a different part):
+        //   - the gradient comes from the first columns (free in all of them);
+        //   - the drawing is what has its colour and not the background's in at least 2 photos, in big pieces that
+        //     show
+        //     clearly in almost all; what the characters cover is completed with its symmetry (the spider is
+        //     symmetric
+        //     left to right; the bullseye also top to bottom).
+        // Saved in csr_live/cache/bg_<field>.png (only on this PC).
         static readonly Dictionary<string, Color32[]> _under = new();
 
         static Color32[] UnderFor(Sprite orig, int w, int h)
@@ -748,9 +859,9 @@ namespace CrimeSightRevival.Mods
                 for (int j = 0; j < k; j++) { var c = all[j][i]; tr[j] = c.r; tg[j] = c.g; tb[j] = c.b; ts[j] = c.r + c.g + c.b; }
                 Array.Sort(tr); Array.Sort(tg); Array.Sort(tb); Array.Sort(ts);
                 med[i] = Px.C((byte)tr[k / 2], (byte)tg[k / 2], (byte)tb[k / 2], 255);
-                low[i] = ts[1];                                                  // el segundo mas oscuro (suma)
+                low[i] = ts[1];                                                  // the second darkest (sum)
             }
-            // degradado: media de las 6 primeras columnas de cada fila
+            // gradient: average of the first 6 columns of each row
             var gr = new int[h * 3];
             for (int y = 0; y < h; y++)
             {
@@ -759,7 +870,7 @@ namespace CrimeSightRevival.Mods
                 gr[y * 3] = r / c6; gr[y * 3 + 1] = g / c6; gr[y * 3 + 2] = b / c6;
             }
             int xr = (int)(w * 0.5f);
-            // color del dibujo: mediana de lo que se ve claro en casi todas
+            // drawing colour: median of what shows clearly in almost all
             var strict = new bool[np];
             var hr = new int[256]; var hg = new int[256]; var hb = new int[256]; int ns = 0;
             for (int y = 0; y < h; y++)
@@ -783,7 +894,7 @@ namespace CrimeSightRevival.Mods
                     }
                     nEc[i] = (byte)a; nGr[i] = (byte)b;
                 }
-            // trozos del dibujo (vecinos de 4) que tienen al menos 300 pixeles claros en casi todas
+            // pieces of the drawing (4-neighbours) that have at least 300 clear pixels in almost all
             var keep = new bool[np]; var seen = new bool[np]; var q = new Queue<int>(); var comp = new List<int>();
             for (int s0 = 0; s0 < np; s0++)
             {
@@ -850,7 +961,7 @@ namespace CrimeSightRevival.Mods
             return bg;
         }
 
-        // la figura de una imagen: lo que no es transparente, y donde esta la cabeza (centro de lo de arriba)
+        // an image's figure: what isn't transparent, and where the head is (centre of the top part)
         static readonly Dictionary<IntPtr, (int x0, int y0, int x1, int y1, float hx)> _figures = new();
         static (int x0, int y0, int x1, int y1, float hx) Figure(Texture2D img, Color32[] src)
         {
@@ -862,7 +973,7 @@ namespace CrimeSightRevival.Mods
             if (x1 < 0) { x0 = 0; y0 = 0; x1 = sw - 1; y1 = sh - 1; }
             int band = Math.Max(1, (int)((y1 - y0 + 1) * 0.12f));
             double sx = 0; long n = 0;
-            for (int y = y1; y > y1 - band && y >= 0; y--)                  // filas de arriba (las texturas van de abajo arriba)
+            for (int y = y1; y > y1 - band && y >= 0; y--)                  // top rows (textures go bottom to top)
                 for (int x = x0; x <= x1; x++)
                     if (src[y * sw + x].a > 128) { sx += x; n++; }
             var f = (x0, y0, x1, y1, n > 0 ? (float)(sx / n) : (x0 + x1) / 2f);
@@ -872,7 +983,7 @@ namespace CrimeSightRevival.Mods
 
         static Sprite Fitted(Texture2D img, Sprite orig, int tint, List<UnityEngine.Object> made)
         {
-            // la forma del original (su transparencia): el retrato nuevo no se sale de ella
+            // the original's shape (its transparency): the new portrait doesn't go outside it
             Texture2D shape;
             try { shape = SpriteToTex(orig); } catch { return null; }
             var mask = Pixels(shape);
@@ -883,21 +994,22 @@ namespace CrimeSightRevival.Mods
             Color32[] src = null; int sw = 0, sh = 0; float scale = 1, x0 = 0, y0 = 0;
             if (img != null)
             {
-                // se encuadra la figura (sin lo transparente de alrededor) desde arriba, centrada en la cabeza: asi la
-                // cara siempre se ve; en los retratos cuadrados o apaisados, de la cabeza a medio cuerpo
+                // the figure is framed (without the transparent area around it) from the top, centred on the head:
+                // that way the
+                // face always shows; in square or landscape portraits, from the head to mid-body
                 src = Pixels(img); sw = img.width; sh = img.height;
                 var fg0 = Figure(img, src);
                 float A = (float)w / h, bw = fg0.x1 - fg0.x0 + 1, bh = fg0.y1 - fg0.y0 + 1;
                 float winW = bw, winH = bw / A;
                 if (winH > bh) { winH = bh; winW = winH * A; }
                 if (A >= 0.6f && bh > bw * 1.15f && winH > bh * 0.62f) { winH = bh * 0.62f; winW = winH * A; }
-                float top = fg0.y1 + 1 + winH * 0.12f;                        // aire por encima de la cabeza
+                float top = fg0.y1 + 1 + winH * 0.12f;                        // room above the head
                 y0 = top - winH;
                 x0 = fg0.hx - winW / 2f;
                 scale = w / winW;
             }
             var sil = img == null ? Pixels(RosterUi.Silhouette()) : null;
-            bool cutout = false;                                          // el retrato es la figura recortada de un personaje
+            bool cutout = false;                                          // the portrait is a character's cropped figure
             if (img == null)
             {
                 int opaque = 0;
@@ -908,7 +1020,7 @@ namespace CrimeSightRevival.Mods
             float sSize = h * 0.86f, sLeft = (w - sSize) / 2f;
             var bg = Px.C(34, 36, 46, 255);
             var fg = Px.C(122, 128, 150, 255);
-            var under = img != null ? UnderFor(orig, w, h) : null;           // resultados: el fondo de asesino / objetivo
+            var under = img != null ? UnderFor(orig, w, h) : null;           // results: the killer / target background
             var dst = new Color32[w * h];
             for (int y = 0; y < h; y++)
             {
@@ -923,7 +1035,7 @@ namespace CrimeSightRevival.Mods
                         float sx = x0 + (x + 0.5f) / scale - 0.5f;
                         c = sx < -0.5f || sx > sw - 0.5f || sy < -0.5f || sy > sh - 0.5f ? Px.C(0, 0, 0, 0) : Bilinear(src, sw, sh, sx, sy);
                     }
-                    else if (cutout) c = bg;                                  // la silueta de un personaje, en oscuro
+                    else if (cutout) c = bg;                                  // a character's silhouette, in dark
                     else
                     {
                         float u = (x - sLeft) / sSize * sn, v = y / sSize * sn;
@@ -974,7 +1086,7 @@ namespace CrimeSightRevival.Mods
                         (byte)(a.b * w00 + b.b * w10 + c.b * w01 + d.b * w11 + 0.5f), (byte)(a.a * w00 + b.a * w10 + c.a * w01 + d.a * w11 + 0.5f));
         }
 
-        // ------------------------------------------------------------ placa con el nombre
+        // ------------------------------------------------------------ name plate
         static Texture2D PanelFor(string name, int w, int h)
         {
             string key = name + "|" + w + "|" + h;
@@ -991,12 +1103,12 @@ namespace CrimeSightRevival.Mods
             t.enableAutoSizing = true;
             t.fontSizeMin = 1; t.fontSizeMax = 40;
             t.color = Color.white;
-            t.rectTransform.sizeDelta = new Vector2(w / (float)h * 2f, 2f);   // mismo aspecto que la placa
+            t.rectTransform.sizeDelta = new Vector2(w / (float)h * 2f, 2f);   // same aspect as the plate
             t.margin = new Vector4(0.12f, 0.2f, 0.12f, 0.2f);
             t.ForceMeshUpdate();
             Snap(go, null, w, h, -1f, Color.black, tex =>
             {
-                // texto blanco sobre negro -> blanco con transparencia, con un borde oscuro para que se lea
+                // white text on black -> white with transparency, with a dark outline so it reads
                 var px = Pixels(tex);
                 var outp = new Color32[px.Length];
                 for (int y = 0; y < h; y++)
@@ -1021,12 +1133,12 @@ namespace CrimeSightRevival.Mods
             return null;
         }
 
-        // ------------------------------------------------------------ retratos originales para el Selector
-        // Solo en este PC (csr_live/cache), para ensenarlos en la sala de espera, donde el juego aun no los tiene:
-        //   mono_<X>.png  la cara de la presentacion del personaje (en el juego es en blanco y negro)
-        //   color_<X>.png el mismo dibujo en color (el de sus dialogos), cuando el juego lo tiene cargado
-        //   face_ThreatTypeData_Traitor.png  la cara del traidor, sacada de su modelo 3D
-        //   idle_<X>.bin  su animacion de reposo (Models.BakeIdle), grabada en la partida
+        // ------------------------------------------------------------ original portraits for the Selector
+        // Only on this PC (csr_live/cache), to show them in the waiting room, where the game doesn't have them yet:
+        //   mono_<X>.png  the face from the character's introduction (black and white in the game)
+        //   color_<X>.png the same drawing in colour (the one from its dialogues), when the game has it loaded
+        //   face_ThreatTypeData_Traitor.png  the traitor's face, taken from its 3D model
+        //   idle_<X>.bin  its idle animation (Models.BakeIdle), recorded in the match
         static float _nextCache;
         static bool _traitorAsked;
         internal static string MonoPath(string key) => Path.Combine(LiveMods.LiveDir, "cache", "mono_" + key + ".png");
@@ -1041,7 +1153,7 @@ namespace CrimeSightRevival.Mods
             Directory.CreateDirectory(dir);
             try
             {
-                foreach (var old in Directory.GetFiles(dir, "orig*.png")) File.Delete(old);                  // las de antes
+                foreach (var old in Directory.GetFiles(dir, "orig*.png")) File.Delete(old);                  // the earlier ones
                 foreach (var old in Directory.GetFiles(dir, "face_*.png")) File.Delete(old);
             }
             catch { }
@@ -1067,7 +1179,7 @@ namespace CrimeSightRevival.Mods
                     if (!File.Exists(ColorPath(key)) && SaveSprite(sp, ColorPath(key))) Plugin.L.LogInfo("[Personajes] retrato en color de " + key + " para el Selector");
                 }
             if (!File.Exists(FacePath(Traitor)) && !_traitorAsked) _traitorAsked = SnapTraitorFace(null);
-            // el fondo de las fotos de resultados, ya en la sala (asi no cuesta nada al empezar la partida)
+            // the result photo background, already in the room (so it costs nothing when the match starts)
             foreach (var f in new[] { "resultKillerSprite", "resultTargetSprite" })
             {
                 if (File.Exists(Path.Combine(dir, "bg_" + f + ".png"))) continue;
@@ -1078,7 +1190,7 @@ namespace CrimeSightRevival.Mods
                     UnderFor(sp, (int)sp.textureRect.width, (int)sp.textureRect.height);
                     break;
                 }
-                break;                                                           // uno cada vez
+                break;                                                           // one at a time
             }
         }
 
@@ -1094,7 +1206,7 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Warn("save" + path, "[Personajes] " + Path.GetFileName(path) + ": " + e.Message); return false; }
         }
 
-        /// <summary>La cara del traidor, sacada de su modelo 3D (se guarda para la siguiente vez).</summary>
+        /// <summary>The traitor's face, taken from its 3D model (saved for the next time).</summary>
         internal static bool SnapTraitorFace(Action<Texture2D> then)
         {
             return SnapChar(Traitor, null, 400, 440, 0.2f, PortraitBg, tex =>
@@ -1105,7 +1217,8 @@ namespace CrimeSightRevival.Mods
             });
         }
 
-        /// <summary>En la partida: graba el reposo de los personajes que aun no lo tienen (para la vista del Selector).</summary>
+        /// <summary>In the match: records the idle of the characters that don't have it yet (for the Selector
+        /// view).</summary>
         static void BakeIdles()
         {
             bool missing = !File.Exists(Models.IdlePath(Traitor));
@@ -1137,7 +1250,7 @@ namespace CrimeSightRevival.Mods
             GameObject animGo = sa != null ? sa.gameObject : null;
             if (clip == null)
             {
-                // sin SimpleAnimation (el traidor): las animaciones de su Animator
+                // without SimpleAnimation (the traitor): the animations of its Animator
                 var seen = new List<string>();
                 foreach (var c in owner.GetComponentsInChildren(Il2CppType.Of<Animator>(), true))
                 {
@@ -1157,7 +1270,7 @@ namespace CrimeSightRevival.Mods
             Models.BakeIdle(key, animGo, clip, root);
         }
 
-        /// <summary>Cuanto color tiene una imagen (saturacion media de lo que no es transparente, 0..1).</summary>
+        /// <summary>How much colour an image has (average saturation of what isn't transparent, 0..1).</summary>
         static float Saturation(Texture2D t)
         {
             var px = Pixels(t);
@@ -1191,7 +1304,7 @@ namespace CrimeSightRevival.Mods
             return t;
         }
 
-        // ------------------------------------------------------------ fotos de modelos y textos (camara aparte)
+        // ------------------------------------------------------------ photos of models and texts (separate camera)
         class Job
         {
             public GameObject content; public List<UnityEngine.Object> made; public int w, h, frames;
@@ -1201,15 +1314,17 @@ namespace CrimeSightRevival.Mods
         static Job _job;
         static Rig _snapRig;
 
-        /// <summary>Saca una foto de content (que pasa a ser nuestro y se destruye despues). frac: parte de arriba del modelo
-        /// que entra (1 = entero); -1 = camara ortografica que encuadra un texto.</summary>
+        /// <summary>Takes a photo of content (which becomes ours and is destroyed afterwards). frac: top part of the
+        /// model
+        /// that fits in (1 = whole); -1 = orthographic camera that frames a text.</summary>
         internal static void Snap(GameObject content, List<UnityEngine.Object> made, int w, int h, float frac, Color bg, Action<Texture2D> done, Action cleanup = null)
         {
             content.SetActive(false);
             _jobs.Enqueue(new Job { content = content, made = made, w = w, h = h, frac = frac, bg = bg, done = done, cleanup = cleanup });
         }
 
-        /// <summary>Foto de un personaje en reposo (el del juego, o con un modelo propio encima). false si no se puede.</summary>
+        /// <summary>Photo of a character at idle (the game's, or with a custom model on top). false if it
+        /// can't.</summary>
         internal static bool SnapChar(string baseKey, string model, int w, int h, float frac, Color bg, Action<Texture2D> done)
         {
             var pv = Models.PreviewChar(baseKey, model, Rig.Layer);
@@ -1220,7 +1335,7 @@ namespace CrimeSightRevival.Mods
             }
             if (model == null) return false;
             var made = new List<UnityEngine.Object>();
-            var go = Models.PreviewGlb(model, Rig.Layer, made);                // sin el juego: quieto, tal cual
+            var go = Models.PreviewGlb(model, Rig.Layer, made);                // without the game: still, as it is
             if (go == null) return false;
             Snap(go, made, w, h, frac, bg, done);
             return true;
@@ -1230,7 +1345,7 @@ namespace CrimeSightRevival.Mods
         {
             if (_job != null)
             {
-                if (++_job.frames < 3) return;                              // ya se ha pintado (al final del fotograma anterior)
+                if (++_job.frames < 3) return;                              // already painted (at the end of the previous frame)
                 Texture2D tex = null;
                 try
                 {
@@ -1261,7 +1376,8 @@ namespace CrimeSightRevival.Mods
         }
     }
 
-    /// <summary>Una camara con su luz, lejos de la escena, que pinta un objeto en una textura (capa propia).</summary>
+    /// <summary>A camera with its light, far from the scene, that paints an object into a texture (its own
+    /// layer).</summary>
     sealed class Rig
     {
         public const int Layer = 31;
@@ -1326,7 +1442,7 @@ namespace CrimeSightRevival.Mods
             Aim();
         }
 
-        /// <summary>Encuadra el contenido (la parte de arriba que pide frac) mirandolo de frente.</summary>
+        /// <summary>Frames the content (the top part frac asks for) looking at it from the front.</summary>
         public void Aim()
         {
             if (content == null) return;
@@ -1334,10 +1450,10 @@ namespace CrimeSightRevival.Mods
             float aspect = rt != null ? rt.width / (float)rt.height : 1f;
             if (_frac < 0)
             {
-                var rect = content.GetComponent<RectTransform>();             // un texto: se encuadra su recuadro entero
+                var rect = content.GetComponent<RectTransform>();             // a text: its whole box is framed
                 if (rect != null)
                 {
-                    // (GetWorldCorners no funciona desde el plugin: devuelve ceros)
+                    // (GetWorldCorners doesn't work from the plugin: it returns zeros)
                     var rr = rect.rect;
                     Vector3 lo = rect.TransformPoint(new Vector3(rr.xMin, rr.yMin, 0f)), hi = rect.TransformPoint(new Vector3(rr.xMax, rr.yMax, 0f));
                     b = new Bounds((lo + hi) / 2f, new Vector3(Math.Abs(hi.x - lo.x), Math.Abs(hi.y - lo.y), 0.01f));
@@ -1360,8 +1476,9 @@ namespace CrimeSightRevival.Mods
             cam.farClipPlane = dist * 3f + b.size.magnitude * 2f;
         }
 
-        /// <summary>Lo que ocupa: los huesos de las mallas con esqueleto (sus "bounds" no valen hasta que se pintan una
-        /// vez) y las cajas de las demas. Solo lo que esta a la vista.</summary>
+        /// <summary>What it takes up: the bones of the skinned meshes (their "bounds" aren't valid until they are
+        /// painted
+        /// once) and the boxes of the rest. Only what is visible.</summary>
         public static Bounds Measure(GameObject content)
         {
             var b = new Bounds();
