@@ -1,21 +1,21 @@
 """
-CRIMESIGHT Revival - registro detallado de cada partida (base para la IA "Pesadilla").
+CRIMESIGHT Revival - detailed log of each match (the base for the "Nightmare" AI).
 
-Por cada partida se guarda una linea JSON en <datos>/match_logs/AAAA-MM.jsonl con lo que se ha visto
-en ella: quien jugaba cada papel (y contra que dificultad), donde estaba cada personaje al empezar cada
-turno, todas las ordenes del turno (de que bando venian o si el personaje iba por su cuenta), si alguien
-corrio, las ordenes pisadas, el asesinato y las acusaciones del final. Desde la version 2, tambien lo
-necesario para comprobar los puntos de accion: los ajustes (planos, perros, gas), que salio al registrar
-cada mueble, como acaba cada turno y que acciones con puntos se dieron. Solo lo que pasa en la partida:
-nada del PC ni de la cuenta de nadie, y se queda en el ordenador de quien hace de servidor.
+For each match one JSON line is saved in <data>/match_logs/YYYY-MM.jsonl with what was seen in it: who
+played each role (and against which difficulty), where each character was at the start of each turn, every
+order of the turn (which side it came from, or whether the character acted on its own), whether someone ran,
+the overridden orders, the murder and the final accusations. Since version 2, also what is needed to check
+the action points: the settings (plans, dogs, gas), what came out when searching each piece of furniture, how
+each turn ends and which actions with points happened. Only what happens in the match: nothing about anyone's
+PC or account, and it stays on the computer of whoever runs the server.
 
-Con esto, mas adelante, la IA puede aprender las costumbres de cada jugador (a quien suele elegir de
-asesino, en que turno ataca, a quien vigila...). Si algo falla al escribir, la partida sigue igual.
+With this, later on, the AI can learn each player's habits (who they usually pick as the killer, on which
+turn they attack, who they watch...). If something fails while writing, the match goes on the same.
 """
 import json, logging, os, time
 
 log = logging.getLogger("crimesight")
-MAX_FILE_BYTES = 30 * 1024 * 1024         # por mes; si se pasa, se deja de apuntar ese mes
+MAX_FILE_BYTES = 30 * 1024 * 1024         # per month; past it, nothing more is written that month
 
 
 class MatchLog:
@@ -36,22 +36,22 @@ class MatchLog:
         self.done = False
 
     def turn_state(self, turn, ref):
-        """Donde empieza cada personaje el turno (lo que ve cualquiera en la partida)."""
+        """Where each character starts the turn (what anyone in the match sees)."""
         pawns = []
         for p in ref.get("pawns") or []:
             if not isinstance(p, dict) or "pawnId" not in p:
                 continue
             pawns.append([int(p["pawnId"]), p.get("gridId"), p.get("roomId"), int(bool(p.get("isHaveWeapon"))),
                           int(bool(p.get("isKillerCandidate", 1))), int(bool(p.get("isTargetCandidate", 1))),
-                          int(bool(p.get("isBlind")))])        # critico (version 2: al final, no cambia lo anterior)
+                          int(bool(p.get("isBlind")))])        # critical (version 2: at the end, nothing before it changes)
         self._turn(turn)["pawns"] = pawns
         self._turn(turn)["dark"] = int(bool(int(ref.get("isBlack", 0) or 0)))
 
     def turn_orders(self, turn, commands, owner_side, kill, owner_who=None):
-        """Las ordenes que se ejecutan: [personaje, tipo, casilla, corre, mueble, bando, pisada, papel, jugador].
-        bando: "S" Sherlock/Watson, "M" Moriarty/Irene, "N" nadie (va por su cuenta).
-        papel y jugador (desde la version 2): quien dio la orden ("detective", "criminal", "irene" o "watson"
-        y su id); None si nadie. Van al final para que lo que ya lee las 7 primeras no cambie."""
+        """The orders that run: [character, type, square, runs, furniture, side, overridden, role, player].
+        side: "S" Sherlock/Watson, "M" Moriarty/Irene, "N" nobody (acting on its own).
+        role and player (since version 2): who gave the order ("detective", "criminal", "irene" or "watson"
+        and their id); None if nobody. They go at the end so that whatever already reads the first 7 does not change."""
         owner_who = owner_who or {}
         out = []
         for c in commands:
@@ -68,13 +68,13 @@ class MatchLog:
             t["assault"] = 1
 
     def found(self, turn, furniture, item, kind):
-        """Lo que sale al registrar un mueble: [mueble, objeto, tipo] (food, weapon, plan u other).
-        Quien lo registro se ve en las ordenes del turno (la orden de buscar en ese mueble)."""
+        """What comes out when searching a piece of furniture: [furniture, item, type] (food, weapon, plan or other).
+        Who searched it shows in the turn's orders (the order to search that furniture)."""
         self._turn(turn).setdefault("found", []).append([furniture, item, kind])
 
     def turn_end(self, turn, ref):
-        """Como acaba el turno: personajes [id, habitacion, puede ser asesino, puede ser victima, heridas,
-        herido, critico, hambre], amenazas (perros...) [id, habitacion, muerta] y habitaciones con escape de gas."""
+        """How the turn ends: characters [id, room, can be the killer, can be the victim, injuries,
+        injured, critical, hunger], threats (dogs...) [id, room, dead] and rooms with a gas leak."""
         def num(x, key, default=0):
             try:
                 return int(x.get(key, default) or 0)
@@ -92,11 +92,11 @@ class MatchLog:
         t["end_dark"] = num(ref, "isBlack")
 
     def action(self, turn, player, action):
-        """Una accion con puntos, la primera vez que la consigue un jugador en la partida."""
+        """An action with points, the first time a player gets it in the match."""
         self.rec["actions"].append([turn, player, action.replace("ctg_name_result_", "")])
 
     def awarded(self, player, outcome, actions, points):
-        """Lo que se anoto en el perfil de cada jugador al acabar (acciones y puntos totales)."""
+        """What was written in each player's profile at the end (actions and total points)."""
         self.rec["awarded"].append({"player": player, "outcome": outcome, "points": points,
                                     "actions": [a.replace("ctg_name_result_", "") for a in actions]})
 
@@ -108,7 +108,7 @@ class MatchLog:
         self.rec["kill"] = {"turn": turn, "assault": bool(assault)}
 
     def accusations(self, items):
-        """[(jugador, personaje acusado, es_bot)]"""
+        """[(player, accused character, is_bot)]"""
         self.rec["accusations"] = [{"player": p, "accused": k, "bot": bool(b)} for p, k, b in items]
 
     def finish(self, winner, reason=""):
@@ -138,7 +138,7 @@ class MatchLog:
 
 
 def read_all(data_dir):
-    """Todas las partidas guardadas (para la IA que aprende), de la mas antigua a la mas nueva."""
+    """Every saved match (for the AI that learns), from the oldest to the newest."""
     d = os.path.join(data_dir, "match_logs")
     out = []
     try:

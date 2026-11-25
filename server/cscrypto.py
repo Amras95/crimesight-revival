@@ -1,8 +1,8 @@
-"""Cifrado compatible con el cliente (Crypto.Encrypt / Crypto.Decrypt).
+"""Encryption compatible with the client (Crypto.Encrypt / Crypto.Decrypt).
 
-AES-256-CBC, PKCS7, IV aleatorio de 16 bytes antepuesto al texto cifrado.
-- "upstream":   cliente -> servidor
-- "downstream": servidor -> cliente
+AES-256-CBC, PKCS7, random 16-byte IV prepended to the ciphertext.
+- "upstream":   client -> server
+- "downstream": server -> client
 """
 import json, os
 from Crypto.Cipher import AES
@@ -12,7 +12,7 @@ _KEYS = None
 
 
 def set_keys(keys):
-    """Para el lanzador: claves ya leidas ({"upstream": hex, "downstream": hex})."""
+    """For the launcher: keys already read ({"upstream": hex, "downstream": hex})."""
     global _KEYS
     _KEYS = {k: bytes.fromhex(v) for k, v in keys.items()}
 

@@ -1,9 +1,9 @@
-// CRIMESIGHT Revival - aspecto de las ventanas del plugin (aviso de mods, dificultad de la IA).
+// CRIMESIGHT Revival - look of the plugin's windows (mods notice, AI difficulty).
 //
-// Para que parezcan del juego, se toma el aspecto de una ventana suya: la de "Expulsar" de la sala, que
-// siempre esta cargada en la sala aunque no se vea. De ella se copian el fondo de la ventana, los botones
-// (el principal y el secundario), la fuente y los colores de los textos. Si no se encuentra (por ejemplo
-// en mitad de una partida), se usa un aspecto oscuro propio.
+// To make them look like the game's, the look of one of its windows is taken: the room's "Kick" one, which
+// is always loaded in the room even when not shown. From it are copied the window background, the buttons
+// (the main and the secondary), the font and the text colours. If it isn't found (for example
+// in the middle of a match), a dark look of our own is used.
 using System;
 using Il2CppInterop.Runtime;
 using TMPro;
@@ -55,7 +55,7 @@ namespace CrimeSightRevival.Mods
                         sk.Font = title.font; sk.FontMat = title.fontSharedMaterial; sk.Title = title.color;
                     }
                     if (pop.MainTMP != null) sk.Body = pop.MainTMP.color;
-                    // el fondo: la imagen mas grande de la ventana que no sea un boton
+                    // the background: the biggest image in the window that isn't a button
                     var root = pop.PosNull != null ? pop.PosNull.transform : pop.transform;
                     float best = 0;
                     foreach (var c in root.GetComponentsInChildren(Il2CppType.Of<Image>(), true))
@@ -115,7 +115,7 @@ namespace CrimeSightRevival.Mods
             return img;
         }
 
-        /// <summary>Pone el boton en estilo principal o secundario (p. ej. la dificultad elegida).</summary>
+        /// <summary>Sets the button to main or secondary style (e.g. the chosen difficulty).</summary>
         public void Style(Image img, TextMeshProUGUI label, bool main)
         {
             if (img == null) return;
@@ -132,10 +132,10 @@ namespace CrimeSightRevival.Mods
 namespace CrimeSightRevival.Mods
 {
     /// <summary>
-    /// Una ventana de verdad del juego: se clona la de "Expulsar" de la sala (banda verde con el titulo,
-    /// papel, recuadro con borde y botones en chevron) y se le cambian textos y botones. Los botones nuevos
-    /// son copias de los del juego, asi que tambien se iluminan igual al pasar el raton. Si la ventana del
-    /// juego no esta (p. ej. en mitad de una partida), Create devuelve null y se usa el aspecto propio.
+    /// A real game window: the room's "Kick" one is cloned (green band with the title,
+    /// paper, bordered box and chevron buttons) and its texts and buttons are changed. The new buttons
+    /// are copies of the game's, so they also light up the same on hover. If the game's
+    /// window isn't there (e.g. in the middle of a match), Create returns null and our own look is used.
     /// </summary>
     sealed class GameWindow
     {
@@ -146,7 +146,7 @@ namespace CrimeSightRevival.Mods
         GameObject _light, _red;
         readonly System.Collections.Generic.List<(TextMeshProUGUI t, string s)> _texts = new();
 
-        public static readonly Color Amber = new Color(1f, 0.70f, 0.12f, 1f);   // como "Iniciar partida"
+        public static readonly Color Amber = new Color(1f, 0.70f, 0.12f, 1f);   // like "Start match"
 
         static Vector2 CenterIn(RectTransform parent, RectTransform t)
         {
@@ -163,9 +163,9 @@ namespace CrimeSightRevival.Mods
         }
 
         /// <summary>
-        /// En el juego la ventana se coloca respecto a los contenedores que tiene encima y con la escala de
-        /// su lienzo. Aqui se copian: la misma escala (CanvasScaler) y una cadena de contenedores vacios con
-        /// los mismos anclajes, tamanos y posiciones. Dentro de eso, la copia queda donde la original.
+        /// In the game the window is placed relative to the containers above it and with its
+        /// canvas's scale. Here they are copied: the same scale (CanvasScaler) and a chain of empty containers with
+        /// the same anchors, sizes and positions. Inside that, the copy sits where the original does.
         /// </summary>
         static Transform Mirror(Transform src, Transform ourCanvas)
         {
@@ -204,9 +204,9 @@ namespace CrimeSightRevival.Mods
         }
 
         /// <summary>
-        /// La ventana original entra con una animacion (empieza desplazada y se desliza); la copia puede
-        /// quedar en el punto de partida. Se mide donde esta su marco (la imagen mas grande) y se lleva al
-        /// centro de la pantalla.
+        /// The original window comes in with an animation (it starts offset and slides); the copy can
+        /// stay at the starting point. Its frame's position is measured (the biggest image) and it is taken to the
+        /// centre of the screen.
         /// </summary>
         static void Center(GameObject go, Transform canvas)
         {
@@ -252,11 +252,11 @@ namespace CrimeSightRevival.Mods
                     var go = UnityEngine.Object.Instantiate(src, holder, false);
                     go.name = "CSR_GameWindow";
                     go.SetActive(true);
-                    go.transform.localScale = Vector3.one;          // por si la animacion de salida la dejo encogida
+                    go.transform.localScale = Vector3.one;          // in case the exit animation left it shrunk
                     var w = new GameWindow { Root = go.GetComponent<RectTransform>() };
                     foreach (var c in go.GetComponentsInChildren(Il2CppType.Of<OutGameRoomPopupKickConfirm>(), true))
                         UnityEngine.Object.Destroy(c);
-                    // la copia queda quieta: sin las animaciones de entrada/salida de la ventana original
+                    // the copy stays still: without the original window's entry/exit animations
                     foreach (var c in go.GetComponentsInChildren(Il2CppType.Of<Behaviour>(), true))
                     {
                         var bh = c.TryCast<Behaviour>();
@@ -281,8 +281,8 @@ namespace CrimeSightRevival.Mods
                     var rrt = w._red.GetComponent<RectTransform>();
                     w.BtnSize = lrt.rect.size;
                     w.ButtonRow = lrt.parent.GetComponent<RectTransform>();
-                    // Donde estan de verdad los botones del juego, medido desde el centro de su fila (que es
-                    // como se colocan los nuevos): su anchoredPosition va respecto a sus propios anclajes
+                    // Where the game's buttons really are, measured from the centre of their row (which is
+                    // how the new ones are placed): their anchoredPosition is relative to their own anchors
                     Canvas.ForceUpdateCanvases();
                     Vector2 cl = CenterIn(w.ButtonRow, lrt), cr = CenterIn(w.ButtonRow, rrt);
                     w.BtnY = (cl.y + cr.y) / 2f;
@@ -397,14 +397,14 @@ namespace CrimeSightRevival.Mods
             _texts.Add((t, s));
         }
 
-        /// <summary>Por si algun componente del juego vuelve a poner su texto: se repone cada fotograma.</summary>
+        /// <summary>In case some game component sets its text again: it is restored every frame.</summary>
         public void KeepTexts()
         {
             foreach (var (t, s) in _texts)
                 if (t != null && t.text != s) t.text = s;
         }
 
-        /// <summary>Un boton del juego (claro o rojo), opcionalmente tenido (ambar = el principal).</summary>
+        /// <summary>A game button (light or red), optionally tinted (amber = the main one).</summary>
         public Image AddButton(string text, bool red, Transform parent, Vector2 pos, Vector2 size, Color? tint,
                                out RectTransform rt, out TextMeshProUGUI label)
         {
@@ -415,7 +415,7 @@ namespace CrimeSightRevival.Mods
             rt.anchoredPosition = pos;
             rt.sizeDelta = size;
             var b = go.GetComponent<Button>();
-            if (b != null) b.onClick = new Button.ButtonClickedEvent();   // sin acciones del juego
+            if (b != null) b.onClick = new Button.ButtonClickedEvent();   // without the game's actions
             var img = b != null && b.image != null ? b.image : go.GetComponent<Image>();
             if (img != null && tint.HasValue) img.color = tint.Value;
             label = go.GetComponentInChildren<TextMeshProUGUI>(true);
@@ -430,7 +430,7 @@ namespace CrimeSightRevival.Mods
             return img;
         }
 
-        /// <summary>Fila de botones de abajo, centrada donde estaban los del juego.</summary>
+        /// <summary>Bottom row of buttons, centred where the game's were.</summary>
         public Image AddBottomButton(string text, bool red, int index, int count, Color? tint,
                                      out RectTransform rt, out TextMeshProUGUI label)
         {

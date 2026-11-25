@@ -1,15 +1,15 @@
 """
-CRIMESIGHT Revival - logica del lanzador (sin interfaz).
+CRIMESIGHT Revival - launcher logic (no interface).
 
-- Encuentra Steam, la cuenta activa y la carpeta del juego.
-- Saca las claves de la instalacion del propio jugador (no se reparte nada de Konami).
-- Apunta el juego al servidor elegido y lo abre desde Steam.
-- Arranca el servidor local (jugar solo / ser anfitrion).
-- Sincroniza el perfil local con el servidor de un amigo o un servidor propio.
+- Finds Steam, the active account and the game folder.
+- Takes the keys from the player's own installation (nothing from Konami is distributed).
+- Points the game at the chosen server and opens it through Steam.
+- Starts the local server (play solo / be the host).
+- Syncs the local profile with a friend's server or your own server.
 
-El progreso de cada jugador vive en SU PC (carpeta de datos del lanzador). Los servidores de
-otros solo lo tienen prestado: al entrar se sube, al salir se traen las partidas nuevas, y las
-dos copias se juntan sumando partidas (cada una tiene un id unico, nunca se duplican).
+Each player's progress lives on THEIR PC (the launcher's data folder). Other people's servers
+only borrow it: it is uploaded on joining, the new matches are brought back on leaving, and the
+two copies are merged by adding up matches (each one has a unique id, they are never duplicated).
 """
 import hashlib, json, logging, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
 
@@ -30,13 +30,13 @@ IS_WINDOWS = os.name == "nt"
 
 
 def _clean_child_env():
-    """Linux, version empaquetada (PyInstaller): el empaquetador apunta LD_LIBRARY_PATH a sus propias librerias,
-    y los programas que abrimos (/bin/sh, steam, xdg-open, el navegador de la interfaz...) las heredan. Con un readline o un libc
-    distinto al del sistema revientan ("symbol lookup error: /bin/sh: undefined symbol: rl_trim_arg_from_keyseq").
-    El lanzador ya cargo lo suyo al arrancar, asi que para los hijos se deja el entorno como estaba."""
+    """Linux, packaged version (PyInstaller): the packager points LD_LIBRARY_PATH at its own libraries,
+    and the programs we open (/bin/sh, steam, xdg-open, the interface's browser...) inherit them. With a readline or a libc
+    different from the system's they break ("symbol lookup error: /bin/sh: undefined symbol: rl_trim_arg_from_keyseq").
+    The launcher already loaded its own at startup, so for the children the environment is left as it was."""
     if IS_WINDOWS or not getattr(sys, "frozen", False):
         return
-    orig = os.environ.get("LD_LIBRARY_PATH_ORIG")       # el que habia antes de abrir el lanzador
+    orig = os.environ.get("LD_LIBRARY_PATH_ORIG")       # the one there was before opening the launcher
     if orig is not None:
         os.environ["LD_LIBRARY_PATH"] = orig
     else:
@@ -46,7 +46,7 @@ def _clean_child_env():
 _clean_child_env()
 
 
-# ------------------------------------------------------------------ carpetas y configuracion
+# ------------------------------------------------------------------ folders and settings
 def app_dir():
     base = os.environ.get("APPDATA") if IS_WINDOWS else os.path.expanduser("~/.local/share")
     d = os.path.join(base or os.path.expanduser("~"), "CrimeSightRevival")
@@ -55,7 +55,7 @@ def app_dir():
 
 
 def setup_launcher_log():
-    """Avisos y errores del lanzador en %APPDATA%\\CrimeSightRevival\\launcher.log (para diagnosticar)."""
+    """Launcher warnings and errors in %APPDATA%\\CrimeSightRevival\\launcher.log (for diagnosis)."""
     from logging.handlers import RotatingFileHandler
     lg = logging.getLogger("crimesight")
     if any(getattr(h, "_csr_launcher", False) for h in lg.handlers):
@@ -122,7 +122,7 @@ def write_config(cfg):
 
 
 def import_old_data():
-    """Si venimos de la version por scripts (server/data/db.json junto al lanzador), copiarla."""
+    """If we come from the script version (server/data/db.json next to the launcher), copy it."""
     dst = os.path.join(data_dir(), "db.json")
     if os.path.isfile(dst):
         return None
@@ -146,7 +146,7 @@ def _reg(path, name):
         return None
 
 
-LINUX_STEAM = ("~/.local/share/Steam", "~/.steam/steam", "~/.steam/root",          # Steam Deck / nativo
+LINUX_STEAM = ("~/.local/share/Steam", "~/.steam/steam", "~/.steam/root",          # Steam Deck / native
                "~/.var/app/com.valvesoftware.Steam/.local/share/Steam",           # Flatpak
                "~/snap/steam/common/.local/share/Steam")                           # Snap
 
@@ -164,7 +164,7 @@ def steam_path():
 
 
 def _linux_steam_roots():
-    """Carpetas de Steam que existen en Linux (nativo, Flatpak, Snap), sin repetir."""
+    """Steam folders that exist on Linux (native, Flatpak, Snap), without repeats."""
     out = []
     for cand in LINUX_STEAM:
         p = os.path.realpath(os.path.expanduser(cand))
@@ -174,7 +174,7 @@ def _linux_steam_roots():
 
 
 def _linux_registry(key):
-    """En Linux, Steam guarda en ~/.steam/registry.vdf lo que en Windows va al registro."""
+    """On Linux, Steam keeps in ~/.steam/registry.vdf what on Windows goes to the registry."""
     paths = ["~/.steam/registry.vdf", "~/.var/app/com.valvesoftware.Steam/.steam/registry.vdf",
              "~/snap/steam/common/.steam/registry.vdf"]
     paths += [os.path.join(r, "..", "registry.vdf") for r in _linux_steam_roots()]
@@ -194,7 +194,7 @@ def _vdf_pairs(text):
 
 
 def _login_users():
-    """[(SteamID64, campos)] de config/loginusers.vdf, de todas las carpetas de Steam que haya."""
+    """[(SteamID64, fields)] from config/loginusers.vdf, from every Steam folder there is."""
     roots = [steam_path()] + ([] if IS_WINDOWS else _linux_steam_roots())
     seen, out = set(), []
     for sp in roots:
@@ -212,7 +212,7 @@ def _login_users():
 
 
 def _newest_userdata():
-    """La cuenta que uso Steam por ultima vez: la carpeta userdata/<id> modificada mas recientemente."""
+    """The account Steam used last: the most recently modified userdata/<id> folder."""
     best = None
     roots = [steam_path()] + ([] if IS_WINDOWS else _linux_steam_roots())
     for sp in roots:
@@ -232,9 +232,9 @@ _ACC_LOGGED = None
 
 
 def steam_account():
-    """(SteamID64, nombre de usuario) de la cuenta con sesion iniciada en Steam.
-    Windows: el registro. Linux: ~/.steam/registry.vdf; si no, la cuenta marcada como la mas reciente en
-    loginusers.vdf; si no, la unica cuenta que haya; si no, la carpeta userdata usada por ultima vez."""
+    """(SteamID64, user name) of the account logged into Steam.
+    Windows: the registry. Linux: ~/.steam/registry.vdf; otherwise, the account marked as the most recent in
+    loginusers.vdf; otherwise, the only account there is; otherwise, the userdata folder used last."""
     active = _reg(r"Software\Valve\Steam\ActiveProcess", "ActiveUser") if IS_WINDOWS else _linux_registry("ActiveUser")
     sid = None
     try:
@@ -263,7 +263,7 @@ def steam_account():
         global _ACC_LOGGED
         msg = "Cuenta de Steam: %s (%s). Carpetas de Steam: %s; cuentas en loginusers: %d" % (
             sid or "ninguna", how or "no encontrada", ", ".join(_linux_steam_roots()) or "ninguna", len(users))
-        if msg != _ACC_LOGGED:                       # al registro (launcher.log) una vez por cambio
+        if msg != _ACC_LOGGED:                       # to the log (launcher.log) once per change
             _ACC_LOGGED = msg
             logging.getLogger("crimesight").warning(msg)
     return sid, name
@@ -292,9 +292,9 @@ def find_game():
 
 
 def game_language(game_dir, steam_id=None):
-    """Idioma del lanzador = el del juego. Orden: el que uso el juego la ultima vez que inicio
-    sesion en un servidor Revival; el idioma con el que Steam tiene instalado el juego; el idioma
-    de Steam. Si no se encuentra el juego: ingles."""
+    """Launcher language = the game's. Order: the one the game used the last time it logged
+    into a Revival server; the language Steam has the game installed in; Steam's
+    language. If the game is not found: English."""
     import i18n
     if not is_game_dir(game_dir):
         return "en"
@@ -324,7 +324,7 @@ def is_game_dir(path):
                                                       "global-metadata.dat"))
 
 
-# ------------------------------------------------------------------ claves y parche
+# ------------------------------------------------------------------ keys and patch
 def ensure_keys(game_dir):
     import cscrypto
     path = os.path.join(app_dir(), "keys.json")
@@ -340,9 +340,9 @@ def ensure_keys(game_dir):
 
 
 def unlock_game_files(game_dir):
-    """Quita el atributo de "solo lectura" a los archivos del juego que toca el lanzador. Con el puesto
-    (pasa tras copiar o restaurar la carpeta del juego desde otro sitio), Windows no deja sustituirlos
-    y sale "Acceso denegado" aunque nadie los tenga abiertos. Devuelve cuantos se han desbloqueado."""
+    """Removes the "read-only" attribute from the game files the launcher touches. With it set
+    (it happens after copying or restoring the game folder from somewhere else), Windows doesn't let them be replaced
+    and "Access denied" comes up even though nobody has them open. Returns how many were unlocked."""
     if not IS_WINDOWS or not game_dir:
         return 0
     import stat
@@ -357,7 +357,7 @@ def unlock_game_files(game_dir):
         for name in names:
             p = os.path.join(d, name)
             if name.endswith(".tmp") and os.path.isfile(p[:-4]):
-                try:                         # copia a medias de un intento anterior (puede ocupar cientos de MB)
+                try:                         # half-done copy from an earlier attempt (it can take hundreds of MB)
                     os.remove(p)
                 except OSError:
                     pass
@@ -378,7 +378,7 @@ def point_game_to(game_dir, url):
     import patch_client, credits_patch
     if not credits_patch.is_patched(game_dir):
         try:
-            credits_patch.patch(game_dir)    # linea de creditos en la pantalla de titulo (solo decorativa)
+            credits_patch.patch(game_dir)    # credits line on the title screen (decorative only)
         except OSError as e:
             logging.getLogger("crimesight").warning("No pude poner la linea de creditos (%s); se intentara la proxima vez", e)
     try:
@@ -392,7 +392,7 @@ def restore_game(game_dir):
     import patch_client, credits_patch, modinject
     unlock_game_files(game_dir)
     m = modinject.restore(game_dir)
-    if live_mode(game_dir):                 # el juego original no lleva BepInEx
+    if live_mode(game_dir):                 # the original game has no BepInEx
         uninstall_bepinex(game_dir)
         m = True
     a = patch_client.restore(game_dir)
@@ -408,7 +408,7 @@ def game_url(game_dir):
         return None
 
 
-# ------------------------------------------------------------------ juego
+# ------------------------------------------------------------------ game
 def game_exe_path():
     """CrimeSight.exe: the one chosen in the launcher, or the one inside the game folder."""
     cfg = load_config()
@@ -443,8 +443,8 @@ _last_running = False
 
 
 def _win_process_names():
-    """Nombres (en minusculas) de los procesos abiertos, preguntando directamente a Windows con la misma
-    funcion que usa el Administrador de tareas, sin tasklist. None si Windows no contesta."""
+    """Names (lowercase) of the running processes, asking Windows directly with the same
+    function the Task Manager uses, without tasklist. None if Windows doesn't answer."""
     import ctypes
     from ctypes import wintypes
 
@@ -472,27 +472,27 @@ def _win_process_names():
         while ok:
             names.add(entry.szExeFile.lower())
             ok = k32.Process32NextW(snap, ctypes.byref(entry))
-        if ctypes.get_last_error() != 18:                # ERROR_NO_MORE_FILES: ha llegado al final
+        if ctypes.get_last_error() != 18:                # ERROR_NO_MORE_FILES: reached the end
             return None
     finally:
         k32.CloseHandle(snap)
-    # Comprobacion: el propio lanzador tiene que salir en la lista; si no, la respuesta no es de fiar
+    # Check: the launcher itself has to be in the list; otherwise, the answer can't be trusted
     if os.path.basename(sys.executable).lower() not in names:
         return None
     return names
 
 
 def game_running():
-    """Si CrimeSight.exe esta abierto. Se pregunta directamente a Windows; tasklist queda solo por si eso
-    falla. Si tasklist tambien falla o tarda (pasa con el PC muy cargado, p. ej. al cargar el final de la
-    partida), no se sabe: se devuelve lo ultimo que se vio, en vez de dar el juego por cerrado y terminar
-    la sesion."""
+    """Whether CrimeSight.exe is open. Windows is asked directly; tasklist is only kept in case that
+    fails. If tasklist also fails or is slow (it happens with a very busy PC, e.g. while loading the end of the
+    match), nobody knows: the last thing seen is returned, instead of taking the game as closed and ending
+    the session."""
     global _last_running
     if not IS_WINDOWS:
         return _linux_game_running()
     try:
         names = _win_process_names()
-    except Exception:  # noqa: BLE001 - si falla, se mira con tasklist como antes
+    except Exception:  # noqa: BLE001 - if it fails, it is checked with tasklist as before
         names = None
     if names is not None:
         _last_running = "crimesight.exe" in names
@@ -502,7 +502,7 @@ def game_running():
                            timeout=20, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     except (OSError, subprocess.SubprocessError):
         return _last_running
-    out = (r.stdout or b"").decode("utf-8", errors="ignore")   # el texto viene en la codificacion de la consola
+    out = (r.stdout or b"").decode("utf-8", errors="ignore")   # the text comes in the console's encoding
     if r.returncode != 0 or not out.strip():
         return _last_running
     _last_running = "crimesight.exe" in out.lower()
@@ -510,7 +510,7 @@ def game_running():
 
 
 def close_game(wait=10):
-    """Cierra el juego (para actualizar el lanzador). Primero se le pide que se cierre; si no, a la fuerza."""
+    """Closes the game (to update the launcher). First it is asked to close; otherwise, by force."""
     if not game_running():
         return
     if IS_WINDOWS:
@@ -529,11 +529,11 @@ def close_game(wait=10):
 
 
 def other_launchers():
-    """PIDs de otros lanzadores abiertos (solo el .exe compilado de Windows; desde Python, ninguno)."""
+    """PIDs of other open launchers (only Windows' compiled .exe; from Python, none)."""
     if not (IS_WINDOWS and getattr(sys, "frozen", False)):
         return []
     from version import ASSET
-    mine = {os.getpid(), os.getppid()}           # el .exe de un archivo son dos procesos: este y su padre
+    mine = {os.getpid(), os.getppid()}           # a one-file .exe is two processes: this one and its parent
     names = {os.path.basename(sys.executable).lower(), ASSET.lower()}
     out = subprocess.run(["tasklist", "/FO", "CSV", "/NH"], capture_output=True, text=True,
                          creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
@@ -557,7 +557,7 @@ def close_other_launchers():
 
 
 def _linux_game_running():
-    """Con Proton el juego es un proceso de Wine cuya linea de comandos incluye CrimeSight.exe."""
+    """With Proton the game is a Wine process whose command line includes CrimeSight.exe."""
     me = str(os.getpid())
     try:
         pids = [p for p in os.listdir("/proc") if p.isdigit() and p != me]
@@ -571,16 +571,16 @@ def _linux_game_running():
             continue
         args = [a.replace(b"\\", b"/").rsplit(b"/", 1)[-1] for a in cmd.split(b"\0") if a]
         if not args or args[0] in (b"sh", b"bash", b"zsh", b"fish", b"dash"):
-            continue                       # una terminal que solo menciona el nombre no cuenta
+            continue                       # a terminal that only mentions the name doesn't count
         if b"crimesight.exe" in args:
             return True
     return False
 
 
 def linux_launch_option_ok():
-    """Linux / Steam Deck: BepInEx necesita que Proton cargue su winhttp.dll, lo que se activa con la
-    opcion de lanzamiento WINEDLLOVERRIDES="winhttp=n,b" %command% (Propiedades del juego en Steam).
-    True si esta puesta, False si no, None si no se puede saber."""
+    """Linux / Steam Deck: BepInEx needs Proton to load its winhttp.dll, which is turned on with the
+    launch option WINEDLLOVERRIDES="winhttp=n,b" %command% (the game's Properties in Steam).
+    True if it is set, False if not, None if it can't be known."""
     if IS_WINDOWS:
         return True
     sp, sid = steam_path(), steam_account()[0]
@@ -616,8 +616,8 @@ def _wait_start(timeout, stop_flag):
 
 
 def bepinex_loaded(game_dir, since):
-    """BepInEx ya ha terminado de cargar en esta apertura del juego (su registro, reescrito en cada
-    arranque, llega a "Chainloader startup complete")."""
+    """BepInEx has finished loading in this run of the game (its log, rewritten on every
+    start, reaches "Chainloader startup complete")."""
     path = os.path.join(game_dir, "BepInEx", "LogOutput.log")
     try:
         if os.path.getmtime(path) < since:
@@ -629,19 +629,19 @@ def bepinex_loaded(game_dir, since):
 
 
 def wait_game(log, start_timeout=180, stop_flag=lambda: False, game_dir=None):
-    """Espera a que el juego se abra y despues a que se cierre.
+    """Waits for the game to open and then for it to close.
 
-    Al abrir CrimeSight.exe directamente (no desde Steam), el juego suele cerrarse al momento para que
-    Steam lo vuelva a abrir. Si eso se tomara por "el jugador ha cerrado el juego", la sesion terminaria
-    y el juego reabierto no encontraria el servidor (error 100010). Por eso, si desaparece nada mas
-    abrirse (Steam lo cierra en cuanto arranca), se espera a que vuelva; y si se cierra mas tarde, se da
-    un margen de unos segundos."""
+    When CrimeSight.exe is opened directly (not through Steam), the game usually closes at once so that
+    Steam opens it again. If that were taken as "the player closed the game", the session would end
+    and the reopened game wouldn't find the server (error 100010). So, if it disappears right after
+    opening (Steam closes it as soon as it starts), it waits for it to come back; and if it closes later, there is
+    a margin of a few seconds."""
     first = bool(game_dir) and bepinex_state(game_dir)["installed"] and not bepinex_state(game_dir)["ready"]
     if not _wait_start(start_timeout, stop_flag):
         log(t("game_not_seen"))
         return False
     if first:
-        # La primera vez, BepInEx se prepara (alrededor de un minuto) antes de que salga el juego
+        # The first time, BepInEx gets ready (around a minute) before the game shows up
         log(t("bep_setup"))
         since = time.time() - 5
         while not stop_flag() and not bepinex_loaded(game_dir, since) and time.time() - since < 300:
@@ -656,23 +656,25 @@ def wait_game(log, start_timeout=180, stop_flag=lambda: False, game_dir=None):
             time.sleep(1)
             continue
         if not restarted and time.time() - opened < 20:
-            # Steam lo esta reabriendo: solo pasa una vez, nada mas arrancar
+            # Steam is reopening it: it only happens once, right at startup
             restarted = True
             if not _wait_start(45, stop_flag):
                 break
-        elif not _wait_start(6, stop_flag):    # cerrado de verdad (se vuelve a mirar unos segundos)
+        elif not _wait_start(6, stop_flag):    # really closed (checked again for a few seconds)
             break
     if not stop_flag():
         logging.getLogger("crimesight").info("El juego se ha cerrado: termina la sesion")
     return True
 
 
-# ------------------------------------------------------------------ servidor local
+# ------------------------------------------------------------------ local server
 class LocalServer:
     def __init__(self, public=False, port=DEFAULT_PORT, password="", mods=None, player_mods="ignore", names=None,
                  stages=None):
         os.environ["CSR_DATA_DIR"] = data_dir()
         import server
+        import match
+        match.forced_roles = dev_forced_roles          # developer mode: picked killer/target
         if not getattr(LocalServer, "_logging", False):
             server.setup_logging(data_dir())
             LocalServer._logging = True
@@ -702,17 +704,17 @@ class LocalServer:
         self.bg.stop()
 
 
-# ------------------------------------------------------------------ mods de apariencia
+# ------------------------------------------------------------------ appearance mods
 def mods_dir():
-    """Tu mod: la propia carpeta de mods, con stamps/, avatars/ y mod.json (se crean si faltan) y unas
-    instrucciones. Dentro van tambien tus modelos (models/), tu cursor (cursor/) y tus escenarios (stages/)."""
+    """Your mod: the mods folder itself, with stamps/, avatars/ and mod.json (created if missing) and some
+    instructions. Your models (models/), your cursor (cursor/) and your stages (stages/) also go inside."""
     d = os.path.join(app_dir(), "mods")
     for sub in ("stamps", "avatars"):
         os.makedirs(os.path.join(d, sub), exist_ok=True)
     meta = os.path.join(d, "mod.json")
     if not os.path.exists(meta):
         with open(meta, "w", encoding="utf-8") as f:
-            # nombre vacio = el de siempre ("Carpeta principal")
+            # empty name = the usual one ("Main folder")
             json.dump({"name": "", "author": ""}, f, ensure_ascii=False, indent=2)
     readme = os.path.join(d, "README.txt")
     text = t("mods_readme") + "\n"
@@ -723,7 +725,7 @@ def mods_dir():
         same = False
     if not same:
         try:
-            with open(readme, "w", encoding="utf-8-sig") as f:   # en Windows, \n ya se escribe como \r\n
+            with open(readme, "w", encoding="utf-8-sig") as f:   # on Windows, \n is already written as \r\n
                 f.write(text)
         except OSError:
             pass
@@ -731,14 +733,14 @@ def mods_dir():
 
 
 def _in_mods(name):
-    """Carpeta dentro de la de mods (models, cursor, stages); se crea vacia si no existe."""
+    """Folder inside the mods one (models, cursor, stages); created empty if it doesn't exist."""
     d = os.path.join(mods_dir(), name)
     os.makedirs(d, exist_ok=True)
     return d
 
 
 def temp_mods_dir():
-    """Mods descargados de la sala de otro jugador ("<id>+temp"); se borran al terminar."""
+    """Mods downloaded from another player's room ("<id>+temp"); deleted at the end."""
     return os.path.join(app_dir(), "mods_temp")
 
 
@@ -746,7 +748,7 @@ _OWNER = []
 
 
 def mod_owner():
-    """Tu cuenta de Steam: forma parte del id de tus mods (para que no choquen con los de otro)."""
+    """Your Steam account: it is part of your mods' id (so they don't clash with someone else's)."""
     if not _OWNER:
         try:
             _OWNER.append(steam_account()[0] or "")
@@ -756,7 +758,7 @@ def mod_owner():
 
 
 def my_mods(cfg):
-    """Tu mod (la carpeta de mods), en una lista como los de una sala."""
+    """Your mod (the mods folder), in a list like a room's."""
     import modpack
     d = mods_dir()
     m = modpack.load_mod(d, mod_owner())
@@ -766,11 +768,19 @@ def my_mods(cfg):
 
 
 def mod_folder(name):
-    """Ruta de tu mod por su nombre de carpeta ("mods")."""
+    """Path of your mod by its folder name ("mods")."""
     base = mods_dir()
     if name == os.path.basename(base):
         return base
     raise ValueError(t("err_unexpected", err=name))
+
+
+def mods_enabled(cfg=None):
+    """The switch of your mods folder in the launcher ("Main folder" in Mods > General). When it is off, nothing in
+    the folder is used or shared: no stickers or avatars, and no models, animations or new characters either (they
+    live in its models/ subfolder; before, only the stickers and avatars followed the switch)."""
+    cfg = cfg if cfg is not None else load_config()
+    return "mods" not in set(cfg.get("mods_disabled", []))
 
 
 def my_room_set(cfg):
@@ -779,9 +789,9 @@ def my_room_set(cfg):
 
 
 def install_mods(game_dir, rs, log=None):
-    """Deja en el juego exactamente esos mods (vacio = ninguno). True si hubo que cambiar algo.
-    Con el plugin de BepInEx (recarga en caliente) los archivos del juego se quedan originales y
-    los mods van a la carpeta que vigila el plugin; sin el, se meten en los archivos del juego."""
+    """Leaves exactly those mods in the game (empty = none). True if something had to change.
+    With the BepInEx plugin (hot reload) the game files stay original and
+    the mods go to the folder the plugin watches; without it, they go into the game files."""
     import modinject
     if live_mode(game_dir):
         changed = modinject.restore(game_dir, fix=False)
@@ -790,7 +800,7 @@ def install_mods(game_dir, rs, log=None):
     return modinject.apply(game_dir, rs, log=log)
 
 
-# ------------------------------------------------------------------ recarga en caliente (BepInEx, activada por defecto)
+# ------------------------------------------------------------------ hot reload (BepInEx, on by default)
 BEPINEX_URL = ("https://github.com/BepInEx/BepInEx/releases/download/v6.0.0-pre.2/"
                "BepInEx-Unity.IL2CPP-win-x64-6.0.0-pre.2.zip")
 BEPINEX_SHA256 = "616ec7eb06cf11b2a0000e8fcef04d1b12bb58e84a2e0bdac9523234fc193ceb"
@@ -802,8 +812,8 @@ PLUGIN_NAME = "CrimeSightRevival.Mods.dll"
 
 
 def cursor_dir():
-    """Tu cursor propio (cursor.png y, si quieres, los demas cursores del juego), en mods/cursor. Sus instrucciones
-    (README.txt) van en el idioma del lanzador, como las de las demas carpetas."""
+    """Your own cursor (cursor.png and, if you want, the game's other cursors), in mods/cursor. Its instructions
+    (README.txt) are in the launcher's language, like the other folders'."""
     d = _in_mods("cursor")
     readme = os.path.join(d, "README.txt")
     text = t("cursor_readme") + "\n"
@@ -829,7 +839,7 @@ def cursor_enabled():
 
 
 def cursor_state():
-    """Para el lanzador: si tienes cursor propio, si esta activado, su miniatura y su punto de clic."""
+    """For the launcher: whether you have your own cursor, whether it is on, its thumbnail and its click point."""
     import base64
     d = cursor_dir()
     path = os.path.join(d, "cursor.png")
@@ -850,8 +860,8 @@ def cursor_state():
 
 
 def cursor_set_image(path):
-    """Pone una imagen como cursor: con transparencia, cuadrada y de 32x32 (el tamano que mejor admite
-    Windows). Si la imagen no tiene transparencia se le quita el fondo liso."""
+    """Sets an image as the cursor: with transparency, square and 32x32 (the size Windows handles
+    best). If the image has no transparency, its plain background is removed."""
     from PIL import Image
     import modimage
     try:
@@ -869,7 +879,7 @@ def cursor_set_image(path):
         img = img.crop(box)
     side = max(img.size)
     sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
-    sq.alpha_composite(img, (0, 0))              # pegado arriba a la izquierda: la punta de una flecha
+    sq.alpha_composite(img, (0, 0))              # stuck to the top left: an arrow's tip
     sq = sq.resize((CURSOR_SIZE, CURSOR_SIZE), Image.LANCZOS)
     d = cursor_dir()
     sq.save(os.path.join(d, "cursor.png"))
@@ -878,7 +888,7 @@ def cursor_set_image(path):
 
 
 def cursor_set_hotspot(mode):
-    """Punto de clic del cursor: "tip" (la esquina de arriba a la izquierda, como una flecha) o "center"."""
+    """The cursor's click point: "tip" (the top left corner, like an arrow) or "center"."""
     xy = (CURSOR_SIZE // 2, CURSOR_SIZE // 2) if mode == "center" else (0, 0)
     try:
         from PIL import Image
@@ -899,8 +909,8 @@ def cursor_remove():
 
 
 def install_cursor(game_dir):
-    """Copia tu cursor a la carpeta que vigila el plugin (solo lo que cambia). True si hubo cambios.
-    Desactivado en el lanzador = la carpeta del plugin se queda vacia (vuelve el cursor del juego)."""
+    """Copies your cursor to the folder the plugin watches (only what changes). True if there were changes.
+    Off in the launcher = the plugin's folder stays empty (the game's cursor comes back)."""
     if not game_dir or not live_mode(game_dir):
         return False
     src, dst = cursor_dir(), os.path.join(live_dir(game_dir), "cursor")
@@ -929,39 +939,48 @@ def install_cursor(game_dir):
     return changed
 
 
-# ---------------------------------------------------------------- modelos 3D (cambiar un personaje por otro)
-# Los huecos que se pueden cambiar y los modelos que se pueden poner (claves del plugin, CrimeSightRevivalModels.cs).
-# Los nombres de los personajes son los del juego (iguales en todos los idiomas); victima y traidor se traducen.
+# ---------------------------------------------------------------- 3D models (swap one character for another)
+# The slots that can be changed and the models that can be used (the plugin's keys, CrimeSightRevivalModels.cs).
+# The characters' names are the game's (the same in every language); victim and traitor are translated.
 MODEL_SLOTS = [("PawnTypeData_A", "Agatha"), ("PawnTypeData_B", "Berkeley"), ("PawnTypeData_C", "Catherine"),
                ("PawnTypeData_D", "Dorothy"), ("PawnTypeData_E", "Ellery"), ("PawnTypeData_F", "Freeman"),
                ("ThreatTypeData_Survivor", None), ("ThreatTypeData_Traitor", None)]
-# Sherlock y Moriarty se guardan para el modo historia: solo salen en modo desarrollador.
+# Sherlock and Moriarty are kept for the story mode: they only show up in developer mode.
 MODEL_EXTRA = [("sherlock", "Sherlock"), ("moriarty", "Moriarty")]
 
 
 def dev_mode():
-    """Modo desarrollador: "dev": true en config.json (o la variable de entorno CSR_DEV=1)."""
+    """Developer mode: "dev": true in config.json (or the environment variable CSR_DEV=1)."""
     return os.environ.get("CSR_DEV") == "1" or bool(load_config().get("dev"))
 
 
+def dev_forced_roles():
+    """Picked killer and target (developer mode): {"killer": ..., "target": ...} or None (random)."""
+    if not dev_mode():
+        return None
+    cfg = load_config()
+    f = {"killer": str(cfg.get("dev_killer") or "") or None, "target": str(cfg.get("dev_target") or "") or None}
+    return f if any(f.values()) else None
+
+
 def model_targets():
-    """Los modelos que se pueden poner: los personajes, tus modelos propios (.glb) y, en modo desarrollador,
-    Sherlock y Moriarty."""
+    """The models that can be used: the characters, your own models (.glb) and, in developer mode,
+    Sherlock and Moriarty."""
     custom = [(CUSTOM_PREFIX + n, n) for n in custom_models()]
     return list(MODEL_SLOTS) + custom + (list(MODEL_EXTRA) if dev_mode() else [])
 
 
 def model_swaps():
-    """{hueco: modelo} elegidos en el lanzador (solo los que cambian algo y estan disponibles)."""
+    """{slot: model} picked in the launcher (only those that change something and are available)."""
     sw = load_config().get("model_swaps") or {}
     valid = {k for k, _ in MODEL_SLOTS} | {k for k, _ in model_targets()}
     return {k: v for k, v in sw.items() if k in valid and v in valid and k != v}
 
 
-# ---------------------------------------------------------------- modelos propios (.glb)
-# Cada .glb de la carpeta de modelos es un modelo que se puede poner a un personaje ("custom:<nombre>"). El plugin
-# escribe en csr_live/skeletons el esqueleto de cada personaje (solo huesos) y aqui se copia a models/skeletons
-# para hacer el modelo encima en Blender.
+# ---------------------------------------------------------------- own models (.glb)
+# Each .glb in the models folder is a model that can be put on a character ("custom:<name>"). The plugin
+# writes each character's skeleton (bones only) to csr_live/skeletons and here it is copied to models/skeletons
+# to build the model on top of it in Blender.
 CUSTOM_PREFIX = "custom:"
 SKELETON_DIR = "skeletons"
 
@@ -969,8 +988,8 @@ SKELETON_DIR = "skeletons"
 
 
 def models_dir():
-    """Tus modelos 3D (mods/models): un .glb por modelo. La primera vez se crea con unas instrucciones y la carpeta
-    de esqueletos."""
+    """Your 3D models (mods/models): one .glb per model. The first time it is created with some instructions and the
+    skeletons folder."""
     d = _in_mods("models")
     os.makedirs(os.path.join(d, SKELETON_DIR), exist_ok=True)
     readme = os.path.join(d, "README.txt")
@@ -993,8 +1012,8 @@ MODEL_EXTS = (".glb", ".fbx")
 
 
 def custom_sources():
-    """{nombre: archivo} de tus modelos: cada .glb o .fbx de la carpeta de modelos, y cada subcarpeta con un modelo
-    dentro (asi un .fbx puede ir con sus texturas al lado; si hay varios, el mas grande)."""
+    """{name: file} of your models: each .glb or .fbx in the models folder, and each subfolder with a model
+    inside (that way an .fbx can come with its textures next to it; if there are several, the biggest)."""
     out = {}
     try:
         d = models_dir()
@@ -1002,7 +1021,7 @@ def custom_sources():
             p = os.path.join(d, f)
             stem, ext = os.path.splitext(f)
             if os.path.isfile(p) and ext.lower() in MODEL_EXTS:
-                if stem not in out or ext.lower() == ".fbx":        # mismo nombre en .glb y .fbx: el .fbx
+                if stem not in out or ext.lower() == ".fbx":        # same name as .glb and .fbx: the .fbx
                     out[stem] = p
             elif os.path.isdir(p) and f.lower() not in (SKELETON_DIR, ANIM_DIR, IMAGE_DIR):
                 best = None
@@ -1022,16 +1041,16 @@ def custom_sources():
 
 
 def custom_models():
-    """Nombres de tus modelos propios, en orden."""
+    """Names of your own models, in order."""
     return sorted(custom_sources(), key=str.lower)
 
 
-# avisos del ultimo paso de cada modelo al juego: {nombre: texto} (no se pudo convertir, faltan texturas...)
+# warnings from each model's last trip to the game: {name: text} (it couldn't be converted, textures missing...)
 model_issues = {}
 
 
 def sync_skeletons(game_dir):
-    """Copia los esqueletos que escribio el plugin a la carpeta de modelos (skeletons). Devuelve cuantos hay."""
+    """Copies the skeletons the plugin wrote to the models folder (skeletons). Returns how many there are."""
     if not game_dir:
         return 0
     src = os.path.join(live_dir(game_dir), "skeletons")
@@ -1055,7 +1074,7 @@ def sync_skeletons(game_dir):
 
 
 def _install_custom_models(game_dir, swaps):
-    """Copia al juego (csr_live/models) los modelos propios elegidos y quita los que ya no se usan."""
+    """Copies the picked own models to the game (csr_live/models) and removes the ones no longer used."""
     want = {v[len(CUSTOM_PREFIX):] for v in swaps.values() if v.startswith(CUSTOM_PREFIX)}
     return _sync_files(os.path.join(live_dir(game_dir), "models"), want, custom_sources(), model_issues)
 
@@ -1066,8 +1085,8 @@ def _file_sig(path):
 
 
 def built_glb(name, src, issues):
-    """El .glb de un modelo o animacion tuyo: el mismo archivo si ya es .glb, o el .fbx convertido (se guarda
-    en models_cache y solo se vuelve a convertir si cambia). None si no se pudo."""
+    """The .glb of a model or animation of yours: the same file if it already is a .glb, or the converted .fbx (kept
+    in models_cache and only converted again if it changes). None if it couldn't be done."""
     if not src or not os.path.isfile(src):
         return None
     if src.lower().endswith(".glb"):
@@ -1094,7 +1113,7 @@ def built_glb(name, src, issues):
             f.write(sig)
         issues[name] = "; ".join(t("models_" + k, **kw) for k, kw in notes) or None
         return b
-    except Exception as e:                                           # noqa: BLE001 (un archivo raro no tumba nada)
+    except Exception as e:                                           # noqa: BLE001 (an odd file doesn't bring anything down)
         logging.getLogger("crimesight").warning("No pude preparar el modelo %s: %s", name, e)
         key = getattr(e, "key", None)
         issues[name] = t("models_convert_error", err=t("models_" + key) if key else e)
@@ -1105,8 +1124,108 @@ def built_glb(name, src, issues):
         return None
 
 
+SHARE_MAX_TEXTURE = 2048      # the plugin never uses more (TexDec scales bigger textures down to this)
+
+
+def slim_glb_bytes(data, max_side=SHARE_MAX_TEXTURE):
+    """The same .glb with its embedded textures scaled down to max_side (PNG, so the plugin still decodes them off
+    the game thread). Returns the original bytes if nothing needs it or the file can't be read."""
+    import io
+    import struct
+    try:
+        from PIL import Image
+        if data[:4] != b"glTF" or len(data) < 28:
+            return data
+        jlen, jtype = struct.unpack_from("<II", data, 12)
+        if jtype != 0x4E4F534A:
+            return data
+        doc = json.loads(data[20:20 + jlen])
+        p = 20 + jlen
+        if p + 8 > len(data):
+            return data
+        blen, btype = struct.unpack_from("<II", data, p)
+        if btype != 0x004E4942:
+            return data
+        binc = data[p + 8:p + 8 + blen]
+        views = doc.get("bufferViews") or []
+        new = {}
+        for im in doc.get("images") or []:
+            vi = im.get("bufferView")
+            if not isinstance(vi, int) or vi >= len(views) or views[vi].get("buffer", 0) != 0:
+                continue
+            v = views[vi]
+            raw = binc[v.get("byteOffset", 0):v.get("byteOffset", 0) + v["byteLength"]]
+            img = Image.open(io.BytesIO(raw))
+            if max(img.size) <= max_side:
+                continue
+            k = max_side / max(img.size)
+            img = img.convert("RGBA" if "A" in img.getbands() or img.mode == "P" else "RGB")
+            img = img.resize((max(1, round(img.width * k)), max(1, round(img.height * k))), Image.LANCZOS)
+            out = io.BytesIO()
+            img.save(out, "PNG", compress_level=9)
+            if out.tell() < len(raw):
+                new[vi] = out.getvalue()
+                im["mimeType"] = "image/png"
+        if not new:
+            return data
+        # the binary chunk again: every view in its order, each one aligned to 4 bytes
+        buf = bytearray()
+        order = sorted(range(len(views)), key=lambda i: views[i].get("byteOffset", 0))
+        for i in order:
+            v = views[i]
+            if v.get("buffer", 0) != 0:
+                continue
+            chunk = new.get(i) or binc[v.get("byteOffset", 0):v.get("byteOffset", 0) + v["byteLength"]]
+            buf += b"\0" * (-len(buf) % 4)
+            v["byteOffset"] = len(buf)
+            v["byteLength"] = len(chunk)
+            buf += chunk
+        buf += b"\0" * (-len(buf) % 4)
+        doc["buffers"][0]["byteLength"] = len(buf)
+        js = json.dumps(doc, separators=(",", ":")).encode("utf-8")
+        js += b" " * (-len(js) % 4)
+        body = struct.pack("<II", len(js), 0x4E4F534A) + js + struct.pack("<II", len(buf), 0x004E4942) + bytes(buf)
+        return struct.pack("<III", 0x46546C67, 2, 12 + len(body)) + body
+    except Exception as e:                                           # noqa: BLE001 (the full file still works)
+        logging.getLogger("crimesight").warning("No pude reducir las texturas del modelo: %s", e)
+        return data
+
+
+def shared_glb(path):
+    """The file of one of your models that goes to the rooms: with its textures at most SHARE_MAX_TEXTURE (a 4096
+    texture is 4 times the bytes and the game shows it at 2048 anyway). Kept in models_cache."""
+    d = os.path.join(app_dir(), "models_cache")
+    try:
+        os.makedirs(d, exist_ok=True)
+        b = os.path.join(d, hashlib.sha1(("share|" + os.path.abspath(path)).encode("utf-8")).hexdigest()[:10] + ".glb")
+        sig = "%d|%s" % (SHARE_MAX_TEXTURE, _file_sig(path))
+        try:
+            with open(b + ".src", encoding="utf-8") as f:
+                if f.read() == sig:
+                    return b if os.path.isfile(b) else path     # no file: the original was already fine
+        except OSError:
+            pass
+        with open(path, "rb") as f:
+            data = f.read()
+        slim = slim_glb_bytes(data)
+        if slim is data:
+            if os.path.isfile(b):
+                os.remove(b)
+            with open(b + ".src", "w", encoding="utf-8") as f:
+                f.write(sig)
+            return path
+        with open(b + ".part", "wb") as f:
+            f.write(slim)
+        os.replace(b + ".part", b)
+        with open(b + ".src", "w", encoding="utf-8") as f:
+            f.write(sig)
+        return b
+    except OSError:
+        return path
+
+
 def _sync_files(d, want, sources, issues):
-    """Deja en d un .glb por cada nombre de want (copiado, o convertido si es .fbx) y quita los demas."""
+    """Leaves in d one .glb per name in want (copied, or converted if it is an .fbx) and removes the rest."""
     if not want and not os.path.isdir(d):
         return False
     os.makedirs(d, exist_ok=True)
@@ -1146,9 +1265,9 @@ def _sync_files(d, want, sources, issues):
     return changed
 
 
-# ---------------------------------------------------------------- animaciones propias
-# Cada .fbx/.glb de models/animations es una animacion (la primera que tenga) que puede sustituir el reposo, el
-# andar o el correr de un personaje. El plugin la adapta a su esqueleto (CrimeSightRevivalAnims.cs).
+# ---------------------------------------------------------------- own animations
+# Each .fbx/.glb in models/animations is an animation (the first one it has) that can replace a character's idle,
+# walk or run. The plugin adapts it to its skeleton (CrimeSightRevivalAnims.cs).
 ANIM_DIR = "animations"
 ANIM_KINDS = ("idle", "walk", "run")
 anim_issues = {}
@@ -1178,7 +1297,7 @@ def custom_anims():
 
 
 def anim_swaps():
-    """{hueco: {idle|walk|run: animacion}} (solo las que existen)."""
+    """{slot: {idle|walk|run: animation}} (only the ones that exist)."""
     have = set(custom_anims())
     slots = {k for k, _ in MODEL_SLOTS}
     out = {}
@@ -1205,10 +1324,12 @@ def set_anim_swap(slot, kind, name):
     write_config(cfg)
 
 
-# ---------------------------------------------------------------- personajes nuevos (slots)
-# Un personaje nuevo no sustituye a nadie: entra en el sorteo de cada partida (Selector de personajes). Lleva su
-# modelo y, si quieres, sus animaciones, su nombre, su imagen y sus frases; lo que no tenga lo pone el personaje
-# cuyo sitio ocupa (tambien su forma de jugar). Si sale de traidor, solo cuentan el modelo y las animaciones.
+# ---------------------------------------------------------------- new characters (slots)
+# A new character doesn't replace anyone: it joins each match's draw (Character Selection). It has its
+# model and, if you want, its animations, its name, its image and its lines; whatever it lacks comes from the
+# character
+# whose place it takes (also its way of playing). If it comes out as the traitor, only the model and the animations
+# count.
 IMAGE_DIR = "images"
 IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".bmp")
 TALK_KEYS = ("cannotGetAnything", "damagedByGasRoom", "dangerHasInvaded", "destroySwitchboard", "discoverBypass",
@@ -1218,7 +1339,7 @@ TALK_KEYS = ("cannotGetAnything", "damagedByGasRoom", "dangerHasInvaded", "destr
              "startAction_statusHunger", "startAction_statusInjury", "stepIntoBlackoutRoom", "useBypass",
              "useFoodForOther", "useMedicineForMyself", "useMedicineForOther")
 
-# la cara que pone el personaje en cada frase, en el juego (igual para los seis): preocupado o atacado; las demas, normal
+# the face the character makes in each line, in the game (the same for all six): worried or attacked; the rest, normal
 TALK_REACTION = {"damagedByGasRoom": "worried", "dangerHasInvaded": "worried", "startAction_statusDying": "worried",
                  "startAction_statusHunger": "worried", "startAction_statusInjury": "worried",
                  "raid": "attacked", "raidFinalDay": "attacked"}
@@ -1226,7 +1347,7 @@ REACTIONS = ("worried", "attacked")
 
 
 def _talk_img(v):
-    """Imagenes de las frases: por reaccion ("@worried", "@attacked") y por frase (las de TALK_KEYS)."""
+    """Images of the lines: per reaction ("@worried", "@attacked") and per line (the ones in TALK_KEYS)."""
     out = {}
     for k, name in (v or {}).items():
         if name and (k in TALK_KEYS or (k.startswith("@") and k[1:] in REACTIONS)):
@@ -1235,7 +1356,7 @@ def _talk_img(v):
 
 
 def talk_image_for(c_imgs, sit, main):
-    """La imagen de una frase: la suya, si no la de su reaccion, si no la principal."""
+    """The image of a line: its own, otherwise its reaction's, otherwise the main one."""
     return c_imgs.get(sit) or c_imgs.get("@" + TALK_REACTION.get(sit, "")) or main
 
 
@@ -1246,7 +1367,7 @@ def images_dir():
 
 
 def custom_images():
-    """{nombre: archivo} de las imagenes para los personajes nuevos (carpeta images)."""
+    """{name: file} of the images for the new characters (images folder)."""
     out = {}
     try:
         d = images_dir()
@@ -1263,17 +1384,27 @@ CHAR_PAWNS = ("PawnTypeData_A", "PawnTypeData_B", "PawnTypeData_C", "PawnTypeDat
 
 
 def _anim_from(v):
-    """De que personaje del juego saca las animaciones un personaje nuevo (Agatha si no se dice)."""
+    """Which game character a new character takes its animations from (Agatha if not said)."""
     return v if v in CHAR_PAWNS else CHAR_PAWNS[0]
 
 
+def _char_active(c, off):
+    """A new character is shared with rooms (and drawn) only once it is switched on in the launcher. Characters
+    saved before the switch existed: on if they were ticked in the Character Selection."""
+    v = c.get("active")
+    return bool(v) if isinstance(v, bool) else c.get("id") not in off
+
+
 def characters():
-    """Tus personajes nuevos (config "characters"), con lo que falte quitado."""
+    """Your new characters (config "characters"), with whatever is missing removed."""
     out = []
-    for c in load_config().get("characters") or []:
+    cfg = load_config()
+    off = set(cfg.get("roster_disabled") or [])
+    for c in cfg.get("characters") or []:
         if not isinstance(c, dict) or not re.match(r"^[a-z0-9]{10}$", str(c.get("id", ""))):
             continue
-        out.append({"id": c["id"], "name": str(c.get("name") or "")[:24], "role": "pawn",       # traidores: mas adelante
+        out.append({"id": c["id"], "name": str(c.get("name") or "")[:24], "role": "pawn",       # traitors: later on
+                    "active": _char_active(c, off),
                     "anim_from": _anim_from(c.get("anim_from")),
                     "model": str(c.get("model") or ""), "image": str(c.get("image") or ""),
                     "talk_img": _talk_img(c.get("talk_img")),
@@ -1283,7 +1414,7 @@ def characters():
 
 
 def save_character(c):
-    """Crea o cambia un personaje nuevo. Devuelve su id."""
+    """Creates or changes a new character. Returns its id."""
     import secrets
     cfg = load_config()
     lst = [x for x in (cfg.get("characters") or []) if isinstance(x, dict)]
@@ -1294,10 +1425,25 @@ def save_character(c):
              "model": str(c.get("model") or ""), "image": str(c.get("image") or ""), "talk_img": _talk_img(c.get("talk_img")),
              "anims": {k: v for k, v in (c.get("anims") or {}).items() if k in ANIM_KINDS and v},
              "talk": {k: str(v).strip()[:240] for k, v in (c.get("talk") or {}).items() if k in TALK_KEYS and str(v).strip()}}
+    old = next((x for x in lst if x.get("id") == cid), None)
+    # a new character starts switched off: it isn't shared or drawn until you switch it on in the launcher
+    entry["active"] = _char_active(old, set(cfg.get("roster_disabled") or [])) if old else False
     lst = [x for x in lst if x.get("id") != cid] + [entry]
     cfg["characters"] = lst
     write_config(cfg)
     return cid
+
+
+def set_character_active(cid, on):
+    """Switches a new character on (shared with rooms and ticked in the Character Selection) or off (not shared,
+    so its files are never uploaded)."""
+    cfg = load_config()
+    for x in cfg.get("characters") or []:
+        if isinstance(x, dict) and x.get("id") == cid:
+            x["active"] = bool(on)
+    off = [x for x in (cfg.get("roster_disabled") or []) if x != cid]
+    cfg["roster_disabled"] = off if on else off + [cid]
+    write_config(cfg)
 
 
 def delete_character(cid):
@@ -1308,7 +1454,7 @@ def delete_character(cid):
 
 
 def _image_file(name, src):
-    """La imagen tal cual si es PNG o JPG; si no, pasada a PNG (en models_cache)."""
+    """The image as it is if it is PNG or JPG; otherwise, converted to PNG (in models_cache)."""
     if not src or not os.path.isfile(src):
         return None
     if src.lower().endswith((".png", ".jpg", ".jpeg")):
@@ -1339,20 +1485,21 @@ def set_model_swap(slot, target):
 
 
 def install_models(game_dir):
-    """Escribe en la carpeta del plugin que personaje se ve con que modelo. True si cambio algo."""
+    """Writes to the plugin's folder which character is seen with which model. True if something changed."""
     if not game_dir or not live_mode(game_dir):
         return False
     d = live_dir(game_dir)
     os.makedirs(d, exist_ok=True)
-    if room_models is not None:                         # en una sala: los de la sala (tuyos apartados un rato)
+    if room_models is not None:                         # in a room: the room's (yours put aside for a while)
         swaps, anims, msrc, asrc = _room_install_set(room_models, room_roster)
         copied = _sync_files(os.path.join(d, "models"), set(msrc), msrc, model_issues)
         copied = _sync_files(os.path.join(d, "anims"), set(asrc), asrc, anim_issues) or copied
         copied = _install_roster(d, room_models, room_roster) or copied
     else:
-        swaps = model_swaps()
-        anims = anim_swaps()
-        copied = _install_custom_models(game_dir, swaps)    # antes que models.json: el plugin lee el archivo al verlo
+        on = mods_enabled()                             # your mods folder switched off: the game's own models
+        swaps = model_swaps() if on else {}
+        anims = anim_swaps() if on else {}
+        copied = _install_custom_models(game_dir, swaps)    # before models.json: the plugin reads the file when it sees it
         want = {n for kinds in anims.values() for n in kinds.values()}
         copied = _sync_files(os.path.join(d, "anims"), want, anim_sources(), anim_issues) or copied
         copied = _clear_roster(d) or copied
@@ -1371,14 +1518,15 @@ def install_models(game_dir):
     return True
 
 
-# ---------------------------------------------------------------- modelos de la sala (como los stickers)
-# El anfitrion comparte sus modelos y animaciones con su sala, y los de los invitados que acepte rellenan los
-# personajes libres. Quien se une los descarga (solo los archivos que no tiene, por su sha256) a models_room, que
-# se borra al terminar; mientras tanto el juego ve los de la sala y los tuyos vuelven al salir.
-room_models = None          # None: los tuyos. Si no: {"hash", "swaps", "anims", "chars", "files": {sha: {"kind", "path"}}}
-room_roster = None          # reparto de la partida en curso (del servidor) o None
-room_disabled = []          # personajes desactivados en el Selector de personajes de la sala
-room_host = False           # True si este PC decide el Selector (anfitrion o en solitario)
+# ---------------------------------------------------------------- room models (like the stickers)
+# The host shares their models and animations with their room, and the guests' ones they accept fill the
+# free characters. Whoever joins downloads them (only the files they don't have, by their sha256) to models_room,
+# which
+# is deleted at the end; meanwhile the game sees the room's and yours come back on leaving.
+room_models = None          # None: yours. Otherwise: {"hash", "swaps", "anims", "chars", "files": {sha: {"kind", "path"}}}
+room_roster = None          # character draw of the ongoing match (from the server) or None
+room_disabled = []          # characters turned off in the room's Character Selection
+room_host = False           # True if this PC decides the Selection (host or solo)
 ROOM_PREFIX = "rm_"
 _sha_cache = {}
 
@@ -1407,10 +1555,12 @@ def _sha256_file(path):
 
 
 def my_model_set():
-    """Tus modelos y animaciones en el formato de sala: los archivos por su sha256 (con su ruta en este PC).
-    Sherlock y Moriarty (modo desarrollador) no se comparten."""
+    """Your models and animations in the room format: the files by their sha256 (with their path on this PC).
+    Sherlock and Moriarty (developer mode) are not shared."""
     import modelpack
     ms = modelpack.empty()
+    if not mods_enabled():                  # your mods folder is switched off: nothing to share
+        return ms
     slots = {k for k, _ in MODEL_SLOTS}
     msrc, asrc = custom_sources(), anim_sources()
 
@@ -1418,6 +1568,8 @@ def my_model_set():
         path = built_glb(name, src, issues)
         if not path:
             return None
+        if kind == "model":
+            path = shared_glb(path)
         sha = _sha256_file(path)
         ms["files"][sha] = {"kind": kind, "size": os.path.getsize(path), "name": name, "path": path}
         return modelpack.FILE_PREFIX + sha
@@ -1435,6 +1587,8 @@ def my_model_set():
                 ms["anims"].setdefault(slot, {})[kind] = ref
     isrc = custom_images()
     for c in characters():
+        if not c["active"]:                 # switched off in the launcher: not shared (nothing is uploaded)
+            continue
         model = add("model", c["model"], msrc.get(c["model"]), model_issues) if c["model"] else None
         if not model:
             continue
@@ -1463,8 +1617,8 @@ def my_model_set():
 
 
 def _room_install_set(rm, roster=None):
-    """Lo que se escribe en el juego para un juego de modelos de sala: nombres rm_<sha> para sus archivos. Con el
-    reparto de la partida, cada sitio con un personaje nuevo lleva su modelo y sus animaciones (o las del juego)."""
+    """What is written to the game for a room's model set: rm_<sha> names for its files. With the
+    match's draw, each place with a new character gets its model and its animations (or the game's)."""
     import modelpack
     msrc, asrc = {}, {}
 
@@ -1490,7 +1644,7 @@ def _room_install_set(rm, roster=None):
             if r:
                 anims.setdefault(slot, {})[kind] = r
     chars = rm.get("chars", {})
-    for c in chars.values():                       # todos sus modelos en el juego (para verlos en el selector)
+    for c in chars.values():                       # all its models in the game (to see them in the selector)
         ref(c.get("model", ""), "model")
     taken = dict((roster or {}).get("positions") or {})
     if roster and roster.get("traitor"):
@@ -1503,7 +1657,7 @@ def _room_install_set(rm, roster=None):
         if not r:
             continue
         swaps[slot] = r
-        anims.pop(slot, None)                      # sin animaciones propias: las del juego
+        anims.pop(slot, None)                      # no own animations: the game's
         for kind, v in (c.get("anims") or {}).items():
             ra = ref(v, "anim")
             if ra:
@@ -1526,7 +1680,7 @@ def _write_json_if_changed(path, obj):
 
 
 def _clear_roster(d):
-    """Fuera de una sala no hay reparto ni Selector de personajes: el juego vuelve a sus personajes."""
+    """Outside a room there is no draw or Character Selection: the game goes back to its characters."""
     gone = False
     for name in ("roster.json", "roster_pool.json"):
         try:
@@ -1539,8 +1693,8 @@ def _clear_roster(d):
 
 
 def _install_roster(d, rm, roster):
-    """Para el plugin: roster.json (que nombre, frases e imagen lleva cada sitio en esta partida) y
-    roster_pool.json (todos los personajes, para el Selector de personajes). Copia las imagenes."""
+    """For the plugin: roster.json (which name, lines and image each place has in this match) and
+    roster_pool.json (every character, for the Character Selection). Copies the images."""
     import modelpack
     chars = (rm or {}).get("chars", {})
     files = (rm or {}).get("files", {})
@@ -1574,7 +1728,7 @@ def _install_roster(d, rm, roster):
         return None
 
     def talk_images(c):
-        """La imagen de cada frase que no lleva la principal (por frase o por la reaccion que pone en el juego)."""
+        """The image of each line that doesn't use the main one (per line or per the reaction it shows in the game)."""
         timg = c.get("talk_img") or {}
         out = {}
         for sit in TALK_KEYS:
@@ -1602,7 +1756,7 @@ def _install_roster(d, rm, roster):
     disabled = set(room_disabled or [])
     items = [{"id": "orig:" + k, "key": k, "role": "pawn", "enabled": "orig:" + k not in disabled} for k in modelpack.PAWNS]
     for cid, c in sorted(chars.items(), key=lambda kv: (kv[1].get("name") or "").lower()):
-        if c.get("role", "pawn") != "pawn":                     # el traidor no entra en el Selector (aun)
+        if c.get("role", "pawn") != "pawn":                     # the traitor isn't in the Selection (yet)
             continue
         items.append({"id": cid, "role": "pawn", "name": c.get("name") or "", "image": image_of(c),
                       "model": model_of(c), "anim_from": _anim_from(c.get("anim_from")), "enabled": cid not in disabled})
@@ -1617,7 +1771,7 @@ def _http(url, password, data=None, method=None, headers=None, timeout=60):
 
 
 def download_models(url, password, expected_hash, progress=None):
-    """Baja los modelos de la sala (solo los archivos que no tengas ya) y devuelve el juego de modelos local."""
+    """Downloads the room's models (only the files you don't have yet) and returns the local model set."""
     import modelpack
     try:
         with _http(url + "/revival/models", password, timeout=20) as r:
@@ -1636,6 +1790,20 @@ def download_models(url, password, expected_hash, progress=None):
     os.makedirs(d, exist_ok=True)
     missing = [s for s in ms["files"] if not (os.path.isfile(os.path.join(d, s + ".glb")) and
                                                _sha256_file(os.path.join(d, s + ".glb")) == s)]
+    if missing:
+        # your own files (the ones you just offered to the room) are copied from this PC, not downloaded again
+        try:
+            own = {s: f["path"] for s, f in my_model_set()["files"].items() if s in missing}
+        except Exception:                                            # noqa: BLE001 (then they are downloaded)
+            own = {}
+        for sha, src in own.items():
+            try:
+                shutil.copyfile(src, os.path.join(d, sha + ".glb.part"))
+                if _sha256_file(os.path.join(d, sha + ".glb.part")) == sha:
+                    os.replace(os.path.join(d, sha + ".glb.part"), os.path.join(d, sha + ".glb"))
+                    missing.remove(sha)
+            except OSError:
+                pass
     if missing and progress:
         progress(sum(ms["files"][s]["size"] for s in missing))
     for sha in missing:
@@ -1662,7 +1830,7 @@ def download_models(url, password, expected_hash, progress=None):
 
 
 def roster_state(url, steam_id):
-    """Reparto de personajes de tu partida en ese servidor y los personajes desactivados de la sala.
+    """Character draw of your match on that server and the room's turned-off characters.
     Also the room's id and whether you created it: (roster, disabled, room id, owner)."""
     try:
         with urllib.request.urlopen(url + "/revival/roster?platform_id=" + str(steam_id or ""), timeout=6) as r:
@@ -1723,7 +1891,7 @@ def roster_select(url, password, steam_id, disabled):
 
 
 def roster_answer(game_dir):
-    """Lo que ha marcado el anfitrion en el Selector de personajes del juego: (n, desactivados) o None."""
+    """What the host ticked in the game's Character Selection: (n, disabled) or None."""
     try:
         with open(os.path.join(live_dir(game_dir), "roster_select.json"), encoding="utf-8") as f:
             a = json.load(f)
@@ -1733,7 +1901,7 @@ def roster_answer(game_dir):
 
 
 def offer_models(url, password, ms, player):
-    """Ofrece tus modelos al anfitrion (solo la lista). Devuelve (estado, id, archivos que pide)."""
+    """Offers your models to the host (only the list). Returns (state, id, files it asks for)."""
     import modelpack
     from urllib.parse import quote
     if not ms.get("hash"):
@@ -1744,7 +1912,7 @@ def offer_models(url, password, ms, player):
                    headers={"Content-Type": "application/json", "X-CSR-Player": quote(player or "?")}) as r:
             a = json.loads(r.read())
     except urllib.error.HTTPError as e:
-        if e.code == 404:                  # servidor de una version anterior
+        if e.code == 404:                  # server from an older version
             return "ignored", "", []
         raise ValueError(t("models_download_failed", err=e.code))
     except (urllib.error.URLError, OSError, ValueError) as e:
@@ -1762,7 +1930,7 @@ def offer_models_state(url, password, oid):
 
 
 def upload_models(url, password, oid, ms, need):
-    """Sube al anfitrion los archivos que ha pedido de tu oferta aceptada."""
+    """Uploads to the host the files it asked for from your accepted offer."""
     for sha in need:
         f = ms["files"].get(sha)
         if not f:
@@ -1774,21 +1942,21 @@ def upload_models(url, password, oid, ms, need):
                        timeout=600, headers={"Content-Type": "model/gltf-binary"}):
                 pass
         except urllib.error.HTTPError as e:
-            if e.code != 409:              # 409: ya lo tenia
+            if e.code != 409:              # 409: it already had it
                 raise ValueError(t("models_upload_failed", err=e.code))
         except (urllib.error.URLError, OSError) as e:
             raise ValueError(t("models_upload_failed", err=getattr(e, "reason", e)))
 
 
 def live_dir(game_dir):
-    """Carpeta que vigila el plugin: dentro de BepInEx, en la carpeta del juego. Asi sirve igual en
-    Windows y con Proton (donde el juego ve otra carpeta de usuario, la de Wine)."""
+    """Folder the plugin watches: inside BepInEx, in the game folder. That way it works the same on
+    Windows and with Proton (where the game sees another user folder, Wine's)."""
     return os.path.join(game_dir, "BepInEx", "csr_live")
 
 
 def bepinex_state(game_dir):
-    """installed: BepInEx en la carpeta del juego; plugin: nuestro plugin dentro; ready: ya arranco
-    una vez (genero sus archivos, la primera vez tarda un minuto)."""
+    """installed: BepInEx in the game folder; plugin: our plugin inside; ready: it has started
+    once (it generated its files; the first time it takes a minute)."""
     if not game_dir:
         return {"installed": False, "plugin": False, "ready": False}
     bep = os.path.join(game_dir, "BepInEx")
@@ -1811,9 +1979,9 @@ def _plugin_source():
 
 
 def install_bepinex(game_dir, progress=None):
-    """Descarga BepInEx (el cargador de mods oficial, desde su GitHub) y lo pone en la carpeta del
-    juego junto a nuestro plugin. No va dentro del lanzador: este lo instala solo al arrancar (salvo
-    que el jugador lo haya quitado)."""
+    """Downloads BepInEx (the official mod loader, from its GitHub) and puts it in the game
+    folder next to our plugin. It doesn't ship inside the launcher: the launcher installs it on its own at startup (unless
+    the player removed it)."""
     import zipfile
     if not is_game_dir(game_dir):
         raise ValueError(t("err_no_game"))
@@ -1837,12 +2005,12 @@ def install_bepinex(game_dir, progress=None):
     shutil.copy2(_plugin_source(), os.path.join(plugins, PLUGIN_NAME))
     _quiet_bepinex(game_dir)
     import modinject
-    modinject.restore(game_dir, fix=False)   # con el plugin, los archivos del juego vuelven a ser los originales
+    modinject.restore(game_dir, fix=False)   # with the plugin, the game files go back to being the original ones
     return True
 
 
 def _sha_ok(path):
-    """El zip es exactamente el oficial (misma huella SHA-256)."""
+    """The zip is exactly the official one (same SHA-256 fingerprint)."""
     if not os.path.isfile(path) or os.path.getsize(path) != BEPINEX_SIZE:
         return False
     import hashlib
@@ -1871,7 +2039,7 @@ def _download_bepinex(zpath, progress, cache):
     except (urllib.error.URLError, OSError) as e:
         err = getattr(e, "reason", e)
     if (err is not None or not _sha_ok(tmp)) and IS_WINDOWS:
-        # plan B: el descargador de Windows (consigue solo los certificados que falten)
+        # plan B: Windows' downloader (it gets the missing certificates on its own)
         if progress:
             progress(0)
         ps = ("$ProgressPreference='SilentlyContinue';"
@@ -1894,7 +2062,7 @@ def _download_bepinex(zpath, progress, cache):
 
 
 def _quiet_bepinex(game_dir):
-    """Sin ventana de consola de BepInEx (el registro sigue en BepInEx/LogOutput.log)."""
+    """No BepInEx console window (the log is still in BepInEx/LogOutput.log)."""
     cfg = os.path.join(game_dir, "BepInEx", "config", "BepInEx.cfg")
     os.makedirs(os.path.dirname(cfg), exist_ok=True)
     try:
@@ -1911,7 +2079,7 @@ def _quiet_bepinex(game_dir):
 
 
 def update_plugin(game_dir):
-    """Si el lanzador trae una version nueva del plugin, la copia."""
+    """If the launcher brings a new version of the plugin, it copies it."""
     if not live_mode(game_dir):
         return False
     src, dst = _plugin_source(), os.path.join(game_dir, "BepInEx", "plugins", PLUGIN_NAME)
@@ -1923,21 +2091,21 @@ def update_plugin(game_dir):
 
 
 def uninstall_bepinex(game_dir):
-    """Quita BepInEx de la carpeta del juego (todo lo que trae su zip)."""
+    """Removes BepInEx from the game folder (everything its zip brings)."""
     for name in BEPINEX_FILES:
         p = os.path.join(game_dir, name)
         if os.path.isdir(p):
             shutil.rmtree(p, ignore_errors=True)
         elif os.path.isfile(p):
             os.remove(p)
-    old = os.path.join(app_dir(), "mods_live")          # sitio antiguo (versiones anteriores)
+    old = os.path.join(app_dir(), "mods_live")          # old place (earlier versions)
     if os.path.isdir(old):
         shutil.rmtree(old, ignore_errors=True)
     return True
 
 
 def write_live(rs, game_dir):
-    """Escribe el conjunto de mods para el plugin: imagenes ya ajustadas + live.json."""
+    """Writes the mod set for the plugin: images already fitted + live.json."""
     import modpack, io
     d = live_dir(game_dir)
     os.makedirs(d, exist_ok=True)
@@ -1952,7 +2120,7 @@ def write_live(rs, game_dir):
     files, stickers, avatars = set(), [], []
 
     def put(name, data):
-        # solo si cambia: el plugin reutiliza lo que no cambia (si no, se perderia el avatar elegido)
+        # only if it changes: the plugin reuses what doesn't change (otherwise the chosen avatar would be lost)
         path = os.path.join(d, name)
         try:
             with open(path, "rb") as f:
@@ -1983,7 +2151,7 @@ def write_live(rs, game_dir):
         avatars.append({"id": a["data_id"], "png": fn})
         files.add(fn)
     _write_json(state_path, {"hash": rs["hash"], "stickers": stickers, "avatars": avatars})
-    for name in os.listdir(d):                  # imagenes de un conjunto anterior
+    for name in os.listdir(d):                  # images from an earlier set
         if name.endswith(".png") and name not in files:
             try:
                 os.remove(os.path.join(d, name))
@@ -1993,8 +2161,8 @@ def write_live(rs, game_dir):
 
 
 def offer_prompt(game_dir, oid, title, body, yes, no, always=""):
-    """Aviso de mods de un invitado dentro del juego: el plugin lo ensena con dos botones y escribe
-    la respuesta en offer_answer.json (el anfitrion suele estar en el juego, no en el lanzador)."""
+    """Notice inside the game about a guest's mods: the plugin shows it with two buttons and writes
+    the answer in offer_answer.json (the host is usually in the game, not in the launcher)."""
     d = live_dir(game_dir)
     if not os.path.isdir(d):
         return False
@@ -2008,7 +2176,7 @@ def offer_prompt(game_dir, oid, title, body, yes, no, always=""):
 
 
 def offer_answer(game_dir, oid):
-    """True/False ("always" si eligio aceptar siempre) si se ha contestado desde el juego; None si aun no."""
+    """True/False ("always" if they chose to always accept) if it was answered from the game; None if not yet."""
     try:
         with open(os.path.join(live_dir(game_dir), "offer_answer.json"), encoding="utf-8") as f:
             a = json.load(f)
@@ -2034,7 +2202,7 @@ def clear_live(game_dir):
 
 
 def download_mods(url, password, expected_hash, timeout=60):
-    """Descarga el paquete de mods de un servidor y lo guarda como mods temporales."""
+    """Downloads a server's mod pack and saves it as temporary mods."""
     import modpack
     req = urllib.request.Request(url + "/revival/mods", headers={"X-CSR-Password": password or ""})
     try:
@@ -2056,7 +2224,7 @@ def download_mods(url, password, expected_hash, timeout=60):
 
 
 def offer_mods(url, password, rs, player, timeout=60):
-    """Ofrece tus mods al anfitrion de la sala. Devuelve 'pending', 'accepted', 'known' o 'ignored'."""
+    """Offers your mods to the room's host. Returns 'pending', 'accepted', 'known' or 'ignored'."""
     import modpack
     from urllib.parse import quote
     if not rs["hash"]:
@@ -2068,7 +2236,7 @@ def offer_mods(url, password, rs, player, timeout=60):
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return json.loads(r.read()).get("status", "ignored")
     except urllib.error.HTTPError as e:
-        if e.code == 404:          # servidor de una version anterior
+        if e.code == 404:          # server from an older version
             return "ignored"
         raise ValueError(t("mods_download_failed", err=e.code))
     except (urllib.error.URLError, OSError, ValueError) as e:
@@ -2087,7 +2255,7 @@ def open_folder(path):
         subprocess.Popen(["xdg-open", path])
 
 
-# ------------------------------------------------------------------ perfiles
+# ------------------------------------------------------------------ profiles
 def _store():
     os.environ["CSR_DATA_DIR"] = data_dir()
     import server
@@ -2105,7 +2273,7 @@ def local_summary(steam_id):
 
 
 def local_record(steam_id):
-    """{w, d, l, p}: victorias, empates, derrotas y puntos del registro local."""
+    """{w, d, l, p}: wins, draws, losses and points from the local record."""
     import server, stats
     if not steam_id:
         return {"w": 0, "d": 0, "l": 0, "p": 0}
@@ -2148,12 +2316,12 @@ def server_info(url, timeout=6):
 
 
 def match_state(url, steam_id, timeout=5):
-    """Tu partida en curso en ese servidor ({"role", "match_id", ...} o None). ValueError si no contesta."""
+    """Your ongoing match on that server ({"role", "match_id", ...} or None). ValueError if it doesn't answer."""
     try:
         with urllib.request.urlopen(f"{url}/revival/match?platform_id={steam_id}", timeout=timeout) as r:
             return json.load(r).get("match")
     except urllib.error.HTTPError as e:
-        if e.code == 404:              # anfitrion con una version sin esto
+        if e.code == 404:              # host with a version without this
             return None
         raise ValueError(str(e))
     except (urllib.error.URLError, OSError, ValueError) as e:
@@ -2161,7 +2329,7 @@ def match_state(url, steam_id, timeout=5):
 
 
 def internet_ok(timeout=5):
-    """True si hay internet (para no dar por ganada una partida si el que se ha quedado sin conexion eres tu)."""
+    """True if there is internet (so as not to count a match as won if the one who lost the connection is you)."""
     for u in ("https://api.github.com", "https://store.steampowered.com"):
         try:
             with urllib.request.urlopen(u, timeout=timeout):
@@ -2174,8 +2342,8 @@ def internet_ok(timeout=5):
 
 
 def record_host_left(steam_id, state):
-    """El anfitrion ha desaparecido a mitad de partida: cuenta como victoria para ti. Devuelve los puntos.
-    Lleva el mismo id de partida que en el servidor, asi que nunca se apunta dos veces."""
+    """The host disappeared mid-match: it counts as a win for you. Returns the points.
+    It has the same match id as on the server, so it is never written twice."""
     import stats
     st = _store()
     user = _local_user(st, steam_id)
@@ -2186,7 +2354,7 @@ def record_host_left(steam_id, state):
 
 
 def _local_user(st, steam_id):
-    """El perfil local de esa cuenta de Steam (lo crea si aun no ha jugado)."""
+    """The local profile of that Steam account (created if it hasn't played yet)."""
     import server
     pid, token = server.derived_ids(3, steam_id)
     user = st.db["users"].setdefault(pid, {"name": "", "progress": 0, "tutorial_step": 0, "config": {},
@@ -2197,7 +2365,7 @@ def _local_user(st, steam_id):
 
 
 def sync_profile(url, steam_id, password=""):
-    """Sube el perfil local, recibe el del servidor ya juntado y lo junta aqui. Devuelve el registro."""
+    """Uploads the local profile, gets the server's already merged and merges it here. Returns the record."""
     import stats
     st = _store()
     user = _local_user(st, steam_id)
@@ -2218,13 +2386,13 @@ def sync_profile(url, steam_id, password=""):
     return local_record(steam_id)
 
 
-# ------------------------------------------------------------------ creador de escenarios
+# ------------------------------------------------------------------ stage creator
 STAGE_BASES = ("Stage_Yokn", "Stage_Yokn_v1030", "Stage_Yokn_v1040", "Stage_Yokn_v1050", "Stage_Yokn_v1060")
 _stage_cat = {}
 
 
 def stages_dir():
-    """Distribuciones guardadas por el jugador (un .json por escenario), en mods/stages."""
+    """Layouts saved by the player (one .json per stage), in mods/stages."""
     return _in_mods("stages")
 
 
@@ -2233,9 +2401,9 @@ def stage_cache_dir():
 
 
 def stage_catalog(game_dir, progress=None):
-    """Piezas de los escenarios, leidas de la copia del juego del jugador (con cache)."""
+    """The stages' pieces, read from the player's copy of the game (cached)."""
     import stagedata
-    dev = os.environ.get("CSR_STAGE_CATALOG")          # pruebas sin el juego
+    dev = os.environ.get("CSR_STAGE_CATALOG")          # tests without the game
     if dev:
         with open(dev, encoding="utf-8") as f:
             return json.load(f)
@@ -2256,13 +2424,13 @@ def _stage_slug(name):
 
 
 def stage_hash(layout):
-    """Huella de una distribucion (la misma que calcula el servidor)."""
+    """Fingerprint of a layout (the same the server works out)."""
     import stageroom
     return stageroom.layout_hash(layout)
 
 
 def stage_list(disabled=()):
-    """Escenarios guardados. enabled: sale en la lista de escenarios del juego."""
+    """Saved stages. enabled: it shows in the game's stage list."""
     out, off = [], set(disabled or ())
     for fn in sorted(os.listdir(stages_dir())):
         if not fn.endswith(".json"):
@@ -2283,7 +2451,7 @@ def stage_load(sid):
 
 
 def stage_save(layout, sid=None):
-    """Guarda una distribucion. Sin sid, el archivo sale del nombre (y pisa al que se llame igual)."""
+    """Saves a layout. Without sid, the file name comes from the name (and overwrites the one with the same name)."""
     sid = sid or _stage_slug(layout.get("name"))
     _write_json(os.path.join(stages_dir(), sid + ".json"), layout)
     return sid
@@ -2296,7 +2464,7 @@ def stage_delete(sid):
 
 
 def stage_own(disabled=()):
-    """Tus escenarios activos, como los necesita la sala: [{"id": "Stage_CSR_<id>", "name", "layout"}]."""
+    """Your active stages, as the room needs them: [{"id": "Stage_CSR_<id>", "name", "layout"}]."""
     out = []
     for it in stage_list(disabled):
         if it["enabled"] and len(out) < MAX_GAME_STAGES:
@@ -2307,7 +2475,7 @@ def stage_own(disabled=()):
     return out
 
 
-# ---- compartir: archivo .csrstage
+# ---- sharing: .csrstage file
 STAGE_EXT = ".csrstage"
 STAGE_FILE_FORMAT = "crimesight-revival-stage"
 
@@ -2317,7 +2485,7 @@ def stage_export(sid, path):
 
 
 def stage_import(path, cat):
-    """Anade a tus escenarios el de un archivo .csrstage. Devuelve su id."""
+    """Adds the one in a .csrstage file to your stages. Returns its id."""
     import stagelayout
     try:
         if os.path.getsize(path) > 512 * 1024:
@@ -2340,7 +2508,7 @@ def stage_import(path, cat):
     return stage_save(lay)
 
 
-# ---- escenarios en la sala (como los mods: el anfitrion los ofrece y cada jugador se los baja)
+# ---- stages in the room (like the mods: the host offers them and each player downloads them)
 def stage_room_fetch(url, password, timeout=20):
     req = urllib.request.Request(url + "/revival/stages", headers={"X-CSR-Password": password or ""})
     try:
@@ -2352,8 +2520,8 @@ def stage_room_fetch(url, password, timeout=20):
 
 
 def stage_report(url, password, steam_id, have, seen="", timeout=10):
-    """Le dice al servidor que escenarios tiene listos tu juego (sin eso no deja jugarlos) y con que
-    lista de la sala se ha sincronizado (seen), para que sepa si aun te espera o ya no puedes tenerlos."""
+    """Tells the server which stages your game has ready (without that it doesn't let them be played) and which
+    room list it synced with (seen), so it knows whether it still waits for you or you can't have them."""
     if not steam_id:
         return False
     body = json.dumps({"platform": 3, "platform_id": str(steam_id), "have": have, "seen": seen or ""}).encode()
@@ -2363,14 +2531,14 @@ def stage_report(url, password, steam_id, have, seen="", timeout=10):
         with urllib.request.urlopen(req, timeout=timeout):
             return True
     except (urllib.error.URLError, ValueError):
-        return False              # servidor de una version anterior
+        return False              # server from an older version
 
 
 STAGE_TEST_FILE = "layout_test.json"
 
 
 def stage_test(game_dir, cat, layout):
-    """Deja la distribucion lista para jugarla en el "Escenario de pruebas (CSR)" (necesita el plugin)."""
+    """Leaves the layout ready to play in the "Test stage (CSR)" (needs the plugin)."""
     import stagedata, stagelayout
     if not live_mode(game_dir):
         raise ValueError(t("stage_need_bep"))
@@ -2395,14 +2563,14 @@ _stage_lock = __import__("threading").Lock()
 
 
 def stage_publish(game_dir, stages, cat=None):
-    with _stage_lock:                  # lo llaman la ventana y la sesion en marcha
+    with _stage_lock:                  # called by the window and by the running session
         return _stage_publish(game_dir, stages, cat)
 
 
 def _stage_publish(game_dir, stages, cat=None):
-    """Deja en la carpeta del plugin esos escenarios ([{"id", "name", "layout"}]): cada uno sale en la
-    lista de escenarios del juego como uno nuevo. Los que tienen errores no se publican.
-    Devuelve {id: huella} de los que han quedado listos."""
+    """Leaves those stages in the plugin's folder ([{"id", "name", "layout"}]): each one shows in the
+    game's stage list as a new one. The ones with errors are not published.
+    Returns {id: fingerprint} of the ones left ready."""
     import stagedata, stagelayout
     if not game_dir or not live_mode(game_dir):
         return {}
@@ -2418,7 +2586,7 @@ def _stage_publish(game_dir, stages, cat=None):
             cat = cat or stage_catalog(game_dir)
             compiled = stagelayout.compile_layout(cat, st["layout"])
         except (OSError, ValueError, KeyError, TypeError, IndexError):
-            continue                                   # con errores (o de otra version): no se publica
+            continue                                   # with errors (or from another version): not published
         compiled["name"] = str(st.get("name") or compiled["name"] or slug)[:60]
         fn = f"stage_{slug}.json"
         text = json.dumps(compiled, ensure_ascii=False)
@@ -2459,7 +2627,7 @@ def _stage_publish(game_dir, stages, cat=None):
 
 
 def stage_test_active(game_dir):
-    """Nombre de la distribucion que se jugara en el escenario de pruebas ("" si es la copia del 01)."""
+    """Name of the layout that will be played in the test stage ("" if it is the copy of 01)."""
     try:
         with open(os.path.join(live_dir(game_dir), STAGE_TEST_FILE), encoding="utf-8") as f:
             lay = json.load(f)
@@ -2474,7 +2642,7 @@ def stage_test_clear(game_dir):
         os.remove(p)
 
 
-# ------------------------------------------------------------------ copias del progreso
+# ------------------------------------------------------------------ progress backups
 SAVE_FORMAT = "crimesight-revival-save"
 SAVE_EXT = ".csrsave"
 
@@ -2487,7 +2655,7 @@ def _write_json(path, data):
 
 
 def export_save(steam_id, path):
-    """Guarda todo el progreso de esa cuenta en un archivo que el jugador se puede llevar."""
+    """Saves all of that account's progress in a file the player can take along."""
     import stats
     if not steam_id:
         raise ValueError(t("err_no_steam"))
@@ -2510,8 +2678,8 @@ def _read_save(path):
 
 
 def import_save(steam_id, path):
-    """Junta un archivo de progreso con el local. Solo suma: nunca duplica ni borra partidas.
-    Devuelve cuantas partidas nuevas trajo."""
+    """Merges a progress file with the local one. It only adds: it never duplicates or deletes matches.
+    Returns how many new matches it brought."""
     import stats
     if not steam_id:
         raise ValueError(t("err_no_steam"))
@@ -2531,9 +2699,9 @@ def backup_path(folder, steam_id):
 
 
 def backup_now(cfg, steam_id):
-    """Copia automatica en la carpeta que eligio el jugador (OneDrive, Google Drive...).
-    Primero recoge lo que haya dejado ahi otro PC y luego escribe la copia juntada.
-    Devuelve las partidas nuevas que trajo, o None si no hay carpeta elegida."""
+    """Automatic backup in the folder the player chose (OneDrive, Google Drive...).
+    First it picks up whatever another PC left there and then it writes the merged copy.
+    Returns the new matches it brought, or None if no folder was chosen."""
     folder = cfg.get("backup_dir")
     if not folder or not steam_id:
         return None

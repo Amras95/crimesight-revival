@@ -1,39 +1,39 @@
 """
-CRIMESIGHT Revival - IA de los jugadores bot.
+CRIMESIGHT Revival - AI of the bot players.
 
-Cada turno el cliente manda al servidor (reference_data) el estado de la mansion:
-para cada personaje, las casillas a las que puede llegar este turno (gridList) con
-su habitacion, los muebles registrables, los objetos en el suelo y la distancia
-desde esa casilla a cada personaje (pawnDistance). Con eso la IA genera ordenes
-validas sin conocer el mapa.
+Every turn the client sends the server (reference_data) the state of the mansion:
+for each character, the squares it can reach this turn (gridList) with
+their room, the searchable furniture, the items on the floor and the distance
+from that square to each character (pawnDistance). With that the AI generates valid
+orders without knowing the map.
 
-Reglas (guias de la comunidad + codigo del cliente):
-- Sherlock da ordenes a 3 personajes (puede incluir a la victima); Moriarty a 2,
-  nunca a la victima. Si ambos ordenan al mismo personaje, gana Moriarty.
-- Andar llega a 2 casillas, correr a 3 (isRun). Hambrientos o heridos llegan menos.
-- Para matar, el asesino necesita un arma, estar en la casilla de la victima y que
-  no haya testigos en la habitacion. El "Asalto" (orden tipo 5) hace que el asesino
-  actue el ultimo y vaya directo a por la victima; si falla, ambos quedan al
-  descubierto.
-- Watson (bando Sherlock) e Irene (bando Moriarty) dan 1 orden cada uno. Irene no puede
-  asaltar ni dar ordenes a la victima. Irene gana a Sherlock/Watson sin dejar rastro; si
-  Moriarty pisa una orden distinta de Sherlock/Watson, se nota (isBatting).
-- El bando de Moriarty sabe en que muebles hay armas desde el principio.
-- Los personajes sin ordenes actuan por su cuenta (en linea lo decide el servidor).
-- Peligros: los escapes de gas hieren a quien acabe el turno en esa habitacion; los perros
-  salvajes atacan a los personajes cercanos (algunas amenazas cuentan como testigo).
+Rules (community guides + client code):
+- Sherlock gives orders to 3 characters (the victim can be one); Moriarty to 2,
+  never to the victim. If both order the same character, Moriarty wins.
+- Walking reaches 2 squares, running 3 (isRun). Hungry or injured ones reach less.
+- To kill, the killer needs a weapon, to be on the victim's square and for there to be
+  no witnesses in the room. The "Assault" (order type 5) makes the killer
+  act last and go straight for the victim; if it fails, both are
+  exposed.
+- Watson (Sherlock's side) and Irene (Moriarty's side) give 1 order each. Irene can't
+  assault or give orders to the victim. Irene beats Sherlock/Watson without leaving a trace; if
+  Moriarty overrides a different order from Sherlock/Watson, it shows (isBatting).
+- Moriarty's side knows which furniture has weapons from the start.
+- Characters without orders act on their own (online the server decides).
+- Hazards: gas leaks injure whoever ends the turn in that room; wild
+  dogs attack nearby characters (some threats count as witnesses).
 """
 import copy, random
 
 MOVE, SEARCH, TARGET = 2, 3, 5
-NO_TARGET = 130              # valor que manda el cliente cuando la orden no apunta a una casilla
+NO_TARGET = 130              # value the client sends when the order doesn't point at a square
 WALK_RANGE = 2
-GRID_W = 10                  # GridManager: id = x*10 + z (z con el signo de x)
+GRID_W = 10                  # GridManager: id = x*10 + z (z with x's sign)
 
-DIFFICULTIES = ["normal", "hard", "expert", "nightmare", "easy"]     # orden del ciclo al "expulsar" a una IA
+DIFFICULTIES = ["normal", "hard", "expert", "nightmare", "easy"]     # order of the cycle when "kicking" an AI
 RANK = {"easy": 0, "normal": 1, "hard": 2, "expert": 3, "nightmare": 4}
 LABEL = {"easy": "Fácil", "normal": "Normal", "hard": "Difícil", "expert": "Experto", "nightmare": "Pesadilla"}
-# Nombre de las IA en el idioma del anfitrion (codigos de idioma del juego)
+# Names of the AIs in the host's language (the game's language codes)
 BOT_NAMES = {
     "ES": ("IA", {"easy": "Fácil", "normal": "Normal", "hard": "Difícil", "expert": "Experto", "nightmare": "Pesadilla"}),
     "EN": ("AI", {"easy": "Easy", "normal": "Normal", "hard": "Hard", "expert": "Expert", "nightmare": "Nightmare"}),
@@ -55,24 +55,24 @@ def bot_name(slot, difficulty, lang=None):
 
 
 def turn_clock(turn):
-    """turno -> (dia, momento del dia): 3 momentos por dia."""
+    """turn -> (day, time of day): 3 times per day."""
     t = max(1, int(turn))
     return (t - 1) // 3 + 1, (t - 1) % 3
 
 
 class View:
-    """Lectura comoda del reference_data de un turno."""
+    """Handy reading of a turn's reference_data."""
 
     def __init__(self, ref, unavailable_objects=()):
         self.turn = int(ref.get("turn", 1))
         self.pawns = {int(p["pawnId"]): p for p in ref.get("pawns", []) if isinstance(p, dict)}
         self.unavailable = set(unavailable_objects)
-        self.weapon_objects = set()     # muebles con arma (solo lo sabe el bando de Moriarty)
-        self.food_objects = set()       # muebles con comida (Moriarty los conoce todos)
+        self.weapon_objects = set()     # furniture with a weapon (only Moriarty's side knows it)
+        self.food_objects = set()       # furniture with food (Moriarty knows all of it)
         self.dark = bool(int(ref.get("isBlack", 0) or 0))
         self.threats = [t for t in ref.get("threatList") or [] if isinstance(t, dict) and not t.get("isDie")]
         self.gas_rooms = {g.get("roomId") for g in ref.get("gaspipeList") or [] if isinstance(g, dict)}
-        self.max_turn = None            # lo pone la sala: turnos de la partida (para saber cuanto queda)
+        self.max_turn = None            # set by the room: the match's turns (to know how many are left)
 
     @staticmethod
     def xy(grid_id):
@@ -80,7 +80,7 @@ class View:
         return int(g / GRID_W), abs(g) % GRID_W
 
     def danger(self, grid):
-        """Cuanto riesgo tiene acabar el turno en esa casilla (gas, perros cerca)."""
+        """How risky it is to end the turn on that square (gas, dogs nearby)."""
         d = 2 if grid.get("roomId") in self.gas_rooms else 0
         if self.threats:
             x, z = self.xy(grid.get("gridId", 0))
@@ -130,14 +130,14 @@ class View:
 def order(view, player_index, pid, kind, grid, target_id=-1):
     days, tz = turn_clock(view.turn)
     if kind == SEARCH:
-        view.unavailable.add(target_id)   # nadie mas registra este mueble este turno
+        view.unavailable.add(target_id)   # nobody else searches this furniture this turn
     return {"pawnId": pid, "playerId": player_index, "type": kind, "days": days, "timeZone": tz,
             "grid": int(grid["gridId"]), "target": NO_TARGET,
             "isRun": 1 if view.self_dist(pid, grid) > WALK_RANGE else 0, "targetId": int(target_id)}
 
 
 def search_or_move(view, idx, pid, grids, rng, prefer=None):
-    """Registra un mueble si hay alguno a mano; si no, se mueve (opcionalmente hacia 'prefer')."""
+    """Searches a piece of furniture if there is one at hand; otherwise, moves (optionally towards 'prefer')."""
     options = [(g, o) for g in grids for o in view.searchable(g)]
     if options:
         if prefer is not None:
@@ -158,7 +158,7 @@ def search_or_move(view, idx, pid, grids, rng, prefer=None):
 
 
 def seek_weapon(view, idx, pid, grids, rng, prefer=None):
-    """Registrar un mueble que se sabe que tiene un arma, si hay alguno a mano."""
+    """Search a piece of furniture known to hold a weapon, if there is one at hand."""
     options = [(g, o) for g in grids for o in view.searchable(g) if o in view.weapon_objects]
     if not options:
         return None
@@ -172,8 +172,8 @@ NPC_SEARCH_PROB = 0.5
 
 
 def npc_order(view, pid, rng):
-    """Pawn.RunNpcAction: sin ordenes, el personaje registra algo a su alcance andando o se
-    mueve a una casilla cercana (a veces se queda donde esta)."""
+    """Pawn.RunNpcAction: without orders, the character searches something within walking reach or
+    moves to a nearby square (sometimes it stays where it is)."""
     grids = [g for g in view.grids(pid) if view.self_dist(pid, g) <= WALK_RANGE]
     if not grids:
         return None
@@ -186,13 +186,13 @@ def npc_order(view, pid, rng):
 
 
 def away_from(view, pid, other):
-    """Casilla alcanzable por pid lo mas lejos posible de 'other' (sin meterse en peligro si se puede)."""
+    """Square reachable by pid as far as possible from 'other' (without walking into danger if possible)."""
     return max(view.grids(pid), key=lambda g: (view.dist(g, other) - 2 * view.danger(g), view.dist(g, other)))
 
 
 # ------------------------------------------------------------------ Moriarty
 def plan_moriarty(view, idx, killer, target, n_orders, difficulty, rng, taken=(), memory=None):
-    """Ordenes para el bando de Moriarty. Devuelve (ordenes, asalto?)."""
+    """Orders for Moriarty's side. Returns (orders, assault?)."""
     orders, used = [], set(taken) | {target}
     if killer not in view.pawns or target not in view.pawns:
         return orders, False
@@ -214,12 +214,12 @@ def assault_order(view, idx, killer, target):
 
 
 def plan_moriarty_normal(view, idx, killer, target, n_orders, rng, taken=()):
-    """Moriarty normal: toma tres cosas del dificil, sin ser implacable.
-    - Nunca hace correr a nadie (llamaria la atencion de Sherlock).
-    - Asalta solo si nadie puede llegar este turno a la habitacion de la victima (aunque no
-      comprueba si ella puede escaparse, asi que a veces falla).
-    - Con arma, se planta en la casilla de la victima si ahora mismo esta sola en su habitacion.
-    Su otra orden aparta, andando, a quien acompana a la victima."""
+    """Normal Moriarty: takes three things from the hard one, without being relentless.
+    - It never makes anyone run (it would draw Sherlock's attention).
+    - It only assaults if nobody can reach the victim's room this turn (although it doesn't
+      check whether she can escape, so it sometimes fails).
+    - With a weapon, it stands on the victim's square if she is alone in her room right now.
+    Its other order moves, walking, whoever is with the victim away."""
     orders, used = [], set(taken) | {target}
     k, t = view.pawns[killer], view.pawns[target]
     armed = bool(k.get("isHaveWeapon"))
@@ -260,7 +260,7 @@ def plan_moriarty_normal(view, idx, killer, target, n_orders, rng, taken=()):
             witnesses.remove(w)
             continue
         q = rng.choice(candidates)
-        o = search_or_move(view, idx, q, walk(view, q), rng)   # comportarse como un sospechoso mas
+        o = search_or_move(view, idx, q, walk(view, q), rng)   # behave like one more suspect
         if o:
             orders.append(o)
         used.add(q)
@@ -268,10 +268,10 @@ def plan_moriarty_normal(view, idx, killer, target, n_orders, rng, taken=()):
 
 
 def plan_moriarty_easy(view, idx, killer, target, n_orders, rng, taken=()):
-    """Moriarty facil: comete errores que un Sherlock atento puede pillar.
-    - Hace correr a su asesino a menudo y lo pega a la victima turno tras turno.
-    - A veces asalta aunque haya testigos (y entonces suele fallar y quedar al descubierto).
-    - Su otra orden es casi siempre un movimiento al azar."""
+    """Easy Moriarty: makes mistakes an attentive Sherlock can catch.
+    - It makes its killer run often and sticks it to the victim turn after turn.
+    - It sometimes assaults even with witnesses (and then usually fails and gets exposed).
+    - Its other order is almost always a random move."""
     orders, used = [], set(taken) | {target}
     k, t = view.pawns[killer], view.pawns[target]
     armed = bool(k.get("isHaveWeapon"))
@@ -284,7 +284,7 @@ def plan_moriarty_easy(view, idx, killer, target, n_orders, rng, taken=()):
 
     if killer not in used and kgrids:
         if armed or rng.random() < 0.5:
-            # pegarse a la victima, corriendo si hace falta: muy evidente
+            # stick to the victim, running if needed: very obvious
             g = min(kgrids, key=lambda g: (view.dist(g, target), -view.self_dist(killer, g), rng.random()))
             o = order(view, idx, killer, MOVE, g)
         else:
@@ -305,7 +305,7 @@ def plan_moriarty_easy(view, idx, killer, target, n_orders, rng, taken=()):
 
 # ------------------------------------------------------------------ Sherlock
 def plan_sherlock(view, idx, n_orders, difficulty, rng, taken=(), memory=None):
-    """Ordenes para el bando de Sherlock: buscar objetos y no dejar a nadie solo."""
+    """Orders for Sherlock's side: search for items and leave nobody alone."""
     if difficulty == "nightmare":
         return plan_sherlock_nightmare(view, idx, n_orders, rng, taken, memory or new_memory())
     if difficulty == "expert":
@@ -320,10 +320,10 @@ def plan_sherlock(view, idx, n_orders, difficulty, rng, taken=(), memory=None):
 
 
 def plan_sherlock_normal(view, idx, n_orders, rng, pool, memory):
-    """Sherlock normal: toma tres cosas del dificil.
-    - No gasta ordenes en personajes que Moriarty ya controla (orden pisada) si hay otros.
-    - Mantiene a la gente junta, a 3 casillas o menos, empezando por las posibles victimas aisladas.
-    - Al final acusa casi siempre al mas sospechoso de lo que ha visto (ver accuse)."""
+    """Normal Sherlock: takes three things from the hard one.
+    - It doesn't spend orders on characters Moriarty already controls (overridden order) if there are others.
+    - It keeps people together, 3 squares apart or less, starting with the isolated possible victims.
+    - At the end it almost always accuses the most suspicious one from what it has seen (see accuse)."""
     orders = []
 
     def lonely(q):
@@ -357,11 +357,11 @@ def plan_sherlock_normal(view, idx, n_orders, rng, pool, memory):
     return orders
 
 
-# ------------------------------------------------------------------ Irene y Watson
+# ------------------------------------------------------------------ Irene and Watson
 def plan_irene(view, idx, killer, target, difficulty, rng, taken=(), memory=None):
-    """Irene (bando Moriarty): 1 orden, sin asalto y nunca sobre la victima.
-    Prioridad: apartar a un testigo de la victima; si no, ayudar al asesino sin arma;
-    si no, despistar como un Watson cualquiera."""
+    """Irene (Moriarty's side): 1 order, no assault and never on the victim.
+    Priority: move a witness away from the victim; otherwise, help the unarmed killer;
+    otherwise, mislead like any Watson would."""
     used = set(taken) | {target}
     if target not in view.pawns:
         return []
@@ -388,8 +388,8 @@ def plan_irene(view, idx, killer, target, difficulty, rng, taken=(), memory=None
 
 
 def plan_sherlock_easy(view, idx, n_orders, rng, pool):
-    """Sherlock facil: ordenes casi al azar, sin mirar peligros ni quien va armado; a veces deja
-    sola a una posible victima o la acerca a un sospechoso."""
+    """Easy Sherlock: almost random orders, without looking at hazards or who is armed; it sometimes leaves
+    a possible victim alone or brings her closer to a suspect."""
     orders = []
     rng.shuffle(pool)
     for q in pool[:n_orders]:
@@ -404,7 +404,7 @@ def plan_sherlock_easy(view, idx, n_orders, rng, pool):
 
 
 def plan_watson(view, idx, difficulty, rng, taken=(), memory=None):
-    """Watson (bando Sherlock): 1 orden con el mismo criterio que Sherlock."""
+    """Watson (Sherlock's side): 1 order with the same criteria as Sherlock."""
     return plan_sherlock(view, idx, 1, difficulty, rng, taken, memory)
 
 
@@ -423,11 +423,11 @@ def accuse(view, killer, difficulty, rng, n_pawns, memory=None):
         top = [q for q in cands if fn(view, mem, q) == best]
         return min(top, key=lambda q: (-mem["moved"].get(q, 0), rng.random()))
     if difficulty == "hard":
-        # Solo con lo que ha visto: el mas sospechoso de los que aun pueden ser el asesino
+        # Only with what it has seen: the most suspicious of those who can still be the killer
         mem = memory or new_memory()
         best = max(suspicion(view, mem, q) for q in cands)
         return rng.choice([q for q in cands if suspicion(view, mem, q) == best])
-    # normal: suele acusar al mas sospechoso de lo que ha visto, pero no siempre
+    # normal: it usually accuses the most suspicious one from what it has seen, but not always
     mem = memory or new_memory()
     if rng.random() < 0.6:
         best = max(suspicion(view, mem, q) for q in cands)
@@ -435,16 +435,16 @@ def accuse(view, killer, difficulty, rng, n_pawns, memory=None):
     return rng.choice(cands)
 
 
-# ------------------------------------------------------------------ dificil: utilidades
+# ------------------------------------------------------------------ hard: helpers
 def new_memory():
-    """Lo que se ha visto durante la partida (sin trampas: lo ve cualquier jugador):
-    moved: veces que un personaje hizo algo llamativo sin que lo ordenara el bando de Sherlock;
-    moriarty: personajes en los que se detecto la mano de Moriarty (orden pisada);
-    ran: veces que corrio sin orden de Sherlock (quien va por su cuenta nunca corre: alguien se lo mando);
-    approach: veces que se acerco a una posible victima sin orden de Sherlock;
-    search: veces que registro un mueble sin orden de Sherlock;
-    acts: acciones sin orden de Sherlock (para comparar).
-    La sala anade prof_moriarty / prof_sherlock: lo aprendido de las personas de la partida (Pesadilla)."""
+    """What was seen during the match (no cheating: any player sees it):
+    moved: times a character did something striking without Sherlock's side ordering it;
+    moriarty: characters where Moriarty's hand was detected (overridden order);
+    ran: times it ran without a Sherlock order (whoever acts on their own never runs: someone told them to);
+    approach: times it got close to a possible victim without a Sherlock order;
+    search: times it searched a piece of furniture without a Sherlock order;
+    acts: actions without a Sherlock order (to compare).
+    The room adds prof_moriarty / prof_sherlock: what was learned from the match's people (Nightmare)."""
     return {"moved": {}, "moriarty": set(), "ran": {}, "approach": {}, "search": {}, "acts": {}}
 
 
@@ -467,9 +467,9 @@ def awake(view, q):
 
 
 def watched(view, grid, dark, watchers, room_of_target=None):
-    """Podria alguien ver lo que pasa en esa casilla al final del turno?
-    watchers: {personaje: lista de casillas donde puede acabar}. Con apagon solo cuenta quien
-    acabe en la misma casilla; con luz, cualquiera en la habitacion. Los perros testigo tambien."""
+    """Could anyone see what happens on that square at the end of the turn?
+    watchers: {character: list of squares where it can end}. In a blackout only whoever
+    ends on the same square counts; with light, anyone in the room. Witness dogs too."""
     room, gid = grid.get("roomId"), grid.get("gridId")
     for ends in watchers.values():
         for g in ends:
@@ -479,7 +479,7 @@ def watched(view, grid, dark, watchers, room_of_target=None):
 
 
 def assault_is_certain(view, killer, target, watchers):
-    """Asalto solo si es seguro: vaya donde vaya la victima, el asesino llega y nadie lo ve."""
+    """Assault only if it is safe: wherever the victim goes, the killer gets there and nobody sees it."""
     kr = reach(view, killer)
     tg = view.grids(target)
     if not tg or kr <= 0:
@@ -492,13 +492,13 @@ def assault_is_certain(view, killer, target, watchers):
 
 
 def walk(view, pid):
-    """Casillas a las que se llega andando: hacer correr a alguien llama la atencion de Sherlock."""
+    """Squares reached walking: making someone run draws Sherlock's attention."""
     return [g for g in view.grids(pid) if view.self_dist(pid, g) <= WALK_RANGE] or view.grids(pid)
 
 
 def lure(view, idx, w, target, rng):
-    """Alejar a un testigo de la victima, mejor hacia un peligro (gas, perros), siempre andando
-    (si corre, Sherlock sospecha)."""
+    """Move a witness away from the victim, better towards a hazard (gas, dogs), always walking
+    (if it runs, Sherlock gets suspicious)."""
     troom = view.pawns[target].get("roomId")
 
     def value(g):
@@ -512,7 +512,7 @@ def has_food(view, pid):
 
 
 def search_no_food(view, idx, pid, grids, rng, prefer=None):
-    """Registrar o moverse sin coger comida: a los demas les conviene seguir hambrientos."""
+    """Search or move without taking food: the others are better off staying hungry."""
     saved = set(view.unavailable)
     view.unavailable |= view.food_objects
     try:
@@ -523,10 +523,10 @@ def search_no_food(view, idx, pid, grids, rng, prefer=None):
     return o
 
 
-# ------------------------------------------------------------------ dificil: Moriarty
+# ------------------------------------------------------------------ hard: Moriarty
 def plan_moriarty_hard(view, idx, killer, target, n_orders, rng, taken=(), memory=None):
-    """Moriarty dificil: lo de abajo (_moriarty_hard_core) y, sin asalto, las ordenes que le sobran no se
-    pierden (fill_free_orders)."""
+    """Hard Moriarty: the one below (_moriarty_hard_core) and, without an assault, its spare orders are not
+    wasted (fill_free_orders)."""
     orders, assault = _moriarty_hard_core(view, idx, killer, target, n_orders, rng, taken)
     if assault:
         return orders, True
@@ -535,12 +535,12 @@ def plan_moriarty_hard(view, idx, killer, target, n_orders, rng, taken=(), memor
 
 
 def fill_free_orders(view, idx, killer, target, orders, n_orders, rng, taken, predicted):
-    """Dificil y superiores: Moriarty no desperdicia ordenes, pero tampoco se arriesga sin motivo. Las que le
-    sobran van a personajes que Sherlock no va a ordenar (predicted: asi no chocan y no le delatan) y siempre
-    andando, como haria el personaje por su cuenta:
-    1. alejar a un posible testigo de la victima (alguien que podria llegar a su habitacion);
-    2. si no, registrar o moverse sin coger comida, sin acercarse a la victima (no estropea su asesinato).
-    Nunca ordena al asesino (lo decide el plan) ni a la victima."""
+    """Hard and above: Moriarty doesn't waste orders, but doesn't take risks without a reason either. Its
+    spare ones go to characters Sherlock isn't going to order (predicted: so they don't clash and give it away) and always
+    walking, like the character would on its own:
+    1. move a possible witness away from the victim (someone who could reach her room);
+    2. otherwise, search or move without taking food, without getting close to the victim (it doesn't spoil its murder).
+    It never orders the killer (the plan decides that) or the victim."""
     out = list(orders)
     used = set(taken) | {killer, target} | {o["pawnId"] for o in out}
     free = [q for q in view.ids() if q not in used and q not in predicted and awake(view, q) and view.grids(q)]
@@ -568,19 +568,19 @@ def fill_free_orders(view, idx, killer, target, orders, n_orders, rng, taken, pr
 
 
 def _moriarty_hard_core(view, idx, killer, target, n_orders, rng, taken=()):
-    """Moriarty dificil:
-    - Asalto solo cuando es seguro: la victima no puede escapar del alcance del asesino y ningun
-      testigo puede acabar en su habitacion (calculando hasta donde puede andar cada uno). Con
-      apagon solo cuenta quien acabe en la misma casilla, asi que aprovecha la oscuridad.
-    - Su asesino siempre armado y alimentado: si no tiene arma va a por la que sabe donde esta (o
-      se acerca a ella) y si tiene hambre o no lleva comida, coge la que conoce.
-    - Con arma prefiere plantarse en la casilla de la victima cuando nadie puede verlo: si la
-      victima no se mueve, cae al final del turno sin revelarse.
-    - Da las menos ordenes posibles: cada orden que choca con una de Sherlock le delata. Solo usa
-      la segunda orden si con ella consigue matar (apartar al unico testigo); a veces ni mueve a su
-      asesino y deja que actue por su cuenta, como uno mas.
-    - Nunca hace correr a nadie (Sherlock sospecha de quien corre) y no deja que los demas cojan
-      comida."""
+    """Hard Moriarty:
+    - Assault only when it is safe: the victim can't escape the killer's reach and no
+      witness can end in her room (working out how far each one can walk). In a
+      blackout only whoever ends on the same square counts, so it takes advantage of the dark.
+    - Its killer always armed and fed: if it has no weapon it goes for the one it knows about (or
+      gets closer to it) and if it is hungry or carries no food, it takes the one it knows.
+    - With a weapon it prefers to stand on the victim's square when nobody can see it: if the
+      victim doesn't move, she falls at the end of the turn without it being revealed.
+    - It gives as few orders as possible: each order that clashes with a Sherlock one gives it away. It only uses
+      the second order if it gets the kill with it (moving the only witness away); sometimes it doesn't even move its
+      killer and lets it act on its own, like everyone else.
+    - It never makes anyone run (Sherlock suspects whoever runs) and doesn't let the others take
+      food."""
     used = set(taken) | {target}
     orders = []
     k = view.pawns[killer]
@@ -590,7 +590,7 @@ def _moriarty_hard_core(view, idx, killer, target, n_orders, rng, taken=()):
     tgrids = view.grids(target)
     troom = view.pawns[target].get("roomId")
 
-    def threatens(q):     # puede acabar en alguna habitacion a la que pueda ir la victima
+    def threatens(q):     # can end in some room the victim can go to
         rooms = {g.get("roomId") for g in tgrids} | {troom}
         return any(g.get("roomId") in rooms for g in watchers[q])
 
@@ -602,7 +602,7 @@ def _moriarty_hard_core(view, idx, killer, target, n_orders, rng, taken=()):
     dark = view.dark and not view.pawns[target].get("isNoBlack")
 
     def with_one_lure(test):
-        """Prueba sin ordenes extra y, si no basta, apartando a un unico testigo."""
+        """Tries without extra orders and, if that isn't enough, moving a single witness away."""
         if test(watchers):
             return []
         if n_orders < 2:
@@ -616,7 +616,7 @@ def _moriarty_hard_core(view, idx, killer, target, n_orders, rng, taken=()):
         return None
 
     def grab(kinds, prefer=None):
-        """Registrar un mueble conocido (arma o comida) al alcance andando."""
+        """Search a known piece of furniture (weapon or food) within walking reach."""
         opts = [(g, o) for g in kwalk for o in view.searchable(g) if o in kinds]
         if not opts:
             return None
@@ -625,7 +625,7 @@ def _moriarty_hard_core(view, idx, killer, target, n_orders, rng, taken=()):
         return order(view, idx, killer, SEARCH, g, o)
 
     def toward(kinds):
-        """Acercarse a un mueble conocido que aun no esta a su alcance: algun personaje lo tiene cerca."""
+        """Get closer to a known piece of furniture that isn't within reach yet: some character has it close."""
         holders = [q for q in view.ids() if q != killer and
                    any(o in kinds for g in view.grids(q) for o in view.searchable(g))]
         if not holders:
@@ -635,45 +635,45 @@ def _moriarty_hard_core(view, idx, killer, target, n_orders, rng, taken=()):
         return order(view, idx, killer, MOVE, g)
 
     if armed:
-        # 1. Asalto seguro
+        # 1. Safe assault
         extra = with_one_lure(lambda ws: assault_is_certain(view, killer, target, ws))
         if extra is not None:
             return [assault_order(view, idx, killer, target)] + extra, True
     food = grab(view.food_objects, prefer=target) if not has_food(view, killer) or k.get("isHungry") else None
-    # 2. Con hambre, comer primero (con hambre llega menos lejos)
+    # 2. When hungry, eat first (hungry, it reaches less far)
     if food and k.get("isHungry"):
         return [food], False
     if not armed:
-        # 3. Armarse: el arma que conoce; si no la tiene a mano, coger comida de reserva o acercarse al arma
+        # 3. Arm itself: the weapon it knows about; if it isn't at hand, take spare food or get closer to the weapon
         o = grab(view.weapon_objects, prefer=target) or food or toward(view.weapon_objects) or \
             search_no_food(view, idx, killer, kwalk, rng, prefer=target)
         return ([o] if o else []), False
-    # 3b. Armado y sin comida encima: hacerse con comida de reserva (a veces, para no ser predecible)
+    # 3b. Armed and without food on it: get spare food (sometimes, so as not to be predictable)
     if food and rng.random() < 0.5:
         return [food], False
-    # 4. Plantarse en la casilla de la victima sin que nadie lo vea
+    # 4. Stand on the victim's square without anyone seeing it
     here = next((g for g in kwalk if view.dist(g, target) == 0), None)
     if here is not None:
         extra = with_one_lure(lambda ws: not watched(view, here, dark, ws))
         if extra is not None:
             return [order(view, idx, killer, MOVE, here)] + extra, False
-    # 5. Sin ocasion: a veces deja que su asesino actue por su cuenta (no da pistas)...
+    # 5. No chance: sometimes it lets its killer act on its own (it gives no clues)...
     if view.pair_distance(killer, target) <= 3 and rng.random() < 0.4:
         return [], False
-    # ...y si no, la acecha a 2 casillas, andando
+    # ...and otherwise it stalks her 2 squares away, walking
     g = min(kwalk, key=lambda g: (abs(view.dist(g, target) - 2), view.danger(g), rng.random()))
     return [order(view, idx, killer, MOVE, g)], False
 
 
-# ------------------------------------------------------------------ dificil: Sherlock
+# ------------------------------------------------------------------ hard: Sherlock
 def plan_sherlock_hard(view, idx, n_orders, rng, taken, memory, sus_fn=None, probes=1, avoid_sus=None):
-    """Sherlock dificil (solo con lo que ve un jugador):
-    - Protege primero a la posible victima mas expuesta, acercandola a gente de confianza y lejos de
-      sospechosos armados.
-    - Usa como escolta a quien ya esta descartado como asesino; si ademas esta descartado como
-      victima, puede compartir casilla con ella.
-    - No malgasta ordenes en personajes que Moriarty ya controla y aparta al mas sospechoso.
-    - El resto, juntos a 3 casillas o menos para que nadie se quede a solas."""
+    """Hard Sherlock (only with what a player sees):
+    - It protects the most exposed possible victim first, bringing her close to trusted people and away from
+      armed suspects.
+    - It uses as an escort whoever is already ruled out as the killer; if they are also ruled out as the
+      victim, they can share a square with her.
+    - It doesn't waste orders on characters Moriarty already controls and moves the most suspicious away.
+    - The rest, together 3 squares apart or less so nobody is left alone."""
     orders, used = [], set(taken)
     ids = view.ids()
     pw = view.pawns
@@ -681,16 +681,16 @@ def plan_sherlock_hard(view, idx, n_orders, rng, taken, memory, sus_fn=None, pro
     cleared = [q for q in ids if not pw[q].get("isKillerCandidate", 1)]
     cleared_both = [q for q in cleared if not pw[q].get("isTargetCandidate", 1)]
     victims = [q for q in ids if pw[q].get("isTargetCandidate", 1)]
-    if avoid_sus is not None:      # a un sospechoso claro no se le protege como posible victima
+    if avoid_sus is not None:      # a clear suspect isn't protected as a possible victim
         victims = [q for q in victims if sus[q] < avoid_sus] or victims
     armed_sus = [q for q in ids if pw[q].get("isHaveWeapon") and sus[q] > -99]
-    planned = {}          # personaje -> casilla a la que lo mandamos
+    planned = {}          # character -> square we send it to
 
     def orderable(q):
         return q not in used and view.grids(q) and q not in memory["moriarty"]
 
     def risk(g, who):
-        """Riesgo de acabar en esa casilla para una posible victima: sospechosos armados que llegan."""
+        """Risk of ending on that square for a possible victim: armed suspects who get there."""
         return sum(1 for a in armed_sus if a != who and any(x.get("gridId") == g.get("gridId") for x in view.grids(a)))
 
     def add(q, kind, g, target_id=-1):
@@ -709,13 +709,13 @@ def plan_sherlock_hard(view, idx, n_orders, rng, taken, memory, sus_fn=None, pro
                                                   -view.danger(g), rng.random()))
         add(q, MOVE, far)
 
-    # 0. (experto) El sospechoso claro, lo primero: alejarlo protege a todas las posibles victimas a la vez
+    # 0. (expert) The clear suspect, first: moving them away protects every possible victim at once
     if avoid_sus is not None:
         top = max((q for q in ids if orderable(q)), key=lambda q: (sus[q], rng.random()), default=None)
         if top is not None and sus[top] >= avoid_sus and len(orders) < n_orders:
             push_away(top)
 
-    # 1. Posible victima mas expuesta: con escolta y lejos de armados
+    # 1. Most exposed possible victim: with an escort and away from armed ones
     for v in sorted(victims, key=lambda v: (-exposure(v), rng.random())):
         if len(orders) >= n_orders:
             break
@@ -728,7 +728,7 @@ def plan_sherlock_hard(view, idx, n_orders, rng, taken, memory, sus_fn=None, pro
                 return (-3 * risk(g, v) + sum(1 for f in friends if view.dist(g, f) <= 1)
                         - view.danger(g), rng.random())
             add(v, MOVE, max(view.grids(v), key=safety))
-        # escolta descartado
+        # ruled-out escort
         dest = planned.get(v) or view.here(v)
         guard = next((q for q in sorted(cleared, key=lambda q: view.pair_distance(q, v))
                       if q != v and orderable(q)), None)
@@ -739,11 +739,11 @@ def plan_sherlock_hard(view, idx, n_orders, rng, taken, memory, sus_fn=None, pro
             def closeness(g, guard=guard, same_ok=same_ok, dest=dest):
                 d = 0 if g.get("gridId") == dest.get("gridId") else (1 if g.get("roomId") == dest.get("roomId") else 3)
                 if d == 0 and not same_ok and risk(g, guard):
-                    d = 2            # no compartir casilla si un armado puede llegar
+                    d = 2            # don't share a square if an armed one can get there
                 return (-d, -view.danger(g), rng.random())
             add(guard, MOVE, max(opts, key=closeness))
 
-    # 2. Apartar al mas sospechoso de las posibles victimas (si Moriarty tambien lo mueve, se le nota)
+    # 2. Move the most suspicious away from the possible victims (if Moriarty also moves them, it shows)
     done = 0
     for q in sorted(ids, key=lambda q: -sus[q]):
         if len(orders) >= n_orders or sus[q] <= 0 or done >= probes:
@@ -752,8 +752,8 @@ def plan_sherlock_hard(view, idx, n_orders, rng, taken, memory, sus_fn=None, pro
             push_away(q)
             done += 1
 
-    # 3. Resto: todos juntos (a 3 casillas o menos) y registrando si se puede (el experto no acerca a
-    #    nadie a quien ya tiene por muy sospechoso)
+    # 3. The rest: all together (3 squares apart or less) and searching if possible (the expert doesn't bring
+    #    anyone close to someone it already finds very suspicious)
     rest = [q for q in ids if orderable(q) and (avoid_sus is None or sus[q] < avoid_sus)]
     for q in sorted(rest, key=lambda q: (len(view.room_mates(q)), rng.random())):
         if len(orders) >= n_orders:
@@ -773,11 +773,11 @@ def plan_sherlock_hard(view, idx, n_orders, rng, taken, memory, sus_fn=None, pro
     return orders
 
 
-# ------------------------------------------------------------------ experto
-# Mismas reglas que todos: solo lo que veria una persona en ese papel. Lo que cambia es como se piensa.
+# ------------------------------------------------------------------ expert
+# The same rules as everyone: only what a person in that role would see. What changes is how it thinks.
 def chase_order(view, idx, killer, target, pred, rng):
-    """Ir a por la victima: lo mas cerca posible de donde estara (si se preve que Sherlock la mueve, de ahi), y
-    mejor en su misma casilla, donde cae al final del turno si nadie lo ve. Corre si hace falta."""
+    """Go for the victim: as close as possible to where she will be (if Sherlock is expected to move her, from there), and
+    better on her same square, where she falls at the end of the turn if nobody sees it. It runs if needed."""
     goal = pred.get(target)
 
     def gap(g):
@@ -789,16 +789,16 @@ def chase_order(view, idx, killer, target, pred, rng):
 
 
 def turns_left(view):
-    """Turnos que quedan despues de este (None si no se sabe)."""
+    """Turns left after this one (None if not known)."""
     if not view.max_turn:
         return None
     return int(view.max_turn) - int(view.turn)
 
 
 def suspicion_expert(view, memory, q):
-    """Sospecha del Sherlock experto. Lo mas fuerte: la mano de Moriarty (orden pisada) y correr sin que
-    lo mande Sherlock (quien va por su cuenta nunca corre). Luego, acercarse a las posibles victimas y
-    llevar arma. Quien ya esta descartado como asesino no cuenta."""
+    """The expert Sherlock's suspicion. The strongest: Moriarty's hand (overridden order) and running without
+    Sherlock ordering it (whoever acts on their own never runs). Then, getting close to the possible victims and
+    carrying a weapon. Whoever is already ruled out as the killer doesn't count."""
     p = view.pawns.get(q, {})
     if not p.get("isKillerCandidate", 1):
         return -99
@@ -806,7 +806,7 @@ def suspicion_expert(view, memory, q):
     score = 6 * (q in m["moriarty"]) + 3 * m.get("ran", {}).get(q, 0) + 1.5 * m.get("approach", {}).get(q, 0)
     if p.get("isHaveWeapon"):
         score += 2
-    # pegado ahora mismo a una posible victima que esta sola con el
+    # stuck right now to a possible victim who is alone with them
     for v, pv in view.pawns.items():
         if v != q and pv.get("isTargetCandidate", 1) and view.pair_distance(q, v) <= 1:
             mates = [x for x in view.room_mates(v) if x != q]
@@ -817,12 +817,12 @@ def suspicion_expert(view, memory, q):
 
 
 def plan_sherlock_expert(view, idx, n_orders, rng, taken, memory):
-    """Sherlock experto: como el dificil, pero
-    - sospecha con mas criterio (suspicion_expert);
-    - aparta y sondea hasta a dos sospechosos: ordenarles algo descubre si Moriarty los mueve (orden
-      pisada), y de paso los aleja de las posibles victimas;
-    - nunca acerca al grupo a quien ya tiene por muy sospechoso;
-    - en los dos ultimos turnos, las ordenes que sobran van a alejar sospechosos (hasta tres)."""
+    """Expert Sherlock: like the hard one, but
+    - it suspects with more judgement (suspicion_expert);
+    - it moves away and probes up to two suspects: ordering them something reveals whether Moriarty moves them (overridden
+      order), and moves them away from the possible victims along the way;
+    - it never brings the group close to someone it already finds very suspicious;
+    - in the last two turns, the spare orders go to moving suspects away (up to three)."""
     left = turns_left(view)
     end = left is not None and left <= 1
     return plan_sherlock_hard(view, idx, n_orders, rng, taken, memory, sus_fn=suspicion_expert,
@@ -830,15 +830,15 @@ def plan_sherlock_expert(view, idx, n_orders, rng, taken, memory):
 
 
 def predict_sherlock(view, memory, rng):
-    """Que ordenaria Sherlock este turno con lo que se ve en la partida (se simula su forma de pensar).
-    Devuelve {personaje: casilla prevista}. No mira nada oculto: ni armas en muebles ni nada del bando
-    de Moriarty."""
+    """What Sherlock would order this turn with what is seen in the match (its way of thinking is simulated).
+    Returns {character: expected square}. It looks at nothing hidden: no weapons in furniture or anything of
+    Moriarty's side."""
     v = copy.copy(view)
     v.unavailable = set(view.unavailable)
     v.weapon_objects, v.food_objects = set(), set()
     try:
         orders = plan_sherlock_hard(v, -1, 3, random.Random(rng.random()), set(), memory)
-    except Exception:  # noqa: BLE001  (una prediccion fallida no debe romper el turno)
+    except Exception:  # noqa: BLE001  (a failed prediction must not break the turn)
         return {}
     out = {}
     for o in orders:
@@ -849,15 +849,15 @@ def predict_sherlock(view, memory, rng):
 
 
 def killer_is_hot(view, memory, killer, threshold=3):
-    """El asesino ya es el principal sospechoso a ojos de Sherlock."""
+    """The killer is already the main suspect in Sherlock's eyes."""
     mine = suspicion_expert(view, memory, killer)
     rest = [suspicion_expert(view, memory, q) for q in view.ids() if q != killer]
     return mine >= threshold and mine >= max(rest, default=-99)
 
 
 def frame_decoy(view, idx, killer, target, memory, used, rng):
-    """Hacer que un inocente parezca el asesino: que corra hacia otra posible victima (no la de verdad,
-    para no dejar un testigo junto a ella). Correr sin orden de Sherlock es lo que mas delata."""
+    """Make an innocent look like the killer: make them run towards another possible victim (not the real one,
+    so as not to leave a witness next to her). Running without a Sherlock order is what gives the most away."""
     cands = [q for q in view.ids() if q not in used and q not in (killer, target) and awake(view, q)
              and view.pawns[q].get("isKillerCandidate", 1) and view.grids(q)]
     if not cands:
@@ -876,8 +876,8 @@ def frame_decoy(view, idx, killer, target, memory, used, rng):
 
 
 def _kill_now(view, idx, killer, target, pred, n_orders, rng, taken, desperate):
-    """Ultimos turnos: buscar el asesinato contando con lo que probablemente hara Sherlock. En el ultimo
-    turno, si no hay nada seguro, se arriesga (si no mata, Moriarty no gana)."""
+    """Last turns: look for the murder counting on what Sherlock will probably do. On the last
+    turn, if nothing is safe, it takes the risk (if it doesn't kill, Moriarty doesn't win)."""
     k = view.pawns.get(killer, {})
     if not k.get("isHaveWeapon") or killer in taken or not view.grids(killer):
         return None
@@ -898,21 +898,21 @@ def _kill_now(view, idx, killer, target, pred, n_orders, rng, taken, desperate):
 
 def plan_moriarty_expert(view, idx, killer, target, n_orders, rng, taken=(), memory=None,
                          kill_window=2, frame_p=0.3, hot_threshold=3, decoy_when_hot=True):
-    """Moriarty experto: el dificil (asalto seguro, armado, sin correr, oscuridad...) y ademas
-    - preve las ordenes de Sherlock: si Sherlock va a mover a su asesino, no le da una orden que no mate
-      (chocarian y se notaria su mano);
-    - si su asesino ya es el principal sospechoso, se esconde: no lo acerca a la victima y hace correr a
-      un inocente hacia otra posible victima para que parezca el;
-    - en los ultimos turnos busca el asesinato contando con lo previsto, y en el ultimo se arriesga;
-    - en los ultimos kill_window + 2 turnos, si su asesino armado aun puede llegar a la victima en los turnos que
-      quedan, deja de esconderse y va a por ella (corriendo si hace falta). Si no llega, sigue escondido y con
-      senuelos: mejor un empate (Sherlock no acierta) que dejarse ver y perder."""
+    """Expert Moriarty: the hard one (safe assault, armed, no running, darkness...) and also
+    - it foresees Sherlock's orders: if Sherlock is going to move its killer, it doesn't give it an order that doesn't kill
+      (they would clash and its hand would show);
+    - if its killer is already the main suspect, it hides: it doesn't bring it close to the victim and makes
+      an innocent run towards another possible victim so they look like the killer;
+    - in the last turns it looks for the murder counting on what is expected, and on the last one it takes the risk;
+    - in the last kill_window + 2 turns, if its armed killer can still reach the victim in the turns
+      left, it stops hiding and goes for her (running if needed). If it can't, it stays hidden with
+      decoys: better a draw (Sherlock doesn't get it right) than being seen and losing."""
     mem = memory or new_memory()
     left = turns_left(view)
     pred = predict_sherlock(view, mem, rng)
     chase = left is not None and left <= kill_window + 2 and bool(view.pawns[killer].get("isHaveWeapon")) \
         and killer not in taken and bool(view.grids(killer)) \
-        and view.pair_distance(killer, target) <= reach(view, killer) * (left + 1)   # le da tiempo a llegar
+        and view.pair_distance(killer, target) <= reach(view, killer) * (left + 1)   # there is time to get there
     if left is not None and left <= kill_window:
         kill = _kill_now(view, idx, killer, target, pred, n_orders, rng, set(taken) | {target}, desperate=left <= 0)
         if kill:
@@ -923,18 +923,18 @@ def plan_moriarty_expert(view, idx, killer, target, n_orders, rng, taken=(), mem
     tgrid = view.pawns[target].get("gridId")
     hot = killer_is_hot(view, mem, killer, hot_threshold)
 
-    def kills(o):           # plantarse en la casilla de la victima, armado: si se queda, cae al final del turno
+    def kills(o):           # stand on the victim's square, armed: if she stays, she falls at the end of the turn
         return o["pawnId"] == killer and o["type"] == MOVE and o["grid"] == tgrid and \
             view.pawns[killer].get("isHaveWeapon")
     keep = []
     for o in orders:
         if o["pawnId"] == killer and not kills(o):
             if chase:
-                continue                    # al final, la orden del asesino es ir a por la victima (abajo)
+                continue                    # at the end, the killer's order is to go for the victim (below)
             if killer in pred and (left is None or left > 3):
-                continue                    # chocaria con Sherlock y le delataria
+                continue                    # it would clash with Sherlock and give it away
             if hot and o["type"] == MOVE:
-                continue                    # perfil bajo: ni acercarse ni acechar
+                continue                    # low profile: neither approach nor stalk
         keep.append(o)
     if chase and not any(o["pawnId"] == killer for o in keep):
         keep.insert(0, chase_order(view, idx, killer, target, pred, rng))
@@ -947,8 +947,8 @@ def plan_moriarty_expert(view, idx, killer, target, n_orders, rng, taken=(), mem
 
 
 def plan_irene_expert(view, idx, killer, target, rng, taken, memory, frame_first=False):
-    """Irene experta (gana a Sherlock sin dejar rastro): aparta al testigo de la victima hacia un
-    peligro; si no hay, arma al asesino; si ya lo esta, hace parecer culpable a un inocente."""
+    """Expert Irene (beats Sherlock without leaving a trace): moves the victim's witness towards a
+    hazard; if there is none, arms the killer; if it already is, makes an innocent look guilty."""
     used = set(taken) | {target}
     witnesses = [q for q in view.room_mates(target) if q not in used and q != killer and view.grids(q)]
     if witnesses:
@@ -971,12 +971,12 @@ def plan_irene_expert(view, idx, killer, target, rng, taken, memory, frame_first
     return [o] if o else []
 
 
-# ------------------------------------------------------------------ pesadilla
-# El experto, mas lo aprendido de las personas de la partida en sus partidas anteriores (profiles.py).
-# Sin perfil (pocas partidas), juega como el experto pero mas agresivo.
+# ------------------------------------------------------------------ nightmare
+# The expert, plus what it learned from the match's people in their earlier matches (profiles.py).
+# Without a profile (few matches), it plays like the expert but more aggressive.
 def suspicion_nightmare(view, memory, q):
-    """Sospecha del Sherlock Pesadilla: la del experto mas lo que delataba al asesino de esta persona
-    en sus partidas (si su asesino solia correr, registrar, acercarse...)."""
+    """The Nightmare Sherlock's suspicion: the expert's plus what gave away this person's killer
+    in their matches (if their killer used to run, search, get close...)."""
     base = suspicion_expert(view, memory, q)
     prof = memory.get("prof_moriarty")
     if base == -99 or not prof:
@@ -990,7 +990,7 @@ def suspicion_nightmare(view, memory, q):
 
 
 def danger_turn(view, memory):
-    """Turno en el que el Moriarty de esta partida suele atacar (o uno antes/despues)."""
+    """Turn on which this match's Moriarty usually attacks (or one before/after)."""
     prof = memory.get("prof_moriarty")
     if not prof or not prof.get("kill_turns"):
         return False
@@ -998,8 +998,8 @@ def danger_turn(view, memory):
 
 
 def plan_sherlock_nightmare(view, idx, n_orders, rng, taken, memory):
-    """Sherlock Pesadilla: el experto con la sospecha aprendida. En los turnos en que esa persona suele
-    atacar y en los dos ultimos, todo a proteger (solo aparta al sospechoso principal)."""
+    """Nightmare Sherlock: the expert with the learned suspicion. On the turns that person usually
+    attacks and on the last two, everything goes to protecting (it only moves the main suspect away)."""
     left = turns_left(view)
     end = left is not None and left <= 1
     tense = danger_turn(view, memory)
@@ -1009,11 +1009,11 @@ def plan_sherlock_nightmare(view, idx, n_orders, rng, taken, memory):
 
 
 def plan_moriarty_nightmare(view, idx, killer, target, n_orders, rng, taken=(), memory=None):
-    """Moriarty Pesadilla: el experto ajustado al Sherlock de la partida.
-    - Si esa persona se traga los senuelos (acusa al inocente que corrio), senuelos casi siempre; si no se
-      los traga, pocos (solo delatarian a Moriarty).
-    - Si suele vigilar al asesino con sus ordenes, esconde al suyo antes.
-    - Busca el asesinato desde cuatro turnos antes del final (el experto, dos)."""
+    """Nightmare Moriarty: the expert adjusted to the match's Sherlock.
+    - If that person falls for the decoys (accuses the innocent who ran), decoys almost always; if they don't
+      fall for them, few (they would only give Moriarty away).
+    - If they usually watch the killer with their orders, it hides its own earlier.
+    - It looks for the murder from four turns before the end (the expert, two)."""
     mem = memory or new_memory()
     prof = mem.get("prof_sherlock")
     frame_p, hot = 0.45, 3

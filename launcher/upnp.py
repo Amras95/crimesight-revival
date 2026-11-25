@@ -1,9 +1,9 @@
 """
-Apertura automatica de puertos en el router (UPnP IGD), sin dependencias.
+Automatic port opening on the router (UPnP IGD), without dependencies.
 
-Solo se usa en "Ser anfitrion": pide al router que reenvie el puerto del servidor a este PC
-para que los amigos puedan entrar. Si el router no tiene UPnP, no pasa nada: se explica como
-abrirlo a mano o usar una red privada (Tailscale, ZeroTier, Radmin VPN).
+Only used in "Host": asks the router to forward the server port to this PC
+so friends can get in. If the router has no UPnP, nothing happens: it explains how to
+open it by hand or use a private network (Tailscale, ZeroTier, Radmin VPN).
 """
 import re, socket, urllib.request
 from urllib.parse import urljoin
@@ -76,7 +76,7 @@ class PortMapping:
         self.external_ip = None
 
     def open(self):
-        """Devuelve True si el router acepto el reenvio."""
+        """Returns True if the router accepted the forwarding."""
         for loc in _discover():
             try:
                 found = _control(loc)

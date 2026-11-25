@@ -1,10 +1,11 @@
-// CRIMESIGHT Revival - texturas de los modelos propios descodificadas fuera del hilo del juego.
+// CRIMESIGHT Revival - custom model textures decoded off the game thread.
 //
-// ImageConversion.LoadImage solo se puede usar en el hilo del juego, y un PNG de 4096x4096 tarda medio segundo:
-// al empezar la partida se congelaba la imagen (con los personajes aun en T). Aqui el PNG se descodifica en otro
-// hilo (calculo puro), se reduce a 2048 como mucho (de sobra para un personaje en pantalla) y se le calculan los
-// mipmaps; en el hilo del juego solo queda copiar los bytes a la textura (LoadRawTextureData). Lo que no se sepa
-// leer (JPEG, PNG entrelazado o de menos de 8 bits) devuelve null y se carga como antes.
+// ImageConversion.LoadImage can only be used on the game thread, and a 4096x4096 PNG takes half a second:
+// when the match started the picture froze (with the characters still in T). Here the PNG is decoded on another
+// thread (pure computation), reduced to 2048 at most (plenty for a character on screen) and its
+// mipmaps are computed; on the game thread only copying the bytes into the texture is left (LoadRawTextureData). What
+// can't be
+// read (JPEG, interlaced PNG or under 8 bits) returns null and loads as before.
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -15,7 +16,7 @@ namespace CrimeSightRevival.Mods
     {
         public const int Max = 2048;
 
-        /// <summary>Rellena raw/rw/rh/rmips de la imagen si es un PNG que se sabe leer.</summary>
+        /// <summary>Fills raw/rw/rh/rmips of the image if it is a PNG that can be read.</summary>
         public static void Prepare(Glb.Image img)
         {
             try
@@ -31,7 +32,7 @@ namespace CrimeSightRevival.Mods
 
         public static int MipCount(int w, int h) { int n = 1, m = Math.Max(w, h); while (m > 1) { m >>= 1; n++; } return n; }
 
-        /// <summary>RGBA de abajo a arriba (como las texturas de Unity), o null.</summary>
+        /// <summary>RGBA bottom to top (like Unity textures), or null.</summary>
         static byte[] Png(byte[] d, out int w, out int h)
         {
             w = h = 0;
@@ -69,10 +70,10 @@ namespace CrimeSightRevival.Mods
                 int got = 0;
                 while (got < raw.Length) { int r = z.Read(raw, got, raw.Length - got); if (r <= 0) return null; got += r; }
             }
-            // quitar los filtros fila a fila (en el mismo array)
+            // remove the filters row by row (in the same array)
             for (int y = 0; y < h; y++)
             {
-                int row = y * (stride + 1), f = raw[row], cur = row + 1, prev = row - stride;   // prev: fila anterior (sus datos)
+                int row = y * (stride + 1), f = raw[row], cur = row + 1, prev = row - stride;   // prev: previous row (its data)
                 bool first = y == 0;
                 switch (f)
                 {
@@ -98,7 +99,7 @@ namespace CrimeSightRevival.Mods
                 }
             }
             var o = new byte[(long)w * h * 4];
-            int step = depth / 8;                                     // 16 bits: se queda el byte alto
+            int step = depth / 8;                                     // 16 bits: the high byte is kept
             for (int y = 0; y < h; y++)
             {
                 int src = y * (stride + 1) + 1, dst = (h - 1 - y) * w * 4;
@@ -124,7 +125,7 @@ namespace CrimeSightRevival.Mods
             return o;
         }
 
-        /// <summary>La mitad de tamano (media de cada 2x2).</summary>
+        /// <summary>Half the size (average of each 2x2).</summary>
         static byte[] Half(byte[] s, ref int w, ref int h)
         {
             int nw = Math.Max(1, w >> 1), nh = Math.Max(1, h >> 1);
@@ -143,7 +144,7 @@ namespace CrimeSightRevival.Mods
             return o;
         }
 
-        /// <summary>El nivel 0 seguido de todos sus mipmaps (como los espera LoadRawTextureData).</summary>
+        /// <summary>Level 0 followed by all its mipmaps (as LoadRawTextureData expects them).</summary>
         static byte[] Mips(byte[] px, int w, int h, out int count)
         {
             count = MipCount(w, h);

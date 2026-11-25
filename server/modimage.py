@@ -1,29 +1,29 @@
 """
-CRIMESIGHT Revival - prepara las imagenes de los mods "a lo loco".
+CRIMESIGHT Revival - prepares "messy" mod images.
 
-La gente no siempre sube un sticker limpio por archivo: a veces es una lamina con muchos
-stickers en cuadricula, con fondo de color, o un JPG sin transparencia. Aqui se:
+People don't always upload one clean sticker per file: sometimes it is a sheet with many
+stickers in a grid, with a coloured background, or a JPG without transparency. Here it:
 
-  1. separa la lamina en piezas, cortando por las filas y columnas "vacias" (transparentes o de
-     un solo color). Solo se corta si las piezas salen de tamano parecido, para no partir un
-     sticker que tenga un adorno suelto (unas "zZZ", una estrella...);
-  2. quita el fondo de cada pieza si no tiene transparencia y su borde es de uno o pocos colores
-     (rellenando desde el borde, asi el negro de la ropa o los ojos, que esta dentro del
-     contorno, no se toca). Una foto o un dibujo con fondo variado se deja tal cual;
-  3. borra las motas sueltas que quedan pegadas a los bordes de cada casilla y recorta.
+  1. splits the sheet into pieces, cutting along the "empty" rows and columns (transparent or
+     a single colour). It only cuts if the pieces come out a similar size, so as not to split a
+     sticker that has a loose ornament (some "zZZ", a star...);
+  2. removes each piece's background if it has no transparency and its border is one or a few colours
+     (flood-filling from the border, so the black of clothes or eyes, which is inside the
+     outline, isn't touched). A photo or a drawing with a varied background is left as is;
+  3. erases the loose specks stuck to each cell's edges and crops.
 
-Solo usa Pillow (sin numpy) para no engordar el lanzador.
+It only uses Pillow (no numpy) to avoid bloating the launcher.
 """
 from collections import deque
 
-SEP_ALPHA = 16          # una fila/columna es separador si todo es casi transparente...
-SEP_STD = 10            # ...o casi de un solo color (desviacion por canal)
-MIN_PIECE = 40          # pixeles minimos de una pieza a lo largo de un eje
-SIMILAR = 0.5           # las piezas tienen que medir al menos la mitad que la mayor
-WORK_SIDE = 512         # cada pieza se procesa a este tamano como mucho
-COLOR_TOL = 48          # parecido al color de fondo (diferencia maxima por canal)
-MAIN_BORDER = 0.5       # el fondo solo se quita si un color ocupa al menos la mitad del borde...
-CLEAN_BORDER = 0.8      # ...y los colores dominantes cubren el 80 %
+SEP_ALPHA = 16          # a row/column is a separator if everything is almost transparent...
+SEP_STD = 10            # ...or almost a single colour (deviation per channel)
+MIN_PIECE = 40          # minimum pixels of a piece along an axis
+SIMILAR = 0.5           # pieces must measure at least half of the biggest
+WORK_SIDE = 512         # each piece is processed at this size at most
+COLOR_TOL = 48          # similar to the background colour (maximum difference per channel)
+MAIN_BORDER = 0.5       # the background is only removed if one colour takes at least half the border...
+CLEAN_BORDER = 0.8      # ...and the dominant colours cover 80 %
 
 
 def _has_alpha(img):
@@ -31,7 +31,7 @@ def _has_alpha(img):
 
 
 def _separators(img, axis, alpha):
-    """Lista de booleanos: True si la fila (axis=1) o columna (axis=0) es un separador."""
+    """List of booleans: True if the row (axis=1) or column (axis=0) is a separator."""
     from PIL import ImageStat
     w, h = img.size
     n = h if axis == 1 else w
@@ -71,8 +71,8 @@ def _split(img, axis, alpha):
 
 
 def cells(img):
-    """Recortes (cajas) de cada pieza de la lamina, en orden de lectura. Una sola caja si no es
-    una lamina."""
+    """Crops (boxes) of each piece of the sheet, in reading order. A single box if it isn't
+    a sheet."""
     w, h = img.size
     alpha = _has_alpha(img)
     rows = _split(img, 1, alpha) or [(0, h)]
@@ -81,22 +81,22 @@ def cells(img):
         band = img.crop((0, y0, w, y1))
         cols = _split(band, 0, alpha) or [(0, w)]
         out += [(x0, y0, x1, y1) for x0, x1 in cols]
-    if len(out) > 1:   # un poco de margen (es fondo) para que el dibujo no toque el borde del recorte
+    if len(out) > 1:   # a bit of margin (it's background) so the drawing doesn't touch the crop's edge
         out = [(max(0, a - 4), max(0, b - 4), min(w, c + 4), min(h, d + 4)) for a, b, c, d in out]
     return out
 
 
-# ------------------------------------------------------------------ fondo
+# ------------------------------------------------------------------ background
 def _border_palette(img):
-    """Colores dominantes del borde, o None si el borde es variado (foto, ilustracion completa)."""
+    """Dominant colours of the border, or None if the border is varied (photo, full illustration)."""
     w, h = img.size
     px = img.load()
     border = [px[x, y] for x in range(w) for y in (0, 1, h - 2, h - 1)]
     border += [px[x, y] for y in range(h) for x in (0, 1, w - 2, w - 1)]
-    border = [c[:3] for c in border if c[3] > 16]      # lo ya transparente no cuenta
+    border = [c[:3] for c in border if c[3] > 16]      # what is already transparent doesn't count
     if len(border) < 16:
         return None
-    groups = []                                   # [color, cuenta]
+    groups = []                                   # [colour, count]
     for c in border:
         for g in groups:
             if max(abs(c[0] - g[0][0]), abs(c[1] - g[0][1]), abs(c[2] - g[0][2])) < COLOR_TOL:
@@ -113,10 +113,10 @@ def _border_palette(img):
 
 
 def _remove_background(img):
-    """Quita el fondo de una pieza sin transparencia. Dos intentos:
-    1) sticker troquelado (con contorno blanco, lo mas habitual): se rellena desde el borde todo lo
-       que NO es blanco, asi el contorno hace de muro y lo de dentro (ropa negra, ojos) se queda;
-    2) fondo liso: se quita lo conectado con el borde que sea del color dominante del borde."""
+    """Removes the background of a piece without transparency. Two attempts:
+    1) die-cut sticker (with a white outline, the most common): everything that is NOT white is filled from the border,
+       so the outline acts as a wall and the inside (black clothes, eyes) stays;
+    2) plain background: what is connected to the border and has the border's dominant colour is removed."""
     out = _diecut(img)
     if out is None:
         out = _peel(img)
@@ -124,7 +124,7 @@ def _remove_background(img):
 
 
 def _flood(img, passable):
-    """Pixeles conectados con el borde por los que se puede pasar. Devuelve (mascara, cuantos)."""
+    """Pixels connected to the border that can be passed through. Returns (mask, how many)."""
     w, h = img.size
     px = img.load()
     bg = bytearray(w * h)
@@ -178,11 +178,11 @@ def _diecut(img):
     w, h = img.size
     bg, removed = _flood(img, lambda c: not _is_white(c))
     left = w * h - sum(bg)
-    # tiene que haber quitado bastante y dejado un dibujo de tamano razonable (si no tenia
-    # contorno blanco, el relleno se come casi todo y se descarta)
+    # it must have removed quite a lot and left a drawing of reasonable size (if it had no
+    # white outline, the fill eats almost everything and it is discarded)
     if removed < 0.12 * w * h or left < 0.2 * w * h:
         return None
-    # si lo que queda es casi todo blanco, lo que se ha quedado es el fondo: descartado
+    # if what is left is almost all white, what stayed is the background: discarded
     px = img.load()
     white = sum(1 for i in range(0, w * h, 7) if not bg[i] and _is_white(px[i % w, i // w]))
     kept = sum(1 for i in range(0, w * h, 7) if not bg[i])
@@ -209,9 +209,9 @@ def _peel(img):
 
 
 def _drop_specks(img):
-    """Quita trocitos sueltos pegados al borde de la casilla (restos de la cuadricula)."""
+    """Removes loose bits stuck to the cell's edge (grid leftovers)."""
     w, h = img.size
-    m = max(10, round(0.05 * max(w, h)))       # franja del borde de la casilla
+    m = max(10, round(0.05 * max(w, h)))       # strip along the cell's edge
     a = img.getchannel("A")
     ap = a.load()
     seen = bytearray(w * h)
@@ -248,7 +248,7 @@ def _drop_specks(img):
 
 
 def extract(img):
-    """Piezas listas (RGBA, recortadas) a partir de una imagen cualquiera."""
+    """Ready pieces (RGBA, cropped) from any image."""
     from PIL import Image
     img = img.convert("RGBA")
     boxes = cells(img)

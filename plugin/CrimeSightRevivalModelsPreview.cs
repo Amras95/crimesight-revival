@@ -1,8 +1,8 @@
-// CRIMESIGHT Revival - modelos para ensenar fuera de la partida (Selector de personajes, retratos automaticos).
+// CRIMESIGHT Revival - models to show outside the match (Character Selector, automatic portraits).
 //
-// Un modelo propio (.glb) se monta quieto, en la postura en la que se hizo, sin el esqueleto del juego: asi se
-// puede ver aunque el juego aun no haya cargado a sus personajes (en la sala de espera). Un personaje original se
-// copia de su prefab (solo si el juego ya lo tiene cargado) con sus scripts apagados.
+// A custom model (.glb) is assembled still, in the pose it was made in, without the game's skeleton: that way it
+// can be seen even if the game hasn't loaded its characters yet (in the waiting room). An original character is
+// copied from its prefab (only if the game already has it loaded) with its scripts off.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,7 +14,7 @@ namespace CrimeSightRevival.Mods
 {
     static partial class Models
     {
-        /// <summary>El material de un personaje del juego (para que el modelo se vea con su sombreado), o null.</summary>
+        /// <summary>A game character's material (so the model shows with its shading), or null.</summary>
         static Material HumanMaterial()
         {
             try
@@ -28,8 +28,9 @@ namespace CrimeSightRevival.Mods
             return null;
         }
 
-        /// <summary>Un modelo propio (csr_live/models/&lt;id&gt;.glb) montado quieto en la capa dada. made: mallas creadas
-        /// (hay que destruirlas con el objeto).</summary>
+        /// <summary>A custom model (csr_live/models/&lt;id&gt;.glb) assembled still on the given layer. made: created
+        /// meshes
+        /// (they must be destroyed with the object).</summary>
         internal static GameObject PreviewGlb(string id, int layer, List<UnityEngine.Object> made)
         {
             var c = LoadCustom(id);
@@ -72,13 +73,14 @@ namespace CrimeSightRevival.Mods
             return root;
         }
 
-        /// <summary>Un personaje para ensenar fuera de la partida, con la animacion de reposo del juego.</summary>
+        /// <summary>A character to show outside the match, with the game's idle animation.</summary>
         static readonly HashSet<string> _pvLogged = new();
 
-        // ---------------------------------------------------------------- trabajo pesado en otro hilo
-        // Leer un .glb grande y adaptar su esqueleto al del juego (Humanoid.Retarget) es calculo puro (sin Unity): se
-        // hace en otro hilo para que la ventana o el inicio de la partida no se queden congelados. En el hilo del juego
-        // queda lo que solo se puede hacer ahi (las texturas y las mallas).
+        // ---------------------------------------------------------------- heavy work on another thread
+        // Reading a big .glb and adapting its skeleton to the game's (Humanoid.Retarget) is pure computation (no
+        // Unity): it is
+        // done on another thread so the window or the match start don't freeze. On the game thread
+        // stays what can only be done there (textures and meshes).
         static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string sig, Glb.Model model)> _parsed = new();
         static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _parsing = new();
         static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (Glb.Model fit, string report)> _fits = new();
@@ -89,7 +91,8 @@ namespace CrimeSightRevival.Mods
             try { var fi = new FileInfo(path); return fi.Exists ? fi.Length + ":" + fi.LastWriteTimeUtc.Ticks : null; } catch { return null; }
         }
 
-        /// <summary>Empieza a leer un modelo propio en otro hilo (si no esta ya leido o leyendose).</summary>
+        /// <summary>Starts reading a custom model on another thread (if it isn't already read or being
+        /// read).</summary>
         internal static void Prefetch(string id)
         {
             if (string.IsNullOrEmpty(id)) return;
@@ -103,7 +106,7 @@ namespace CrimeSightRevival.Mods
                 try
                 {
                     var model = Glb.Read(File.ReadAllBytes(path));
-                    var jobs = new System.Threading.Tasks.Task[model.images.Count];            // las texturas tambien, aqui (a la vez)
+                    var jobs = new System.Threading.Tasks.Task[model.images.Count];            // the textures too, here (at the same time)
                     for (int k = 0; k < jobs.Length; k++) { var img = model.images[k]; jobs[k] = System.Threading.Tasks.Task.Run(() => TexDec.Prepare(img)); }
                     System.Threading.Tasks.Task.WaitAll(jobs);
                     _parsed[id] = (sig, model);
@@ -113,15 +116,16 @@ namespace CrimeSightRevival.Mods
             });
         }
 
-        /// <summary>Deja listo (poco a poco y en otro hilo lo pesado) un modelo propio montado sobre key: true cuando ya
-        /// se puede montar sin esperas. Llamarlo cada fotograma hasta que devuelva true.</summary>
+        /// <summary>Gets ready (bit by bit, and the heavy part on another thread) a custom model assembled over key:
+        /// true once it
+        /// can be assembled without waiting. Call it every frame until it returns true.</summary>
         internal static bool Prefit(string id, string key)
         {
             string path = CustomPath(id), sig = FileSigOf(path);
-            if (sig == null) return true;                                        // no esta: que falle al montarlo
+            if (sig == null) return true;                                        // not there: let it fail when assembling it
             if (!(_custom.TryGetValue(id, out var c) && c.sig == sig))
             {
-                if (_parsed.TryGetValue(id, out var p) && p.sig == sig) { LoadCustom(id); return false; }   // texturas: aqui
+                if (_parsed.TryGetValue(id, out var p) && p.sig == sig) { LoadCustom(id); return false; }   // textures: here
                 Prefetch(id);
                 return false;
             }
@@ -143,7 +147,7 @@ namespace CrimeSightRevival.Mods
             var rest = RestPose(key, root, out var parents);
             int known = 0, named = 0;
             foreach (var jt in c.model.joints) if (jt.name != "<root>") { named++; if (live.Contains(jt.name) && rest.ContainsKey(jt.name)) known++; }
-            if (!(named > 0 && known < named * 0.5f)) return true;                 // usa el esqueleto del juego: nada que adaptar
+            if (!(named > 0 && known < named * 0.5f)) return true;                 // uses the game's skeleton: nothing to adapt
             var game = new Dictionary<string, Humanoid.GameBone>();
             foreach (var kv in rest)
                 if (live.Contains(kv.Key))
@@ -162,17 +166,17 @@ namespace CrimeSightRevival.Mods
 
         internal sealed class Preview
         {
-            public GameObject holder;              // lo que se mueve / gira / destruye
-            public GameObject animGo;              // donde se aplica la animacion (el del Animator)
+            public GameObject holder;              // what moves / rotates / is destroyed
+            public GameObject animGo;              // where the animation is applied (the Animator's)
             public AnimationClip idle;
             public Baked baked; public Transform[] bakedBones;
-            public int appliedId;                  // modelo propio montado sobre el del juego (Late lo mueve)
+            public int appliedId;                  // custom model assembled over the game's (Late moves it)
         }
 
-        // ---------------------------------------------------------------- reposo grabado
-        // Las animaciones de los personajes del juego no estan cargadas en la sala de espera. En la partida se graba su
-        // reposo una vez (giros y posiciones de cada hueso, por nombre, a 15 fotogramas por segundo) en
-        // csr_live/cache/idle_<personaje>.bin (solo en este PC) y la vista lo reproduce.
+        // ---------------------------------------------------------------- recorded idle
+        // The game characters' animations aren't loaded in the waiting room. In the match their
+        // idle is recorded once (rotations and positions of each bone, by name, at 15 frames per second) in
+        // csr_live/cache/idle_<character>.bin (only on this PC) and the view plays it back.
         internal sealed class Baked { public string[] bones; public float fps; public int frames; public float[] data; }
         static readonly Dictionary<string, Baked> _baked = new();
         internal static string IdlePath(string key) => Path.Combine(LiveMods.LiveDir, "cache", "idle_" + key + ".bin");
@@ -205,8 +209,9 @@ namespace CrimeSightRevival.Mods
             return b;
         }
 
-        /// <summary>Graba el reposo de un personaje de la partida: se pone la animacion sobre sus huesos fotograma a
-        /// fotograma, se apunta cada hueso y se deja todo como estaba (en el mismo instante: el jugador no ve nada).</summary>
+        /// <summary>Records a match character's idle: the animation is put on its bones frame by
+        /// frame, each bone is noted down and everything is left as it was (in the same instant: the player sees
+        /// nothing).</summary>
         internal static bool BakeIdle(string key, GameObject animGo, AnimationClip clip, GameObject modelRoot)
         {
             try
@@ -246,7 +251,7 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Warn("bake" + key, "[Modelos] no pude grabar el reposo de " + key + ": " + e.Message); return false; }
         }
 
-        /// <summary>La animacion de reposo entre unas cuantas (las de un Animator); seen apunta sus nombres.</summary>
+        /// <summary>The idle animation among several (an Animator's); seen notes their names.</summary>
         internal static AnimationClip IdleClip(Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<AnimationClip> clips, List<string> seen)
         {
             AnimationClip best = null; int bestScore = 0;
@@ -263,7 +268,7 @@ namespace CrimeSightRevival.Mods
             return best;
         }
 
-        /// <summary>La animacion de reposo de un personaje de la partida (de su SimpleAnimation).</summary>
+        /// <summary>A match character's idle animation (from its SimpleAnimation).</summary>
         internal static AnimationClip IdleClip(SimpleAnimation sa)
         {
             AnimationClip best = null; int bestScore = -1;
@@ -286,22 +291,22 @@ namespace CrimeSightRevival.Mods
             return bestScore >= 1 ? best : null;
         }
 
-        /// <summary>El personaje del juego (baseKey: PawnTypeData_X / ThreatTypeData_Traitor) y, si model no es null, un
-        /// modelo propio montado encima igual que en la partida (sus huesos siguen a los del juego). Sus scripts quedan
-        /// apagados; la animacion de reposo se pone con PreviewTick. null si el juego aun no tiene el modelo o el
-        /// modelo propio no se puede montar.</summary>
+        /// <summary>The game character (baseKey: PawnTypeData_X / ThreatTypeData_Traitor) and, if model isn't null, a
+        /// custom model assembled on top just like in the match (its bones follow the game's). Its scripts stay
+        /// off; the idle animation is set with PreviewTick. null if the game doesn't have the model yet or the
+        /// custom model can't be assembled.</summary>
         internal static Preview PreviewChar(string baseKey, string model, int layer)
         {
             GameObject tpl;
             try { tpl = Template(baseKey); } catch { tpl = null; }
             if (tpl == null) return null;
             var holder = new GameObject("CSR_Vista_" + baseKey + (model != null ? "_" + model : ""));
-            holder.SetActive(false);                                   // asi la copia no arranca sus scripts
+            holder.SetActive(false);                                   // that way the copy doesn't start its scripts
             try
             {
                 var go = UnityEngine.Object.Instantiate(tpl, holder.transform, false);
                 var pv = new Preview { holder = holder };
-                // la animacion de reposo: la de su controlador (ControllerMixerPlayable.controller, en el propio prefab)
+                // the idle animation: its controller's (ControllerMixerPlayable.controller, in the prefab itself)
                 var cmp = go.GetComponentInChildren<ControllerMixerPlayable>(true);
                 var ctrl = cmp != null ? cmp.controller : null;
                 if (ctrl != null)
@@ -331,7 +336,7 @@ namespace CrimeSightRevival.Mods
                     catch (Exception e) { Warn("pvidle" + baseKey, "[Modelos] vista: animaciones de " + baseKey + ": " + e.Message); }
                     pv.idle ??= sa.m_Clip ?? first;
                 }
-                pv.baked = LoadBaked(baseKey);                             // grabado en una partida: manda sobre lo demas
+                pv.baked = LoadBaked(baseKey);                             // recorded in a match: takes precedence over the rest
                 if (pv.baked == null && pv.idle == null)
                     foreach (var c in go.GetComponentsInChildren(Il2CppType.Of<Animator>(), true))
                     {
@@ -362,7 +367,7 @@ namespace CrimeSightRevival.Mods
                 }
                 if (model == null)
                 {
-                    // el traidor viene con todo oculto (el juego lo ensena despues): se ensenan sus mallas
+                    // the traitor comes with everything hidden (the game shows it later): its meshes are shown
                     bool Shown(Renderer r)
                     {
                         if (!r.enabled) return false;
@@ -391,7 +396,7 @@ namespace CrimeSightRevival.Mods
                     var ac = ApplyCustom(root, CustomPrefix + model, baseKey);
                     if (ac == null) { UnityEngine.Object.Destroy(holder); return null; }
                     pv.appliedId = root.GetInstanceID();
-                    _applied[pv.appliedId] = ac;                           // Late: sus huesos copian los del juego
+                    _applied[pv.appliedId] = ac;                           // Late: its bones copy the game's
                 }
                 foreach (var t in holder.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer;
                 foreach (var smr in holder.GetComponentsInChildren<SkinnedMeshRenderer>(true)) smr.updateWhenOffscreen = true;
@@ -450,15 +455,16 @@ namespace CrimeSightRevival.Mods
             pv.holder = null;
         }
 
-        /// <summary>Copia del modelo original de un personaje (PawnTypeData_X / ThreatTypeData_Traitor) en la capa dada,
-        /// o null si el juego aun no lo ha cargado. Sus scripts quedan apagados.</summary>
+        /// <summary>Copy of a character's original model (PawnTypeData_X / ThreatTypeData_Traitor) on the given
+        /// layer,
+        /// or null if the game hasn't loaded it yet. Its scripts stay off.</summary>
         internal static GameObject PreviewOriginal(string key, int layer)
         {
             GameObject tpl;
             try { tpl = Template(key); } catch { tpl = null; }
             if (tpl == null) return null;
             var holder = new GameObject("CSR_VistaOriginal_" + key);
-            holder.SetActive(false);                                   // asi la copia no arranca sus scripts
+            holder.SetActive(false);                                   // that way the copy doesn't start its scripts
             var go = UnityEngine.Object.Instantiate(tpl, holder.transform, false);
             foreach (var c in go.GetComponentsInChildren(Il2CppType.Of<MonoBehaviour>(), true))
             {

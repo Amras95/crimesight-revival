@@ -1,12 +1,12 @@
-// CRIMESIGHT Revival - cursor propio.
+// CRIMESIGHT Revival - custom cursor.
 //
-// El lanzador copia tus imagenes de la carpeta "cursor" (junto a la de mods) a csr_live/cursor:
-//   cursor.png          el cursor normal (menus y partida)
-//   <nombre>.png        opcional: sustituye un cursor concreto del juego (al moverte, correr, atacar...).
-//                       Los nombres de los del juego salen en el registro de BepInEx la primera vez que se usan.
-//   hotspot.txt         opcional: el punto que hace clic en cursor.png, "x,y" en pixeles (por defecto 0,0,
-//                       la esquina de arriba a la izquierda, como una flecha)
-// Solo lo ves tu. Sin imagenes, el juego usa sus cursores de siempre.
+// The launcher copies your images from the "cursor" folder (next to the mods one) to csr_live/cursor:
+//   cursor.png          the normal cursor (menus and match)
+//   <name>.png          optional: replaces a specific game cursor (when moving, running, attacking...).
+//                       The names of the game's ones show in the BepInEx log the first time they are used.
+//   hotspot.txt         optional: the point of cursor.png that clicks, "x,y" in pixels (default 0,0,
+//                       the top left corner, like an arrow)
+// Only you see it. Without images, the game uses its usual cursors.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -38,7 +38,7 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[Cursor] " + e.Message); }
         }
 
-        // cada pocos segundos: si cambian las imagenes, se recargan y se pone el cursor
+        // every few seconds: if the images change, they are reloaded and the cursor is set
         public static void Frame()
         {
             if (Time.unscaledTime < _next) return;
@@ -48,7 +48,7 @@ namespace CrimeSightRevival.Mods
             _sig = sig;
             Load();
             _inside = false;
-            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);   // el prefijo pone el nuestro (o el del juego)
+            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);   // the prefix sets ours (or the game's)
         }
 
         static string Signature()
@@ -113,7 +113,7 @@ namespace CrimeSightRevival.Mods
                 if (_logged.Add(name)) Plugin.L.LogInfo($"[Cursor] el juego usa el cursor \"{name}\" ({texture.width}x{texture.height})");
                 if (name.Length > 0 && _tex.TryGetValue(name, out var mine) && mine != null && mine.Pointer != texture.Pointer)
                 {
-                    // mismo punto de clic, a la escala de la imagen nueva
+                    // same click point, at the new image's scale
                     hotspot = new Vector2(hotspot.x * mine.width / Math.Max(1, texture.width),
                                           hotspot.y * mine.height / Math.Max(1, texture.height));
                     texture = mine;

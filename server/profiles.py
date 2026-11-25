@@ -1,22 +1,22 @@
 """
-CRIMESIGHT Revival - perfiles de jugador para la IA "Pesadilla".
+CRIMESIGHT Revival - player profiles for the "Nightmare" AI.
 
-Con las partidas guardadas (matchlog) se sacan las costumbres de cada persona, como haria un rival
-humano que ya ha jugado contra ella:
+From the saved matches (matchlog) each person's habits are worked out, as a human
+rival who has already played against them would:
 
-Como Moriarty (para el Sherlock Pesadilla):
-- Que delata a su asesino: se compara como se movia su asesino con como se movian los inocentes en
-  sus partidas (correr, registrar, acercarse a posibles victimas, ordenes pisadas). Solo cuenta lo que
-  ve el bando de Sherlock: lo que hacian los personajes sin orden suya.
-- En que turnos suele atacar.
+As Moriarty (for the Nightmare Sherlock):
+- What gives their killer away: how their killer moved is compared to how the innocents moved in
+  their matches (running, searching, getting close to possible victims, overridden orders). Only what
+  Sherlock's side sees counts: what the characters did without its order.
+- On which turns they usually attack.
 
-Como Sherlock / Watson (para el Moriarty Pesadilla):
-- Si se deja enganar por senuelos: cuando el que mas corrio era inocente, si le acuso igualmente.
-- Si da ordenes al asesino mas que a cualquier otro (vigila a los sospechosos: hay que esconderse antes).
-- Cuantas partidas gana.
+As Sherlock / Watson (for the Nightmare Moriarty):
+- Whether they fall for decoys: when the one who ran the most was innocent, whether they accused them anyway.
+- Whether they order the killer more than anyone else (they watch suspects: hide earlier).
+- How many matches they win.
 
-Todo se calcula en el PC de quien hace de servidor con sus propias partidas. Con menos de MIN_MATCHES
-partidas en ese papel no hay perfil y la IA juega como Experto.
+Everything is worked out on the PC of whoever acts as the server, with their own matches. With fewer than MIN_MATCHES
+matches in that role there is no profile and the AI plays as Expert.
 """
 import math
 
@@ -40,8 +40,8 @@ def _dist(a, b):
 
 
 def visible_features(rec):
-    """Por cada personaje, lo que vio el bando de Sherlock en esa partida: veces que corrio, registro o se
-    acerco a una posible victima sin orden de Sherlock, y ordenes pisadas."""
+    """For each character, what Sherlock's side saw in that match: times it ran, searched or got
+    close to a possible victim without a Sherlock order, and overridden orders."""
     out = {}
     for t in rec.get("turns") or []:
         pos = {p[0]: p[1] for p in t.get("pawns") or [] if len(p) >= 2}
@@ -77,7 +77,7 @@ def _role_of(rec, pid):
 
 
 def build(records, pid):
-    """Perfil de un jugador (por su id de jugador del servidor)."""
+    """A player's profile (by their server player id)."""
     prof = {"as_moriarty": None, "as_sherlock": None}
     mor = [r for r in records if _role_of(r, pid) == "criminal" and r.get("killer", -1) >= 0]
     det = [r for r in records if _role_of(r, pid) in ("detective", "watson") and r.get("killer", -1) >= 0]
@@ -103,12 +103,12 @@ def build(records, pid):
                         i_sum[x] += f[x]
             if r.get("kill"):
                 kill_turns.append(int(r["kill"].get("turn", 0)))
-        # Cuantas veces por partida hace cada cosa su asesino frente a un inocente. Se suaviza hacia la
-        # media de todos, asi que sin datos de algo (nunca paso) el peso queda en 0.
+        # How many times per match their killer does each thing compared to an innocent. It is smoothed towards the
+        # overall average, so without data on something (it never happened) the weight stays at 0.
         weights = {}
         for x in FEATURES:
             if not k_sum[x] + i_sum[x]:
-                weights[x] = 0.0                  # nunca paso: no dice nada
+                weights[x] = 0.0                  # never happened: it says nothing
                 continue
             prior = (k_sum[x] + i_sum[x]) / max(1, k_n + i_n)
             rk = (k_sum[x] + 2 * prior + 0.05) / (k_n + 2)
@@ -124,7 +124,7 @@ def build(records, pid):
             killer = r["killer"]
             runner = max(feats, key=lambda q: (feats[q]["run"], -q), default=None) if feats else None
             mine = [a for a in r.get("accusations") or [] if a.get("player") == pid]
-            # Se deja enganar? Cuenta solo cuando el que mas corrio era un senuelo (no el asesino)
+            # Do they fall for it? Only counts when the one who ran the most was a decoy (not the killer)
             if runner is not None and feats[runner]["run"] > 0 and runner != killer and mine:
                 fooled_n += 1
                 fooled += mine[0].get("accused") == runner
@@ -137,15 +137,15 @@ def build(records, pid):
             wins += r.get("winner") == "sherlock"
         prof["as_sherlock"] = {"matches": len(det),
                                "fooled_by_runner": fooled / fooled_n if fooled_n else None,
-                               # >1: ordena al asesino mas que a un personaje cualquiera (le vigila)
+                               # >1: orders the killer more than any character (watches them)
                                "tracks_killer": (ordered_killer / ordered_any) if ordered_any else 1.0,
                                "win_rate": wins / len(det)}
     return prof
 
 
 def for_room(records, members, role_names):
-    """Perfiles de los humanos de una sala: {"moriarty": perfil del Moriarty humano (o None),
-    "sherlock": perfil del Sherlock o Watson humano (o None)}."""
+    """Profiles of a room's humans: {"moriarty": profile of the human Moriarty (or None),
+    "sherlock": profile of the human Sherlock or Watson (or None)}."""
     out = {"moriarty": None, "sherlock": None}
     for pid, m in members.items():
         if m.get("bot"):

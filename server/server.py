@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-CRIMESIGHT Revival - servidor comunitario.
+CRIMESIGHT Revival - community server.
 
-Fase 1: API HTTP (account.*, user.*, consultas de match.* sin sala) para
-poder iniciar sesion y llegar al menu principal sin los servidores de Konami.
-Fase 2: canal WebSocket/WAMP para salas y partidas (ver match.py).
+Phase 1: HTTP API (account.*, user.*, match.* queries without a room) to
+be able to log in and reach the main menu without Konami's servers.
+Phase 2: WebSocket/WAMP channel for rooms and matches (see match.py).
 
-Uso: python server.py [--host 0.0.0.0] [--port 18080]
+Usage: python server.py [--host 0.0.0.0] [--port 18080]
 """
 import argparse, asyncio, hashlib, hmac, json, logging, os, secrets, sys, threading, time
 
@@ -27,10 +27,10 @@ DATA_DIR = os.environ.get("CSR_DATA_DIR") or os.path.join(os.path.dirname(os.pat
 log = logging.getLogger("crimesight")
 
 
-# ---------------------------------------------------------------- identidad
-# La misma cuenta de Steam tiene el mismo jugador y el mismo token en CUALQUIER servidor de la
-# comunidad: asi se puede jugar en casa de un amigo o en un servidor propio y volver sin que el
-# juego se lie con las cuentas, y los perfiles se pueden juntar.
+# ---------------------------------------------------------------- identity
+# The same Steam account has the same player and the same token on ANY community
+# server: that way you can play at a friend's or on your own server and come back without the
+# game getting confused by the accounts, and profiles can be merged.
 def derived_ids(platform, platform_id):
     base = f"{platform}:{platform_id}".encode()
     pid = hashlib.sha256(b"csr-player:" + base).hexdigest()[:16]
@@ -38,9 +38,9 @@ def derived_ids(platform, platform_id):
     return pid, token
 
 
-# ---------------------------------------------------------------- almacenamiento
+# ---------------------------------------------------------------- storage
 class Store:
-    """Persistencia minima en un JSON local (un servidor por grupo de amigos)."""
+    """Minimal persistence in a local JSON (one server per group of friends)."""
 
     def __init__(self, path):
         self.path = path
@@ -49,13 +49,13 @@ class Store:
         if os.path.isfile(path):
             with open(path, encoding="utf-8") as f:
                 self.db.update(json.load(f))
-        self.sessions = {}  # ssid -> player_id (en memoria)
-        for k in [k for k in self.db["users"] if k.startswith("bot")]:   # restos de versiones viejas
+        self.sessions = {}  # ssid -> player_id (in memory)
+        for k in [k for k in self.db["users"] if k.startswith("bot")]:   # leftovers from old versions
             self.db["users"].pop(k)
         self._migrate_ids()
 
     def _migrate_ids(self):
-        """Cuentas creadas con ids aleatorios (versiones anteriores) -> ids derivados de Steam."""
+        """Accounts created with random ids (earlier versions) -> ids derived from Steam."""
         changed = False
         for acc in self.db["accounts"].values():
             pid, token = derived_ids(acc.get("platform"), acc.get("platform_id"))
@@ -71,7 +71,7 @@ class Store:
                 changed = True
                 log.info("Cuenta %s: id %s -> %s", acc.get("platform_id"), old, pid)
             if acc.get("token") != token:
-                acc.setdefault("legacy_tokens", []).append(acc.get("token"))   # el juego aun puede usar el viejo
+                acc.setdefault("legacy_tokens", []).append(acc.get("token"))   # the game may still use the old one
                 acc["token"] = token
                 changed = True
         if changed:
@@ -99,16 +99,16 @@ class Store:
         })
 
 
-# Campanas (eventos) del cliente: NetworkManager.CAMPAIGN_PROJECT_WINTER = 1
+# Client campaigns (events): NetworkManager.CAMPAIGN_PROJECT_WINTER = 1
 EVENT_CAMPAIGNS = [1]
 EVENT_OPEN_SECONDS = 10 * 365 * 24 * 3600
 
 
-# ---------------------------------------------------------------- comandos HTTP
+# ---------------------------------------------------------------- HTTP commands
 class Api:
     def __init__(self, store: Store, public_url: str):
         self.s = store
-        self.public_url = public_url      # None: la que use cada cliente para llegar (cabecera Host)
+        self.public_url = public_url      # None: the one each client uses to get here (Host header)
         self.request_base = "http://127.0.0.1:18080"
         self.hub = None
 
@@ -121,7 +121,7 @@ class Api:
     # --- account.*
     def account_HasAccount(self, p, ssid):
         acc = self.s.account_by_platform(p.get("platform"), p.get("platform_id"))
-        # agreement_version 0: el cliente no vuelve a pedir aceptar terminos que ya no existen
+        # agreement_version 0: the client doesn't ask again to accept terms that no longer exist
         return {"exists": acc is not None, "agreement_version": 0}
 
     def account_Register(self, p, ssid):
@@ -146,15 +146,15 @@ class Api:
         self.s.sessions[new_ssid] = acc["player_id"]
         u = self.s.user(acc["player_id"])
         if p.get("lang"):
-            # idioma del juego: lo usan el lanzador (para traducirse) y los nombres de las IA
+            # game language: used by the launcher (to translate itself) and the AI names
             u["lang"], u["lang_time"] = str(p["lang"]).upper(), int(time.time())
             self.s.save()
         return {"ssid": new_ssid, "player_id": acc["player_id"],
                 "user_create": 0 if u["name"] else 1,
                 "suspended": "", "message": "",
-                # Eventos: ya no hay eventos oficiales, asi que todos quedan abiertos y con la
-                # participacion hecha (desbloquea su avatar). Las recompensas por puntos y nivel
-                # y el contenido Deluxe siguen como en el juego (Deluxe = tenerlo en Steam).
+                # Events: there are no official events anymore, so all of them stay open with
+                # participation done (unlocks its avatar). The rewards for points and level
+                # and the Deluxe content stay as in the game (Deluxe = owning it on Steam).
                 "campaigns": [{"id": cid, "up_to_start": -3600, "up_to_end": EVENT_OPEN_SECONDS}
                               for cid in EVENT_CAMPAIGNS],
                 "campaign_entries": list(EVENT_CAMPAIGNS)}
@@ -229,7 +229,7 @@ class Api:
     def user_GetReplay(self, p, ssid):
         return {"replay_data": []}
 
-    # --- match.* que van por HTTP
+    # --- match.* that go over HTTP
     def match_GetUrl(self, p, ssid):
         return {"url": self.ws_url()}
 
@@ -260,10 +260,10 @@ class Api:
         return {"id": room.id, "url": self.ws_url()}
 
     def match_GetStats(self, p, ssid):
-        """Puntos de la ultima partida (pantalla de resultados)."""
+        """Points of the last match (results screen)."""
         pid = self.player(ssid)
         if self.hub:
-            self.hub.settle_kill(pid)      # si la partida acabo en asesinato, se anota ya
+            self.hub.settle_kill(pid)      # if the match ended in a murder, it is recorded now
         return {"stats": self._me(ssid).get("last_result", [])}
 
 
@@ -294,7 +294,7 @@ async def handle_api(request: web.Request):
     params = req.get("params") or {}
     ssid = req.get("ssid", "")
     api: Api = request.app["api"]
-    api.request_base = f"http://{request.host}"   # el anfitrion entra por 127.0.0.1 y su amigo por la IP publica
+    api.request_base = f"http://{request.host}"   # the host comes in through 127.0.0.1 and their friend through the public IP
     fn = getattr(api, cmd.replace(".", "_"), None)
     if fn is None:
         log.warning("COMANDO SIN IMPLEMENTAR %s %s", cmd, json.dumps(params, ensure_ascii=False)[:500])
@@ -309,7 +309,7 @@ async def handle_api(request: web.Request):
         return reply(code=400, error=(e.code, e.msg))
 
 
-# ---------------------------------------------------------------- WebSocket (salas y partidas)
+# ---------------------------------------------------------------- WebSocket (rooms and matches)
 async def handle_ws(request: web.Request):
     ws = web.WebSocketResponse(heartbeat=20, max_msg_size=8 * 1024 * 1024)
     await ws.prepare(request)
@@ -319,9 +319,9 @@ async def handle_ws(request: web.Request):
 
 
 async def handle_sync(request):
-    """Sincronizacion de perfiles para el lanzador (JSON sin cifrar).
+    """Profile sync for the launcher (unencrypted JSON).
     POST {"platform": 3, "platform_id": "...", "profile": {...}, "password": "..."}
-    -> junta el perfil recibido con el del servidor y devuelve el resultado."""
+    -> merges the received profile with the server's and returns the result."""
     api = request.app["api"]
     try:
         body = await request.json()
@@ -339,16 +339,16 @@ async def handle_sync(request):
         api.s.db["accounts"][key] = {"player_id": pid, "token": token, "platform": platform,
                                      "platform_id": platform_id, "country": ""}
     user = api.s.user(pid)
-    stats.merge_into(user, body.get("profile") or {}, prefer_other=True)   # su copia de sus partidas manda
+    stats.merge_into(user, body.get("profile") or {}, prefer_other=True)   # their copy of their matches rules
     api.s.save()
     log.info("Perfil sincronizado: %s (%s)", user.get("name") or platform_id, stats.summary(user))
     return web.json_response({"player_id": pid, "profile": stats.export_profile(user)})
 
 
 async def handle_match(request):
-    """GET /revival/match?platform_id=... -> {"match": {"role", "match_id", "stage", "level"} o null}.
-    El lanzador de un invitado lo mira durante la partida: si el anfitrion desaparece a mitad, cuenta
-    como victoria para quien se queda (el servidor no puede apuntarla porque ya no esta)."""
+    """GET /revival/match?platform_id=... -> {"match": {"role", "match_id", "stage", "level"} or null}.
+    A guest's launcher checks it during the match: if the host disappears midway, it counts
+    as a win for whoever stays (the server can't record it because it is gone)."""
     platform_id = str(request.query.get("platform_id", ""))
     if not platform_id.isdigit():
         return web.json_response({"error": "platform_id"}, status=400)
@@ -357,7 +357,7 @@ async def handle_match(request):
 
 
 async def handle_roster(request):
-    """GET /revival/roster?platform_id=... -> reparto de personajes de la partida de ese jugador (o null).
+    """GET /revival/roster?platform_id=... -> character cast of that player's match (or null).
     Also says which characters are off in that player's room, the room's id and whether the player created it."""
     platform_id = str(request.query.get("platform_id", ""))
     if not platform_id.isdigit():
@@ -417,7 +417,7 @@ def _password_ok(request):
 
 
 async def handle_mods(request):
-    """Paquete con los mods de la sala (los descarga el lanzador al unirse y cuando cambian)."""
+    """Pack with the room's mods (the launcher downloads them on joining and when they change)."""
     if not _password_ok(request):
         return web.json_response({"error": "password"}, status=403)
     room = request.app["room"]
@@ -428,7 +428,7 @@ async def handle_mods(request):
 
 
 async def handle_mods_offer(request):
-    """Un jugador ofrece sus mods a la sala; el anfitrion decide si los usa."""
+    """A player offers their mods to the room; the host decides whether to use them."""
     if not _password_ok(request):
         return web.json_response({"error": "password"}, status=403)
     if (request.content_length or 0) > modpack.MAX_PACK_BYTES:
@@ -444,16 +444,16 @@ async def handle_mods_offer(request):
     return web.json_response({"status": status})
 
 
-# ------------------------------------------------------------ modelos 3D y animaciones de la sala
+# ------------------------------------------------------------ the room's 3D models and animations
 async def handle_models(request):
-    """Lista de los modelos de la sala (que personaje lleva cada uno y el sha256 de cada archivo)."""
+    """List of the room's models (which character each one is on and the sha256 of each file)."""
     if not _password_ok(request):
         return web.json_response({"error": "password"}, status=403)
     return web.json_response(request.app["models"].manifest())
 
 
 async def handle_model_file(request):
-    """Un .glb de la sala, por su sha256 (solo los que esten en uso)."""
+    """A .glb of the room, by its sha256 (only the ones in use)."""
     if not _password_ok(request):
         return web.json_response({"error": "password"}, status=403)
     path = request.app["models"].path_of(request.match_info["sha"])
@@ -463,7 +463,7 @@ async def handle_model_file(request):
 
 
 async def handle_models_offer(request):
-    """Un jugador ofrece sus modelos (solo la lista; los archivos se suben si el anfitrion acepta)."""
+    """A player offers their models (only the list; the files are uploaded if the host accepts)."""
     if not _password_ok(request):
         return web.json_response({"error": "password"}, status=403)
     try:
@@ -483,7 +483,7 @@ async def handle_models_offer_state(request):
 
 
 async def handle_models_upload(request):
-    """El invitado sube un archivo de su oferta aceptada. Se guarda poco a poco y se comprueba antes de usarlo."""
+    """The guest uploads a file of their accepted offer. It is saved bit by bit and checked before use."""
     if not _password_ok(request):
         return web.json_response({"error": "password"}, status=403)
     room = request.app["models"]
@@ -519,14 +519,14 @@ async def handle_models_upload(request):
 
 
 async def handle_stages(request):
-    """Escenarios del creador que hay en la sala (los baja el lanzador al unirse y cuando cambian)."""
+    """Creator stages in the room (the launcher downloads them on joining and when they change)."""
     if not _password_ok(request):
         return web.json_response({"error": "password"}, status=403)
     return web.json_response(request.app["stages"].pack())
 
 
 async def handle_stages_have(request):
-    """El lanzador de un jugador dice que escenarios tiene listos: {"platform_id": ..., "have": {id: huella}}."""
+    """A player's launcher says which stages it has ready: {"platform_id": ..., "have": {id: fingerprint}}."""
     if not _password_ok(request):
         return web.json_response({"error": "password"}, status=403)
     if (request.content_length or 0) > stageroom.MAX_BYTES:
@@ -537,12 +537,12 @@ async def handle_stages_have(request):
     except (ValueError, KeyError, TypeError):
         return web.json_response({"error": "bad_request"}, status=400)
     request.app["stages"].report(pid, body.get("have"), body.get("seen"))
-    await request.app["hub"].stage_poll()        # las salas se enteran al momento
+    await request.app["hub"].stage_poll()        # the rooms find out right away
     return web.json_response({"ok": True})
 
 
 async def _stage_watch(app):
-    """Vigila que salas esperan a que alguien tenga el escenario elegido (y cuando dejan de esperar)."""
+    """Watches which rooms are waiting for someone to have the chosen stage (and when they stop waiting)."""
     async def loop():
         while True:
             await asyncio.sleep(1)
@@ -588,12 +588,12 @@ async def _idle_reset(app):
 def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", data_dir=None, mods=None,
               mods_dir=None, owner="", player_mods="ask", mod_names=None, stages=None, stages_dir=None,
               idle_reset=False):
-    """player_mods: "ask" (el anfitrion decide desde el lanzador), "accept" (se aceptan solos) o
-    "ignore" (servidor dedicado sin nadie que conteste).
+    """player_mods: "ask" (the host decides from the launcher), "accept" (accepted automatically) or
+    "ignore" (dedicated server with nobody to answer).
     idle_reset: standalone server, drop the players' mods when nobody is left."""
     data_dir = data_dir or DATA_DIR
     os.makedirs(data_dir, exist_ok=True)
-    cscrypto._keys()  # falla pronto si no hay claves
+    cscrypto._keys()  # fails early if there are no keys
     app = web.Application(client_max_size=8 * 1024 * 1024, middlewares=[_seen])
     app["last_seen"] = time.time()
     api = Api(Store(os.path.join(data_dir, "db.json")), public_url)
@@ -622,11 +622,11 @@ def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", 
     app["room"] = modroom.ModRoom(mods, mods_dir, owner=owner,
                                   offers_dir=None if player_mods == "ignore" else os.path.join(data_dir, "mods_offers"),
                                   auto_accept=player_mods == "accept", names=mod_names)
-    api.hub.mod_room = app["room"]      # las IA miran a que sticker del juego equivale cada sticker de mod
+    api.hub.mod_room = app["room"]      # the AIs check which game sticker each mod sticker is equivalent to
     app["models"] = modelroom.ModelRoom(
         offers_dir=None if player_mods == "ignore" else os.path.join(data_dir, "models_offers"),
         auto_accept=player_mods == "accept")
-    api.hub.model_room = app["models"]  # cada partida sortea que personajes salen
+    api.hub.model_room = app["models"]  # each match draws which characters appear
     if idle_reset:
         app.cleanup_ctx.append(_idle_reset)
     return app
@@ -642,7 +642,7 @@ def setup_logging(data_dir, debug=False):
 
 
 class BackgroundServer:
-    """Servidor en un hilo aparte (lo usa el lanzador)."""
+    """Server on a separate thread (used by the launcher)."""
 
     def __init__(self, host="127.0.0.1", port=18080, **kw):
         import asyncio
@@ -680,17 +680,17 @@ class BackgroundServer:
 
     @property
     def room(self):
-        """Los mods de la sala (el lanzador del anfitrion los cambia y contesta a las ofertas)."""
+        """The room's mods (the host's launcher changes them and answers the offers)."""
         return self.app["room"]
 
     @property
     def models(self):
-        """Los modelos 3D y animaciones de la sala (igual que los mods)."""
+        """The room's 3D models and animations (same as the mods)."""
         return self.app["models"]
 
     @property
     def stages(self):
-        """Los escenarios del creador que hay en la sala."""
+        """The creator stages in the room."""
         return self.app["stages"]
 
     def stop(self):

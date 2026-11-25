@@ -1,13 +1,13 @@
-// CRIMESIGHT Revival - "Máximo de turnos" en los ajustes de la sala.
+// CRIMESIGHT Revival - "Max turns" in the room settings.
 //
-// El juego trae el ajuste ya hecho (barra de 6 a 15 turnos, con su texto en todos los idiomas), pero lo
-// esconde al abrir la ventana de ajustes de la sala, y al pulsar "Aplicar" no lo manda. Aqui se vuelve a
-// ensenar, empieza en el valor de la sala y lo elegido se anade a los ajustes que se envian (max_turn).
-// El servidor de Revival ya lo guarda y lo reparte a todos. Con los escenarios propios el rango se abre
-// de 1 a 99 turnos (el original era de 6 a 15).
+// The game comes with the setting already made (slider from 6 to 15 turns, with its text in every language), but it
+// hides it when opening the room settings window, and when pressing "Apply" it doesn't send it. Here it is
+// shown again, it starts at the room's value and the choice is added to the settings sent (max_turn).
+// The Revival server already stores it and hands it out to everyone. With custom stages the range opens
+// to 1 to 99 turns (the original was 6 to 15).
 //
-// Tiempo por turno: el juego dejaba de 10 a 999 segundos en salas privadas y de 60 a 180 en publicas.
-// Ahora siempre es de 60 a 999, para quien quiera jugar con calma.
+// Time per turn: the game allowed 10 to 999 seconds in private rooms and 60 to 180 in public ones.
+// Now it is always 60 to 999, for whoever wants to play calmly.
 using System;
 using HarmonyLib;
 using UnityEngine;
@@ -38,7 +38,7 @@ namespace CrimeSightRevival.Mods
         const int MIN = 1, MAX = 99;
         const int MIN_SEC = 60, MAX_SEC = 999;
 
-        // el juego elige el rango de segundos segun la sala sea privada o publica: los dos pasan a 60-999
+        // the game picks the seconds range depending on whether the room is private or public: both become 60-999
         static void BeforeInit(OutGameRoomPopupRoomSetting __instance)
         {
             try
@@ -72,11 +72,11 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[Turnos] tiempo: " + e.Message); }
         }
         static bool _timeLogged;
-        static int _chosen;          // turnos elegidos en la ventana (0 = no se ha tocado)
-        static OutGameRoomPopupRoomSetting _win;   // la ventana de ajustes abierta
+        static int _chosen;          // turns chosen in the window (0 = not touched)
+        static OutGameRoomPopupRoomSetting _win;   // the settings window open
 
-        // Escribir los turnos en la casilla: el juego nunca conecto esa casilla (el ajuste estaba escondido),
-        // asi que el numero se pasa a la barra, como si se hubiera movido (y se activa "Aplicar").
+        // Typing the turns in the box: the game never wired that box (the setting was hidden),
+        // so the number is passed to the slider, as if it had been moved (and "Apply" is enabled).
         static void TypedTurns(OutGameRoomPopupRoomSetting win, string text)
         {
             try
@@ -85,18 +85,18 @@ namespace CrimeSightRevival.Mods
                 int now = Mathf.RoundToInt(win.TurnSlider.value);
                 if (!int.TryParse((text ?? "").Trim(), out int v))
                 {
-                    win.TurnInputField.text = now.ToString();     // no es un numero: se deja el de la barra
+                    win.TurnInputField.text = now.ToString();     // not a number: the slider's is left
                     return;
                 }
                 v = Mathf.Clamp(v, MIN, MAX);
                 win.TurnInputField.text = v.ToString();
-                if (v != now) win.TurnSlider.value = v;           // avisa a la barra -> AfterSlider
+                if (v != now) win.TurnSlider.value = v;           // notifies the slider -> AfterSlider
                 else AfterSlider(win, v);
             }
             catch (Exception e) { Plugin.L.LogWarning("[Turnos] casilla: " + e.Message); }
         }
 
-        // Lo que pone la casilla al pulsar "Aplicar" (por si se pulsa sin haber salido de ella)
+        // What the box says when pressing "Apply" (in case it is pressed without leaving it)
         static void ReadTypedTurns()
         {
             try
@@ -108,8 +108,8 @@ namespace CrimeSightRevival.Mods
             catch { }
         }
 
-        // el juego nunca llego a activar "Aplicar" al mover esta barra (el ajuste estaba escondido):
-        // se activa aqui cuando los turnos elegidos no son los que ya tiene la sala
+        // the game never got to enable "Apply" when moving this slider (the setting was hidden):
+        // it is enabled here when the chosen turns aren't the ones the room already has
         static void AfterSlider(OutGameRoomPopupRoomSetting __instance, float value)
         {
             _chosen = Mathf.RoundToInt(value);
@@ -138,7 +138,7 @@ namespace CrimeSightRevival.Mods
         {
             try
             {
-                // rango de 1 a 99 (el texto "1 - 99 turno(s)" sale de estos valores)
+                // range from 1 to 99 (the "1 - 99 turn(s)" text comes from these values)
                 try
                 {
                     __instance.MIN_TURN = MIN; __instance.MAX_TURN = MAX;
@@ -146,15 +146,15 @@ namespace CrimeSightRevival.Mods
                     if (__instance.TurnInputField != null)
                     {
                         __instance.TurnInputField.characterLimit = 2;
-                        // solo numeros, igual que la casilla del tiempo: el juego le pone su propio filtro (Val)
-                        // al abrir la ventana; la de los turnos usa el mismo
+                        // numbers only, like the time box: the game sets its own filter (Val) on it
+                        // when opening the window; the turns box uses the same
                         if (__instance.SecondsInputField != null)
                             __instance.TurnInputField.onValidateInput = __instance.SecondsInputField.onValidateInput;
                     }
                     __instance.SetText();
                 }
                 catch (Exception e) { Plugin.L.LogWarning("[Turnos] rango: " + e.Message); }
-                // la casilla de los turnos tambien vale para escribirlos
+                // the turns box also works for typing them
                 try
                 {
                     _win = __instance;
@@ -165,7 +165,7 @@ namespace CrimeSightRevival.Mods
                                 new Action<string>(t => TypedTurns(win, t))));
                 }
                 catch (Exception e) { Plugin.L.LogWarning("[Turnos] casilla: " + e.Message); }
-                // la barra empieza en los turnos que tiene la sala ahora
+                // the slider starts at the turns the room has now
                 try
                 {
                     int now = NetworkManager.Instance?.currentRoom?.MaxTurn ?? 0;

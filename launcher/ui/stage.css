@@ -1,4 +1,4 @@
-/* CRIMESIGHT Revival - creador de escenarios */
+/* CRIMESIGHT Revival - stage creator */
 .modal .box.stagebox{width:min(1240px,97vw);height:min(760px,95vh);max-width:none;display:flex;flex-direction:column;padding:16px 18px;position:relative}
 .stagebox h3{font-size:21px;margin:0}
 .shead{display:flex;align-items:center;gap:14px;margin-bottom:10px;flex-wrap:wrap}

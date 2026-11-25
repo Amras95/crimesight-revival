@@ -1,20 +1,20 @@
 """
-CRIMESIGHT Revival - creador de escenarios: de la distribucion del editor a lo que aplica el plugin.
+CRIMESIGHT Revival - stage creator: from the editor's layout to what the plugin applies.
 
-Una distribucion (lo que guarda el editor) dice que habitaciones del escenario base se usan, en que
-casilla y con que giro, y unas pocas decisiones del jugador: que conexiones entre habitaciones se
-cierran con muebles en vez de con puerta, donde hay pasadizos, por que ventanas entran los lobos,
-donde sale el gas y en que casillas empiezan los personajes.
+A layout (what the editor saves) says which rooms of the base stage are used, on which
+square and with which rotation, and a few player decisions: which connections between rooms are
+closed with furniture instead of a door, where there are passages, which windows the wolves come in through,
+where the gas comes out and on which squares the characters start.
 
-Todo lo demas se deduce aqui, igual que lo monta el juego en sus escenarios:
-  - cada hueco de pared que da al exterior lleva una ventana;
-  - cada hueco entre dos habitaciones lleva una puerta, o dos muebles que lo tapan;
-  - un hueco que da a una pared sin hueco lleva un mueble;
-  - las puertas y muebles de las paredes interiores de una habitacion van con ella.
+Everything else is worked out here, just as the game builds its stages:
+  - each wall gap facing outside has a window;
+  - each gap between two rooms has a door, or two pieces of furniture covering it;
+  - a gap facing a wall without a gap has a piece of furniture;
+  - the doors and furniture on a room's interior walls go with it.
 
-  default_layout(cat, scene)  -> la distribucion original del escenario
-  derive(cat, layout)         -> piezas, aristas para dibujar y problemas (validacion)
-  compile_layout(cat, layout) -> lo que lee el plugin (layout_test.json)
+  default_layout(cat, scene)  -> the stage's original layout
+  derive(cat, layout)         -> pieces, edges to draw and problems (validation)
+  compile_layout(cat, layout) -> what the plugin reads (layout_test.json)
 """
 import math
 
@@ -22,7 +22,7 @@ from stagedata import GRID, MIN_X, MAX_X, MIN_Z, MAX_Z, cell_to_id, edge_cells, 
 
 FORMAT = 1
 PLUGIN_FORMAT = 2
-WANT_WOLVES = WANT_GAS = WANT_BYWAYS = 3            # lo que traen los escenarios del juego
+WANT_WOLVES = WANT_GAS = WANT_BYWAYS = 3            # what the game's stages bring
 MAX_ROOMS = 30
 
 
@@ -44,7 +44,7 @@ def _footprint(t, rot):
 
 
 def place(cat, stage, r):
-    """Habitacion colocada: posicion del pivote, giro y casillas que ocupa."""
+    """Placed room: pivot position, rotation and squares it takes."""
     src = stage["rooms"][r["src"]]
     t = cat["types"][src["type"]]
     rot = int(r.get("rot", 0)) % 4
@@ -65,7 +65,7 @@ def _local(p, x, z):
 
 
 def _free_floor(t, lx, lz):
-    """El punto local esta sobre suelo y no dentro de un mueble."""
+    """The local point is on floor and not inside a piece of furniture."""
     tri = lambda f: ((f[0], f[1]), (f[2], f[3]), (f[4], f[5]))  # noqa: E731
     return any(_inside(lx, lz, *tri(f)) for f in t["floor"]) and not any(_inside(lx, lz, *tri(f)) for f in t["block"])
 
@@ -107,8 +107,8 @@ def _clean(layout, stage):
 
 
 def derive(cat, layout):
-    """Calcula todo lo que sale de una distribucion. Devuelve un dict con:
-    layout (limpia), rooms, edges (para dibujar), pieces/hide/locators (para el plugin) y problems."""
+    """Works out everything that comes from a layout. Returns a dict with:
+    layout (clean), rooms, edges (to draw), pieces/hide/locators (for the plugin) and problems."""
     stage = cat["stages"].get(layout.get("base"))
     if stage is None:
         raise ValueError("Escenario base desconocido.")
@@ -118,7 +118,7 @@ def derive(cat, layout):
     err = lambda code, **kw: problems.append({"level": "error", "code": code, **kw})  # noqa: E731
     warn = lambda code, **kw: problems.append({"level": "warn", "code": code, **kw})  # noqa: E731
 
-    # ---- habitaciones y casillas
+    # ---- rooms and squares
     rooms = [place(cat, stage, r) for r in lay["rooms"]]
     if not rooms:
         err("no_rooms")
@@ -137,15 +137,15 @@ def derive(cat, layout):
         else:
             err("overlap", room=b[1], other=b[2])
 
-    # ---- aristas del perimetro de cada habitacion, en el mundo
-    sides = {}                                      # clave -> [(habitacion, hueco abierto, normal hacia fuera, arista local)]
+    # ---- perimeter edges of each room, in the world
+    sides = {}                                      # key -> [(room, open gap, outward normal, local edge)]
     for k, p in enumerate(rooms):
         for e in types[p["type"]]["edges"]:
             x, z = _world(p, e["x"], e["z"])
             nx, nz = rot_xz(e["nx"], e["nz"], p["yaw"])
             sides.setdefault(ekey(x, z), []).append((k, e["open"], (round(nx), round(nz)), e))
 
-    # ---- piezas del escenario base: reservadas (van con su habitacion) y libres
+    # ---- base stage pieces: reserved (they go with their room) and free
     base = stage["pieces"]
     pools = {"door": [], "shelf": [], "window": [], "outdoor": []}
     at_edge = {}
@@ -154,7 +154,7 @@ def derive(cat, layout):
             continue
         pools[pc["kind"]].append(n)
         at_edge.setdefault((pc["kind"], ekey(*pc["edge"])), []).append(n)
-    closed_window = set()                           # (tipo, arista local): pared sin hueco que lleva ventana
+    closed_window = set()                           # (type, local edge): wall without a gap that has a window
     for st in cat["stages"].values():
         for r in st["rooms"]:
             closed = {(e["x"], e["z"]) for e in types[r["type"]]["edges"] if not e["open"]}
@@ -163,19 +163,19 @@ def derive(cat, layout):
                     closed_window.add((r["type"], c["ex"], c["ez"]))
 
     used, pieces, edges = set(), [], []
-    by_edge = {}                                    # clave -> indices en pieces
+    by_edge = {}                                    # key -> indices in pieces
 
     def add(src, x, z, yaw, key):
         pieces.append({"src": src, "x": round(x, 3), "z": round(z, 3), "yaw": round(yaw) % 360, "edge": key})
         by_edge.setdefault(key, []).append(len(pieces) - 1)
         return len(pieces) - 1
 
-    def keep(n, key):                               # pieza del juego que se queda donde estaba
+    def keep(n, key):                               # game piece that stays where it was
         used.add(n)
         return add(n, base[n]["x"], base[n]["z"], base[n]["yaw"], key)
 
     def take(kind, want=None):
-        """Una pieza libre de ese tipo (o, si no quedan, una repetida: el plugin la duplica)."""
+        """A free piece of that type (or, if none are left, a repeated one: the plugin duplicates it)."""
         pool = pools[kind]
         ok = [n for n in pool if want is None or want(base[n])]
         for n in ok:
@@ -188,7 +188,7 @@ def derive(cat, layout):
         return None
     take.turn = {}
 
-    # ---- piezas que van con cada habitacion: paredes interiores y puerta principal
+    # ---- pieces that go with each room: interior walls and main door
     outdoor_edges = set()
     for k, p in enumerate(rooms):
         for c in stage["rooms"][p["src"]]["carried"]:
@@ -212,11 +212,11 @@ def derive(cat, layout):
                            for c in stage["rooms"][p["src"]]["carried"])
             edges.append({"key": key, "x": round(ex), "z": round(ez), "kind": "inner_door" if has_door else "inner_blocked"})
 
-    # ---- huecos del perimetro
+    # ---- perimeter gaps
     blocked, byways, wolves = set(lay["blocked"]), set(lay["byways"]), set(lay["wolves"])
     blocked |= byways
-    pending = []                                    # huecos que necesitan una pieza libre
-    links = []                                      # (habitacion, habitacion) unidas por una puerta
+    pending = []                                    # gaps that need a free piece
+    links = []                                      # (room, room) joined by a door
     locators = {"byways": [], "wolves": []}
     valid = {"blocked": set(), "byways": set(), "wolves": set()}
     for key in sorted(sides, key=_parse_key):
@@ -244,7 +244,7 @@ def derive(cat, layout):
             continue
         _a, _b, n = edge_cells(ex, ez)
         (ka, open_a, out_a, _), (kb, open_b, out_b, _) = ss
-        if (out_a[0], out_a[1]) != n:               # ka queda en el lado negativo de la normal
+        if (out_a[0], out_a[1]) != n:               # ka ends up on the negative side of the normal
             (ka, open_a), (kb, open_b) = (kb, open_b), (ka, open_a)
         if open_a and open_b:
             if key in blocked:
@@ -271,7 +271,7 @@ def derive(cat, layout):
                     pending.append(("door", None, ex + dx, ez + dz, yaw, key))
                 links.append((ka, kb))
                 edges.append({"key": key, "x": ex, "z": ez, "kind": "door", "toggle": True})
-        elif open_a or open_b:                      # hueco contra pared: un mueble que da al lado del hueco
+        elif open_a or open_b:                      # gap against a wall: a piece of furniture facing the gap's side
             s = -1 if open_a else 1
             same = [m for m in at_edge.get(("shelf", key), []) if m not in used and base[m].get("side", 1) == s]
             if same:
@@ -280,7 +280,7 @@ def derive(cat, layout):
                 pending.append(("shelf", None, ex - s * 0.1 * n[0], ez - s * 0.1 * n[1], yaw_of(s * n[0], s * n[1]), key))
             edges.append({"key": key, "x": ex, "z": ez, "kind": "single"})
 
-    # ---- huecos sin pieza propia: se usan las piezas libres del escenario (y, si faltan, repetidas)
+    # ---- gaps without their own piece: the stage's free pieces are used (and, if short, repeated ones)
     for kind, want, x, z, yaw, key in pending:
         src = None
         if want:
@@ -294,12 +294,12 @@ def derive(cat, layout):
     for b in locators["byways"]:
         b["shelves"] = list(by_edge.get(b["shelves"], []))
 
-    # ---- decisiones del jugador que ya no encajan con las habitaciones
+    # ---- player decisions that no longer fit the rooms
     lay["blocked"] = sorted(valid["blocked"] - valid["byways"])
     lay["byways"] = sorted(valid["byways"])
     lay["wolves"] = sorted(valid["wolves"])
 
-    # ---- conexion entre habitaciones
+    # ---- connection between rooms
     if rooms and not bad:
         seen, todo = {0}, [0]
         while todo:
@@ -313,7 +313,7 @@ def derive(cat, layout):
             if k not in seen:
                 err("unreachable", room=k)
 
-    # ---- salidas, gas y recomendaciones
+    # ---- exits, gas and recommendations
     def spot(x, z):
         k = cell_room.get((round(x / GRID), round(z / GRID)))
         if k is None:
@@ -357,7 +357,7 @@ def derive(cat, layout):
 
 
 def compile_layout(cat, layout):
-    """Lo que aplica el plugin: de donde sale cada pieza del escenario base y donde va."""
+    """What the plugin applies: where each base stage piece comes from and where it goes."""
     d = derive(cat, layout)
     if not d["ok"]:
         raise ValueError("La distribucion tiene errores.")

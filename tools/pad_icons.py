@@ -1,14 +1,14 @@
 """
-Genera plugin/pad_icons.png: los iconos de botones de mando que el plugin ensena en la barra de ayuda
-del juego cuando juegas con mando (el juego solo trae iconos de teclado y raton). Dibujos propios.
+Generates plugin/pad_icons.png: the gamepad button icons the plugin shows in the game's help bar
+when you play with a gamepad (the game only has keyboard and mouse icons). Our own drawings.
   python tools/pad_icons.py
-Celdas de 64x64 en una hoja de 512x512; el orden de NAMES y COMBOS es el que usa el plugin
-(CrimeSightRevivalPad.cs). dpad_up/down/left/right: la cruceta con esa direccion marcada. La ultima celda (abajo a la derecha) queda vacia: es el icono "nada".
+64x64 cells in a 512x512 sheet; the order of NAMES and COMBOS is the one the plugin uses
+(CrimeSightRevivalPad.cs). dpad_up/down/left/right: the D-pad with that direction marked. The last cell (bottom right) stays empty: it is the "nothing" icon.
 """
 import os
 from PIL import Image, ImageDraw, ImageFont
 
-CELL, COLS, SS = 64, 8, 4                 # SS: se dibuja 4 veces mas grande y se reduce (bordes suaves)
+CELL, COLS, SS = 64, 8, 4                 # SS: drawn 4 times bigger and scaled down (smooth edges)
 NAMES = [
     "xbox_a", "xbox_b", "xbox_x", "xbox_y", "xbox_lb", "xbox_rb", "xbox_lt", "xbox_rt",
     "ps_a", "ps_b", "ps_x", "ps_y", "ps_lb", "ps_rb", "ps_lt", "ps_rt",
@@ -16,7 +16,7 @@ NAMES = [
     "lstick", "rstick", "dpad", "xbox_start", "xbox_back", "ps_start", "ps_back", "sw_start",
     "sw_back", "dpad_up", "dpad_down", "dpad_left", "dpad_right",
 ]
-# Botones dobles (girar: LB+RB; zoom: LT+RT), en celdas de 128x64 desde la fila 5, cuatro por fila
+# Double buttons (turn: LB+RB; zoom: LT+RT), in 128x64 cells from row 5, four per row
 COMBOS = [("xbox", "lb", "rb"), ("xbox", "lt", "rt"), ("ps", "lb", "rb"), ("ps", "lt", "rt"),
           ("sw", "lb", "rb"), ("sw", "lt", "rt")]
 WHITE, DARK = (240, 240, 236, 255), (34, 36, 44, 255)
@@ -46,9 +46,9 @@ def face(name, S):
         if style == "xbox":
             col = {"a": (40, 160, 70), "b": (205, 50, 50), "x": (40, 110, 210), "y": (220, 170, 20)}[b]
             text(d, b.upper(), int(S * .52), col + (255,), S / 2, S / 2)
-        elif style == "sw":           # Steam pone los de Switch por posicion: abajo B, derecha A, izquierda Y, arriba X
+        elif style == "sw":           # Steam maps the Switch ones by position: bottom B, right A, left Y, top X
             text(d, {"a": "B", "b": "A", "x": "Y", "y": "X"}[b], int(S * .52), DARK, S / 2, S / 2)
-        else:                         # PlayStation: abajo cruz, derecha circulo, izquierda cuadrado, arriba triangulo
+        else:                         # PlayStation: bottom cross, right circle, left square, top triangle
             w, c = int(S * .075), S / 2
             if b == "a":
                 r = S * .2
@@ -78,10 +78,10 @@ def face(name, S):
     elif b in ("start", "back"):
         d.rounded_rectangle((S * .1, S * .2, S * .9, S * .8), radius=S * .28, fill=WHITE, outline=DARK, width=int(S * .05))
         c, w = S / 2, int(S * .055)
-        if style == "xbox" and b == "start":        # tres rayas
+        if style == "xbox" and b == "start":        # three stripes
             for k in (-1, 0, 1):
                 d.line((c - S * .16, c + k * S * .1, c + S * .16, c + k * S * .1), fill=DARK, width=w)
-        elif style == "xbox":                       # dos ventanas
+        elif style == "xbox":                       # two windows
             d.rectangle((c - S * .17, c - S * .12, c + S * .05, c + S * .06), outline=DARK, width=w)
             d.rectangle((c - S * .05, c - S * .04, c + S * .17, c + S * .14), outline=DARK, width=w)
         elif style == "ps":
@@ -111,10 +111,10 @@ def dpad(S):
 
 
 def dpad_dir(S, way):
-    """La cruceta con una direccion marcada (una flecha oscura en ese brazo)."""
+    """The D-pad with one direction marked (a dark arrow on that arm)."""
     im = dpad(S)
     d = ImageDraw.Draw(im)
-    c, a, h = S / 2, S * .11, S * .30          # centro, media anchura de la flecha, distancia de su punta
+    c, a, h = S / 2, S * .11, S * .30          # centre, arrow half-width, distance of its tip
     pts = {"up": [(c, c - h - a), (c - a, c - h + a * .6), (c + a, c - h + a * .6)],
            "down": [(c, c + h + a), (c - a, c + h - a * .6), (c + a, c + h - a * .6)],
            "left": [(c - h - a, c), (c - h + a * .6, c - a), (c - h + a * .6, c + a)],

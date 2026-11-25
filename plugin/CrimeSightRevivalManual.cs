@@ -1,7 +1,7 @@
-// CRIMESIGHT Revival - "Manual online" abre la wiki del proyecto.
+// CRIMESIGHT Revival - "Online manual" opens the project's wiki.
 //
-// El boton del juego llevaba a la pagina de Konami del manual, que ahora solo dice que el juego ya no esta en
-// servicio. Se cambia por la wiki de CRIMESIGHT Revival en GitHub (las demas direcciones no se tocan).
+// The game's button led to Konami's manual page, which now only says the game is no longer in
+// service. It is swapped for the CRIMESIGHT Revival wiki on GitHub (the other addresses aren't touched).
 using System;
 using HarmonyLib;
 using UnityEngine;
@@ -30,7 +30,7 @@ namespace CrimeSightRevival.Mods
 
         static void AfterManualUrl(ref string __result) => __result = Wiki;
 
-        // por si algun boton abre la pagina de Konami del juego sin pasar por GetURLOnlineManual
+        // in case some button opens Konami's game page without going through GetURLOnlineManual
         static void BeforeOpenUrl(ref string url)
         {
             if (url != null && url.IndexOf("konami.com/games/crimesight", StringComparison.OrdinalIgnoreCase) >= 0)

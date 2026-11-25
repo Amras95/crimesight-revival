@@ -1,15 +1,15 @@
 """
-CRIMESIGHT Revival - modelos 3D y animaciones de una sala (los .glb que ponen el anfitrion y los invitados).
+CRIMESIGHT Revival - a room's 3D models and animations (the .glb files the host and the guests put in).
 
-Un "juego de modelos" es lo que cada uno ha elegido en el lanzador (Mods > Modelos):
+A "model set" is what each one has chosen in the launcher (Mods > Models):
 
     {"swaps": {"PawnTypeData_F": "file:<sha256>", "PawnTypeData_A": "PawnTypeData_B"},
      "anims": {"PawnTypeData_F": {"idle": "file:<sha256>"}},
-     "files": {"<sha256>": {"kind": "model" | "anim", "size": bytes, "name": "Mi robot"}}}
+     "files": {"<sha256>": {"kind": "model" | "anim", "size": bytes, "name": "My robot"}}}
 
-Los archivos van por su sha256: cada PC solo descarga los que no tiene y nadie puede colar otro archivo con
-el mismo nombre. Antes de usar un .glb que viene de otro PC se comprueba entero (check_glb): que sea un glTF
-binario de verdad, con todo dentro del archivo, y que no se pase de tamano (mallas, texturas, animaciones).
+The files go by their sha256: each PC only downloads the ones it doesn't have and nobody can sneak in another file with
+the same name. Before using a .glb that comes from another PC it is checked fully (check_glb): that it is a real
+binary glTF, with everything inside the file, and that it doesn't exceed the size limits (meshes, textures, animations).
 """
 import hashlib, io, json, re, struct
 
@@ -18,7 +18,7 @@ SLOTS = ("PawnTypeData_A", "PawnTypeData_B", "PawnTypeData_C", "PawnTypeData_D",
 ANIM_KINDS = ("idle", "walk", "run")
 KINDS = ("model", "anim", "image")
 FILE_PREFIX = "file:"
-PAWNS = SLOTS[:6]                        # los 6 sitios de una partida (cada uno con su forma de jugar)
+PAWNS = SLOTS[:6]                        # the 6 seats of a match (each with its own way of playing)
 TRAITOR = "ThreatTypeData_Traitor"
 MIN_PAWNS = 6
 ROLES = ("pawn", "traitor")
@@ -28,15 +28,15 @@ MAX_TALK = 48
 _CHAR = re.compile(r"^[a-z0-9]{10}$")
 _TALK_KEY = re.compile(r"^[A-Za-z0-9_]{1,48}$")
 
-MAX_FILE_BYTES = 64 * 1024 * 1024        # por archivo
-MAX_ROOM_BYTES = 256 * 1024 * 1024       # todos los de una sala (o una oferta)
+MAX_FILE_BYTES = 64 * 1024 * 1024        # per file
+MAX_ROOM_BYTES = 256 * 1024 * 1024       # all of a room's (or an offer's)
 MAX_FILES = 24
-MAX_VERTICES = 400_000                   # sumando todas las mallas de un archivo
+MAX_VERTICES = 400_000                   # adding up all the meshes of a file
 MAX_INDICES = 3_000_000
 MAX_IMAGES = 24
 MAX_IMAGE_SIDE = 4096
 MAX_NODES = 2000
-MAX_ANIM_VALUES = 4_000_000              # floats de todas las curvas de animacion
+MAX_ANIM_VALUES = 4_000_000              # floats of all the animation curves
 _SHA = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -53,7 +53,7 @@ def empty():
 
 
 def set_hash(ms):
-    """Huella de un juego de modelos (igual en todos los PCs): cambia si cambia cualquier eleccion o archivo."""
+    """Fingerprint of a model set (the same on every PC): changes if any choice or file changes."""
     if not ms.get("swaps") and not ms.get("anims") and not ms.get("chars"):
         return ""
     key = json.dumps({"s": ms.get("swaps", {}), "a": ms.get("anims", {}), "c": ms.get("chars", {}),
@@ -72,7 +72,7 @@ def _used(ms):
 
 
 def summary(ms):
-    """Lo que se ensena antes de unirse (y en el aviso al anfitrion)."""
+    """What is shown before joining (and in the notice to the host)."""
     files = ms.get("files", {})
     return {"hash": ms.get("hash", ""), "models": sum(1 for f in files.values() if f["kind"] == "model"),
             "anims": sum(1 for f in files.values() if f["kind"] == "anim"), "chars": len(ms.get("chars", {})),
@@ -81,7 +81,7 @@ def summary(ms):
 
 
 def manifest(ms):
-    """El juego de modelos sin rutas locales (lo que viaja por la red)."""
+    """The model set without local paths (what travels over the network)."""
     return {"hash": ms.get("hash", ""), "swaps": dict(ms.get("swaps", {})),
             "anims": {k: dict(v) for k, v in ms.get("anims", {}).items()},
             "chars": {k: _char_copy(c) for k, c in ms.get("chars", {}).items()},
@@ -101,12 +101,12 @@ def _char_copy(c):
 
 
 def clean_text(v, n):
-    """Texto de otro PC: sin caracteres de control ni etiquetas (el juego interpreta <...>)."""
+    """Text from another PC: without control characters or tags (the game interprets <...>)."""
     return re.sub(r"[\x00-\x08\x0b-\x1f<>]", "", str(v or ""))[:n].strip()
 
 
 def clean(meta):
-    """Valida un juego de modelos que llega de otro PC (sin los archivos). Lanza ModelError si algo no vale."""
+    """Validates a model set that comes from another PC (without the files). Raises ModelError if something is invalid."""
     if not isinstance(meta, dict):
         raise ModelError("juego de modelos no valido")
     files = {}
@@ -193,30 +193,40 @@ def fill_enabled(items):
     return items
 
 
-def draw(ms, disabled, rng):
-    """Reparto de una partida: que personaje se ve en cada uno de los 6 sitios y que traidor. Salen 6 de los
-    activados (originales y nuevos con la misma probabilidad); un original sale en su propio sitio y los nuevos
-    rellenan los demas al azar. Si hay menos de 6 activados, se completan con originales."""
+def draw(ms, disabled, rng, must=()):
+    """A match's cast: which character is seen in each of the 6 seats and which traitor. 6 are drawn from the
+    enabled ones (originals and new ones with the same probability); an original appears in its own seat and the new ones
+    fill the rest at random. If fewer than 6 are enabled, they are completed with originals. The ones in must
+    ("orig:PawnTypeData_X" or a new character's id) always appear (developer mode)."""
     disabled = set(disabled or ())
     chars = ms.get("chars", {})
+    forced = []
+    for cid in must or ():
+        cid = str(cid or "")
+        item = ("orig", cid[5:]) if cid.startswith("orig:") and cid[5:] in PAWNS else \
+            ("char", cid) if (chars.get(cid) or {}).get("role", "pawn") == "pawn" and cid in chars else None
+        if item and item not in forced:
+            forced.append(item)
     pool = [("orig", k) for k in PAWNS if "orig:" + k not in disabled]
     pool += [("char", cid) for cid, c in sorted(chars.items()) if c.get("role") == "pawn" and cid not in disabled]
-    if len(pool) < MIN_PAWNS:                                    # siempre 6: vuelven originales desactivados
+    pool += [x for x in forced if x not in pool]
+    if len(pool) < MIN_PAWNS:                                    # always 6: disabled originals come back
         pool += [("orig", k) for k in PAWNS if ("orig", k) not in pool][:MIN_PAWNS - len(pool)]
-    picked = rng.sample(pool, MIN_PAWNS) if len(pool) > MIN_PAWNS else list(pool)
+    rest = [x for x in pool if x not in forced]
+    picked = forced + rng.sample(rest, MIN_PAWNS - len(forced)) if len(pool) > MIN_PAWNS else list(pool)
     positions = {k: None for k in PAWNS}
     free = [k for k in PAWNS if ("orig", k) not in picked]
     rng.shuffle(free)
     for (kind, cid) in picked:
         if kind == "char":
             positions[free.pop()] = cid
-    # el traidor siempre es el original por ahora (sus variantes llegaran mas adelante)
+    # the traitor is always the original for now (its variants will come later)
     return {"positions": positions, "traitor": None}
 
 
 def merge(parts):
-    """Junta varios juegos de modelos: el primero manda (el anfitrion) y los siguientes (invitados aceptados,
-    por orden) solo rellenan los personajes y animaciones que quedan libres. Conserva las rutas locales."""
+    """Merges several model sets: the first one rules (the host) and the following ones (accepted guests,
+    in order) only fill the characters and animations still free. Keeps the local paths."""
     swaps, anims, chars, files = {}, {}, {}, {}
     for ms in parts:
         for cid, c in ms.get("chars", {}).items():
@@ -236,9 +246,9 @@ def merge(parts):
     return out
 
 
-# ------------------------------------------------------------------ comprobar un .glb
+# ------------------------------------------------------------------ checking a .glb
 def check_file(data, kind):
-    """Comprueba un archivo de la sala segun su tipo (modelo, animacion o imagen de personaje)."""
+    """Checks a room file according to its type (model, animation or character image)."""
     if kind == "image":
         if len(data) > MAX_IMAGE_BYTES:
             raise ModelError("imagen demasiado grande")
@@ -248,7 +258,7 @@ def check_file(data, kind):
 
 
 def check_glb(data, kind):
-    """Lanza ModelError si el archivo no es un .glb que se pueda usar sin riesgo (y del tipo esperado)."""
+    """Raises ModelError if the file isn't a .glb that can be used safely (and of the expected type)."""
     if len(data) > MAX_FILE_BYTES:
         raise ModelError("modelo demasiado grande")
     if len(data) < 20 or data[:4] != b"glTF":
@@ -276,7 +286,7 @@ def check_glb(data, kind):
         raise ModelError("el .glb necesita la extension %s" % str(k)[:40])
     buffers = gltf.get("buffers", []) or []
     if len(buffers) > 1 or any("uri" in b for b in buffers):
-        raise ModelError("el .glb tiene archivos fuera")          # todo tiene que ir dentro
+        raise ModelError("el .glb tiene archivos fuera")          # everything must be inside
     if buffers and int(buffers[0].get("byteLength", 0)) > bin_len:
         raise ModelError(".glb danado")
     views = gltf.get("bufferViews", []) or []
@@ -292,7 +302,7 @@ def check_glb(data, kind):
         if cnt < 0 or a.get("type") not in sizes or a.get("componentType") not in comp:
             raise ModelError(".glb con datos no admitidos")
         sp = a.get("sparse")
-        if sp:                                   # los usan las expresiones de VRM (no se usan, pero no se rechazan)
+        if sp:                                   # used by VRM expressions (not used, but not rejected)
             if not isinstance(sp, dict) or int(sp.get("count", 0)) > cnt:
                 raise ModelError(".glb danado")
             for part in ("indices", "values"):

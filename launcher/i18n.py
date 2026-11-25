@@ -1,16 +1,16 @@
 """
-Textos del lanzador en los 11 idiomas del juego.
+Launcher texts in the game's 11 languages.
 
-El idioma se toma del juego: el que tenia puesto la ultima vez que se conecto a un servidor de
-Revival y, si no, el idioma con el que esta instalado en Steam. Sin juego localizado: ingles.
+The language is taken from the game: the one it had set the last time it connected to a
+Revival server and, otherwise, the language it is installed with on Steam. Without a localised game: English.
 """
 import re
 
 LANGS = ("en", "es", "ja", "fr", "it", "de", "pt", "ru", "zh-CN", "zh-TW", "ko")
-# Codigos que manda el juego al iniciar sesion (ConfigSystem.LangType)
+# Codes the game sends when logging in (ConfigSystem.LangType)
 GAME_CODES = {"JP": "ja", "JA": "ja", "EN": "en", "FR": "fr", "IT": "it", "DE": "de", "ES": "es",
               "PT": "pt", "RU": "ru", "KO": "ko", "KR": "ko", "CN": "zh-CN", "TW": "zh-TW"}
-# Idiomas de Steam (appmanifest / ajustes del cliente)
+# Steam languages (appmanifest / client settings)
 STEAM_CODES = {"english": "en", "spanish": "es", "latam": "es", "japanese": "ja", "french": "fr",
                "italian": "it", "german": "de", "brazilian": "pt", "portuguese": "pt", "russian": "ru",
                "koreana": "ko", "korean": "ko", "schinese": "zh-CN", "tchinese": "zh-TW"}
@@ -579,7 +579,7 @@ _add("zh-TW",
      ev_arrest="最終回合結束：犯人已被逮捕", ev_threat="出現了威脅",
      ev_gas="發生了瓦斯外洩", ev_synced="個人資料已同步")
 
-# --- mods de apariencia (stickers y avatares nuevos) ------------------------------------------
+# --- appearance mods (new stickers and avatars) ------------------------------------------
 _MODS = {
     "en": dict(
         mods_btn="Mods", mods_title="Mods",
@@ -793,7 +793,8 @@ _TEXT_HINT = {
 for _l, _v in _TEXT_HINT.items():
     S[_l]["mods_text_hint"] = _v
 
-# --- recarga en caliente con BepInEx (activada por defecto: el lanzador la instala sola) -----------------------------------------------
+# --- hot reload with BepInEx (on by default: the launcher installs it by itself)
+# -----------------------------------------------
 _BEP = {
     "en": dict(bep_title="Hot reload", bep_desc="BepInEx is a mod loader that shows mod changes without restarting the game and enables the custom cursor, 3D models and custom scenarios. The launcher downloads it for you (34 MB); you can remove it at any time.",
                bep_status_off="Off", bep_status_on="On", bep_status_first="On · the game will take about a minute to start next time (first time only)",
@@ -876,7 +877,7 @@ _BEP = {
 for _l, _d in _BEP.items():
     S[_l].update(_d)
 
-# Instalacion automatica de BepInEx al abrir el lanzador (registro)
+# Automatic BepInEx install when opening the launcher (log)
 _BEP_AUTO = {
     "en": dict(bep_installing_log="Installing BepInEx, the mod loader (34 MB download, first time only)…",
                bep_ready_log="BepInEx installed. The game will take about a minute to start next time (first time only).",
@@ -953,7 +954,7 @@ _TXT = {
 for _l, (_b, _ti, _d, _s) in _TXT.items():
     S[_l].update(mods_texts_btn=_b, mods_texts_title=_ti, mods_texts_desc=_d, mods_text_saved=_s)
 
-# A que sticker del juego equivale cada sticker de un mod (para que las IA le contesten)
+# Which game sticker each mod sticker is equivalent to (so the AIs reply to it)
 _MEANS = {
     "en": ("The picture on the right of each stamp says which game stamp it counts as, so the AIs can reply to it. Leave it empty and they won't reply.", "Counts as…", "None"),
     "es": ("La imagen a la derecha de cada sticker dice a qué sticker del juego equivale, para que las IA puedan contestarle. Si la dejas vacía, no le contestan.", "Equivale a…", "Ninguno"),
@@ -986,7 +987,7 @@ _MANUAL = {
 for _l, _v in _MANUAL.items():
     S[_l]["bep_manual"] = _v
 
-# --- mods de los jugadores que se unen ---------------------------------------------------------
+# --- mods of the players who join ---------------------------------------------------------
 _OFFER = {
     "en": dict(mods_offer_title="{player} has mods",
                mods_offer_text="{player} wants to use their own stamps and avatars in your room. If you download them, everyone in the room will see them. They're temporary and are deleted when the room closes.",
@@ -1113,7 +1114,7 @@ _OFFER = {
 for _l, _d in _OFFER.items():
     S[_l].update(_d)
 
-# --- anfitrion: que hacer con los mods de los invitados (preguntar o aceptar siempre) -------------
+# --- host: what to do with the guests' mods (ask or always accept) -------------
 _GUEST = {
     "en": dict(guest_mods_title="Guests' mods", guest_mods_ask="Ask me", guest_mods_always="Always accept",
                guest_mods_desc="For when you host and someone joins with their own stamps or avatars. You're asked in the game and in the launcher; with \"Always accept\" they're added right away.",
@@ -1152,7 +1153,7 @@ _GUEST = {
 for _l, _d in _GUEST.items():
     S[_l].update(_d)
 
-# ventana de mods por pestañas
+# mods window with tabs
 _MODTABS = {
     "en": dict(mods_tab_general="General", mods_tab_stickers="Stamps", mods_tab_avatars="Avatars",
                mods_none_stickers="You don't have any stamps yet.", mods_none_avatars="You don't have any avatars yet.",
@@ -1191,7 +1192,7 @@ _MODTABS = {
 for _l, _d in _MODTABS.items():
     S[_l].update(_d)
 
-# modelos 3D (cambiar un personaje por otro)
+# 3D models (swap one character for another)
 _MODELS = {
     "en": dict(mods_tab_models="Models", models_original="Original", models_now="Looks like {name}",
                models_desc="Swap a character's 3D model for another character's from the game (Sherlock and Moriarty too). They keep their own animations and behaviour; only the look changes. Only you see it, and the 2D portraits don't change.",
@@ -1241,7 +1242,7 @@ _MODELS = {
 for _l, _d in _MODELS.items():
     S[_l].update(_d)
 
-# Modelos 3D propios (.glb): carpeta, esqueletos e instrucciones (README.txt de la carpeta de modelos)
+# Custom 3D models (.glb): folder, skeletons and instructions (README.txt in the models folder)
 _MODELS_CUSTOM = {
     "en": dict(models_custom_title="Your own 3D models",
                models_custom_desc="Put a .glb file in the models folder and it appears in the lists above with its file name. To make one, open a character's skeleton (\"skeletons\" folder) in Blender, fit your model to it and export it as glTF Binary (.glb). The README in the folder explains the steps.",
@@ -1302,7 +1303,7 @@ _MODELS_CUSTOM = {
 for _l, _d in _MODELS_CUSTOM.items():
     S[_l].update(_d)
 
-# Modelos en .fbx (se convierten solos) y modelos con otro esqueleto (se adaptan solos)
+# Models in .fbx (converted automatically) and models with another skeleton (adapted automatically)
 _MODELS_FBX = {
     "en": dict(models_custom_desc="Put a .fbx or .glb file in the models folder (or a subfolder with the model and its textures) and it appears in the lists above. Humanoid models from Mixamo, VRChat, VRoid, Blender, 3ds Max or MMD are fitted to the character's skeleton automatically. For a perfect fit, build it on one of the skeletons in the \"skeletons\" folder. The README in the folder explains everything.",
                models_convert_error="Couldn't read this model: {err}"),
@@ -1330,7 +1331,7 @@ _MODELS_FBX = {
 for _l, _d in _MODELS_FBX.items():
     S[_l].update(_d)
 
-# avisos del paso de .fbx a .glb (fbx2glb.py)
+# notices of the .fbx to .glb conversion (fbx2glb.py)
 _MODELS_FBX_NOTES = {
     'en': dict(models_tex_missing='Texture not found: {name} (put it next to the model)', models_tex_bad="Couldn't read the texture {name}: save it as PNG", models_mesh_static="The part {name} has no bones, so it won't move",
                models_fbx_old="it's a very old FBX: export it again as FBX 2014 or later", models_fbx_empty="there's no 3D model inside"),
@@ -1358,7 +1359,7 @@ _MODELS_FBX_NOTES = {
 for _l, _d in _MODELS_FBX_NOTES.items():
     S[_l].update(_d)
 
-# animaciones propias (reposo, andar, correr) por personaje
+# custom animations (idle, walk, run) per character
 _MODELS_ANIMS = {
     "en": dict(models_anims_title="Animations", models_anims_desc="Replace a character's idle, walk or run with your own animation (.fbx or .glb, e.g. from Mixamo) from the \"animations\" folder. Any humanoid animation works: it's fitted to the character's skeleton. Works with both the game's models and yours.", models_anims_open="Open animations folder", models_anims_none="No animations yet: put .fbx or .glb files in the \"animations\" folder and press Reload.", models_anim_idle="Idle", models_anim_walk="Walk", models_anim_run="Run", models_anim_game="Game default"),
     "es": dict(models_anims_title="Animaciones", models_anims_desc="Cambia el reposo, el andar o el correr de un personaje por una animación tuya (.fbx o .glb, por ejemplo de Mixamo) de la carpeta \"animations\". Vale cualquier animación humanoide: se adapta al esqueleto del personaje. Funciona con los modelos del juego y con los tuyos.", models_anims_open="Abrir carpeta de animaciones", models_anims_none="Aún no hay animaciones: pon archivos .fbx o .glb en la carpeta \"animations\" y pulsa refrescar.", models_anim_idle="Reposo", models_anim_walk="Andar", models_anim_run="Correr", models_anim_game="La del juego"),
@@ -1375,7 +1376,7 @@ _MODELS_ANIMS = {
 for _l, _d in _MODELS_ANIMS.items():
     S[_l].update(_d)
 
-# modelos 3D y animaciones compartidos con la sala (como los stickers)
+# 3D models and animations shared with the room (like the stickers)
 _MODELS_SYNC = {
     "en": dict(models_room_entry="3D models and animations", models_room_count="{models} models · {anims} animations · {mb} MB",
                models_offer_text="{player} wants to use their own 3D models and animations in your room ({mb} MB). If you accept, everyone in the room will see them on the characters you haven't changed. They're temporary and are deleted when the room closes.",
@@ -1491,7 +1492,7 @@ S['ko']["models_offer_timeout"] = '호스트가 제때 답하지 않았습니다
 S['zh-CN']["models_offer_timeout"] = '房主没有及时回应：你将使用房间的 3D 模型加入。如果房主之后接受，你的模型会自动出现。'
 S['zh-TW']["models_offer_timeout"] = '房主沒有及時回應：你將使用房間的 3D 模型加入。如果房主之後接受，你的模型會自動出現。'
 
-# personajes nuevos (slots) y Selector de personajes
+# new characters (slots) and Character Selector
 _CHARS = {
     "en": dict(chars_title="New characters", chars_desc="A new character doesn't replace anyone: it joins the draw of each match, with the same chance as the originals (choose who can appear with the in-game \"Character Selection\" in the waiting room). Without a name, animations or lines of its own it uses those of the character whose place it takes, and it always plays like that character. For a skin that always replaces a character, use the list above.",
                chars_add="Add character", chars_edit="Edit", chars_delete="Remove", chars_images_open="Open images folder",
@@ -1499,7 +1500,7 @@ _CHARS = {
                chars_model="3D model", chars_role="Type", chars_role_pawn="Character", chars_role_traitor="Traitor",
                chars_image="Image (portraits)", chars_image_none="Generate from the model", chars_anims="Animations",
                chars_talk="Lines", chars_talk_hint="Only fill in the ones you want to change; empty ones keep the lines of the character whose slot it takes. Traitors don't speak.",
-               chars_talk_keep="(keeps the original line)", chars_save="Save", chars_cancel="Cancel", chars_need_model="Choose a 3D model from the models folder.",
+               chars_talk_keep="(keeps the original line)", chars_save="Save", chars_cancel="Cancel", chars_active_on="On: shared with the rooms you join or host, and it can appear in matches.", chars_active_off="Off: not shared with any room (nothing is uploaded) and it never appears.", chars_need_model="Choose a 3D model from the models folder.",
                chars_has_anims="custom animations", chars_has_talk="{n} lines", chars_has_image="image", roster_saved="Character Selection saved."),
     "es": dict(chars_title="Personajes nuevos", chars_desc="Un personaje nuevo no sustituye a nadie: entra en el sorteo de cada partida con la misma probabilidad que los originales (eliges quién puede salir con la «Selección de personajes» de la sala de espera del juego). Si no tiene nombre, animaciones o frases propias, usa los del personaje cuyo sitio ocupa, y siempre juega como él. Para una skin que sustituya siempre a un personaje, usa la lista de arriba.",
                chars_add="Añadir personaje", chars_edit="Editar", chars_delete="Quitar", chars_images_open="Abrir carpeta de imágenes",
@@ -1507,7 +1508,7 @@ _CHARS = {
                chars_model="Modelo 3D", chars_role="Tipo", chars_role_pawn="Personaje", chars_role_traitor="Traidor",
                chars_image="Imagen (retratos)", chars_image_none="Sacarla del modelo", chars_anims="Animaciones",
                chars_talk="Frases", chars_talk_hint="Escribe solo las que quieras cambiar; las vacías se quedan con las del personaje cuyo sitio ocupe. Un traidor no habla.",
-               chars_talk_keep="(se queda la frase original)", chars_save="Guardar", chars_cancel="Cancelar", chars_need_model="Elige un modelo 3D de la carpeta de modelos.",
+               chars_talk_keep="(se queda la frase original)", chars_save="Guardar", chars_cancel="Cancelar", chars_active_on="Activado: se comparte con las salas en las que entras o que creas, y puede salir en las partidas.", chars_active_off="Desactivado: no se comparte con ninguna sala (no se sube nada) y no sale nunca.", chars_need_model="Elige un modelo 3D de la carpeta de modelos.",
                chars_has_anims="animaciones propias", chars_has_talk="{n} frases", chars_has_image="imagen", roster_saved="Selección de personajes guardada."),
     "fr": dict(chars_title="Nouveaux personnages", chars_desc="Un nouveau personnage ne remplace personne : il entre dans le tirage de chaque partie, avec la même chance que les originaux (choisissez qui peut apparaître avec la « Sélection des personnages » de la salle d'attente). Sans nom, animations ou répliques à lui, il utilise ceux du personnage dont il prend la place, et joue toujours comme lui. Pour un skin qui remplace toujours un personnage, utilisez la liste ci-dessus.",
                chars_add="Ajouter un personnage", chars_edit="Modifier", chars_delete="Retirer", chars_images_open="Ouvrir le dossier des images",
@@ -1515,7 +1516,7 @@ _CHARS = {
                chars_model="Modèle 3D", chars_role="Type", chars_role_pawn="Personnage", chars_role_traitor="Traître",
                chars_image="Image (portraits)", chars_image_none="La tirer du modèle", chars_anims="Animations",
                chars_talk="Répliques", chars_talk_hint="N'écrivez que celles à changer ; les vides gardent celles du personnage dont il prend la place. Un traître ne parle pas.",
-               chars_talk_keep="(garde la réplique d'origine)", chars_save="Enregistrer", chars_cancel="Annuler", chars_need_model="Choisissez un modèle 3D du dossier des modèles.",
+               chars_talk_keep="(garde la réplique d'origine)", chars_save="Enregistrer", chars_cancel="Annuler", chars_active_on="Activé : partagé avec les salons que vous rejoignez ou créez, et il peut apparaître dans les parties.", chars_active_off="Désactivé : il n'est partagé avec aucun salon (rien n'est envoyé) et il n'apparaît jamais.", chars_need_model="Choisissez un modèle 3D du dossier des modèles.",
                chars_has_anims="animations propres", chars_has_talk="{n} répliques", chars_has_image="image", roster_saved="Sélection des personnages enregistrée."),
     "it": dict(chars_title="Nuovi personaggi", chars_desc="Un nuovo personaggio non sostituisce nessuno: entra nel sorteggio di ogni partita, con la stessa probabilità degli originali (scegli chi può comparire con la «Selezione dei personaggi» della sala d'attesa). Senza nome, animazioni o battute proprie usa quelli del personaggio di cui prende il posto, e gioca sempre come lui. Per una skin che sostituisce sempre un personaggio, usa l'elenco qui sopra.",
                chars_add="Aggiungi personaggio", chars_edit="Modifica", chars_delete="Rimuovi", chars_images_open="Apri cartella delle immagini",
@@ -1523,7 +1524,7 @@ _CHARS = {
                chars_model="Modello 3D", chars_role="Tipo", chars_role_pawn="Personaggio", chars_role_traitor="Traditore",
                chars_image="Immagine (ritratti)", chars_image_none="Ricavarla dal modello", chars_anims="Animazioni",
                chars_talk="Battute", chars_talk_hint="Scrivi solo quelle da cambiare; quelle vuote restano quelle del personaggio di cui prende il posto. Un traditore non parla.",
-               chars_talk_keep="(resta la battuta originale)", chars_save="Salva", chars_cancel="Annulla", chars_need_model="Scegli un modello 3D dalla cartella dei modelli.",
+               chars_talk_keep="(resta la battuta originale)", chars_save="Salva", chars_cancel="Annulla", chars_active_on="Attivo: condiviso con le stanze in cui entri o che crei, e può apparire nelle partite.", chars_active_off="Disattivato: non è condiviso con nessuna stanza (non si carica nulla) e non appare mai.", chars_need_model="Scegli un modello 3D dalla cartella dei modelli.",
                chars_has_anims="animazioni proprie", chars_has_talk="{n} battute", chars_has_image="immagine", roster_saved="Selezione dei personaggi salvata."),
     "de": dict(chars_title="Neue Figuren", chars_desc="Eine neue Figur ersetzt niemanden: Sie kommt in die Auslosung jeder Partie, mit derselben Chance wie die Originale (wer erscheinen darf, wählst du mit der „Figurenauswahl“ im Warteraum). Ohne eigenen Namen, Animationen oder Sätze nutzt sie die der Figur, deren Platz sie einnimmt, und spielt immer wie diese. Für einen Skin, der eine Figur immer ersetzt, nimm die Liste oben.",
                chars_add="Figur hinzufügen", chars_edit="Bearbeiten", chars_delete="Entfernen", chars_images_open="Bilderordner öffnen",
@@ -1531,7 +1532,7 @@ _CHARS = {
                chars_model="3D-Modell", chars_role="Typ", chars_role_pawn="Figur", chars_role_traitor="Verräter",
                chars_image="Bild (Porträts)", chars_image_none="Aus dem Modell erzeugen", chars_anims="Animationen",
                chars_talk="Sätze", chars_talk_hint="Schreib nur die, die du ändern willst; leere behalten die Sätze der Figur, deren Platz sie einnimmt. Ein Verräter spricht nicht.",
-               chars_talk_keep="(behält den Originalsatz)", chars_save="Speichern", chars_cancel="Abbrechen", chars_need_model="Wähle ein 3D-Modell aus dem Modellordner.",
+               chars_talk_keep="(behält den Originalsatz)", chars_save="Speichern", chars_cancel="Abbrechen", chars_active_on="An: wird mit den Räumen geteilt, denen du beitrittst oder die du erstellst, und kann in Partien vorkommen.", chars_active_off="Aus: wird mit keinem Raum geteilt (nichts wird hochgeladen) und kommt nie vor.", chars_need_model="Wähle ein 3D-Modell aus dem Modellordner.",
                chars_has_anims="eigene Animationen", chars_has_talk="{n} Sätze", chars_has_image="Bild", roster_saved="Figurenauswahl gespeichert."),
     "pt": dict(chars_title="Novos personagens", chars_desc="Um novo personagem não substitui ninguém: entra no sorteio de cada partida, com a mesma chance dos originais (escolha quem pode aparecer com a «Seleção de personagens» da sala de espera). Sem nome, animações ou falas próprios, usa os do personagem cujo lugar ocupa, e sempre joga como ele. Para uma skin que substitui sempre um personagem, use a lista acima.",
                chars_add="Adicionar personagem", chars_edit="Editar", chars_delete="Remover", chars_images_open="Abrir pasta de imagens",
@@ -1539,7 +1540,7 @@ _CHARS = {
                chars_model="Modelo 3D", chars_role="Tipo", chars_role_pawn="Personagem", chars_role_traitor="Traidor",
                chars_image="Imagem (retratos)", chars_image_none="Tirar do modelo", chars_anims="Animações",
                chars_talk="Falas", chars_talk_hint="Escreva só as que quer mudar; as vazias ficam com as do personagem cujo lugar ocupa. Um traidor não fala.",
-               chars_talk_keep="(fica a fala original)", chars_save="Salvar", chars_cancel="Cancelar", chars_need_model="Escolha um modelo 3D da pasta de modelos.",
+               chars_talk_keep="(fica a fala original)", chars_save="Salvar", chars_cancel="Cancelar", chars_active_on="Ativado: é compartilhado com as salas em que você entra ou que cria, e pode aparecer nas partidas.", chars_active_off="Desativado: não é compartilhado com nenhuma sala (nada é enviado) e nunca aparece.", chars_need_model="Escolha um modelo 3D da pasta de modelos.",
                chars_has_anims="animações próprias", chars_has_talk="{n} falas", chars_has_image="imagem", roster_saved="Seleção de personagens salva."),
     "ru": dict(chars_title="Новые персонажи", chars_desc="Новый персонаж никого не заменяет: он участвует в жеребьёвке каждого матча с тем же шансом, что и оригиналы (кто может появиться, выбирается в «Выборе персонажей» в зале ожидания). Без своего имени, анимаций или реплик он использует те, что у персонажа, чьё место занимает, и всегда играет как он. Для скина, который всегда заменяет персонажа, используйте список выше.",
                chars_add="Добавить персонажа", chars_edit="Изменить", chars_delete="Убрать", chars_images_open="Открыть папку изображений",
@@ -1547,7 +1548,7 @@ _CHARS = {
                chars_model="3D-модель", chars_role="Тип", chars_role_pawn="Персонаж", chars_role_traitor="Предатель",
                chars_image="Изображение (портреты)", chars_image_none="Сделать из модели", chars_anims="Анимации",
                chars_talk="Реплики", chars_talk_hint="Пишите только те, что хотите изменить; пустые остаются репликами персонажа, чьё место он занимает. Предатель не говорит.",
-               chars_talk_keep="(остаётся исходная реплика)", chars_save="Сохранить", chars_cancel="Отмена", chars_need_model="Выберите 3D-модель из папки моделей.",
+               chars_talk_keep="(остаётся исходная реплика)", chars_save="Сохранить", chars_cancel="Отмена", chars_active_on="Вкл.: передаётся в комнаты, в которые вы входите или которые создаёте, и может появиться в матче.", chars_active_off="Выкл.: не передаётся ни в одну комнату (ничего не загружается) и никогда не появляется.", chars_need_model="Выберите 3D-модель из папки моделей.",
                chars_has_anims="свои анимации", chars_has_talk="реплик: {n}", chars_has_image="изображение", roster_saved="Выбор персонажей сохранён."),
     "ja": dict(chars_title="新キャラクター", chars_desc="新キャラクターは誰とも入れ替わりません。毎試合の抽選にオリジナルと同じ確率で加わります（出場できるキャラはゲームの待機ルームの「キャラクター選択」で選びます）。名前・アニメーション・セリフがなければ、入った枠のキャラクターのものを使い、プレイも常にそのキャラクターと同じです。常に特定のキャラを置き換えるスキンは上のリストを使ってください。",
                chars_add="キャラクターを追加", chars_edit="編集", chars_delete="削除", chars_images_open="画像フォルダーを開く",
@@ -1555,7 +1556,7 @@ _CHARS = {
                chars_model="3Dモデル", chars_role="種類", chars_role_pawn="キャラクター", chars_role_traitor="裏切り者",
                chars_image="画像（顔アイコン）", chars_image_none="モデルから作る", chars_anims="アニメーション",
                chars_talk="セリフ", chars_talk_hint="変えたいものだけ書いてください。空欄は入った枠のキャラクターのセリフのままです。裏切り者は話しません。",
-               chars_talk_keep="（元のセリフのまま）", chars_save="保存", chars_cancel="キャンセル", chars_need_model="モデルフォルダーの3Dモデルを選んでください。",
+               chars_talk_keep="（元のセリフのまま）", chars_save="保存", chars_cancel="キャンセル", chars_active_on="オン：参加・作成するルームに共有され、試合に登場することがあります。", chars_active_off="オフ：どのルームにも共有されず（何もアップロードされません）、登場しません。", chars_need_model="モデルフォルダーの3Dモデルを選んでください。",
                chars_has_anims="独自アニメーション", chars_has_talk="セリフ {n} 件", chars_has_image="画像", roster_saved="キャラクター選択を保存しました。"),
     "ko": dict(chars_title="새 캐릭터", chars_desc="새 캐릭터는 누구도 대체하지 않습니다. 매 판 추첨에 원래 캐릭터와 같은 확률로 들어갑니다(누가 나올 수 있는지는 대기실의 \"캐릭터 선택\"에서 고릅니다). 자기 이름·애니메이션·대사가 없으면 들어간 자리 캐릭터의 것을 쓰고, 플레이도 항상 그 캐릭터와 같습니다. 항상 특정 캐릭터를 대체하는 스킨은 위 목록을 쓰세요.",
                chars_add="캐릭터 추가", chars_edit="편집", chars_delete="제거", chars_images_open="이미지 폴더 열기",
@@ -1563,7 +1564,7 @@ _CHARS = {
                chars_model="3D 모델", chars_role="종류", chars_role_pawn="캐릭터", chars_role_traitor="배신자",
                chars_image="이미지(초상화)", chars_image_none="모델에서 만들기", chars_anims="애니메이션",
                chars_talk="대사", chars_talk_hint="바꾸고 싶은 것만 쓰세요. 빈칸은 들어간 자리 캐릭터의 대사를 유지합니다. 배신자는 말하지 않습니다.",
-               chars_talk_keep="(원래 대사 유지)", chars_save="저장", chars_cancel="취소", chars_need_model="모델 폴더의 3D 모델을 고르세요.",
+               chars_talk_keep="(원래 대사 유지)", chars_save="저장", chars_cancel="취소", chars_active_on="켜짐: 참가하거나 만드는 방에 공유되며 경기에 나올 수 있습니다.", chars_active_off="꺼짐: 어떤 방에도 공유되지 않고(아무것도 업로드되지 않음) 나오지 않습니다.", chars_need_model="모델 폴더의 3D 모델을 고르세요.",
                chars_has_anims="자체 애니메이션", chars_has_talk="대사 {n}개", chars_has_image="이미지", roster_saved="캐릭터 선택을 저장했습니다."),
     "zh-CN": dict(chars_title="新角色", chars_desc="新角色不替换任何人：它会以与原角色相同的概率加入每局的抽选（在游戏等待室的“角色选择”里决定谁可以出场）。没有自己的名字、动画或台词时，就使用它所占位置的角色的，玩法也始终与该角色相同。想要始终替换某个角色的皮肤，请用上面的列表。",
                chars_add="添加角色", chars_edit="编辑", chars_delete="移除", chars_images_open="打开图片文件夹",
@@ -1571,7 +1572,7 @@ _CHARS = {
                chars_model="3D 模型", chars_role="类型", chars_role_pawn="角色", chars_role_traitor="叛徒",
                chars_image="图片（头像）", chars_image_none="从模型生成", chars_anims="动画",
                chars_talk="台词", chars_talk_hint="只写想改的；空着的沿用所占位置角色的台词。叛徒不说话。",
-               chars_talk_keep="（沿用原台词）", chars_save="保存", chars_cancel="取消", chars_need_model="请从模型文件夹选择一个 3D 模型。",
+               chars_talk_keep="（沿用原台词）", chars_save="保存", chars_cancel="取消", chars_active_on="已启用：会共享给你加入或创建的房间，并可能在对局中出现。", chars_active_off="已停用：不共享给任何房间（不上传任何内容），也不会出现。", chars_need_model="请从模型文件夹选择一个 3D 模型。",
                chars_has_anims="自带动画", chars_has_talk="{n} 句台词", chars_has_image="图片", roster_saved="角色选择已保存。"),
     "zh-TW": dict(chars_title="新角色", chars_desc="新角色不替換任何人：它會以與原角色相同的機率加入每局的抽選（在遊戲等待室的「角色選擇」裡決定誰可以出場）。沒有自己的名字、動畫或台詞時，就使用它所佔位置的角色的，玩法也始終與該角色相同。想要始終替換某個角色的造型，請用上面的清單。",
                chars_add="新增角色", chars_edit="編輯", chars_delete="移除", chars_images_open="開啟圖片資料夾",
@@ -1579,13 +1580,13 @@ _CHARS = {
                chars_model="3D 模型", chars_role="類型", chars_role_pawn="角色", chars_role_traitor="叛徒",
                chars_image="圖片（頭像）", chars_image_none="從模型產生", chars_anims="動畫",
                chars_talk="台詞", chars_talk_hint="只寫想改的；空著的沿用所佔位置角色的台詞。叛徒不說話。",
-               chars_talk_keep="（沿用原台詞）", chars_save="儲存", chars_cancel="取消", chars_need_model="請從模型資料夾選擇一個 3D 模型。",
+               chars_talk_keep="（沿用原台詞）", chars_save="儲存", chars_cancel="取消", chars_active_on="已啟用：會分享給你加入或建立的房間，並可能在對局中出現。", chars_active_off="已停用：不分享給任何房間（不上傳任何內容），也不會出現。", chars_need_model="請從模型資料夾選擇一個 3D 模型。",
                chars_has_anims="自帶動畫", chars_has_talk="{n} 句台詞", chars_has_image="圖片", roster_saved="角色選擇已儲存。"),
 }
 for _l, _d in _CHARS.items():
     S[_l].update(_d)
 
-# de que personaje del juego saca las animaciones un personaje nuevo
+# which game character a new character takes its animations from
 _ANIMFROM = {
     "en": ("Animations of", "{n}'s animations", "Without its own animations, it moves like the character chosen in \"Animations of\" (not the one whose slot it takes). Your own idle/walk/run animations replace those."),
     "es": ("Animaciones de", "animaciones de {n}", "Sin animaciones propias se mueve como el personaje elegido en «Animaciones de» (no como el del sitio que ocupa). Tus animaciones de reposo/andar/correr sustituyen a esas."),
@@ -1607,7 +1608,7 @@ S["es"]["chars_desc"] = ("Un personaje nuevo no sustituye a nadie: entra en el s
                          "Sin nombre o frases propias usa los del sitio que ocupa. Para una skin que sustituya siempre a un personaje, usa la lista de arriba.")
 S["en"]["chars_desc"] = ("A new character doesn't replace anyone: it's added to the pool for each match, with the same chance of appearing as the originals (choose who can appear with the \"Character Selection\" in the game's waiting room). It plays like the character whose slot it takes, but moves like the one you pick in \"Animations of\" (or with your own animations). If it has no name or lines of its own, it uses those of the character whose slot it takes. For a skin that always replaces a character, use the list above.")
 
-# imagenes de los dialogos (por reaccion y por frase)
+# dialogue images (per reaction and per line)
 _TALKIMG = {
     "en": ("Image when worried", "Image when attacked", "In the game each character makes a face in some lines: worried (gas, danger, injured, hungry, dying) and attacked. Pick an image for each, or for any single line in Lines; without one, the main image is used.", "worried", "attacked", "(main image)", "(image of its reaction)"),
     "es": ("Imagen preocupado", "Imagen atacado", "En el juego cada personaje pone cara en algunas frases: preocupado (gas, peligro, herido, hambre, moribundo) y atacado. Elige una imagen para cada una, o para cualquier frase en Frases; sin ella se usa la imagen principal.", "preocupado", "atacado", "(imagen principal)", "(imagen de su reacción)"),
@@ -1624,7 +1625,7 @@ _TALKIMG = {
 for _l, (_w, _a, _h, _rw, _ra, _m, _r) in _TALKIMG.items():
     S[_l].update(chars_img_worried=_w, chars_img_attacked=_a, chars_img_hint=_h, chars_react_worried=_rw,
                  chars_react_attacked=_ra, chars_img_main=_m, chars_img_by_react=_r)
-# las situaciones de las frases (descripcion propia; no es el texto del juego)
+# the line situations (our own description; not the game's text)
 _TALK_LABELS = {
     "en": ["Searches and finds nothing", "Breathes in gas", "Danger enters the room", "Breaks the fuse box", "Finds a secret passage", "Finds a note", "Finds a fuse box", "Can't carry more items", "Can't carry more weapons", "Picks up food", "Picks up medicine", "Picks up a weapon", "Alone with someone (both suspects)", "Alone with the killer", "Alone with the victim", "Match starts", "Gets attacked", "Gets attacked on the last day", "Healed by someone else", "Repairs the fuse box", "Acts while dying", "Acts while hungry", "Acts while injured", "Walks into a dark room", "Uses a secret passage", "Gives food to someone", "Uses medicine on themselves", "Gives medicine to someone"],
     "es": ["Busca y no encuentra nada", "Respira gas", "Un peligro ha entrado en la sala", "Rompe la caja de fusibles",
@@ -1685,7 +1686,7 @@ _LOCKED = {
 for _l, _v in _LOCKED.items():
     S[_l]["err_game_locked"] = _v
 
-# --- actualizar con el juego, una sesion u otro lanzador abiertos ------------------------------------
+# --- updating with the game, a session or another launcher open ------------------------------------
 _UPD_CLOSE = {
     "en": dict(update_confirm_close="To update, the game, the current session and any other open launchers will be closed. If you're in a match, this counts as leaving it.",
                update_close_btn="Close everything and update", update_closing="Closing the game and the session to update…"),
@@ -1733,7 +1734,7 @@ _lang = "en"
 
 
 
-# creador de escenarios (de momento en ingles y espanol; el resto de idiomas usa el ingles)
+# stage creator (for now in English and Spanish; the other languages use English)
 S["en"].update(
     stage_btn='Scenario Creator',
     stage_title='Scenario Creator',
@@ -2493,7 +2494,7 @@ S["zh-TW"].update(
     stage_export='匯出',
     stage_none='你還沒有儲存任何場景。',
 )
-# ---- actualizacion del lanzador: se ofrece con sus novedades
+# ---- launcher update: offered with its release notes
 S["en"].update(update_title='New version available', update_ver='You have {cur}. The latest is {v}.', update_changes="What's new", update_no_notes='No notes for this version.', update_now='Update now', update_later='Not now', update_hint="To play with others, it's best if everyone has the same version.", update_pill='Update available: {v}')
 S["es"].update(update_title='Nueva versión disponible', update_ver='Tienes la {cur}. La última es la {v}.', update_changes='Novedades', update_no_notes='Esta versión no trae notas.', update_now='Actualizar ahora', update_later='Ahora no', update_hint='Para jugar con otras personas, lo mejor es que todos tengáis la misma versión.', update_pill='Actualización disponible: {v}')
 S["fr"].update(update_title='Nouvelle version disponible', update_ver='Vous avez la {cur}. La dernière est la {v}.', update_changes='Nouveautés', update_no_notes='Pas de notes pour cette version.', update_now='Mettre à jour', update_later='Pas maintenant', update_hint="Pour jouer avec d'autres personnes, mieux vaut que tout le monde ait la même version.", update_pill='Mise à jour disponible : {v}')
@@ -2525,7 +2526,7 @@ def t(key, **kw):
 
 
 def table():
-    """Todos los textos del idioma actual (con respaldo en ingles) para la interfaz."""
+    """All the texts of the current language (with English fallback) for the interface."""
     out = dict(S["en"])
     out.update(S.get(_lang, {}))
     return out
@@ -2539,7 +2540,7 @@ def from_steam(name):
     return STEAM_CODES.get(str(name or "").lower())
 
 
-# --- lineas del servidor que se muestran en el registro del lanzador -------------------------
+# --- server lines shown in the launcher's log -------------------------
 _EVENTS = [
     (re.compile(r"empieza la partida"), lambda m: t("ev_start")),
     (re.compile(r": (.+?) \([a-z]+\) GANA, \+(\d+)"), lambda m: t("ev_win", name=m.group(1), pts=m.group(2))),
@@ -2555,7 +2556,7 @@ _EVENTS = [
 
 
 def server_event(msg):
-    """Traduce una linea del registro del servidor, o None si no interesa al jugador."""
+    """Translates a server log line, or None if it doesn't matter to the player."""
     for rx, fn in _EVENTS:
         m = rx.search(msg)
         if m:

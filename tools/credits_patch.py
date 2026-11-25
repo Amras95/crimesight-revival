@@ -1,18 +1,18 @@
 """
-CRIMESIGHT Revival - linea de creditos en la pantalla de titulo.
+CRIMESIGHT Revival - credits line on the title screen.
 
-Anade a la linea de copyright de la pantalla de titulo ("©2022 Konami Digital Entertainment") el
-texto de CREDITS y, detras, "Contributions by Ashen" traducido a cada idioma (como en los creditos de
-Revival del juego y en el lanzador). El logo y el copyright de Konami no se tocan.
+Adds to the title screen's copyright line ("©2022 Konami Digital Entertainment") the
+CREDITS text and, after it, "Contributions by Ashen" translated into each language (like in the game's
+Revival credits and in the launcher). Konami's logo and copyright aren't touched.
 
-Como funciona: los textos del juego son JSON con sangria dentro de resources.assets. Se reescribe
-el JSON afectado sin sangria (ocupa mucho menos), se le anade el credito y se rellena con espacios
-hasta el tamano original, asi que el archivo no cambia de tamano ni de estructura. Se guarda una
-copia del original (resources.assets.original) y se puede deshacer con --restore.
+How it works: the game's texts are indented JSON inside resources.assets. The affected JSON
+is rewritten without indentation (it takes much less), the credit is added and it is padded with spaces
+up to the original size, so the file changes neither size nor structure. A
+copy of the original is kept (resources.assets.original) and it can be undone with --restore.
 
-Uso:
-  python credits_patch.py "<carpeta del juego>"
-  python credits_patch.py "<carpeta del juego>" --restore
+Usage:
+  python credits_patch.py "<game folder>"
+  python credits_patch.py "<game folder>" --restore
 """
 import json, os, shutil, struct, sys
 
@@ -20,7 +20,7 @@ ASSETS_REL = os.path.join("CrimeSight_Data", "resources.assets")
 MSG_ID = "ctg_outgame_title_copyright"
 MARK = "CRIMESIGHT REVIVAL"
 
-# --- Creditos (editar aqui) ---------------------------------------------------------------
+# --- Credits (edit here) ---------------------------------------------------------------
 GITHUB = "Amras95"
 TWITTER = "AmrasMithandir"
 CREDITS = f"   ·   {MARK}  —  GitHub: {GITHUB}  ·  X: @{TWITTER}"
@@ -41,7 +41,7 @@ def credits_for(lang):
 
 
 def _find_blob(d, at):
-    """Inicio y longitud del texto JSON (TextAsset) que contiene la posicion 'at'."""
+    """Start and length of the JSON text (TextAsset) that contains position 'at'."""
     for p in range(at, max(0, at - 30_000_000), -1):
         if d[p] not in (0x7B, 0x5B, 0xEF):          # '{', '[', BOM
             continue
@@ -89,7 +89,7 @@ def patch(game_dir, text=None):
     compact_key = f'"msg_id":"{MSG_ID}"'.encode()
     done = 0
     pos = 0
-    edits = []                      # (posicion, bytes): el bloque de textos cambia sin cambiar de tamano
+    edits = []                      # (position, bytes): the text block changes without changing size
     while True:
         a, b = d.find(key, pos), d.find(compact_key, pos)
         hits = [x for x in (a, b) if x >= 0]
@@ -114,14 +114,14 @@ def patch(game_dir, text=None):
         pos = start + length
     if not done:
         raise ValueError("No encuentro la linea de copyright de la pantalla de titulo.")
-    # Se escriben solo esos bytes, en el mismo archivo: nada de copiar entero el .assets (cientos de MB)
-    # a un .tmp y renombrarlo, que el antivirus revisa al momento y bloquea ("Acceso denegado").
+    # Only those bytes are written, in the same file: no copying the whole .assets (hundreds of MB)
+    # to a .tmp and renaming it, which the antivirus scans right away and blocks ("Access denied").
     with open(path, "r+b") as f:
         for start, block in edits:
             f.seek(start)
             f.write(block)
     try:
-        os.remove(path + ".tmp")    # el que dejaban las versiones anteriores si fallaban
+        os.remove(path + ".tmp")    # the one earlier versions left if they failed
     except OSError:
         pass
     return done

@@ -1,6 +1,6 @@
-/* CRIMESIGHT Revival - creador de escenarios (ventana del lanzador).
-   La logica (que pieza va en cada hueco, validacion) esta en Python (stagelayout.py): aqui solo se
-   dibuja y se recogen los cambios del jugador. Usa api(), T(), esc() y toast() de index.html. */
+/* CRIMESIGHT Revival - stage creator (launcher window).
+   The logic (which piece goes in each gap, validation) is in Python (stagelayout.py): here it only
+   draws and collects the player's changes. Uses api(), T(), esc() and toast() from index.html. */
 const SE = (() => {
   const G = 6;
   const COL = {floor:'#363c80', floorEnt:'#2c6170', block:'rgba(12,14,44,.42)', wall:'#aab0ff', wallSel:'#ffffff', wallBad:'#ff6a6a',
@@ -10,7 +10,7 @@ const SE = (() => {
   let cv, ctx, tr = {s: 8, ox: 0, oy: 0, x0: 0, z1: 0};
   const $ = s => document.querySelector(s);
 
-  /* ---------- coordenadas ---------- */
+  /* ---------- coordinates ---------- */
   function fit() {
     const r = cv.parentElement.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
     cv.width = Math.max(50, r.width * dpr); cv.height = Math.max(50, r.height * dpr);
@@ -32,7 +32,7 @@ const SE = (() => {
     return -1;
   }
 
-  /* ---------- dibujo ---------- */
+  /* ---------- drawing ---------- */
   function drawRoom(c, t, px, pz, yaw, map, opt) {
     const P = (lx, lz) => { const [x, z] = rot(lx, lz, yaw); return map(px + x, pz + z); };
     const tris = (list, color, seam) => {
@@ -47,7 +47,7 @@ const SE = (() => {
     c.strokeStyle = opt.wall; c.lineWidth = opt.lw; c.lineCap = 'round'; c.stroke();
   }
   function bar(x, z, len, color, lw, dash) {
-    const vert = Math.abs(Math.round(x)) % G !== 0;            // arista vertical: la barra va a lo largo de z
+    const vert = Math.abs(Math.round(x)) % G !== 0;            // vertical edge: the bar runs along z
     ctx.beginPath();
     if (vert) { ctx.moveTo(sx(x), sz(z - len / 2)); ctx.lineTo(sx(x), sz(z + len / 2)); }
     else { ctx.moveTo(sx(x - len / 2), sz(z)); ctx.lineTo(sx(x + len / 2), sz(z)); }
@@ -101,7 +101,7 @@ const SE = (() => {
     drawRoom(g, t, 0, 0, 0, (x, z) => [W / 2 + x * s, H / 2 - z * s], {floor: COL.floor, wall: COL.wall, lw: 1.4});
   }
 
-  /* ---------- paneles ---------- */
+  /* ---------- panels ---------- */
   function stage() { return CAT.stages.find(s => s.scene === LAY.base); }
   function renderSide() {
     document.querySelectorAll('#sttools button').forEach(b => b.classList.toggle('on', b.dataset.tool === TOOL));
@@ -144,7 +144,7 @@ const SE = (() => {
     $('#ststop').style.display = CAT.active ? '' : 'none';
   }
 
-  /* ---------- cambios ---------- */
+  /* ---------- changes ---------- */
   function take(r) {
     if (!r) return false;
     if (r.error) { toast(r.error); return false; }
@@ -153,7 +153,7 @@ const SE = (() => {
     if (base !== LAY.base) { renderPalette(); $('#stbase').value = LAY.base; }
     renderSide(); draw(); return true;
   }
-  async function refresh() {                    // recalcula en Python; si llegan mas cambios, solo cuenta el ultimo
+  async function refresh() {                    // recalculates in Python; if more changes arrive, only the last one counts
     if (BUSY) { PENDING = true; return; }
     BUSY = 1;
     try { do { PENDING = false; take(await api('stage_derive', LAY)); } while (PENDING); } finally { BUSY = 0; }
@@ -216,7 +216,7 @@ const SE = (() => {
     else if (ev.key === 'Escape') close();
   }
 
-  /* ---------- acciones de la cabecera ---------- */
+  /* ---------- header actions ---------- */
   async function setBase(scene) { CUR_ID = ''; SEL = -1; if (take(await api('stage_default', scene))) renderHead(); }
   async function load(id) {
     if (!id) return;
@@ -254,14 +254,14 @@ const SE = (() => {
     CAT.active = ''; renderHead(); toast(r.msg);
   }
 
-  /* ---------- abrir / cerrar ---------- */
+  /* ---------- open / close ---------- */
   async function open() {
     $('#stage').classList.add('on');
     if (CAT) { renderHead(); draw(); return; }
     $('#stload').classList.add('on'); $('#stloadmsg').textContent = T('stage_reading', {pct: 0});
     const r = await api('stage_open');
     if (!r) { $('#stloadmsg').textContent = T('err_no_game'); return; }
-    if (r.loading) return;                       // avisara con ui.stageReady
+    if (r.loading) return;                       // will notify with ui.stageReady
     CAT = r;
     if (!cv) {
       cv = $('#stcv'); ctx = cv.getContext('2d');

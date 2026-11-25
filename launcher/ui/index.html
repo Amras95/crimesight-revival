@@ -23,7 +23,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 #bg.tint{background-blend-mode:luminosity}
 .app{position:relative;height:100%;display:flex;flex-direction:column;padding:22px 30px 16px}
 
-/* cabecera */
+/* header */
 header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px}
 .brand{line-height:1}
 .brand .name{font-family:var(--serif);font-size:44px;letter-spacing:.18em;font-weight:700;
@@ -47,7 +47,7 @@ header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px}
 .stats b{display:block;font-size:20px}
 .stats .w b{color:#7dffb0}.stats .d b{color:#ffd36b}.stats .l b{color:#ff8a8a}.stats .p b{color:#c9b8ff}
 
-/* tarjetas */
+/* cards */
 .cards{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin:22px 0 14px;min-height:0}
 .card{--c:var(--accent);position:relative;border-radius:18px;overflow:hidden;cursor:pointer;
   background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(0,0,0,.25)),var(--panel);
@@ -66,7 +66,7 @@ header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px}
 .card p{margin:0;color:var(--dim);font-size:13px;line-height:1.45;min-height:57px}
 .c-sherlock{--c:var(--sherlock)} .c-moriarty{--c:var(--moriarty)} .c-watson{--c:var(--watson)} .c-irene{--c:var(--irene)}
 
-/* panel de accion */
+/* action panel */
 .panel{background:var(--panel2);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:flex;gap:16px;align-items:center;min-height:86px;backdrop-filter:blur(10px)}
 .panel .fields{flex:1;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
 .field{display:flex;flex-direction:column;gap:5px}
@@ -83,7 +83,7 @@ input:focus,select:focus{border-color:var(--c,var(--accent))}
 .btn.small{padding:9px 14px;font-size:13px}
 .btn:disabled{opacity:.45;cursor:default;filter:none}
 
-/* sesion en marcha */
+/* session running */
 .session{display:none;gap:16px;align-items:stretch}
 .session.on{display:flex}
 .session .status{min-width:260px;display:flex;flex-direction:column;justify-content:center;gap:8px}
@@ -127,7 +127,7 @@ footer .updpill.on{display:inline-block}
 .loading.off{opacity:0;pointer-events:none}
 .spinner{width:42px;height:42px;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:var(--accent);animation:s 1s linear infinite}
 @keyframes s{to{transform:rotate(360deg)}}
-/* ventana de progreso */
+/* progress window */
 .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(4,5,16,.72);backdrop-filter:blur(4px);z-index:4}
 .modal.on{display:flex}
 .modal .box{width:560px;max-width:92vw;background:var(--panel2);border:1px solid var(--line);border-radius:18px;padding:22px 24px;
@@ -142,7 +142,7 @@ footer .updpill.on{display:inline-block}
 .modal .close{display:flex;justify-content:flex-end;margin-top:6px}
 /* mods */
 .modal .box.wide{width:640px}
-/* ventana de mods: casi a pantalla completa, por pestañas; solo baja lo de dentro */
+/* mods window: almost full screen, with tabs; only the inside scrolls */
 .modal .box.full{width:min(1100px,96vw);height:92vh;display:flex;flex-direction:column}
 .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:14px;flex-wrap:wrap}
 .tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);font:600 14px var(--sans);padding:9px 14px;cursor:pointer;margin-bottom:-1px}
@@ -348,6 +348,7 @@ footer .updpill.on{display:inline-block}
           <button class="btn small" onclick="charEdit('')" data-t="chars_add"></button>
           <button class="btn ghost small" onclick="api('chars_images_open')" data-t="chars_images_open"></button>
         </div></div>
+        <div id="devroles" style="display:none"></div>
         <div class="sub" data-t="models_anims_title"></div>
         <p class="note" data-t="models_anims_desc"></p>
         <div class="mods" id="animslist"></div>
@@ -582,7 +583,7 @@ async function importProgress(){done(await api('import_progress'))}
 async function pickBackup(){done(await api('pick_backup'))}
 async function clearBackup(){done(await api('clear_backup'))}
 
-/* mods de apariencia */
+/* appearance mods */
 function modCount(m){return m.text||T('mods_count',{stickers:m.stickers,avatars:m.avatars})}
 function modRow(m,kind){
   const th=(kind==='avatars'?m.avatar_thumbs:m.sticker_thumbs)||m.thumbs||[];
@@ -627,21 +628,35 @@ async function loadModels(){
       <select class="small" onchange="setModel(${esc(JSON.stringify(s.id))},this.value)">${opts}</select></div>`;
   }).join('');
 }
-/* ---- personajes nuevos: entran en el sorteo de cada partida (Selector de personajes) ---- */
+/* ---- new characters: they enter each match's draw (Character Selector) ---- */
 let CHARS=null;
 const CHAR_ORIG=['Agatha','Berkeley','Catherine','Dorothy','Ellery','Freeman'];
 async function loadChars(){
   CHARS=await api('chars_state');if(!CHARS)return;
+  loadDevRoles();
   $('#charslist').innerHTML=!CHARS.chars.length?`<p class="note">${esc(T('chars_none'))}</p>`:CHARS.chars.map(c=>{
     const what=[T('chars_anim_from_short',{n:CHAR_ORIG['ABCDEF'.indexOf((c.anim_from||'PawnTypeData_A').slice(-1))]||'Agatha'}),c.model,
       Object.keys(c.anims||{}).length?T('chars_has_anims'):'',Object.keys(c.talk||{}).length?T('chars_has_talk',{n:Object.keys(c.talk).length}):'',
       c.image?T('chars_has_image'):''].filter(x=>x).join(' · ');
     const miss=CHARS.models.indexOf(c.model)<0?`<small class="warn">${esc(T('chars_need_model'))}</small>`:'';
-    return `<div class="mod"><div class="info"><b>${esc(c.name||c.model||'?')}</b><small>${esc(what)}</small>${miss}</div>
+    return `<div class="mod${c.active?'':' off'}"><div class="info"><b>${esc(c.name||c.model||'?')}</b><small>${esc(what)}</small>${miss}
+      <small>${esc(T(c.active?'chars_active_on':'chars_active_off'))}</small></div>
+      <button class="btn ghost small" onclick="charActive(${esc(JSON.stringify(c.id))},${!c.active})">${esc(T(c.active?'mods_on':'mods_off'))}</button>
       <button class="btn ghost small" onclick="charEdit(${esc(JSON.stringify(c.id))})">${esc(T('chars_edit'))}</button>
       <button class="btn ghost small" onclick="charDel(${esc(JSON.stringify(c.id))})">${esc(T('chars_delete'))}</button></div>`;
   }).join('');
 }
+/* ---- developer mode: chosen killer and target (only in rooms you create) ---- */
+async function loadDevRoles(r){
+  r=r||await api('dev_roles_state');const e=$('#devroles');
+  if(!r||!r.dev){e.style.display='none';e.innerHTML='';return}
+  const sel=(id,cur)=>`<select class="small" id="${id}" onchange="devRolesSet()"><option value="">Al azar</option>${r.options.map(o=>`<option value="${esc(o.id)}"${o.id===cur?' selected':''}>${esc(o.name)}${o.new?' (nuevo)':''}</option>`).join('')}</select>`;
+  e.innerHTML=`<div class="sub">Asesino y objetivo (modo desarrollador)</div>
+    <p class="note">Solo en las salas que creas t\u00fa. El personaje elegido sale siempre en el reparto y le toca ese papel; con \u00abAl azar\u00bb, como siempre.</p>
+    <div class="row2"><label><small>Asesino</small>${sel('dev_killer',r.killer)}</label><label><small>Objetivo</small>${sel('dev_target',r.target)}</label></div>`;
+  e.style.display='block';
+}
+async function devRolesSet(){loadDevRoles(await api('dev_roles_set',$('#dev_killer').value,$('#dev_target').value))}
 function charSel(id,list,cur,none){return `<select class="small" id="${id}"><option value="">${esc(none)}</option>${list.map(n=>`<option value="${esc(n)}"${n===cur?' selected':''}>${esc(n)}</option>`).join('')}</select>`}
 function charEdit(cid){
   if(!CHARS)return;
@@ -674,6 +689,7 @@ async function charSave(){
   charClose();loadChars();
 }
 async function charDel(cid){await api('chars_delete',cid);loadChars()}
+async function charActive(cid,on){await api('chars_active',cid,on);loadChars()}
 async function setAnim(slot,kind,name){const r=await api('models_anim_set',slot,kind,name);if(r&&r.error){toast(r.error);return}loadModels()}
 async function setModel(slot,target){const r=await api('models_set',slot,target);if(r&&r.error){toast(r.error);return}loadModels()}
 let MODTAB='general';
@@ -701,8 +717,8 @@ async function toggleBep(){
   if(r.msg){toast(r.msg);loadBep()} else $('#bepbtn').disabled=true;
 }
 let TXT_FOLDER=null;
-// stickers del juego a los que puede equivaler uno de un mod (imagenes en ui/stickers/). Sin "roger": su emoticono
-// es el mismo que el de "good" y las IA contestan igual a los dos (mod.json lo sigue aceptando)
+// game stickers a mod one can be equivalent to (images in ui/stickers/). Without "roger": its emoticon
+// is the same as "good" and the AIs reply the same to both (mod.json still accepts it)
 const MEANS=['hello','good','why','no_way','relieved','frightened','scream','worried','please','hold_on','smirk',
   'suspicious','killer_no_suspicion','killer_suspicion','target_no_suspicion','target_suspicion'];
 function meansFace(v){return v?`<img src="stickers/${v}.png" alt="">`:'—'}
@@ -764,7 +780,7 @@ function closeMods(){$('#mods').classList.remove('on')}
 function answerOffer(ok){$('#modoffer').classList.remove('on');api('answer_mods',ok)}
 function answerMods(ok){$('#modask').classList.remove('on');api('answer_mods',ok)}
 
-/* llamadas desde Python */
+/* calls from Python */
 window.ui={
   update(u){setUpdate(u,true)},
   log(t,kind){const d=document.createElement('div');if(kind)d.className=kind;d.textContent=t;const L=$('#log');L.appendChild(d);L.scrollTop=L.scrollHeight},
@@ -791,7 +807,7 @@ window.ui={
     $('#modask').classList.add('on')},
 };
 
-/* ---- actualizacion del lanzador: se ofrece con sus novedades y el jugador decide ---- */
+/* ---- launcher update: offered with its release notes and the player decides ---- */
 let UPD=null;
 function mdLine(t){return esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`(.+?)`/g,'<code>$1</code>')}
 function updNotes(notes){
@@ -828,7 +844,7 @@ let UPD_FORCE=false;
 async function updateNow(){
   const r=await api('update_apply',UPD_FORCE);
   if(r&&r.error)return toast(r.error);
-  if(r&&r.confirm){            // hay que cerrar el juego / la sesion / otros lanzadores: se avisa antes
+  if(r&&r.confirm){            // the game / the session / other launchers must be closed: warned first
     UPD_FORCE=true;const w=$('#updwarn');w.textContent=r.confirm;w.classList.add('on');
     $('#updbtn').textContent=T('update_close_btn');return;
   }
@@ -842,7 +858,7 @@ async function boot(){
   if(s&&s.update) setUpdate(s.update);
 }
 window.addEventListener('pywebviewready',boot);
-/* Linux / Steam Deck: la pagina va en el navegador y recibe los avisos de Python sondeando */
+/* Linux / Steam Deck: the page runs in the browser and gets Python's notices by polling */
 async function pollEvents(){
   for(;;){
     try{

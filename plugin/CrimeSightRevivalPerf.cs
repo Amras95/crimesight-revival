@@ -1,8 +1,9 @@
-// CRIMESIGHT Revival - medidor de tirones.
+// CRIMESIGHT Revival - stutter meter.
 //
-// Mide cuanto tarda cada parte del plugin en cada fotograma y apunta en el registro ("[Rendimiento] ...") las que
-// tardan mas de 25 ms, y los fotogramas que tardan mas de 150 ms (con lo que tardo el plugin en ellos): asi se sabe
-// si un tiron viene del plugin (y de que parte) o del propio juego.
+// Measures how long each part of the plugin takes every frame and logs ("[Rendimiento] ...") the ones that
+// take more than 25 ms, and the frames that take more than 150 ms (with how long the plugin took in them): that way
+// you know
+// whether a stutter comes from the plugin (and which part) or from the game itself.
 using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
@@ -13,7 +14,7 @@ namespace CrimeSightRevival.Mods
     {
         static readonly Stopwatch _sw = Stopwatch.StartNew();
         static readonly Dictionary<string, float> _lastLog = new();
-        static double _ours;                 // ms del plugin en el fotograma anterior
+        static double _ours;                 // plugin ms in the previous frame
         static string _worst = ""; static double _worstMs;
         static int _logs;
 
@@ -31,7 +32,7 @@ namespace CrimeSightRevival.Mods
             Plugin.L.LogWarning($"[Rendimiento] {name} tardo {ms:0} ms");
         }
 
-        /// <summary>Al principio de cada fotograma: si el anterior fue lento, lo apunta.</summary>
+        /// <summary>At the start of each frame: if the previous one was slow, it logs it.</summary>
         public static void Frame()
         {
             float dt = Time.unscaledDeltaTime;

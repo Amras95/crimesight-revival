@@ -1,27 +1,27 @@
-// CRIMESIGHT Revival - controles con mando.
+// CRIMESIGHT Revival - gamepad controls.
 //
-// El juego solo se maneja con raton y teclado. Su gestor de controles (KeySettingManager) ya tiene
-// funciones para mando, pero vacias. Aqui:
-//   - Se lee el mando con XInput. Steam presenta como mando de Xbox los de PlayStation, Switch y la propia
-//     Steam Deck, asi que vale para todos (tambien en Linux con Proton).
-//   - El stick izquierdo mueve el cursor de verdad y A / B hacen clic izquierdo / derecho: asi funcionan
-//     todos los menus y botones del juego sin tocarlos.
-//   - La camara, el menu de indicadores, ver sospechosos y las flechas se le dan al gestor de controles del
-//     juego como si fueran sus propias teclas (KeySettingManager.IsDown/IsUp/IsStatus/GetScroll).
-//   - Start pulsa "Finalizar turno" (u "Omitir accion") y Back abre o cierra el registro.
+// The game is only played with mouse and keyboard. Its input manager (KeySettingManager) already has
+// gamepad functions, but empty. Here:
+//   - The gamepad is read with XInput. Steam presents PlayStation and Switch pads and the Steam Deck
+//     itself as an Xbox pad, so it works for all of them (also on Linux with Proton).
+//   - The left stick really moves the cursor and A / B do left / right click: that way every
+//     menu and button of the game works without touching them.
+//   - The camera, the indicator menu, seeing suspects and the arrows are given to the game's input
+//     manager as if they were its own keys (KeySettingManager.IsDown/IsUp/IsStatus/GetScroll).
+//   - Start presses "End turn" (or "Skip action") and Back opens or closes the log.
 //
-//   Stick izq.: cursor                       A: clic        B: clic derecho
-//   L3 / R3: velocidad del cursor / de la camara (lenta, media, rapida; 1, 2 o 3 toques de vibracion)
-//   Stick der.: mover la camara              LB / RB: girar la camara   LT / RT: alejar / acercar
-//   X: indicadores y stickers                Y: ver sospechosos         Cruceta: flechas
-//   Start: Finalizar turno / Omitir accion   Back: Registro
-//   Crear sala, sala de espera y sus ventanas: B / Start / Back (y LB / RB, X / Y) pulsan su boton; cruceta
-//   arriba: la rueda de ajustes (ver CrimeSightRevivalPadUi.cs)
+//   Left stick: cursor                       A: click       B: right click
+//   L3 / R3: cursor / camera speed (slow, medium, fast; 1, 2 or 3 vibration taps)
+//   Right stick: move the camera             LB / RB: turn the camera   LT / RT: zoom out / in
+//   X: indicators and stickers               Y: see suspects            D-pad: arrows
+//   Start: End turn / Skip action            Back: Log
+//   Create room, waiting room and their windows: B / Start / Back (and LB / RB, X / Y) press their button; D-pad
+//   up: the settings cog (see CrimeSightRevivalPadUi.cs)
 //
-// Vibracion: un toque al elegir un personaje y otro al confirmarle una orden; un latido cuando dos
-// personajes se quedan a solas con un arma (escena de comprobacion del asesinato) hasta que empieza el
-// dialogo, o, si es una ejecucion, hasta el golpe, que vibra fuerte; y una vibracion normal cuando
-// Sherlock aparece para hacer su deduccion. Los momentos se detectan por los sonidos que lanza el juego.
+// Vibration: a tap when choosing a character and another when confirming an order for it; a heartbeat when two
+// characters are left alone with a weapon (murder check scene) until the
+// dialogue starts, or, if it is an execution, until the blow, which vibrates hard; and a normal vibration when
+// Sherlock shows up to make his deduction. The moments are detected by the sounds the game plays.
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -49,7 +49,7 @@ namespace CrimeSightRevival.Mods
         [DllImport("xinput9_1_0.dll", EntryPoint = "XInputGetState")] static extern uint Get910(uint u, out XState s);
 
         [StructLayout(LayoutKind.Sequential)]
-        struct XVibration { public ushort left, right; }      // izquierdo: grave (golpe); derecho: agudo (toque)
+        struct XVibration { public ushort left, right; }      // left: low (thud); right: high (tap)
         delegate uint SetStateFn(uint user, ref XVibration v);
         static SetStateFn _set;
         [DllImport("xinput1_4.dll", EntryPoint = "XInputSetState")] static extern uint Set14(uint u, ref XVibration v);
@@ -59,7 +59,7 @@ namespace CrimeSightRevival.Mods
         const ushort DUP = 0x0001, DDOWN = 0x0002, DLEFT = 0x0004, DRIGHT = 0x0008, START = 0x0010, BACK = 0x0020,
                      L3 = 0x0040, R3 = 0x0080, LB = 0x0100, RB = 0x0200, A = 0x1000, B = 0x2000, X = 0x4000, Y = 0x8000;
 
-        // ------------------------------------------------------------ raton y teclado del sistema
+        // ------------------------------------------------------------ system mouse and keyboard
         [StructLayout(LayoutKind.Sequential)]
         struct MouseInput { public int dx, dy; public uint data, flags, time; public IntPtr extra; }
         [StructLayout(LayoutKind.Explicit, Size = 40)]
@@ -77,33 +77,33 @@ namespace CrimeSightRevival.Mods
             SendInput(1, i, Marshal.SizeOf<Input>());
         }
 
-        // ------------------------------------------------------------ estado
+        // ------------------------------------------------------------ state
         static ushort _now, _prev;
         static float _lx, _ly, _rx, _ry, _lt, _rt;
-        static float _rawLx, _rawLy;           // stick izquierdo sin zona muerta (-1..1)
-        static double _cx, _cy;                // posicion del cursor con decimales
-        static bool _cursorHeld;               // _cx/_cy siguen al cursor real
+        static float _rawLx, _rawLy;           // left stick without dead zone (-1..1)
+        static double _cx, _cy;                // cursor position with decimals
+        static bool _cursorHeld;               // _cx/_cy follow the real cursor
         const float CursorDead = 0.16f;
-        static int _rotDone;                   // pixeles movidos para girar (se devuelven al soltar)
+        static int _rotDone;                   // pixels moved to turn (given back on release)
         static bool _rotating, _connected, _announced;
         static readonly Dictionary<string, ushort> Buttons = new()
         {
-            ["PingStampMenu"] = X, ["ViewHint"] = Y, ["Cancel"] = B,          // Cancel (Esc): solo en la partida
+            ["PingStampMenu"] = X, ["ViewHint"] = Y, ["Cancel"] = B,          // Cancel (Esc): only in the match
             ["UpArrow"] = DUP, ["DownArrow"] = DDOWN, ["LeftArrow"] = DLEFT, ["RightArrow"] = DRIGHT,
         };
 
         static void Log(string s) => Plugin.L.LogInfo("[Mando] " + s);
 
-        // velocidades: 0 lenta, 1 media, 2 rapida (se guardan en csr_live/pad.txt)
-        static readonly float[] CursorSpeeds = { 0.5f, 0.9f, 1.4f };     // pantallas por segundo a tope
-        static readonly float[] CameraSpeeds = { 0.35f, 0.65f, 1f };      // fraccion de la velocidad del juego
+        // speeds: 0 slow, 1 medium, 2 fast (saved in csr_live/pad.txt)
+        static readonly float[] CursorSpeeds = { 0.5f, 0.9f, 1.4f };     // screens per second at full tilt
+        static readonly float[] CameraSpeeds = { 0.35f, 0.65f, 1f };      // fraction of the game's speed
         static int _cursorSpeed = 1, _cameraSpeed = 1;
         static string _styleSetting = "auto";
-        // camara con el stick derecho: se mueve aqui directamente (no pulsando "teclas" a ratos, que daba
-        // tirones), en la direccion exacta del stick y con la velocidad segun lo inclinado
-        static float _camVx, _camVy;           // velocidad actual (suavizada), -1..1 por eje
-        static int _camAllowedFrame = -10;     // ultimo fotograma en que el juego dejaba mover la camara
-        const float KeyStep = 0.25f;           // lo que mueve el juego por fotograma con las teclas (KEY_MOVE_SPEED)
+        // camera with the right stick: it is moved here directly (not pressing "keys" now and then, which
+        // stuttered), in the exact direction of the stick and with the speed according to the tilt
+        static float _camVx, _camVy;           // current speed (smoothed), -1..1 per axis
+        static int _camAllowedFrame = -10;     // last frame in which the game allowed the camera to move
+        const float KeyStep = 0.25f;           // what the game moves per frame with the keys (KEY_MOVE_SPEED)
 
         static string SpeedFile => System.IO.Path.Combine(LiveMods.LiveDir, "pad.txt");
 
@@ -155,9 +155,10 @@ namespace CrimeSightRevival.Mods
                     System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
             }
             catch (Exception e) { Plugin.L.LogWarning("[Mando] iconos: " + e.Message); }
-            // GetSpriteMacro es privado y el compilador del juego lo mete dentro de quien lo llama, asi que
-            // tambien se retoca el texto ya montado: se cambian los iconos de teclado/raton por los del mando.
-            // (SetKeyMacroColor no se toca: su color llega mal al plugin y salian textos de colores raros; esos los cambia Aliases)
+            // GetSpriteMacro is private and the game's compiler inlines it into its callers, so
+            // the already built text is touched up too: the keyboard/mouse icons are swapped for the gamepad's.
+            // (SetKeyMacroColor isn't touched: its colour reaches the plugin wrong and texts came out in odd colours;
+            // Aliases changes those)
             foreach (var (name, post) in new[] { ("SetKeyMacroText", nameof(AfterMacroText)) })
             {
                 try
@@ -174,7 +175,7 @@ namespace CrimeSightRevival.Mods
         static readonly System.Text.RegularExpressions.Regex SpriteTag =
             new System.Text.RegularExpressions.Regex("<sprite name=\"?([A-Za-z0-9_]+)\"?[^>]*>");
 
-        // Icono del juego -> icono del mando (null = se queda como esta)
+        // Game icon -> gamepad icon (null = stays as it is)
         static string PadSprite(string name)
         {
             switch (name)
@@ -184,7 +185,7 @@ namespace CrimeSightRevival.Mods
                 case "keyboard_ctrl": return Btn("x");
                 case "mouse_right_click": case "mouse_middle_click": return "";
                 case "keyboard_tab": return Btn("y");
-                case "mouse_blank": return "";                       // hueco del juego cuando no hay boton de raton
+                case "mouse_blank": return "";                       // the game's gap when there is no mouse button
                 case "mouse_DragLeft": return Sprite("rstick");
                 case "mouse_DragRight": return Btn("lbrb");
                 case "mouse_wheel": return Btn("ltrt");
@@ -193,7 +194,7 @@ namespace CrimeSightRevival.Mods
             return null;
         }
 
-        // Texto ya montado -> como se monto (para rehacerlo al cambiar entre mando y raton)
+        // Already built text -> how it was built (to redo it when switching between gamepad and mouse)
         struct Macro { public string raw; public bool colored; public Color color; }
         static readonly Dictionary<string, Macro> _macros = new();
 
@@ -217,7 +218,7 @@ namespace CrimeSightRevival.Mods
             try
             {
                 var s = SpriteTag.Replace(__result, m => m.Groups[1].Value.StartsWith("csr_") ? m.Value : (PadSprite(m.Groups[1].Value) ?? m.Value));
-                // el mismo boton dos veces seguidas (raton + tecla, o las cuatro flechas) se deja en uno
+                // the same button twice in a row (mouse + key, or the four arrows) is left as one
                 string prev;
                 do
                 {
@@ -247,8 +248,8 @@ namespace CrimeSightRevival.Mods
                 }
                 if (_get == null) { _noXInput = true; Log("XInput no disponible: sin soporte de mando"); return false; }
             }
-            // con el mando conectado se lee su ranura cada fotograma; sin mando se buscan las cuatro una vez
-            // por segundo (preguntar por ranuras vacias es lento y daria tirones)
+            // with the gamepad connected its slot is read every frame; without a gamepad the four are searched once
+            // a second (asking about empty slots is slow and would stutter)
             if (_slot >= 0 && _get((uint)_slot, out s) == 0) return true;
             _slot = -1;
             if (Time.unscaledTime < _nextScan) return false;
@@ -269,17 +270,17 @@ namespace CrimeSightRevival.Mods
             float mag = (float)Math.Sqrt(x * x + y * y);
             if (mag < CursorDead) { _cursorHeld = false; return; }
             float m = Math.Min(1f, (mag - CursorDead) / (1f - CursorDead));
-            float curve = 0.25f * m + 0.75f * m * m;               // fino al empezar, rapido a tope
+            float curve = 0.25f * m + 0.75f * m * m;               // fine at the start, fast at full tilt
             float speed = Screen.height * CursorSpeeds[_cursorSpeed] * curve * dt;
             float dx = x / mag * speed, dy = -y / mag * speed;
             if (!GetCursorPos(out var now)) return;
-            // si el cursor real no esta donde lo dejamos (lo ha movido el raton), se parte de ahi
+            // if the real cursor isn't where we left it (the mouse moved it), it starts from there
             if (!_cursorHeld || Math.Abs(now.x - Math.Round(_cx)) > 1 || Math.Abs(now.y - Math.Round(_cy)) > 1)
             {
                 _cx = now.x; _cy = now.y; _cursorHeld = true;
             }
             _cx += dx; _cy += dy;
-            // sin salirse de la ventana del juego
+            // without leaving the game window
             var w = GetActiveWindow();
             if (w != IntPtr.Zero && GetClientRect(w, out var rc))
             {
@@ -309,7 +310,7 @@ namespace CrimeSightRevival.Mods
         static bool Pressed(ushort b) => (_now & b) != 0 && (_prev & b) == 0;
         static bool Released(ushort b) => (_now & b) == 0 && (_prev & b) != 0;
 
-        // ------------------------------------------------------------ cada fotograma
+        // ------------------------------------------------------------ every frame
         public static void Frame()
         {
             if (!Read(out var s))
@@ -337,12 +338,12 @@ namespace CrimeSightRevival.Mods
             if (Pressed(L3)) { _cursorSpeed = (_cursorSpeed + 1) % 3; SaveSpeeds(); SpeedTaps(_cursorSpeed); Log("velocidad del cursor: " + _cursorSpeed); }
             if (Pressed(R3)) { _cameraSpeed = (_cameraSpeed + 1) % 3; SaveSpeeds(); SpeedTaps(_cameraSpeed); Log("velocidad de la camara: " + _cameraSpeed); }
 
-            // camara: el juego la mueve a velocidad fija mientras la "tecla" esta pulsada; se pulsa solo en una
-            // parte de los fotogramas, segun cuanto se incline el stick y la velocidad elegida
+            // camera: the game moves it at a fixed speed while the "key" is held; it is held only in some
+            // of the frames, depending on how far the stick is tilted and the chosen speed
             float k = CameraSpeeds[_cameraSpeed];
             if (ScrollMode())
             {
-                // fuera de la partida (o con el registro abierto) el stick derecho es la rueda del raton
+                // outside the match (or with the log open) the right stick is the mouse wheel
                 _camVx = _camVy = 0;
                 _wheel += _ry * Math.Abs(_ry) * 900f * (0.5f + 0.5f * k) * dt;
                 int w = (int)_wheel;
@@ -355,23 +356,23 @@ namespace CrimeSightRevival.Mods
                 catch (Exception e) { if (!_camWarned) { _camWarned = true; Plugin.L.LogWarning("[Mando] camara: " + e.Message); } }
             }
 
-            // cursor: el stick como un vector (zona muerta redonda y curva sobre la distancia, no por eje),
-            // asi la direccion es la del dedo y se pueden hacer circulos. Se mueve a una posicion exacta
-            // (no "x pixeles"), para que la aceleracion del raton de Windows no lo tuerza hacia los ejes.
-            if (_rotating) { _cursorHeld = false; }                // mientras gira, el cursor es de la camara
+            // cursor: the stick as a vector (round dead zone and curve over the distance, not per axis),
+            // so the direction is the finger's and circles can be made. It moves to an exact position
+            // (not "x pixels"), so Windows' mouse acceleration doesn't bend it towards the axes.
+            if (_rotating) { _cursorHeld = false; }                // while turning, the cursor belongs to the camera
             else MoveCursor(dt);
 
-            // sala de espera y sus ventanas: B / Start / Back pulsan su boton (CrimeSightRevivalPadUi.cs)
+            // waiting room and its windows: B / Start / Back press their button (CrimeSightRevivalPadUi.cs)
             UiButtons(out bool startDone, out bool backDone);
 
             if (Pressed(A)) Mouse(LDOWN);
             if (Released(A)) Mouse(LUP);
-            // B: en la partida es "Cancelar" (Esc) y no el clic derecho, que abre la ventana de stickers
+            // B: in the match it is "Cancel" (Esc) and not the right click, which opens the sticker window
             if (Pressed(B) && !_bConsumed) { if (_inGame) _bCancel = true; else Mouse(RDOWN); }
             if (Released(B)) { if (!_bConsumed && !_bCancel) Mouse(RUP); _bConsumed = false; _bCancel = false; }
 
-            // girar la camara: el juego gira mientras "CameraRotate" esta activo, segun lo que se mueva el cursor
-            bool rot = !ScrollMode() && !_uiTabs && (Held(LB) ^ Held(RB));      // fuera de la partida LB/RB no hacen nada
+            // turn the camera: the game turns while "CameraRotate" is active, according to how much the cursor moves
+            bool rot = !ScrollMode() && !_uiTabs && (Held(LB) ^ Held(RB));      // outside the match LB/RB do nothing
             if (rot)
             {
                 _rotating = true;
@@ -381,7 +382,7 @@ namespace CrimeSightRevival.Mods
             else if (_rotating)
             {
                 _rotating = false;
-                if (_rotDone != 0) { Mouse(MOVE, -_rotDone, 0); _rotDone = 0; }   // el cursor vuelve a su sitio
+                if (_rotDone != 0) { Mouse(MOVE, -_rotDone, 0); _rotDone = 0; }   // the cursor goes back to its place
             }
 
             if (Pressed(START) && !startDone && _inGame) TurnButton();
@@ -421,9 +422,9 @@ namespace CrimeSightRevival.Mods
 
         static bool _camWarned;
 
-        // Igual que hace el juego con las flechas (se suelta el seguimiento de la ficha y se desplaza el punto
-        // al que mira), pero con un vector analogico: zona muerta redonda, curva suave y arranque/frenada
-        // progresivos. Se mide por tiempo, asi va igual a 30 que a 144 fps.
+        // Like the game does with the arrows (the character tracking is released and the point it looks at
+        // moves), but with an analog vector: round dead zone, soft curve and gradual start/stop.
+        // It is measured by time, so it runs the same at 30 as at 144 fps.
         static void CameraStick(short sx, short sy, float k, float dt)
         {
             float x = Math.Max(-1f, sx / 32767f), y = Math.Max(-1f, sy / 32767f);
@@ -442,7 +443,7 @@ namespace CrimeSightRevival.Mods
             if (tx == 0 && Math.Abs(_camVx) < 0.004f) _camVx = 0;
             if (ty == 0 && Math.Abs(_camVy) < 0.004f) _camVy = 0;
             if ((_camVx == 0 && _camVy == 0) || _rotating) return;
-            if (Time.frameCount - _camAllowedFrame > 2) return;     // menus, escenas, registro abierto...
+            if (Time.frameCount - _camAllowedFrame > 2) return;     // menus, scenes, log open...
             var cm = CameraManager.Instance;
             if (cm == null) return;
             var cam = cm.GetCurrentCamera();
@@ -473,10 +474,11 @@ namespace CrimeSightRevival.Mods
             _lx = _ly = _rx = _ry = _lt = _rt = 0;
         }
 
-        // ------------------------------------------------------------ botones del juego
+        // ------------------------------------------------------------ game buttons
         static T Find<T>() where T : UnityEngine.Object
         {
-            // FindObjectOfType no esta en el juego (lo quito el compilador): se usa la version que devuelve todos
+            // FindObjectOfType isn't in the game (the compiler removed it): the version that returns all of them is
+            // used
             var all = UnityEngine.Object.FindObjectsOfType(Il2CppType.Of<T>());
             if (all == null) return null;
             foreach (var o in all) { var t = o == null ? null : o.TryCast<T>(); if (t != null) return t; }
@@ -496,14 +498,15 @@ namespace CrimeSightRevival.Mods
             return true;
         }
 
-        // Se pulsa el boton de verdad: el cursor va encima, clic y vuelve a donde estaba. Asi el juego hace
-        // exactamente lo mismo que con el raton (sonido, confirmaciones...).
+        // The button is really pressed: the cursor goes over it, clicks and goes back to where it was. That way the
+        // game does
+        // exactly the same as with the mouse (sound, confirmations...).
         [StructLayout(LayoutKind.Sequential)] struct Point { public int x, y; }
         [DllImport("user32.dll")] static extern bool GetCursorPos(out Point p);
         [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
         [DllImport("user32.dll")] static extern IntPtr GetActiveWindow();
         [DllImport("user32.dll")] static extern bool ClientToScreen(IntPtr h, ref Point p);
-        static int _clickStage, _clickHover = 2;          // fotogramas con el cursor encima antes de pulsar
+        static int _clickStage, _clickHover = 2;          // frames with the cursor over it before pressing
         static Point _clickBack;
 
         static bool ClickAt(UnityEngine.UI.Button b)
@@ -528,13 +531,13 @@ namespace CrimeSightRevival.Mods
             return true;
         }
 
-        // un paso por fotograma: encima -> pulsar -> soltar -> volver
+        // one step per frame: over -> press -> release -> go back
         static void ClickStep()
         {
             if (_clickStage == 0) return;
             _lastInjected = Time.unscaledTime;
             int st = _clickStage++;
-            if (st <= _clickHover) return;                   // que el juego vea el cursor encima del boton
+            if (st <= _clickHover) return;                   // so the game sees the cursor over the button
             switch (st - _clickHover)
             {
                 case 1: Mouse(LDOWN); break;
@@ -568,10 +571,10 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[Mando] Registro: " + e.Message); }
         }
 
-        // ------------------------------------------------------------ iconos de mando en la barra de ayuda
-        // El juego dibuja las teclas con un "sprite asset" de TextMeshPro (keyboard_ctrl, mouse_wheel...). Se le
-        // anade como respaldo uno nuestro con iconos de mando (plugin/pad_icons.png, ver tools/pad_icons.py) y,
-        // mientras juegas con mando, cada accion se pinta con su boton.
+        // ------------------------------------------------------------ gamepad icons in the help bar
+        // The game draws the keys with a TextMeshPro "sprite asset" (keyboard_ctrl, mouse_wheel...). One of ours with
+        // gamepad icons is added as a fallback (plugin/pad_icons.png, see tools/pad_icons.py) and,
+        // while you play with a gamepad, each action is drawn with its button.
         static readonly string[] IconNames = {
             "xbox_a", "xbox_b", "xbox_x", "xbox_y", "xbox_lb", "xbox_rb", "xbox_lt", "xbox_rt",
             "ps_a", "ps_b", "ps_x", "ps_y", "ps_lb", "ps_rb", "ps_lt", "ps_rt",
@@ -582,10 +585,10 @@ namespace CrimeSightRevival.Mods
         static readonly Dictionary<string, TMP_SpriteGlyph> _glyphs = new();
         static TMP_SpriteAsset _src, _mine;
         static int _baseChars;
-        static readonly Dictionary<int, string> _srcNames = new();   // nombre original de cada icono del juego
+        static readonly Dictionary<int, string> _srcNames = new();   // original name of each game icon
         static string _aliasState = "";
 
-        // Icono del juego -> el nuestro (nombre en _glyphs). Asi cambia cualquier texto del juego, lo monte como lo monte.
+        // Game icon -> ours (name in _glyphs). That way any game text changes, however it was built.
         static string AliasFor(string name)
         {
             switch (name)
@@ -594,7 +597,7 @@ namespace CrimeSightRevival.Mods
                 case "keyboard_esc": return _style + "_b";
                 case "keyboard_ctrl": return _style + "_x";
                 case "keyboard_tab": return _style + "_y";
-                // en la barra cada accion sale como "boton de raton + tecla"; con mando sobra el del raton
+                // in the bar each action shows as "mouse button + key"; with a gamepad the mouse one is extra
                 case "mouse_blank": case "mouse_right_click": case "mouse_middle_click": return "blank";
                 case "mouse_DragLeft": return "rstick";
                 case "mouse_DragRight": return _style + "_lbrb";
@@ -604,8 +607,8 @@ namespace CrimeSightRevival.Mods
             return null;
         }
 
-        // Con mando, los iconos del juego se "esconden" (cambian de nombre) y los nuestros toman su nombre; TextMeshPro
-        // no los encuentra en el suyo y los busca en el nuestro. Con raton se deja todo como estaba.
+        // With a gamepad, the game's icons are "hidden" (renamed) and ours take their name; TextMeshPro
+        // doesn't find them in its own and looks for them in ours. With the mouse everything is left as it was.
         static void Aliases()
         {
             if (_src == null || _mine == null) return;
@@ -646,7 +649,7 @@ namespace CrimeSightRevival.Mods
         const int CELL = 64, SHEET = 512;
         static bool _iconsReady, _iconsFailed, _padMode;
         static float _iconsNextTry, _lastPadInput = -10f, _lastInjected = -10f;
-        static string _style = "xbox";         // xbox, ps o sw (Switch)
+        static string _style = "xbox";         // xbox, ps or sw (Switch)
 
         static void Icons()
         {
@@ -660,7 +663,7 @@ namespace CrimeSightRevival.Mods
                     var a = o.TryCast<TMP_SpriteAsset>();
                     if (a != null && a.GetSpriteIndexFromName("keyboard_ctrl") >= 0) { src = a; break; }
                 }
-                if (src == null) return;                         // aun no se ha cargado: se vuelve a intentar
+                if (src == null) return;                         // not loaded yet: it is tried again
 
                 byte[] png;
                 using (var st = typeof(Pad).Assembly.GetManifestResourceStream("CrimeSightRevival.PadIcons.png"))
@@ -679,7 +682,7 @@ namespace CrimeSightRevival.Mods
                 mine.hashCode = TMP_TextUtilities.GetSimpleHashCode(mine.name);
                 mine.materialHashCode = TMP_TextUtilities.GetSimpleHashCode(mat.name);
 
-                // tamano en pantalla: el de una tecla del juego, en cuadrado
+                // on-screen size: a game key's, as a square
                 var refGlyph = src.spriteGlyphTable[src.spriteCharacterTable[src.GetSpriteIndexFromName("keyboard_ctrl")].glyphIndex < src.spriteGlyphTable.Count
                     ? (int)src.spriteCharacterTable[src.GetSpriteIndexFromName("keyboard_ctrl")].glyphIndex : 0];
                 var rm = refGlyph.metrics;
@@ -697,7 +700,7 @@ namespace CrimeSightRevival.Mods
                     mine.spriteCharacterTable.Add(c);
                     _glyphs[IconNames[i]] = g;
                 }
-                // botones dobles, el doble de anchos
+                // double buttons, twice as wide
                 var wide = new GlyphMetrics(2 * h, h, 0, rm.horizontalBearingY, 2 * h + Math.Max(0, rm.horizontalAdvance - rm.width));
                 for (int k2 = 0; k2 < Combos.Length; k2++)
                 {
@@ -707,7 +710,7 @@ namespace CrimeSightRevival.Mods
                     mine.spriteCharacterTable.Add(new TMP_SpriteCharacter(0xFFFE, g) { name = "csr_" + Combos[k2] });
                     _glyphs[Combos[k2]] = g;
                 }
-                // "nada": la celda vacia de abajo a la derecha, sin ancho
+                // "nothing": the empty cell at the bottom right, without width
                 var blank = new TMP_SpriteGlyph((uint)(IconNames.Length + Combos.Length), new GlyphMetrics(1, 1, 0, 0, 0),
                     new GlyphRect(SHEET - CELL + 8, 8, 4, 4), refGlyph.scale, 0);
                 mine.spriteGlyphTable.Add(blank);
@@ -728,9 +731,9 @@ namespace CrimeSightRevival.Mods
         }
 
         static string Sprite(string name) => $"<sprite name=\"csr_{name}\">";
-        // para la Guia Revival: los iconos del juego (con los nuestros de respaldo) y el tipo de mando
+        // for the Revival Guide: the game's icons (with ours as fallback) and the gamepad type
         internal static TMP_SpriteAsset KeyIcons => _src;
-        internal static void EnsureIcons() { try { Icons(); } catch { } }   // sin mando conectado tambien
+        internal static void EnsureIcons() { try { Icons(); } catch { } }   // also without a gamepad connected
         internal static string PadStyle => _style;
         static string Btn(string b) => Sprite(_style + "_" + b);
 
@@ -748,7 +751,7 @@ namespace CrimeSightRevival.Mods
                 case "Wheel": return Btn("ltrt");
                 case "UpArrow": case "DownArrow": case "LeftArrow": case "RightArrow": return Sprite("dpad");
             }
-            return null;                                         // F1-F6 y demas: se quedan las del teclado
+            return null;                                         // F1-F6 and the rest: the keyboard ones stay
         }
 
         static void AfterSpriteMacro(ref string __result, ref string checkKey)
@@ -758,7 +761,7 @@ namespace CrimeSightRevival.Mods
             if (s != null) __result = s;
         }
 
-        // Mando o raton: se usa el ultimo que se haya tocado (sin contar lo que mueve el propio mando)
+        // Gamepad or mouse: the last one touched is used (not counting what the gamepad itself moves)
         static void UpdateMode(XState s)
         {
             float now = Time.unscaledTime;
@@ -799,8 +802,8 @@ namespace CrimeSightRevival.Mods
             FixTexts();
         }
 
-        // Textos ya puestos en pantalla (barra de abajo, avisos sobre el mapa): se cambian sus iconos.
-        // Lo que se cambio a mano se recuerda para devolverlo al volver al raton.
+        // Texts already on screen (bottom bar, notices over the map): their icons are changed.
+        // What was changed by hand is remembered to give it back when returning to the mouse.
         static readonly Dictionary<string, string> _unswap = new();
         static float _nextFix;
 
@@ -830,14 +833,14 @@ namespace CrimeSightRevival.Mods
         }
         static bool _fixWarned;
 
-        // Tipo de mando, para sus iconos. Con Steam Input el juego ve un mando de Xbox, pero el mando fisico
-        // sigue en la lista de dispositivos: se mira el fabricante (Sony 054C, Nintendo 057E). Se puede fijar
-        // en csr_live/pad.txt (tercer valor: auto, xbox, ps o sw).
+        // Gamepad type, for its icons. With Steam Input the game sees an Xbox pad, but the physical pad
+        // is still in the device list: the vendor is checked (Sony 054C, Nintendo 057E). It can be fixed
+        // in csr_live/pad.txt (third value: auto, xbox, ps or sw).
         [StructLayout(LayoutKind.Sequential)] struct RawDevice { public IntPtr handle; public uint type; }
         [DllImport("user32.dll")] static extern uint GetRawInputDeviceList([Out] RawDevice[] list, ref uint count, uint size);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern uint GetRawInputDeviceInfoW(IntPtr dev, uint cmd, System.Text.StringBuilder data, ref uint size);
 
-        // Con Steam Input el juego solo ve un mando de Xbox. Steam sabe cual es el de verdad: se le pregunta.
+        // With Steam Input the game only sees an Xbox pad. Steam knows which is the real one: it is asked.
         const string SteamDll = "steam_api64";
         [DllImport(SteamDll)] static extern IntPtr SteamAPI_SteamInput_v002();
         [DllImport(SteamDll)] [return: MarshalAs(UnmanagedType.I1)] static extern bool SteamAPI_ISteamInput_Init(IntPtr self, [MarshalAs(UnmanagedType.I1)] bool explicitRunFrame);
@@ -860,7 +863,7 @@ namespace CrimeSightRevival.Mods
         {
             if (_steamFailed || _steamFound || _styleSetting != "auto") return;
             float now = Time.unscaledTime;
-            if (_steamUntil < 0) _steamUntil = now + 20f;            // se intenta durante 20 s
+            if (_steamUntil < 0) _steamUntil = now + 20f;            // it is tried for 20 s
             if (now < _steamNext) return;
             if (now > _steamUntil) { _steamFailed = true; Log("Steam no dice que mando es"); return; }
             _steamNext = now + 1f;
@@ -910,7 +913,7 @@ namespace CrimeSightRevival.Mods
                     var sb = new System.Text.StringBuilder(512);
                     if (GetRawInputDeviceInfoW(d.handle, 0x20000007, sb, ref len) == uint.MaxValue) continue;
                     var name = sb.ToString().ToUpperInvariant();
-                    if (name.Contains("VID_054C") || name.Contains("054C_PID")) sony = true;          // USB y Bluetooth (VID&0002054C_PID)
+                    if (name.Contains("VID_054C") || name.Contains("054C_PID")) sony = true;          // USB and Bluetooth (VID&0002054C_PID)
                     if (name.Contains("VID_057E") || name.Contains("057E_PID")) nintendo = true;
                     if (!_hidLogged && (name.Contains("VID") )) Log("dispositivo HID: " + name);
                 }
@@ -920,11 +923,11 @@ namespace CrimeSightRevival.Mods
             catch { return "xbox"; }
         }
 
-        // ------------------------------------------------------------ vibracion
+        // ------------------------------------------------------------ vibration
         struct Pulse { public float start, end, left, right; }
         static readonly List<Pulse> _pulses = new();
-        static float _beatUntil, _nextBeat;     // latido: hasta cuando y cuando toca el siguiente
-        static bool _execution;                 // el latido es de una ejecucion: sigue hasta el golpe
+        static float _beatUntil, _nextBeat;     // heartbeat: until when and when the next one is due
+        static bool _execution;                 // the heartbeat belongs to an execution: it goes on until the blow
         static ushort _sentL, _sentR;
 
         static void Rumble(float delay, float dur, float left, float right)
@@ -944,17 +947,18 @@ namespace CrimeSightRevival.Mods
 
         static void StopHeartbeat() { _beatUntil = 0; _execution = false; }
 
-        // ------------------------------------------------------------ vibracion al ritmo de las escenas
-        // Las escenas son Timelines del juego; se mira su tiempo cada fotograma y se vibra en el momento justo
-        // (los tiempos salen de los propios Timelines; ver tools o el CLAUDE.md):
-        //   p0220_Demo_Timeline   Sherlock detecta: un pulso con cada onda de la esfera (3.5, 4.333, 4.833) y uno
-        //                         mas fuerte al final (5.5)
-        //   p0100_Demo_Timeline   asesinato (KillCutPrefab): la pantalla se rompe a 13.783 (Glitch_Spider_Effect_Plane)
-        //   p0155_p_Demo_Timeline asesinato detenido por Sherlock: la pantalla se rompe a 14.233 (SS_04_Movie_Texture_Set)
-        //                         y el destello del buho a 16.667
-        // El golpe va 2 fotogramas despues, corta el latido y es muy fuerte.
+        // ------------------------------------------------------------ vibration in time with the scenes
+        // The scenes are game Timelines; their time is checked every frame and it vibrates at the right moment
+        // (the times come from the Timelines themselves; see tools or the CLAUDE.md):
+        //   p0220_Demo_Timeline   Sherlock detects: one pulse with each wave of the sphere (3.5, 4.333, 4.833) and
+        //   one
+        //                         stronger at the end (5.5)
+        //   p0100_Demo_Timeline   murder (KillCutPrefab): the screen breaks at 13.783 (Glitch_Spider_Effect_Plane)
+        //   p0155_p_Demo_Timeline murder stopped by Sherlock: the screen breaks at 14.233 (SS_04_Movie_Texture_Set)
+        //                         and the owl's flash at 16.667
+        // The blow comes 2 frames later, cuts the heartbeat and is very strong.
         const float Frame2 = 2f / 30f;
-        struct Cue { public string timeline; public float t; public int kind; }    // 0 pulso, 1 pulso fuerte, 2 golpe
+        struct Cue { public string timeline; public float t; public int kind; }    // 0 pulse, 1 strong pulse, 2 blow
         static readonly Cue[] Cues =
         {
             new Cue { timeline = "p0220_Demo_Timeline", t = 3.5f, kind = 0 },
@@ -995,7 +999,7 @@ namespace CrimeSightRevival.Mods
                 var (d, name, last) = _directors[i];
                 double t;
                 try { if (d == null || !d.isActiveAndEnabled) continue; t = d.time; } catch { continue; }
-                if (t < last - 0.5) last = -1;                         // vuelve a empezar
+                if (t < last - 0.5) last = -1;                         // starts over
                 foreach (var c in Cues)
                     if (c.timeline == name && last < c.t && t >= c.t) SceneCue(c.kind);
                 _directors[i] = (d, name, t);
@@ -1006,9 +1010,9 @@ namespace CrimeSightRevival.Mods
         {
             switch (kind)
             {
-                case 0: Rumble(0f, 0.12f, 0.55f, 0.35f); Rumble(0.12f, 0.15f, 0.2f, 0.1f); break;   // pulso
-                case 1: Rumble(0f, 0.18f, 0.8f, 0.6f); Rumble(0.18f, 0.2f, 0.3f, 0.15f); break;    // pulso fuerte
-                case 2:                                                                             // golpe
+                case 0: Rumble(0f, 0.12f, 0.55f, 0.35f); Rumble(0.12f, 0.15f, 0.2f, 0.1f); break;   // pulse
+                case 1: Rumble(0f, 0.18f, 0.8f, 0.6f); Rumble(0.18f, 0.2f, 0.3f, 0.15f); break;    // strong pulse
+                case 2:                                                                             // blow
                     StopHeartbeat();
                     _pulses.Clear();
                     _hitAt = Time.unscaledTime;
@@ -1049,7 +1053,7 @@ namespace CrimeSightRevival.Mods
 
         static void StopRumble() { _pulses.Clear(); StopHeartbeat(); Send(0, 0); }
 
-        // Wwise identifica cada sonido por un numero: FNV-1 de 32 bits del nombre en minusculas
+        // Wwise identifies each sound by a number: 32-bit FNV-1 of the lowercase name
         static uint WwiseId(string name)
         {
             uint h = 2166136261;
@@ -1067,14 +1071,14 @@ namespace CrimeSightRevival.Mods
         static void OnSound(uint id)
         {
             float now = Time.unscaledTime;
-            if (id == _lastId && now - _lastSound < 0.1f) return;    // el mismo sonido por dos caminos
+            if (id == _lastId && now - _lastSound < 0.1f) return;    // the same sound through two paths
             _lastId = id; _lastSound = now;
             if (id == KillCheck || id == KillJingle)
                 Heartbeat(false, 12f);
             else if (id == Hit && _execution && now < _beatUntil && now - _hitAt > 2f)
             {
                 StopHeartbeat();
-                Rumble(0f, 0.5f, 1f, 0.8f);                           // el golpe
+                Rumble(0f, 0.5f, 1f, 0.8f);                           // the blow
             }
             else if (id == SherlockAppear)
                 Rumble(0f, 0.3f, 0.45f, 0.35f);
@@ -1127,10 +1131,10 @@ namespace CrimeSightRevival.Mods
         static void AfterKillScene() { Heartbeat(true, 20f); }
         static void AfterDialogue(bool __result)
         {
-            if (__result && !_execution && Time.unscaledTime < _beatUntil) StopHeartbeat();   // empieza a hablar
+            if (__result && !_execution && Time.unscaledTime < _beatUntil) StopHeartbeat();   // starts talking
         }
 
-        // ------------------------------------------------------------ gestor de controles del juego
+        // ------------------------------------------------------------ the game's input manager
         static bool Status(string id)
         {
             if (!_connected || id == null) return false;
@@ -1148,7 +1152,7 @@ namespace CrimeSightRevival.Mods
         static void AfterIsUp(ref bool __result, ref string id) { if (!__result && Up(id)) __result = true; }
         static void AfterIsStatus(ref bool __result, ref string id)
         {
-            if (id == "CameraMoveRight") _camAllowedFrame = Time.frameCount;   // el juego esta mirando si mover la camara
+            if (id == "CameraMoveRight") _camAllowedFrame = Time.frameCount;   // the game is checking whether to move the camera
             if (!__result && Status(id)) __result = true;
         }
 

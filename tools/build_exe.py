@@ -1,11 +1,11 @@
 """
-Crea dist/CrimeSightRevival.exe (Windows) o dist/CrimeSightRevival (Linux / Steam Deck) con
-PyInstaller (lo usan crear_exe.bat y GitHub Actions).
+Creates dist/CrimeSightRevival.exe (Windows) or dist/CrimeSightRevival (Linux / Steam Deck) with
+PyInstaller (used by crear_exe.bat and GitHub Actions).
 
-  python tools/build_exe.py            -> version "dev" (no se actualiza sola)
-  python tools/build_exe.py 1.1.12     -> version publicada (se actualiza desde GitHub)
+  python tools/build_exe.py            -> "dev" version (doesn't update itself)
+  python tools/build_exe.py 1.1.12     -> published version (updates from GitHub)
 
-El .exe no contiene ningun archivo de Konami: claves e ilustraciones se leen del juego de cada uno.
+The .exe contains no Konami file: keys and illustrations are read from each person's game.
 """
 import os, sys
 
@@ -24,13 +24,13 @@ hidden = ["server", "match", "ai", "stats", "cscrypto", "extract_keys", "patch_c
 args = ["--noconfirm", "--clean", "--onefile", "--windowed", "--name", "CrimeSightRevival",
         "--paths", "server", "--paths", "tools", "--paths", "launcher",
         "--add-data", f"launcher{os.sep}ui{sep}ui", "--add-data", f"launcher{os.sep}icon.ico{sep}.",
-        # plugin opcional de BepInEx (recarga en caliente de mods); BepInEx NO va incluido
+        # optional BepInEx plugin (live mod reload); BepInEx is NOT included
         "--add-data", f"plugin{os.sep}CrimeSightRevival.Mods.dll{sep}plugin",
         "--collect-all", "UnityPy",
-        # UnityPy carga su modulo de audio al sacar imagenes: sin la libreria de fmod no hay ilustraciones
+        # UnityPy loads its audio module when extracting images: without the fmod library there are no illustrations
         "--collect-all", "fmod_toolkit", "--collect-all", "archspec", "--collect-data", "certifi"]
 if os.name == "nt":
-    # ventana propia con WebView2; en Linux la interfaz se abre en el navegador (browserui.py)
+    # own window with WebView2; on Linux the interface opens in the browser (browserui.py)
     args += ["--icon", os.path.join("launcher", "icon.ico"), "--collect-all", "webview"]
 else:
     args += ["--exclude-module", "webview"]
@@ -39,8 +39,8 @@ for h in hidden:
 
 
 def crypto_binaries():
-    """Librerias nativas de pycryptodome. Se meten a mano: el hook de PyInstaller a veces no las
-    recoge y entonces el servidor no puede descifrar nada (error 100010 al iniciar sesion)."""
+    """pycryptodome native libraries. Added by hand: the PyInstaller hook sometimes doesn't
+    collect them and then the server can't decrypt anything (error 100010 when logging in)."""
     import glob
     import Crypto
     base = os.path.dirname(Crypto.__file__)
@@ -58,8 +58,8 @@ for src_file, dest in crypto_binaries():
     args += ["--add-binary", f"{src_file}{sep}{dest}"]
 args.append(os.path.join("launcher", "webapp.py"))
 
-# Lo que tiene que llevar el .exe si o si: cifrado (sin esto el servidor no entiende al juego)
-# y la libreria de audio de UnityPy (sin ella no se sacan las ilustraciones del juego)
+# What the .exe must carry no matter what: crypto (without it the server doesn't understand the game)
+# and UnityPy's audio library (without it the game's illustrations can't be extracted)
 REQUIRED = ["Crypto/Cipher/_raw_cbc.", "Crypto/Cipher/_raw_aes.", "Crypto/Util/_cpuid_c.", "fmod_toolkit/libfmod/"]
 
 
@@ -77,7 +77,7 @@ try:
     PyInstaller.__main__.run(args)
 finally:
     if version != "dev":
-        open(vfile, "w", encoding="utf-8").write(src)   # no dejar la version escrita en el codigo
+        open(vfile, "w", encoding="utf-8").write(src)   # don't leave the version written in the code
 exe = os.path.join("dist", "CrimeSightRevival.exe" if os.name == "nt" else "CrimeSightRevival")
 check_exe(exe)
 print(f"\nListo: {exe} (version {version})")

@@ -1,14 +1,14 @@
-// CRIMESIGHT Revival - elegir la dificultad de una IA de la sala con una ventana.
+// CRIMESIGHT Revival - choose the difficulty of a room AI with a window.
 //
-// En el juego original, "Expulsar" a una IA era la unica forma de tocarla, asi que el servidor de Revival
-// lo usaba para ir cambiando su dificultad (Normal -> Dificil -> Experto -> Pesadilla -> Facil -> hueco
-// libre): habia que expulsar varias veces. Con el plugin, al pulsar Expulsar sobre una IA sale esta
-// ventana con todas las dificultades a la vista (con una frase de que hace cada una), la opcion de
-// aplicarla a todas las IA de la sala y la de dejar el hueco libre.
+// In the original game, "Kick" on an AI was the only way to touch it, so the Revival server
+// used it to cycle its difficulty (Normal -> Hard -> Expert -> Nightmare -> Easy -> free
+// seat): you had to kick several times. With the plugin, pressing Kick on an AI shows this
+// window with every difficulty in view (with a line on what each one does), the option to
+// apply it to all the room's AIs and the option to leave the seat free.
 //
-// Se manda por el mismo camino que la expulsion (NetworkManager.Kick) con la eleccion pegada al id:
-// "bot0001#expert" o "bot0001#expert#all". Asi el servidor sabe que viene del anfitrion sin nada mas.
-// Sin el plugin todo sigue como antes (el ciclo de expulsar).
+// It is sent along the same path as the kick (NetworkManager.Kick) with the choice attached to the id:
+// "bot0001#expert" or "bot0001#expert#all". That way the server knows it comes from the host with nothing else.
+// Without the plugin everything stays as before (the kick cycle).
 using System;
 using HarmonyLib;
 using TMPro;
@@ -19,7 +19,7 @@ namespace CrimeSightRevival.Mods
 {
     static class AiPicker
     {
-        // idiomas del juego (TextManager.GetLangType): ja, en, fr, it, de, es, pt, ru, ko, zh-cn, zh-tw
+        // game languages (TextManager.GetLangType): ja, en, fr, it, de, es, pt, ru, ko, zh-cn, zh-tw
         static readonly string[] Keys = { "easy", "normal", "hard", "expert", "nightmare" };
         static readonly string[][] Names =
         {
@@ -69,9 +69,9 @@ namespace CrimeSightRevival.Mods
         static readonly string[] Cancel = { "キャンセル", "Cancel", "Annuler", "Annulla", "Abbrechen", "Cancelar", "Cancelar",
             "Отмена", "취소", "取消", "取消" };
 
-        static readonly Color Blood = new Color(0.62f, 0.10f, 0.16f, 1f);    // Pesadilla, sobre el boton del juego
+        static readonly Color Blood = new Color(0.62f, 0.10f, 0.16f, 1f);    // Nightmare, over the game's button
         static Skin _sk;
-        static GameWindow _gw;                 // la ventana clonada del juego (null: aspecto propio)
+        static GameWindow _gw;                 // the window cloned from the game (null: our own look)
         static readonly Color[] _diffBase = new Color[5];
         static Color _allBase, _freeBase, _cancelBase;
 
@@ -98,7 +98,7 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Plugin.L.LogWarning("[IA] " + e.Message); }
         }
 
-        // Expulsar sobre una IA del servidor de Revival (ids "bot0001"...): nuestra ventana en vez de la del juego
+        // Kick on a Revival server AI (ids "bot0001"...): our window instead of the game's
         static bool BeforeOpen(OutGameRoomPopupKickConfirm __instance)
         {
             try
@@ -108,7 +108,7 @@ namespace CrimeSightRevival.Mods
                 string name = "";
                 try { name = __instance.GetPlayerName() ?? ""; } catch { }
                 Show(id, name);
-                return _root == null;          // si no se pudo ensenar, la del juego (el ciclo de siempre)
+                return _root == null;          // if it couldn't be shown, the game's (the usual cycle)
             }
             catch (Exception e) { Plugin.L.LogWarning("[IA] " + e.Message); return true; }
         }
@@ -194,7 +194,7 @@ namespace CrimeSightRevival.Mods
             if (_gw != null) _gw.SetText(_desc, t); else _desc.text = t;
         }
 
-        // Con la ventana del juego: dificultades dentro del recuadro, la explicacion debajo y abajo las opciones
+        // With the game's window: difficulties inside the box, the explanation below and the options at the bottom
         static bool ShowNative(string title)
         {
             var gw = GameWindow.Create(_root.transform);
@@ -268,23 +268,23 @@ namespace CrimeSightRevival.Mods
             if (_gw != null)
             {
                 _gw.SetText(_allLabel, lbl);
-                if (_allImg != null) _allImg.color = _all ? GameWindow.Amber : Color.white;   // marcado en ambar
+                if (_allImg != null) _allImg.color = _all ? GameWindow.Amber : Color.white;   // marked in amber
             }
             else
             {
                 if (_allLabel != null) _allLabel.text = lbl;
-                _sk?.Style(_allImg, _allLabel, _all);      // "Todas las IA" se ve marcado
+                _sk?.Style(_allImg, _allLabel, _all);      // "All AIs" shows as marked
                 if (_allImg != null) _allBase = _allImg.color;
             }
         }
 
-        // ---- mando (CrimeSightRevivalPadUi.cs): B cerrar, Y "Solo esta IA / Todas", X "Dejar el hueco libre"
+        // ---- gamepad (CrimeSightRevivalPadUi.cs): B close, Y "Only this AI / All", X "Leave the seat free"
         internal static bool IsOpen => _root != null;
         internal static void PadCancel() { if (_root != null) Close(); }
         internal static void PadAll() { if (_root != null) ToggleAll(); }
         internal static void PadFree() { if (_root != null) Send("free"); }
 
-        /// <summary>Con mando, el icono de su boton delante del texto de los tres botones de abajo.</summary>
+        /// <summary>With a gamepad, its button's icon in front of the text of the three bottom buttons.</summary>
         static void PadTags()
         {
             void Put(TextMeshProUGUI t, string btn, string text)
@@ -320,8 +320,9 @@ namespace CrimeSightRevival.Mods
             if (_root != null)
             {
                 UnityEngine.Object.Destroy(_root);
-                // La sala se queda "con una ventana abierta" desde que pide abrir la de expulsar: los botones
-                // del juego (Confirmar y Volver) la liberan asi; si no, la sala no responde hasta abrir Opciones
+                // The room stays "with a window open" from the moment it asks to open the kick one: the game's
+                // buttons
+                // (Confirm and Back) release it this way; otherwise, the room doesn't respond until Options is opened
                 try { OutGameManager.ResetAddPhaseRoot(); }
                 catch (Exception e) { Plugin.L.LogWarning("[IA] no pude liberar la sala: " + e.Message); }
             }

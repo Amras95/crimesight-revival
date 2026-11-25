@@ -1,11 +1,12 @@
-// CRIMESIGHT Revival - un personaje nuevo se mueve como el personaje del juego que se le elige en el lanzador.
+// CRIMESIGHT Revival - a new character moves like the game character chosen for it in the launcher.
 //
-// Cada sitio (A..F) juega como su original, y el juego le pone sus animaciones (las de ese personaje: van_..., drt_...).
-// Si en ese sitio sale un personaje nuevo con "Animaciones de: Dorothy", despues de las animaciones del juego
-// (LateUpdate, antes de que el esqueleto propio copie los huesos) se pone en sus huesos la animacion equivalente de
-// Dorothy: misma accion (reposo, andar, correr...) en el mismo punto. Solo giros; la cadera, con su altura escalada.
-// Mientras el juego hace una accion suelta (PlayClip: atacar, coger...) se deja la del juego, con un fundido corto.
-// Las animaciones propias (reposo/andar/correr del .glb) van despues y mandan sobre estas.
+// Each seat (A..F) plays as its original, and the game gives it its animations (that character's: van_..., drt_...).
+// If a new character with "Animations from: Dorothy" appears in that seat, after the game's animations
+// (LateUpdate, before the custom skeleton copies the bones) Dorothy's equivalent animation is put on its bones:
+// same action (idle, walk, run...) at the same point. Rotations only; the hips, with their height scaled.
+// While the game plays a one-off action (PlayClip: attack, pick up...) the game's is left, with a short fade, and
+// while a scene (Timeline: attacking someone, the ending...) moves the character, the scene's, with nothing on top.
+// Custom animations (idle/walk/run from the .glb) go after these and take precedence.
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -22,7 +23,7 @@ namespace CrimeSightRevival.Mods
             public Transform[] bones; public Transform hips;
             public Vector3 hipsRest, fromHipsRest; public float hipK = 1f;
             public float w; public AnimationClip last; public float lastT;
-            public Quaternion[] keepR; public Vector3[] keepP;
+            public Quaternion[] keepR; public Vector3[] keepP; public bool scene;
         }
         static Dictionary<string, string> _borrowMap = new();
         static readonly Dictionary<int, Borrow> _borrows = new();
@@ -39,12 +40,69 @@ namespace CrimeSightRevival.Mods
             }
         }
 
-        /// <summary>La animacion del juego que pesa mas ahora (null si hay una accion suelta encima).</summary>
+        // ---------------------------------------------------------------- game scenes (Timeline)
+        // The scenes (attacking someone, the ending...) are Timelines that move the character with its
+        // seat's animations, coordinated with the others and with the camera. While a scene moves a character,
+        // nothing is
+        // put on top (neither the borrowed animations nor the custom ones): the scene rules.
+        static readonly List<Transform> _sceneBound = new();
+        static float _sceneNext;
+        static string _sceneNames = "";
+
+        static void RefreshScenes()
+        {
+            if (Time.unscaledTime < _sceneNext) return;
+            _sceneNext = Time.unscaledTime + 0.2f;
+            _sceneBound.Clear();
+            var names = new System.Text.StringBuilder();
+            foreach (var o in UnityEngine.Object.FindObjectsOfType(Il2CppType.Of<UnityEngine.Playables.PlayableDirector>()))
+            {
+                var pd = o.TryCast<UnityEngine.Playables.PlayableDirector>();
+                if (pd == null || pd.state != UnityEngine.Playables.PlayState.Playing) continue;
+                var ta = pd.playableAsset != null ? pd.playableAsset.TryCast<UnityEngine.Timeline.TimelineAsset>() : null;
+                if (ta == null) continue;
+                int n = ta.outputTrackCount, bound = 0;
+                for (int i = 0; i < n; i++)
+                {
+                    var tr = ta.GetOutputTrack(i);
+                    if (tr == null || tr.TryCast<UnityEngine.Timeline.AnimationTrack>() == null) continue;
+                    var bo = pd.GetGenericBinding(tr);
+                    if (bo == null) continue;
+                    Transform t = null;
+                    var an = bo.TryCast<Animator>();
+                    if (an != null) t = an.transform;
+                    else { var go = bo.TryCast<GameObject>(); if (go != null) t = go.transform; }
+                    if (t != null) { _sceneBound.Add(t); bound++; }
+                }
+                if (bound > 0) names.Append(names.Length > 0 ? ", " : "").Append(pd.name);
+            }
+            _sceneNames = names.ToString();
+        }
+
+        /// <summary>true if a game scene (Timeline) is moving this character now.</summary>
+        internal static bool InScene(Component c)
+        {
+            if (c == null) return false;
+            try
+            {
+                RefreshScenes();
+                if (_sceneBound.Count == 0) return false;
+                var t = c.transform;
+                foreach (var bt in _sceneBound)
+                    if (bt != null && (t == bt || t.IsChildOf(bt) || bt.IsChildOf(t))) return true;
+            }
+            catch { }
+            return false;
+        }
+
+        /// <summary>The game animation weighing the most now (null if there is a one-off action on top or a
+        /// scene).</summary>
         internal static AnimationClip CurrentClip(ControllerMixerPlayable cmp, out float normTime)
         {
             normTime = 0f;
             if (cmp == null) return null;
             try { if (cmp.playOnce) return null; } catch { }
+            if (InScene(cmp)) return null;
             var acp = cmp.GetAnimator();
             var infos = acp.GetCurrentAnimatorClipInfo(0);
             if (infos == null) return null;
@@ -58,7 +116,7 @@ namespace CrimeSightRevival.Mods
             return best;
         }
 
-        /// <summary>Las animaciones de un personaje del juego (las de su prefab), por nombre, y su prefijo (van, drt...).</summary>
+        /// <summary>A game character's animations (its prefab's), by name, and its prefix (van, drt...).</summary>
         static Dictionary<string, AnimationClip> GameClips(string key, out string code)
         {
             code = null;
@@ -87,7 +145,7 @@ namespace CrimeSightRevival.Mods
                 var clips = GameClips(from, out b.fromCode);
                 foreach (var kv in clips) b.clips[kv.Key] = kv.Value;
             }
-            _borrows[id] = b;                                       // aunque no valga: asi no se repite cada segundo
+            _borrows[id] = b;                                       // even if it isn't valid: so it isn't repeated every second
             if (cmp == null || b.fromCode == null || b.clips.Count == 0)
             {
                 Warn("borrow" + key, $"[Animaciones] {key}: no encuentro las animaciones de {from}");
@@ -130,6 +188,13 @@ namespace CrimeSightRevival.Mods
 
         static void DriveBorrow(Borrow b)
         {
+            if (InScene(b.cmp))                                                   // the scene rules, right away
+            {
+                if (!b.scene) { b.scene = true; Plugin.L.LogInfo($"[Animaciones] {b.key}: escena del juego ({_sceneNames}), con sus animaciones"); }
+                b.w = 0f;
+                return;
+            }
+            b.scene = false;
             var cur = CurrentClip(b.cmp, out float nt);
             AnimationClip use = null;
             if (cur != null)
@@ -158,10 +223,10 @@ namespace CrimeSightRevival.Mods
                 t.localRotation = b.w >= 1f ? q : Quaternion.Slerp(b.keepR[i], q, b.w);
                 if (t == b.hips && b.hipsRest != Vector3.zero)
                 {
-                    var p = b.hipsRest + (t.localPosition - b.fromHipsRest) * b.hipK;   // misma accion, a su altura
+                    var p = b.hipsRest + (t.localPosition - b.fromHipsRest) * b.hipK;   // same action, at its height
                     t.localPosition = Vector3.Lerp(b.keepP[i], p, b.w);
                 }
-                else t.localPosition = b.keepP[i];                                     // solo giros
+                else t.localPosition = b.keepP[i];                                     // rotations only
             }
         }
     }

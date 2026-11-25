@@ -1,21 +1,21 @@
 """
-CRIMESIGHT Revival - victorias, derrotas, empates y puntos.
+CRIMESIGHT Revival - wins, losses, draws and points.
 
-El cliente pide user.GetStats (perfil y nivel) y match.GetStats (puntos de la ultima partida).
-Ambos devuelven {"stats": [{id, role, category, text_id, count, point}, ...]}:
-- category "count": partidas ganadas/perdidas/empatadas por rol (el nivel sale de la suma).
-- category "points": puntos totales de cada bando.
-- category "result": filas de "Puntos por resultado de la partida". En el perfil, como en el juego original, dos
-  por rol: cuantas veces se consiguio cada resultado y los puntos que dio (RESULT_ROWS).
-- cualquier otra categoria: filas de "Puntos de accion" (texto traducido por el propio juego).
+The client asks for user.GetStats (profile and level) and match.GetStats (points of the last match).
+Both return {"stats": [{id, role, category, text_id, count, point}, ...]}:
+- category "count": matches won/lost/drawn per role (the level comes from the sum).
+- category "points": total points of each side.
+- category "result": rows of "Match result points". In the profile, as in the original game, two
+  per role: how many times each result was achieved and the points it gave (RESULT_ROWS).
+- any other category: rows of "Action points" (text translated by the game itself).
 
-Los ids salen de PlayerPointManager en el cliente.
+The ids come from PlayerPointManager in the client.
 """
 import time
 
 DETECTIVE, CRIMINAL, IRENE, WATSON = 1, 2, 3, 4
 
-# rol -> ids de victorias / derrotas / empates
+# role -> ids of wins / losses / draws
 COUNT_IDS = {
     DETECTIVE: {"win": 1, "lose": 2, "draw": 3},
     CRIMINAL: {"win": 4, "lose": 5, "draw": 6},
@@ -24,17 +24,17 @@ COUNT_IDS = {
 }
 POINT_IDS = {DETECTIVE: 10, CRIMINAL: 20, IRENE: 30, WATSON: 40}
 
-# Puntos por partida (sistema generoso: el juego ya no tiene comunidad, que desbloquear no sea un trabajo)
-# Victoria segun el nivel: IA facil 200, normal 400, dificil 800; contra otras personas 1000 (ahora
-# cuesta mucho encontrar partida). Empate o derrota: la mitad. Abandonar: 0.
+# Points per match (generous system: the game no longer has a community, unlocking shouldn't be a chore)
+# Win by level: easy AI 200, normal 400, hard 800; against other people 1000 (finding a match is
+# very hard now). Draw or loss: half. Quitting: 0.
 WIN_POINTS = {"easy": 200, "normal": 400, "hard": 800, "expert": 1000, "nightmare": 1200, "online": 1000}
 LEVELS = tuple(WIN_POINTS)
-RESULT_POINTS = {"win": 400, "draw": 250, "lose": 250, "abandon": 0}   # tabla antigua (partidas viejas)
+RESULT_POINTS = {"win": 400, "draw": 250, "lose": 250, "abandon": 0}   # old table (old matches)
 RECORD_VERSION = 3
-RESULT_TEXT = "ctg_name_result_match_result_point"            # "Puntos por resultado de la partida"
+RESULT_TEXT = "ctg_name_result_match_result_point"            # "Match result points"
 
-# Filas de "Puntos por resultado de la partida" del perfil (las mismas que mostraba el juego original):
-# resultado de la partida -> texto del juego. Las derrotas no tienen fila.
+# Rows of "Match result points" in the profile (the same ones the original game showed):
+# match result -> game text. Losses have no row.
 SIDE_SHERLOCK = (("win", "ctg_name_result_arrest_succeed"),                # "Villain identified and Moriarty's..."
                  ("draw", "ctg_name_result_pattern_sherlock_arrest_failed"))  # "Foiled Moriarty's plan, but failed..."
 SIDE_MORIARTY = (("win", "ctg_name_result_kill_succeed"),                 # "Killed a target."
@@ -43,51 +43,52 @@ RESULT_ROWS = {DETECTIVE: SIDE_SHERLOCK, WATSON: SIDE_SHERLOCK, CRIMINAL: SIDE_M
 
 
 def result_points(outcome, level=None):
-    """Puntos por el resultado. Sin nivel (partidas antiguas), la tabla de antes."""
+    """Points for the result. Without a level (old matches), the earlier table."""
     if level not in WIN_POINTS:
         return RESULT_POINTS.get(outcome, 0)
     win = WIN_POINTS[level]
     return {"win": win, "draw": win // 2, "lose": win // 2}.get(outcome, 0)
 
 
-# Acciones que el servidor detecta -> (id, puntos). Los textos son los del propio juego.
+# Actions the server detects -> (id, points). The texts are the game's own.
 ACTIONS = {
     # Bando de Sherlock
-    "ctg_name_result_repair_switchboard": (104, 50),                    # arreglar el cuadro electrico
-    "ctg_name_result_action_treated_pawnForInjuries": (105, 50),        # curar a alguien
-    "ctg_name_result_apply_tearSpray_to_killer": (107, 100),            # gas lacrimogeno al asesino
-    "ctg_name_result_identified_killer_by_deduction": (108, 100),       # acusar al asesino correcto
-    "ctg_name_result_discover_switchboard_before_moriarty": (123, 50),  # plano del cuadro antes que Moriarty
+    "ctg_name_result_repair_switchboard": (104, 50),                    # fix the fuse box
+    "ctg_name_result_action_treated_pawnForInjuries": (105, 50),        # heal someone
+    "ctg_name_result_apply_tearSpray_to_killer": (107, 100),            # tear gas on the killer
+    "ctg_name_result_identified_killer_by_deduction": (108, 100),       # accuse the right killer
+    "ctg_name_result_discover_switchboard_before_moriarty": (123, 50),  # fuse box plan before Moriarty
     # Bando de Moriarty
-    "ctg_name_result_action_targetKilledByAssail": (101, 50),           # ganar matando con el Asalto
-    "ctg_name_result_blackOut_by_switchboard": (109, 50),               # romper el cuadro (apagon)
-    "ctg_name_result_action_blockedSherlockWithSpray": (110, 50),       # gasear a alguien
-    "ctg_name_result_action_beCriticalNoKiller": (111, 100),            # otro que no es el asesino queda critico
-    "ctg_name_result_first_batting": (124, 50),                         # primer choque con Sherlock en un personaje
-    "ctg_name_result_after_the_first_batting": (125, 50),               # otro choque en un personaje ya chocado
-    "ctg_name_result_action_activateSecretPassage": (112, 50),        # usar un pasadizo secreto
-    "ctg_name_result_action_repair_gasPipe": (113, 50),               # arreglar un escape de gas
-    "ctg_name_result_action_exterminateWildDog": (114, 50),           # matar a un perro (o un traidor)
-    "ctg_name_result_action_foundSwitchboard": (115, 50),             # encontrar un plano del cuadro
-    "ctg_name_result_action_obtainFoodFromFoodPoint": (116, 50),      # encontrar comida
-    "ctg_name_result_action_proven_pawnNotKiller": (117, 50),         # descartar a alguien como asesino
-    "ctg_name_result_action_proven_pawnNotTarget": (118, 50),         # descartar a alguien como victima
-    "ctg_name_result_action_foundSwitchboardBeforeSherlock": (119, 50),   # plano del cuadro antes que Sherlock
-    "ctg_name_result_action_treated_killerForInjuries": (120, 50),    # curar al asesino
-    "ctg_name_result_action_wildDogAttackedEveryoneButKiller": (121, 50),  # un perro hiere a otro que no es el asesino
-    "ctg_name_result_action_injured_noKillerWithGasLeak": (122, 50),  # el gas hiere a otro que no es el asesino
-    # Antiguas (solo para recalcular partidas viejas)
-    # "Villain identified and Moriarty's devious plot foiled": es el texto del juego para la victoria del bando de
-    # Sherlock (RESULT_ROWS), no una accion. Antes se daba como accion al sobrevivir a un Asalto; ya no.
+    "ctg_name_result_action_targetKilledByAssail": (101, 50),           # win by killing with the Assault
+    "ctg_name_result_blackOut_by_switchboard": (109, 50),               # break the fuse box (blackout)
+    "ctg_name_result_action_blockedSherlockWithSpray": (110, 50),       # gas someone
+    "ctg_name_result_action_beCriticalNoKiller": (111, 100),            # someone who isn't the killer ends up critical
+    "ctg_name_result_first_batting": (124, 50),                         # first clash with Sherlock on a character
+    "ctg_name_result_after_the_first_batting": (125, 50),               # another clash on an already clashed character
+    "ctg_name_result_action_activateSecretPassage": (112, 50),        # use a secret passage
+    "ctg_name_result_action_repair_gasPipe": (113, 50),               # fix a gas leak
+    "ctg_name_result_action_exterminateWildDog": (114, 50),           # kill a dog (or a traitor)
+    "ctg_name_result_action_foundSwitchboard": (115, 50),             # find a fuse box plan
+    "ctg_name_result_action_obtainFoodFromFoodPoint": (116, 50),      # find food
+    "ctg_name_result_action_proven_pawnNotKiller": (117, 50),         # rule someone out as the killer
+    "ctg_name_result_action_proven_pawnNotTarget": (118, 50),         # rule someone out as the victim
+    "ctg_name_result_action_foundSwitchboardBeforeSherlock": (119, 50),   # fuse box plan before Sherlock
+    "ctg_name_result_action_treated_killerForInjuries": (120, 50),    # heal the killer
+    "ctg_name_result_action_wildDogAttackedEveryoneButKiller": (121, 50),  # a dog injures someone who isn't the killer
+    "ctg_name_result_action_injured_noKillerWithGasLeak": (122, 50),  # the gas injures someone who isn't the killer
+    # Old ones (only to recalculate old matches)
+    # "Villain identified and Moriarty's devious plot foiled": it is the game's text for the win of
+    # Sherlock's side (RESULT_ROWS), not an action. It used to be given as an action when surviving an Assault; not
+    # anymore.
     "ctg_name_result_arrest_succeed": (106, 100),
     "ctg_name_result_action_kill_succeed_not_identified_killer": (102, 30),
     "ctg_name_result_pattern_arrest_success": (103, 50),
 }
 
-# Lista de "Puntos de accion" del perfil: como en el juego original, salen todas, tambien las que van a 0.
-# El juego las ordena por id, de mayor a menor; estos ids reproducen el orden del juego original (las
-# cuatro primeras de cada bando salen en un video de entonces). Las que el servidor aun no detecta
-# siempre van a 0. Texto -> id en el perfil.
+# List of "Action points" in the profile: as in the original game, all of them show, also the ones at 0.
+# The game sorts them by id, highest to lowest; these ids reproduce the original game's order (the
+# first four of each side show in a video from back then). The ones the server doesn't detect yet
+# always stay at 0. Text -> id in the profile.
 PROFILE_ACTIONS_SHERLOCK = {
     "ctg_name_result_action_activateSecretPassage": 150,         # "Activated a secret passage."
     "ctg_name_result_action_exterminateWildDog": 149,            # "Defeated a wild dog..."
@@ -112,14 +113,15 @@ PROFILE_ACTIONS_MORIARTY = {
     "ctg_name_result_blackOut_by_switchboard": 126,
     "ctg_name_result_action_blockedSherlockWithSpray": 125,
     "ctg_name_result_action_targetKilledByAssail": 124,
-    "ctg_name_result_action_exterminateWildDog": 123,            # los dos bandos pueden matar perros
-    "ctg_name_result_action_repair_gasPipe": 122,                # y arreglar escapes de gas
-    "ctg_name_result_action_treated_pawnForInjuries": 121,       # y curar a cualquiera
+    "ctg_name_result_action_exterminateWildDog": 123,            # both sides can kill dogs
+    "ctg_name_result_action_repair_gasPipe": 122,                # and fix gas leaks
+    "ctg_name_result_action_treated_pawnForInjuries": 121,       # and heal anyone
     "ctg_name_result_first_batting": 120,                        # "Initial command conflict detected with each pawn."
     "ctg_name_result_after_the_first_batting": 119,              # "Interfered with Sherlock's command."
 }
-# Irene: lo de Moriarty menos lo que ella no puede hacer. Consejo de Sherlock sobre Irene: "no tiene acceso al
-# 'Asalto' ni puede sabotear la caja de fusibles". Y sus choques con Sherlock no se detectan (son su ventaja).
+# Irene: Moriarty's minus what she can't do. Sherlock's tip about Irene: "she has no access to the
+# 'Assault' nor can she sabotage the fuse box". And her clashes with Sherlock aren't detected (they are her
+# advantage).
 PROFILE_ACTIONS_IRENE = {k: v for k, v in PROFILE_ACTIONS_MORIARTY.items()
                          if k not in ("ctg_name_result_action_targetKilledByAssail",
                                       "ctg_name_result_blackOut_by_switchboard",
@@ -131,7 +133,7 @@ PROFILE_ACTIONS = {DETECTIVE: PROFILE_ACTIONS_SHERLOCK, WATSON: PROFILE_ACTIONS_
 def _record(user):
     rec = user.get("record")
     if not isinstance(rec, dict) or rec.get("v") != RECORD_VERSION or "outcomes" not in rec:
-        # (Re)calcular con la tabla de puntos actual a partir del historial de partidas
+        # (Re)calculate with the current points table from the match history
         rec = {"v": RECORD_VERSION, "counts": {}, "points": {}, "outcomes": {}, "actions": {}}
         for h in user.get("history", []) or []:
             role = int(h.get("role", 0))
@@ -140,7 +142,7 @@ def _record(user):
             outcome = h.get("outcome") or ("win" if h.get("win") else "lose")
             if outcome not in RESULT_POINTS:
                 continue
-            if "base" in h:      # partidas nuevas: cada una guarda sus propios puntos
+            if "base" in h:      # new matches: each one stores its own points
                 h["points"] = _add(rec, role, outcome, h.get("actions") or [], h.get("base"), h.get("acts"),
                                    h.get("finish"))
             else:
@@ -150,7 +152,7 @@ def _record(user):
 
 
 def _add(rec, role, outcome, actions, base=None, acts=None, finish=None):
-    if outcome == "abandon":                     # cuenta como derrota, sin puntos ni extras
+    if outcome == "abandon":                     # counts as a loss, without points or extras
         actions, base, acts = [], 0, {}
     cid = str(COUNT_IDS[role]["lose" if outcome == "abandon" else outcome])
     rec["counts"][cid] = rec["counts"].get(cid, 0) + 1
@@ -161,7 +163,7 @@ def _add(rec, role, outcome, actions, base=None, acts=None, finish=None):
     pts = int(base) + sum(int(acts.get(a, 0)) for a in actions)
     pid = str(POINT_IDS[role])
     rec["points"][pid] = rec["points"].get(pid, 0) + pts
-    # Victoria o empate de verdad (no porque el otro bando se rindiera): cuenta en "Puntos por resultado"
+    # A real win or draw (not because the other side gave up): counts in "Match result points"
     if outcome in ("win", "draw") and finish != "abandon":
         o = rec.setdefault("outcomes", {}).setdefault(f"{role}:{outcome}", [0, 0])
         o[0] += 1
@@ -173,14 +175,14 @@ def _add(rec, role, outcome, actions, base=None, acts=None, finish=None):
     return pts
 
 
-HISTORY_MAX = 20000          # unas cuantas vidas de partidas; el registro se recalcula desde aqui
+HISTORY_MAX = 20000          # quite a few lifetimes of matches; the log is recalculated from here
 
 
 def record_match(user, role, outcome, actions=(), stage="", match_id=None, level=None, finish=None):
-    """Anota una partida terminada. Devuelve los puntos ganados.
-    match_id identifica la partida en cualquier servidor: al juntar perfiles no se duplica.
-    level: "easy"/"normal"/"hard"/"expert"/"nightmare" (contra la IA) u "online" (contra personas).
-    finish: como acabo la partida: "kill", "deduction" o "abandon" (alguien se rindio o se fue)."""
+    """Records a finished match. Returns the points earned.
+    match_id identifies the match on any server: merging profiles doesn't duplicate it.
+    level: "easy"/"normal"/"hard"/"expert"/"nightmare" (against the AI) or "online" (against people).
+    finish: how the match ended: "kill", "deduction" or "abandon" (someone gave up or left)."""
     if role not in COUNT_IDS or outcome not in RESULT_POINTS:
         return 0
     hist = user.setdefault("history", [])
@@ -198,7 +200,7 @@ def record_match(user, role, outcome, actions=(), stage="", match_id=None, level
                  "finish": finish})
     del hist[:-HISTORY_MAX]
     user["match_count"] = int(user.get("match_count", 0)) + 1
-    # Lo que se ve en la pantalla de resultados
+    # What shows on the results screen
     items = [{"id": 100, "role": role, "category": "result", "text_id": RESULT_TEXT,
               "count": 1, "point": base}]
     for a in actions:
@@ -219,18 +221,18 @@ def user_stats(user):
         pid = POINT_IDS[role]
         out.append({"id": pid, "role": role, "category": "points", "text_id": "",
                     "count": played, "point": int(rec["points"].get(str(pid), 0))})
-        # "Puntos por resultado de la partida": veces que se consiguio cada resultado y sus puntos
+        # "Match result points": times each result was achieved and its points
         for i, (outcome, text) in enumerate(RESULT_ROWS[role]):
             n, p = rec["outcomes"].get(f"{role}:{outcome}", (0, 0))
             out.append({"id": 9000 + i * 10 + role, "role": role, "category": "result", "text_id": text,
                         "count": int(n), "point": int(p)})
-    # "Puntos de accion": la lista entera de cada rol (veces y puntos ganados con cada accion)
+    # "Action points": the whole list for each role (times and points earned with each action)
     for role, actions in PROFILE_ACTIONS.items():
         for text, aid in actions.items():
             n = int(rec["actions"].get(f"{role}:{text}", 0))
             out.append({"id": aid * 10 + role, "role": role, "category": "action", "text_id": text,
                         "count": n, "point": n * ACTIONS.get(text, (0, 0))[1]})
-    # Acciones de partidas antiguas que ya no estan en la lista: siguen saliendo, al final
+    # Actions from old matches no longer in the list: they still show, at the end
     for key, n in sorted(rec["actions"].items()):
         role, text = key.split(":", 1)
         aid, p = ACTIONS.get(text, (0, 0))
@@ -241,7 +243,7 @@ def user_stats(user):
 
 
 def summary(user):
-    """Texto corto para el log del servidor."""
+    """Short text for the server log."""
     rec = _record(user)
     c = rec["counts"]
     w = sum(int(c.get(str(ids["win"]), 0)) for ids in COUNT_IDS.values())
@@ -250,7 +252,7 @@ def summary(user):
     return f"{w}V {d}E {l}D, {sum(rec['points'].values())} puntos"
 
 
-# ------------------------------------------------------------------ perfiles portables
+# ------------------------------------------------------------------ portable profiles
 PROFILE_KEYS = ("name", "progress", "tutorial_step", "config", "config_time", "history", "last_result", "updated",
                 "lang", "lang_time")
 
@@ -260,17 +262,17 @@ def _mid(h):
 
 
 def export_profile(user):
-    """Lo que viaja entre servidores y el PC de cada jugador."""
+    """What travels between servers and each player's PC."""
     out = {k: user[k] for k in PROFILE_KEYS if k in user}
     out["history"] = [dict(h, mid=_mid(h)) for h in user.get("history", []) or []]
     return out
 
 
 def merge_into(user, other, prefer_other=False):
-    """Junta 'other' (perfil exportado) dentro de 'user'. Solo suma: partidas por id unico,
-    tutorial/progreso el mas avanzado, ajustes y nombre el cambio mas reciente.
-    Si una partida esta en los dos, se queda la de 'user'; con prefer_other, la de 'other' (el servidor la usa
-    cuando un jugador sincroniza: su copia de sus propias partidas manda, asi una correccion llega a todas partes)."""
+    """Merges 'other' (exported profile) into 'user'. It only adds: matches by unique id,
+    tutorial/progress the most advanced, settings and name the most recent change.
+    If a match is in both, 'user''s stays; with prefer_other, 'other''s (the server uses it
+    when a player syncs: their copy of their own matches rules, so a correction reaches everywhere)."""
     if not isinstance(other, dict):
         return user
     seen = {}
@@ -295,6 +297,6 @@ def merge_into(user, other, prefer_other=False):
         user["lang"], user["lang_time"] = other["lang"], other["lang_time"]
     user["updated"] = max(user.get("updated", 0), other.get("updated", 0))
     user["match_count"] = len(user["history"])
-    user.pop("record", None)            # se recalcula con el historial completo
+    user.pop("record", None)            # recalculated with the full history
     _record(user)
     return user

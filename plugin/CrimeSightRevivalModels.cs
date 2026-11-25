@@ -1,21 +1,22 @@
-// CRIMESIGHT Revival - cambiar el modelo 3D de un personaje por el de otro personaje del juego.
+// CRIMESIGHT Revival - swap a character's 3D model for another game character's.
 //
-// El lanzador escribe en csr_live/models.json que personaje se ve con que modelo:
+// The launcher writes in csr_live/models.json which character is seen with which model:
 //   { "swaps": { "PawnTypeData_A": "sherlock", "PawnTypeData_C": "PawnTypeData_E" } }
-// Claves (lo que se cambia): PawnTypeData_A..F (Agatha, Berkeley, Catherine, Dorothy, Ellery, Freeman),
-//   ThreatTypeData_Survivor / ThreatTypeData_Traitor (victima y traidor).
-// Valores (el modelo que se pone): las mismas claves, o "sherlock" / "moriarty" (los modelos de la escena
-//   del asesinato, KillCutPrefab, que el juego carga con Addressables), o "custom:<nombre>" (un modelo propio en
-//   csr_live/models/<nombre>.glb: ver CrimeSightRevivalModelsGlb.cs).
+// Keys (what is swapped): PawnTypeData_A..F (Agatha, Berkeley, Catherine, Dorothy, Ellery, Freeman),
+//   ThreatTypeData_Survivor / ThreatTypeData_Traitor (victim and traitor).
+// Values (the model put on): the same keys, or "sherlock" / "moriarty" (the models of the murder
+//   scene, KillCutPrefab, which the game loads with Addressables), or "custom:<name>" (a custom model in
+//   csr_live/models/<name>.glb: see CrimeSightRevivalModelsGlb.cs).
 //
-// Como se hace: el personaje se queda como esta (su esqueleto, sus animaciones, su IA); solo se cambian las
-// mallas y los materiales de sus SkinnedMeshRenderer por los del otro modelo, enganchadas a sus huesos por el
-// nombre (todos los humanos del juego usan el mismo esqueleto: ROOT_c_hum/SKL_000_WAIST/...). Los huesos que
-// solo tiene el otro modelo (capas, faldones, cuellos) se crean en su sitio y se quedan en reposo.
-// Las mallas se ponen en los mismos objetos que las originales cuando coinciden (el cuerpo, _00); las que el
-// personaje no tiene (ojos, cejas y boca separados de Sherlock y Moriarty) se crean al lado. Las mallas propias
-// que sobran se apagan. Si el esqueleto no encaja (p. ej. un animal), no se toca.
-// Solo lo ve quien lo tiene puesto. Los retratos 2D (fichas, resultados) no cambian.
+// How it is done: the character stays as it is (its skeleton, its animations, its AI); only the
+// meshes and materials of its SkinnedMeshRenderers are swapped for the other model's, hooked to its bones by
+// name (every human in the game uses the same skeleton: ROOT_c_hum/SKL_000_WAIST/...). The bones
+// only the other model has (capes, coat tails, collars) are created in place and stay at rest.
+// The meshes go on the same objects as the originals when they match (the body, _00); the ones the
+// character doesn't have (Sherlock's and Moriarty's separate eyes, eyebrows and mouth) are created next to them. The
+// character's own
+// extra meshes are switched off. If the skeleton doesn't fit (e.g. an animal), it isn't touched.
+// Only whoever has it set sees it. The 2D portraits (cards, results) don't change.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -44,8 +45,9 @@ namespace CrimeSightRevival.Mods
         class Applied
         {
             public GameObject root; public string target;
-            public List<Link> links;                                     // esqueleto propio (modelo adaptado) o null
-            public List<Shoulder> shoulders;                             // sus hombros, que acompanan a los brazos
+            public List<Link> links;                                     // own skeleton (adapted model) or null
+            public List<Shoulder> shoulders;                             // its shoulders, which follow the arms
+            public float sceneLogAt = -1f; public int sceneLogs;             // log of positions in the scenes
             public readonly List<Saved> saved = new();
             public readonly List<(Renderer r, bool enabled)> hidden = new();
             public readonly List<GameObject> created = new();
@@ -55,10 +57,10 @@ namespace CrimeSightRevival.Mods
         static Dictionary<string, string> _swaps = new();
         static string _sig = "";
         static float _next;
-        static readonly Dictionary<int, Applied> _applied = new();          // por id del objeto del personaje
-        static readonly Dictionary<int, string> _customTried = new();       // modelos propios que no se pudieron poner
+        static readonly Dictionary<int, Applied> _applied = new();          // by the character object's id
+        static readonly Dictionary<int, string> _customTried = new();       // custom models that couldn't be applied
         static readonly HashSet<string> _warned = new();
-        static GameObject _killCut;                                          // plantilla de Sherlock y Moriarty
+        static GameObject _killCut;                                          // Sherlock and Moriarty template
         static bool _killCutAsked;
         static UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<GameObject> _killCutHandle;
 
@@ -75,13 +77,13 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Warn("frame", "[Modelos] " + e.Message); }
         }
 
-        // ------------------------------------------------------------ configuracion
+        // ------------------------------------------------------------ config
         static void ReadConfig()
         {
             string sig = "";
             try { var fi = new FileInfo(File_); if (fi.Exists) sig = fi.Length + ":" + fi.LastWriteTimeUtc.Ticks; } catch { }
             string json = sig;
-            sig += CustomSigs(_swaps) + AnimSigs(_anims);  // un .glb que se cambia con el juego abierto tambien se recarga
+            sig += CustomSigs(_swaps) + AnimSigs(_anims);  // a .glb changed with the game open is reloaded too
             if (sig == _sig) return;
             var swaps = new Dictionary<string, string>();
             var anims = new Dictionary<string, Dictionary<string, string>>();
@@ -107,7 +109,7 @@ namespace CrimeSightRevival.Mods
             foreach (var d in _drivers.Values) { d.map = null; d.fading = null; }
             _sig = json + CustomSigs(swaps) + AnimSigs(anims);
             _customTried.Clear();
-            RevertAll();                                   // con la nueva configuracion se vuelve a aplicar todo
+            RevertAll();                                   // with the new config everything is applied again
             Plugin.L.LogInfo("[Modelos] " + (swaps.Count == 0 ? "sin cambios de modelo"
                 : swaps.Count + " cambio(s): " + string.Join(", ", Pairs(swaps))));
             foreach (var kv in anims) Plugin.L.LogInfo("[Animaciones] " + kv.Key + ": " + string.Join(", ", Pairs(kv.Value)));
@@ -122,10 +124,10 @@ namespace CrimeSightRevival.Mods
 
         static IEnumerable<string> Pairs(Dictionary<string, string> d) { foreach (var kv in d) yield return kv.Key + " -> " + kv.Value; }
 
-        // ------------------------------------------------------------ personajes de la partida
+        // ------------------------------------------------------------ match characters
         static void Scan()
         {
-            // los que ya no existen (fin de la partida)
+            // the ones that no longer exist (end of the match)
             var gone = new List<int>();
             foreach (var kv in _applied) if (kv.Value.root == null) gone.Add(kv.Key);
             foreach (var id in gone) _applied.Remove(id);
@@ -165,8 +167,8 @@ namespace CrimeSightRevival.Mods
             if (_applied.TryGetValue(id, out var a) && a.target == target) return;
             if (target.StartsWith(CustomPrefix))
             {
-                if (_customTried.TryGetValue(id, out var tried) && tried == target + "|" + CustomSig(target)) return;   // ya fallo
-                if (!Prefit(target.Substring(CustomPrefix.Length), key)) return;     // lo pesado, en otro hilo: se monta al estar listo
+                if (_customTried.TryGetValue(id, out var tried) && tried == target + "|" + CustomSig(target)) return;   // already failed
+                if (!Prefit(target.Substring(CustomPrefix.Length), key)) return;     // the heavy part, on another thread: assembled when ready
                 if (a != null) { Revert(a); _applied.Remove(id); }
                 var ac = ApplyCustom(root, target, key);
                 if (ac != null) { _applied[id] = ac; _customTried.Remove(id); }
@@ -174,13 +176,14 @@ namespace CrimeSightRevival.Mods
                 return;
             }
             var tpl = Template(target);
-            if (tpl == null) return;                        // aun no esta (Sherlock/Moriarty cargando) o no existe
+            if (tpl == null) return;                        // not there yet (Sherlock/Moriarty loading) or doesn't exist
             if (a != null) { Revert(a); _applied.Remove(id); }
             var applied = Apply(root, tpl, target, key);
             if (applied != null) _applied[id] = applied;
         }
 
-        /// <summary>El objeto del modelo dentro del personaje (c_hum_XX); si no se encuentra, el propio personaje.</summary>
+        /// <summary>The model object inside the character (c_hum_XX); if it isn't found, the character
+        /// itself.</summary>
         static GameObject ModelRoot(GameObject owner)
         {
             foreach (var t in owner.GetComponentsInChildren<Transform>(true))
@@ -188,7 +191,7 @@ namespace CrimeSightRevival.Mods
             return owner.GetComponentInChildren<SkinnedMeshRenderer>(true) != null ? owner : null;
         }
 
-        // ------------------------------------------------------------ modelos que se pueden poner
+        // ------------------------------------------------------------ models that can be applied
         static GameObject Template(string target)
         {
             if (target == "sherlock" || target == "moriarty")
@@ -212,7 +215,8 @@ namespace CrimeSightRevival.Mods
             return null;
         }
 
-        /// <summary>La escena del asesinato del juego (tiene a Sherlock y a Moriarty): se pide una vez a Addressables.</summary>
+        /// <summary>The game's murder scene (it has Sherlock and Moriarty): requested once from
+        /// Addressables.</summary>
         static void AskKillCut()
         {
             if (_killCut != null) return;
@@ -233,9 +237,9 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { Warn("killcut", "[Modelos] KillCutPrefab: " + e.Message); }
         }
 
-        // ------------------------------------------------------------ cambio de mallas
-        // "mesh_c_hum_10_00" (Sherlock, Moriarty: cuerpo, ojos, cejas y boca por separado) o "c_hum_04_00" (los
-        // personajes del tablero: todo en una malla)
+        // ------------------------------------------------------------ mesh swap
+        // "mesh_c_hum_10_00" (Sherlock, Moriarty: body, eyes, eyebrows and mouth separately) or "c_hum_04_00" (the
+        // board characters: everything in one mesh)
         static readonly Regex Slot = new(@"^(?:mesh_)?c_[a-z]+_\d+_(.+)$");
 
         static string SlotOf(string name)
@@ -256,7 +260,7 @@ namespace CrimeSightRevival.Mods
             var tSmrs = tpl.GetComponentsInChildren<SkinnedMeshRenderer>(true);
             if (tSmrs.Length == 0) { Warn("nosmr" + target, "[Modelos] " + target + " no tiene mallas"); return null; }
 
-            // ¿encaja el esqueleto? (cuantos huesos usados por el otro modelo existen aqui)
+            // does the skeleton fit? (how many bones used by the other model exist here)
             int used = 0, found = 0;
             foreach (var s in tSmrs)
                 foreach (var b in s.bones)
@@ -271,7 +275,7 @@ namespace CrimeSightRevival.Mods
             var own = new Dictionary<string, SkinnedMeshRenderer>();
             foreach (var s in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
-                if (!Slot.IsMatch(s.name.Replace("(Clone)", ""))) continue;     // sombras y demas: no se tocan
+                if (!Slot.IsMatch(s.name.Replace("(Clone)", ""))) continue;     // shadows and the like: not touched
                 a.saved.Add(new Saved { smr = s, mesh = s.sharedMesh, mats = ToArr(s.sharedMaterials), bones = ToArr(s.bones),
                                         rootBone = s.rootBone, enabled = s.enabled, offscreen = s.updateWhenOffscreen });
                 own[SlotOf(s.name)] = s;
@@ -283,7 +287,7 @@ namespace CrimeSightRevival.Mods
             {
                 if (!own.TryGetValue(SlotOf(ts.name), out var dst) || usedOwn.Contains(dst.GetInstanceID()))
                 {
-                    var go = new GameObject(ts.name);                     // el otro modelo tiene una malla de mas
+                    var go = new GameObject(ts.name);                     // the other model has an extra mesh
                     go.transform.SetParent(meshParent, false);
                     go.transform.localPosition = ts.transform.localPosition;
                     go.transform.localRotation = ts.transform.localRotation;
@@ -301,10 +305,10 @@ namespace CrimeSightRevival.Mods
                 dst.sharedMaterials = ts.sharedMaterials;
                 dst.bones = nb;
                 dst.rootBone = ts.rootBone != null ? Bone(ts.rootBone, bones, tplBones, root.transform, a) : dst.rootBone;
-                dst.updateWhenOffscreen = true;                           // los limites de la malla original ya no valen
+                dst.updateWhenOffscreen = true;                           // the original mesh's bounds are no longer valid
                 dst.enabled = true;
             }
-            // las mallas propias que el otro modelo no tiene, fuera
+            // the character's own meshes the other model doesn't have, out
             foreach (var s in a.saved)
                 if (!usedOwn.Contains(s.smr.GetInstanceID())) s.smr.enabled = false;
             foreach (var r in root.GetComponentsInChildren<MeshRenderer>(true))
@@ -314,8 +318,9 @@ namespace CrimeSightRevival.Mods
             return a;
         }
 
-        /// <summary>El hueso con ese nombre en el personaje; si no lo tiene (capa, faldon...), se crea colgando del
-        /// mismo padre que en el otro modelo y en la misma postura de reposo.</summary>
+        /// <summary>The bone with that name in the character; if it doesn't have it (cape, coat tail...), it is
+        /// created hanging from the
+        /// same parent as in the other model and in the same rest pose.</summary>
         static Transform Bone(Transform tb, Dictionary<string, Transform> bones, Dictionary<string, Transform> tplBones,
                               Transform root, Applied a)
         {
