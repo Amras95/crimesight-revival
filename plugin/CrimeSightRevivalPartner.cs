@@ -1,14 +1,12 @@
-// CRIMESIGHT Revival - Sherlock and Watson can see each other's icon in the player list (room setting).
+// CRIMESIGHT Revival - the detective team (Sherlocks and Watsons) can see each other's icons in the player list
+// (room setting).
 //
 // In the player list (bottom right) the original game shows your own icon, Irene's to Moriarty and Moriarty's to
-// Irene (Hud.SetPlayersInfoRoleIrene/Moriarty), but never Watson's to Sherlock or Sherlock's to Watson. That stays
-// the
-// default. The host can turn on "Reveal Partner (Detective Team)" in the room's Match Settings: then, each time the
-// game fills in the icons (Hud.SetPlayersInfoRoleAll/Own), Sherlock gets Watson's icon and Watson gets Sherlock's,
-// the
-// same way the game does it for Irene. Neither game knows who the other one is, so they are found in the room's
-// member list
-// (each member carries its role).
+// Irene (Hud.SetPlayersInfoRoleIrene/Moriarty), but never the detectives' to each other. That stays the default. The
+// host can turn on "Reveal Partner (Detective Team)" in the room's Match Settings: then, each time the game fills in
+// the icons (Hud.SetPlayersInfoRoleAll/Own), every Sherlock and Watson sees the Sherlock or Watson icon of every
+// member of the detective team. Moriarty's side sees nothing new. The games don't know the others' roles, so they
+// are taken from the room's member list (each member carries its role).
 //
 // The setting travels with the room settings as "partner_icons" (RoomSettings.GetParam). The Revival server keeps it
 // and tells every game in the room with "CsrPartnerIcons" (Team.cs), when someone enters, when the settings change
@@ -70,28 +68,27 @@ namespace CrimeSightRevival.Mods
             try
             {
                 if (!RoomValue) return;                                                // off: as in the original game
-                var gm = GameManager.instance;
                 var nm = NetworkManager.Instance;
-                if (gm == null || nm == null || __instance == null) return;
-                if (nm.IsCriminal || nm.IsIrene) return;                               // only Sherlock and Watson
+                if (nm == null || __instance == null) return;
+                if (nm.IsCriminal || nm.IsIrene) return;          // only the detective team sees it, never Moriarty's side
                 var list = __instance.playersInfo;
-                if (list == null) return;
+                var members = nm.GetCurrentRoom()?.Members;
+                var hs = NetworkManager.GetHostSystem();
+                if (list == null || members == null || hs == null) return;
                 bool on = true;
-                if (nm.IsWatson)
+                // every Sherlock and every Watson of the room, with their icon (the game only knows its own role)
+                for (int i = 0; i < members.Count; i++)
                 {
-                    // Watson: Sherlock's icon
-                    int sherlock = SherlockIndex(nm);
-                    if (sherlock < 0) return;
-                    list.SetRoleIconActive(ref sherlock, ref on);
-                    list.SetRoleIconSherlock(ref sherlock);
-                    return;
+                    var x = members[i];
+                    if (x == null || x.IsCriminal || x.IsIrene) continue;
+                    string id = x.PlayerId;
+                    if (string.IsNullOrEmpty(id)) continue;
+                    int idx = hs.SearchMemberIndex(ref id);
+                    if (idx < 0) continue;
+                    list.SetRoleIconActive(ref idx, ref on);
+                    if (x.IsWatson) list.SetRoleIconWatson(ref idx);
+                    else list.SetRoleIconSherlock(ref idx);
                 }
-                // Sherlock: Watson's icon (Sherlock's game doesn't know who Watson is: found in the room)
-                int watson = gm.GetWatsonPlayerIndex();
-                if (watson < 0) watson = WatsonIndex(nm);
-                if (watson < 0) return;
-                list.SetRoleIconActive(ref watson, ref on);
-                list.SetRoleIconWatson(ref watson);
             }
             catch (Exception e)
             {
@@ -99,37 +96,6 @@ namespace CrimeSightRevival.Mods
             }
         }
 
-        /// <summary>Sherlock's player number from the room list: the member who is not Moriarty, Irene or Watson.</summary>
-        static int SherlockIndex(NetworkManager nm)
-        {
-            var members = nm.GetCurrentRoom()?.Members;
-            var hs = NetworkManager.GetHostSystem();
-            if (members == null || hs == null) return -1;
-            for (int i = 0; i < members.Count; i++)
-            {
-                var x = members[i];
-                if (x == null || x.IsCriminal || x.IsIrene || x.IsWatson) continue;
-                string id = x.PlayerId;
-                return string.IsNullOrEmpty(id) ? -1 : hs.SearchMemberIndex(ref id);
-            }
-            return -1;
-        }
-
-        /// <summary>Watson's player number according to the room list (the server sends each one's role).</summary>
-        static int WatsonIndex(NetworkManager nm)
-        {
-            var members = nm.GetCurrentRoom()?.Members;
-            var hs = NetworkManager.GetHostSystem();
-            if (members == null || hs == null) return -1;
-            for (int i = 0; i < members.Count; i++)
-            {
-                var x = members[i];
-                if (x == null || !x.IsWatson) continue;
-                string id = x.PlayerId;
-                return string.IsNullOrEmpty(id) ? -1 : hs.SearchMemberIndex(ref id);
-            }
-            return -1;
-        }
     }
 
     /// <summary>The "Reveal Partner (Detective Team)" row (Off / On) in the room's Match Settings window.</summary>
@@ -155,7 +121,6 @@ namespace CrimeSightRevival.Mods
         static int _iconTries;
         static Toggle _off, _on;
         static bool _setting, _warned;
-        static bool _sound;                       // the copied buttons already play the game's click sound
 
         public static void Init(Harmony h)
         {
@@ -278,7 +243,6 @@ namespace CrimeSightRevival.Mods
                 _row = null;
                 return;
             }
-            _sound = false;
             foreach (var tg in new[] { _off, _on })
             {
                 tg.group = null;                                 // not tied to the speed buttons
@@ -289,14 +253,31 @@ namespace CrimeSightRevival.Mods
                 for (int i = 0; i < n; i++)
                 {
                     string m = ev.GetPersistentMethodName(i) ?? "";
-                    if (m.StartsWith("Play", StringComparison.Ordinal)) _sound = true;
-                    else ev.SetPersistentListenerState(i, UnityEngine.Events.UnityEventCallState.Off);
+                    if (!m.StartsWith("Play", StringComparison.Ordinal)) ev.SetPersistentListenerState(i, UnityEngine.Events.UnityEventCallState.Off);
                 }
             }
+            foreach (var tg in new[] { _off, _on }) HoverSound(tg);
             _off.onValueChanged.AddListener(DelegateSupport.ConvertDelegate<UnityEngine.Events.UnityAction<bool>>(
                 new Action<bool>(v => { if (v && !_setting) Choose(false, true); })));
             _on.onValueChanged.AddListener(DelegateSupport.ConvertDelegate<UnityEngine.Events.UnityAction<bool>>(
                 new Action<bool>(v => { if (v && !_setting) Choose(true, true); })));
+        }
+
+        /// <summary>The game's buttons get their hover sound from code (PointerUI actions set at runtime), which the
+        /// copy doesn't have: the same sound is set here.</summary>
+        static void HoverSound(Toggle tg)
+        {
+            try
+            {
+                var pu = tg.GetComponent<PointerUI>() ?? tg.gameObject.AddComponent<PointerUI>();
+                pu.PointerEnterAction = DelegateSupport.ConvertDelegate<Il2CppSystem.Action<UnityEngine.EventSystems.PointerEventData>>(
+                    new Action<UnityEngine.EventSystems.PointerEventData>(_ =>
+                    {
+                        if (tg != null && tg.interactable)
+                            try { AudioManager.PlayOutGameMouseOverButton(); } catch { }
+                    }));
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Watson] ajuste: sonido: " + e.Message); }
         }
 
         /// <summary>Sherlock's diamond icon instead of the copied speed icon.</summary>
@@ -347,8 +328,9 @@ namespace CrimeSightRevival.Mods
             _chosen = v;
             Show();
             try { if (_win != null) _win.SetApplyButtonEnable(true); } catch { }
-            if (click && changed && !_sound)
-                try { AudioManager.PlayToggleCheck(true); } catch { }
+            // the copied buttons don't sound (their "Play" calls aren't the sound): the game's toggle sound
+            if (click && changed)
+                try { AudioManager.PlayToggleCheck(v); } catch { }
         }
 
         /// <summary>Both buttons show _chosen.</summary>

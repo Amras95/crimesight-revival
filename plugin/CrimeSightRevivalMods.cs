@@ -49,6 +49,7 @@ namespace CrimeSightRevival.Mods
             PartnerIcon.Init(h);
             Team.Init(h);
             QuickRematch.Init(h);
+            RoleLock.Init(h);
             ResultNames.Init(h);
             L.LogInfo("Mods en caliente activos. Carpeta: " + LiveMods.LiveDir);
         }

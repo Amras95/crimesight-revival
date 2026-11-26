@@ -246,14 +246,18 @@ def solo(ctx, cfg):
                            names={m["folder"]: m["name"] for m in rs["mods"]}).start()
     ctx.log(t("srv_local_on"))
     _models_room_start(cfg, srv)                        # your models and new characters, as in your room
+    roster = None
     try:
         url = f"http://127.0.0.1:{port}"
         steam_id = core.steam_account()[0]
         stages = _stages(ctx, cfg, url, "", steam_id, srv=srv)
         _first(ctx, stages)
+        roster = _roster_watcher(ctx, cfg, url, steam_id, srv)
         _play(ctx, gd, url, rs, watch=_both(_own_watcher(ctx, cfg, rs, srv), _host_models_watcher(ctx, cfg, srv),
-                                            _roster_watcher(ctx, cfg, url, steam_id, srv), stages))
+                                            roster, stages))
     finally:
+        if roster is not None:
+            roster.stop()
         _models_room_end(gd)
         srv.stop()
         ctx.log(t("srv_stopped"))
@@ -272,6 +276,7 @@ def host(ctx, cfg, port):
                            names={m["folder"]: m["name"] for m in rs["mods"]}).start()
     _models_room_start(cfg, srv)                           # your models and characters are the room's
     mapping = upnp.PortMapping(port)
+    roster = None
     try:
         ctx.log(t("host_upnp"))
         if mapping.open():
@@ -287,9 +292,12 @@ def host(ctx, cfg, port):
         stages = _stages(ctx, cfg, url, "", core.steam_account()[0], srv=srv)
         _first(ctx, stages)
         steam_id = core.steam_account()[0]
+        roster = _roster_watcher(ctx, cfg, url, steam_id, srv)
         _play(ctx, gd, url, rs, watch=_both(_host_watcher(ctx, cfg, srv), _host_models_watcher(ctx, cfg, srv),
-                                            _roster_watcher(ctx, cfg, url, steam_id, srv), stages))
+                                            roster, stages))
     finally:
+        if roster is not None:
+            roster.stop()
         mapping.close()
         _models_room_end(gd)                           # the guests' ones were only for this room
         if srv.room.accepted:                      # the players' mods were only for this room
@@ -485,6 +493,7 @@ def _models_room_start(cfg, srv):
     """Host or solo: your models and new characters are the room's, and you decide the Selector."""
     srv.models.set_base(core.my_model_set())
     core.room_disabled = srv.models.set_disabled(core.load_config().get("roster_disabled") or [])
+    core.room_disabled_fn = lambda: sorted(srv.models.disabled)
     core.room_host = True
     core.room_roster = None
     core.room_models = srv.models.local()
@@ -494,6 +503,7 @@ def _models_room_end(gd):
     core.room_models = None
     core.room_roster = None
     core.room_disabled = []
+    core.room_disabled_fn = None
     core.room_host = False
     try:
         core.install_models(gd)
@@ -507,8 +517,12 @@ def _roster_watcher(ctx, cfg, url, steam_id, srv, password=""):
     On someone else's server, whoever created the room decides its Character Selection: their launcher sends it
     (check.stop() ends the quick check of the Selector)."""
     gd = cfg["game_dir"]
-    state = {"id": None, "disabled": None, "answer": None, "owner": False, "room": None, "pushed": None,
-             "seen": (core.roster_answer(gd) or (None,))[0]}
+    last = (core.roster_answer(gd) or (None,))[0]
+    # "answer"/"seen" start at the Selector answer already on disk: it was saved in an earlier session (and is already
+    # in the settings). Taking it as new re-applied an old choice over the current one when the session started
+    # (e.g. an original unticked long ago came back unticked after the match).
+    state = {"id": None, "disabled": None, "answer": last, "owner": False, "room": None, "pushed": None,
+             "seen": last}
     lock = threading.Lock()
     checking = threading.Lock()
     stop = threading.Event()
@@ -605,8 +619,15 @@ def _roster_watcher(ctx, cfg, url, steam_id, srv, password=""):
             if core.room_models is not None and core.live_mode(gd):
                 core.install_models(gd)
 
-    if srv is None:
-        threading.Thread(target=quick, daemon=True).start()
+    def host_quick():
+        """Host: what you save in the Selector reaches the room (and the Selector's list) within half a second."""
+        while not stop.wait(0.5):
+            try:
+                pick_up()
+            except Exception:  # noqa: BLE001
+                log.exception("Fallo leyendo el Selector de personajes")
+
+    threading.Thread(target=quick if srv is None else host_quick, daemon=True).start()
     check.stop = stop.set
     return check
 

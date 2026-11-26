@@ -434,6 +434,20 @@ namespace CrimeSightRevival.Mods
                     }
             }
             catch (Exception e) { Plugin.L.LogWarning("[Selector] roster_pool.json: " + e.Message); return false; }
+            // The launcher rewrites the pool a moment after a save: opening the window again before that showed the
+            // previous choice (and saving it again undid the change). A save newer than the pool wins.
+            try
+            {
+                if (_host && File.Exists(SelectFile) && File.GetLastWriteTimeUtc(SelectFile) > File.GetLastWriteTimeUtc(PoolFile))
+                {
+                    using var sel = JsonDocument.Parse(File.ReadAllText(SelectFile, Encoding.UTF8));
+                    var off = new HashSet<string>();
+                    if (sel.RootElement.TryGetProperty("disabled", out var d) && d.ValueKind == JsonValueKind.Array)
+                        foreach (var x in d.EnumerateArray()) if (x.ValueKind == JsonValueKind.String) off.Add(x.GetString());
+                    foreach (var it in _items) it.enabled = !off.Contains(it.id);
+                }
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Selector] roster_select.json: " + e.Message); }
             return _items.Count > 0;
         }
 

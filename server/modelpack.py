@@ -224,6 +224,26 @@ def draw(ms, disabled, rng, must=()):
     return {"positions": positions, "traitor": None}
 
 
+def _distinct_names(chars):
+    """Two characters with the same name in a room (e.g. two players' "New"): the later ones get " 2", " 3"... so
+    the match log, the dialogues and the Character Selection can tell them apart. The first one (the host's, then each
+    guest in order) keeps its name."""
+    seen, out = set(), {}
+    for cid, c in chars.items():
+        name = str(c.get("name") or "").strip()
+        if not name:
+            out[cid] = c
+            continue
+        new, n = name, 2
+        while new.lower() in seen:
+            tail = " %d" % n
+            new = name[:24 - len(tail)].rstrip() + tail
+            n += 1
+        seen.add(new.lower())
+        out[cid] = c if new == name else dict(c, name=new)
+    return out
+
+
 def merge(parts):
     """Merges several model sets: the first one rules (the host) and the following ones (accepted guests,
     in order) only fill the characters and animations still free. Keeps the local paths."""
@@ -239,6 +259,7 @@ def merge(parts):
                 anims.setdefault(slot, {}).setdefault(kind, v)
         for s, f in ms.get("files", {}).items():
             files.setdefault(s, f)
+    chars = _distinct_names(chars)
     out = {"swaps": swaps, "anims": anims, "chars": chars, "files": files}
     used = _used(out)
     out["files"] = {s: f for s, f in files.items() if s in used}

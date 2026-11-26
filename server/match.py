@@ -424,6 +424,8 @@ class Hub:
                 log.info("Sala %s: %s manda %r %s con %s -> lo ven %s", room.id, who, kw.get("tag"),
                          kw.get("type"), sig[2], names)
         await self.emit(topic, kw, var=room.vars if room else None, exclude=None if echo else sess, eligible=eligible)
+        if room is not None and room.__dict__.pop("redealt", False):
+            await room.control("ChangeSettings", None)      # everyone (the sender too) sees the roles dealt again
         if room is not None and "tag" in kw:
             asyncio.ensure_future(room.on_player_message(sess, kw, eligible))
         call = opts.get("call")
@@ -1114,33 +1116,39 @@ class Room:
         self.vars = v
 
     def detective_orders(self, pid):
-        """Orders per turn for a Sherlock. The game splits the detectives' 3 orders among everyone on Sherlock's side
-        (Sherlocks and Watsons), the remainder going to the first ones: Sherlock gets 2 and Watson 1 in a 2v2, and a
-        lone Sherlock gets 3. Counting only the Sherlocks gave an AI Sherlock 3 orders next to a Watson."""
-        side = self.players_by_role([ROLE_DETECTIVE]) + self.players_by_role([ROLE_WATSON])
-        if pid not in side:
-            return 3
-        d, rank = len(side), side.index(pid)
-        return max(1, 3 // d + (1 if rank < 3 % d else 0))
+        """Orders per turn for a Sherlock, as the game works them out (GameManager.GetInstructPawnCount online):
+        total / detective_count, where total is 4 with two Sherlocks and 3 otherwise. Watson has his own count
+        and isn't part of it: a Sherlock next to a Watson keeps his 3 orders."""
+        d = max(1, len(self.players_by_role([ROLE_DETECTIVE])))
+        return max(1, (4 if d == 2 else 3) // d)
 
     def side_counts(self):
-        """(detectives, criminals) for the room variables. The game splits the detectives' orders among them with
-        these counts (Sherlock gets 2 and Watson 1 when there is a Watson). In the lobby the AIs and the players on
-        "Random" have no role yet, so counting roles gave 1 detective and the room showed 3 orders for Sherlock in a
-        2v2. There the counts come from the room's composition instead: Moriarty plus the Irenes on one side, the
-        rest (Sherlocks and Watsons) on the other, the same seats assign_roles() hands out."""
+        """(detectives, criminals) for the room variables. detective_count is the number of SHERLOCKS: the game
+        gives each Sherlock total / detective_count orders (GameManager.UpdateInstructPawnCount/GetInstructPawnCount:
+        total 4 with two Sherlocks, 3 otherwise) and Watson has his own fixed count. Counting Watson as a detective
+        left Sherlock with 4 / 2 = 2 orders in a 2v2. In the lobby the AIs and the players on "Random" have no role
+        yet, so the counts come from the seats assign_roles() hands out."""
         n = len(self.members)
         if self.phase == "lobby" and n >= 2:
             irene = int(self.settings.get("irene_count", 0) or 0)
+            watson = int(self.settings.get("watson_count", 0) or 0)
             criminals = min(1 + irene, n - 1)
-            return n - criminals, criminals
-        return (sum(1 for m in self.members.values() if m["role"] in (ROLE_DETECTIVE, ROLE_WATSON)),
+            return max(1, n - 1 - irene - watson), criminals
+        return (max(1, sum(1 for m in self.members.values() if m["role"] == ROLE_DETECTIVE)),
                 sum(1 for m in self.members.values() if m["role"] in (ROLE_CRIMINAL, ROLE_IRENE)))
 
     def apply_var_ops(self, ops):
+        locked = self.counting_down()
         for op in ops:
             for k, val in (op.get("set") or {}).items():
                 if k.startswith("role_") and k[5:] in self.members:
+                    if locked:
+                        # the roles are locked during the countdown (they were dealt when it started): the change
+                        # is ignored and everyone gets the room's roles again; cancelling the countdown unlocks them
+                        if self.members[k[5:]]["role"] != int(val):
+                            log.info("Sala %s: cambio de rol durante la cuenta atras: ignorado", self.id)
+                            self.redealt = True
+                        continue
                     self.members[k[5:]]["role"] = int(val)
                 elif k.startswith("ready_") and k[6:] in self.members:
                     self.members[k[6:]]["ready"] = bool(val)
@@ -1149,6 +1157,21 @@ class Room:
             for k in op.get("unset") or op.get("delete") or []:
                 self.vars.pop(k, None)
         self.refresh_vars()
+
+    def counting_down(self):
+        return self.phase == "lobby" and self.countdown_task is not None and not self.countdown_task.done()
+
+    def redeal_if_counting(self):
+        """Safety net: if roles still changed during the countdown (they are locked, see apply_var_ops), they are
+        dealt again so nobody ends up with a repeated role: a role asked by two is drawn between them and the one left
+        out gets a free role at random."""
+        if not self.counting_down():
+            return False
+        log.info("Sala %s: cambio de rol durante la cuenta atras: se reparten de nuevo", self.id)
+        self.assign_roles()
+        self.boost_support()
+        self.redealt = True
+        return True
 
     async def control(self, cmd, data=None):
         await self.hub.emit(self.topic, {"Control": {cmd: data}}, var=self.vars)
@@ -1325,6 +1348,11 @@ class Room:
         return rc({})
 
     async def p_SetRoles(self, sess, p):
+        if self.counting_down():
+            # roles locked during the countdown: everyone gets the room's roles again
+            self.refresh_vars()
+            await self.control("ChangeSettings", None)
+            return rc({})
         for pid, role in zip(p.get("player_ids", []), p.get("roles", [])):
             if pid in self.members:
                 self.members[pid]["role"] = int(role)
@@ -1440,6 +1468,7 @@ class Room:
         self.refresh_vars()
         if self.countdown_task:
             self.countdown_task.cancel()
+            self.countdown_task = None          # roles unlocked right away
         await self.control("CancelCountDown", None)
         return rc({})
 

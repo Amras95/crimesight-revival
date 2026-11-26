@@ -89,17 +89,32 @@ class ModelRoom:
         if not ms["hash"]:
             return "known", "", []
         oid = hashlib.sha1(json.dumps(modelpack.manifest(ms), sort_keys=True).encode()).hexdigest()[:12]
+        player = str(player or "?")[:40]
         with self.lock:
             if oid in self.accepted:
                 return "accepted", oid, self._need(oid)
             if oid in self.pending:
                 return "pending", oid, []
+            # The same player offering something else (e.g. they left, renamed their character and came back): it
+            # replaces what they offered before. Otherwise the old version stayed in the room (its characters were
+            # "already in the room") with the old name. If the host had accepted them, the new one is accepted too.
+            was = [k for k, v in self.accepted.items() if v["player"] == player]
+            for k in [k for k, v in self.pending.items() if v["player"] == player]:
+                self.pending.pop(k, None)
+            if was:
+                have = self._known_files(ms)                # files already here (also the old offer's) aren't re-sent
+                for k in was:
+                    self.accepted.pop(k, None)
+                self.accepted[oid] = {"player": player, "ms": ms, "have": have}
+                self.ms = self._build()
+                log.info("%s actualiza sus modelos (ya aceptados)", player)
+                return "accepted", oid, self._need(oid)
             # nothing to contribute: what they bring is already in the room or the characters are already changed
             if not self._adds(ms):
                 return "known", oid, []
             if len(self.pending) + len(self.accepted) >= MAX_OFFERS:
                 return "ignored", "", []
-            entry = {"player": str(player or "?")[:40], "ms": ms}
+            entry = {"player": player, "ms": ms}
             if self.auto_accept:
                 self.accepted[oid] = dict(entry, have=self._known_files(ms))
                 self.ms = self._build()

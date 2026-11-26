@@ -92,7 +92,25 @@ def load_config():
         cfg = {}
     cfg.setdefault("servers", [])
     cfg.setdefault("port", DEFAULT_PORT)
+    if cfg.get("roster_v") != 3 and os.path.isfile(path):
+        _migrate_roster(cfg)
     return cfg
+
+
+def _migrate_roster(cfg):
+    """Once (roster_v 3): your new characters switched on in the launcher and ticked in the game's Character
+    Selection, and no original character left unticked from earlier versions (ed139-ed150 defaults)."""
+    ids = {c.get("id") for c in cfg.get("characters") or [] if isinstance(c, dict) and c.get("id")}
+    for c in cfg.get("characters") or []:
+        if isinstance(c, dict):
+            c["active"] = True
+    cfg["roster_disabled"] = [x for x in (cfg.get("roster_disabled") or [])
+                              if not str(x).startswith("orig:") and x not in ids]
+    cfg["roster_v"] = 3
+    try:
+        write_config(cfg)
+    except OSError:
+        pass
 
 
 # Settings changed only straight in the file (load, change, save at once: characters, model and animation
@@ -1388,11 +1406,10 @@ def _anim_from(v):
     return v if v in CHAR_PAWNS else CHAR_PAWNS[0]
 
 
-def _char_active(c, off):
-    """A new character is shared with rooms (and drawn) only once it is switched on in the launcher. Characters
-    saved before the switch existed: on if they were ticked in the Character Selection."""
+def _char_active(c, off=None):
+    """A new character is shared with rooms only while it is switched on in the launcher (on by default)."""
     v = c.get("active")
-    return bool(v) if isinstance(v, bool) else c.get("id") not in off
+    return bool(v) if isinstance(v, bool) else True
 
 
 def characters():
@@ -1426,8 +1443,11 @@ def save_character(c):
              "anims": {k: v for k, v in (c.get("anims") or {}).items() if k in ANIM_KINDS and v},
              "talk": {k: str(v).strip()[:240] for k, v in (c.get("talk") or {}).items() if k in TALK_KEYS and str(v).strip()}}
     old = next((x for x in lst if x.get("id") == cid), None)
-    # a new character starts switched off: it isn't shared or drawn until you switch it on in the launcher
-    entry["active"] = _char_active(old, set(cfg.get("roster_disabled") or [])) if old else False
+    # a new character of yours: switched on in the launcher (shared with the rooms) and ticked in the game's
+    # Character Selection. Only the characters other players bring start unticked (server ModelRoom._build).
+    entry["active"] = _char_active(old) if old else True
+    if not old:
+        cfg["roster_disabled"] = [x for x in (cfg.get("roster_disabled") or []) if x != cid]
     lst = [x for x in lst if x.get("id") != cid] + [entry]
     cfg["characters"] = lst
     write_config(cfg)
@@ -1435,14 +1455,12 @@ def save_character(c):
 
 
 def set_character_active(cid, on):
-    """Switches a new character on (shared with rooms and ticked in the Character Selection) or off (not shared,
-    so its files are never uploaded)."""
+    """Switches a new character on (shared with rooms; ticking it in the game's Character Selection is separate)
+    or off (not shared, so its files are never uploaded)."""
     cfg = load_config()
     for x in cfg.get("characters") or []:
         if isinstance(x, dict) and x.get("id") == cid:
             x["active"] = bool(on)
-    off = [x for x in (cfg.get("roster_disabled") or []) if x != cid]
-    cfg["roster_disabled"] = off if on else off + [cid]
     write_config(cfg)
 
 
@@ -1526,6 +1544,7 @@ def install_models(game_dir):
 room_models = None          # None: yours. Otherwise: {"hash", "swaps", "anims", "chars", "files": {sha: {"kind", "path"}}}
 room_roster = None          # character draw of the ongoing match (from the server) or None
 room_disabled = []          # characters turned off in the room's Character Selection
+room_disabled_fn = None     # host: the room server's live list (includes guests' characters, unticked on arrival)
 room_host = False           # True if this PC decides the Selection (host or solo)
 ROOM_PREFIX = "rm_"
 _sha_cache = {}
@@ -1753,7 +1772,10 @@ def _install_roster(d, rm, roster):
         out["positions"] = {k: entry(v) for k, v in (roster.get("positions") or {}).items()}
         out["traitor"] = entry(roster.get("traitor"))
     changed = _write_json_if_changed(os.path.join(d, "roster.json"), out)
-    disabled = set(room_disabled or [])
+    try:
+        disabled = set(room_disabled_fn() if room_disabled_fn else (room_disabled or []))
+    except Exception:                                                # noqa: BLE001
+        disabled = set(room_disabled or [])
     items = [{"id": "orig:" + k, "key": k, "role": "pawn", "enabled": "orig:" + k not in disabled} for k in modelpack.PAWNS]
     for cid, c in sorted(chars.items(), key=lambda kv: (kv[1].get("name") or "").lower()):
         if c.get("role", "pawn") != "pawn":                     # the traitor isn't in the Selection (yet)
