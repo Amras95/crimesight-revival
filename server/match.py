@@ -524,6 +524,8 @@ class Room:
         self.pending_success = []  # actions that only count if they succeed: (player, action, type, leak/character, room/square, dark)
         self.clashed = set()       # characters where Moriarty has already clashed with a Sherlock order
         self.searched = {}         # furniture (cottage id) -> item that came out
+        self.searched_now = {}     # furniture -> (turn it was searched, memo data): same-turn searches share the item
+        self.picked_now = {}       # item on the floor -> (turn it was picked up, item): the same for pick-ups
         self.drops = {}            # item on the floor (cottage id) -> item index
         self.disabled_objects = set()
         self.bot_orders = {}
@@ -2416,10 +2418,24 @@ class Room:
                               else "plan" if item in self.switch_items else "other")
                 c["itemId"] = self.searched[target]
                 self.memo_reveal(c, target)
+                self.searched_now[target] = (self.turn, {k: c[k] for k in ("memoTargetId", "memoItemId") if k in c})
+            elif self.searched_now.get(target, (None,))[0] == self.turn:
+                # Another character searches the same furniture this turn: it gets the same item. The game plays
+                # the searches in its own order: whoever gets there first takes it (with its dialogue) and the rest
+                # find it already searched and just walk there. Giving "nothing" to all but one made the item
+                # vanish when the game played that one first (silent search, then the other only walked).
+                c["itemId"] = self.searched[target]
+                c.update(self.searched_now[target][1])
             else:
-                c["itemId"] = -1   # already searched: nothing left
+                c["itemId"] = -1   # searched in an earlier turn: nothing left
         elif kind == INSTRUCT_PICK and target >= 0:
-            c["itemId"] = self.drops.pop(target, -1)
+            if target in self.drops:
+                c["itemId"] = self.drops.pop(target)
+                self.picked_now[target] = (self.turn, c["itemId"])
+            elif self.picked_now.get(target, (None,))[0] == self.turn:
+                c["itemId"] = self.picked_now[target][1]     # same item on the floor this turn: same rule as searches
+            else:
+                c["itemId"] = -1
         return c
 
     def is_danger(self):
@@ -2714,6 +2730,7 @@ class Room:
         self.refresh_vars()
         self.killer = self.target = -1
         self.object_items, self.searched, self.drops = {}, {}, {}
+        self.searched_now, self.picked_now = {}, {}
         self.disabled_objects = set()
         self.recorded, self.hazard_prob = False, {}
         self.vars["random_seed"] = random.randint(1, 2**31 - 1)
