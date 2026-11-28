@@ -73,6 +73,14 @@ namespace CrimeSightRevival.Mods
                 Patch(h, typeof(OutGameTips), "Open", pre: nameof(BeforeTipsOpen), fin: nameof(TipsOpenError));   // the guide's lists or the game's
             }
             catch (Exception e) { Plugin.L.LogWarning("[Guia] " + e.Message); }
+            // which button was pressed last (mouse, gamepad and keyboard all go through these)
+            try
+            {
+                Patch(h, typeof(Button), nameof(Button.OnPointerClick), pre: nameof(BeforeButtonPress));
+                Patch(h, typeof(Button), nameof(Button.OnSubmit), pre: nameof(BeforeButtonPress));
+                _pressSeen = AccessTools.Method(typeof(Button), nameof(Button.OnPointerClick)) != null;
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Guia] botones: " + e.Message); }
         }
 
         static void Patch(Harmony h, Type t, string method, string pre = null, string post = null, string fin = null)
@@ -183,6 +191,7 @@ namespace CrimeSightRevival.Mods
                 try { UIScriptingHelper.SetMouseOverSoundEvent(b); } catch { }     // the copy loses the game's hover sound
             }
             _copyButton = b != null ? b.transform : null;
+            _copyBtn = b;
             var lt = tmp != null ? Find(copy.transform, src, tmp.transform) : null;
             _label = lt != null ? lt.GetComponent<TextMeshProUGUI>() : copy.GetComponentInChildren<TextMeshProUGUI>(true);
             var bt = badge != null ? Find(copy.transform, src, badge.transform) : null;
@@ -215,6 +224,7 @@ namespace CrimeSightRevival.Mods
         }
 
         static Transform _copyButton;
+        static Button _copyBtn;
         static float _hotUntil;
 
         /// <summary>The mouse (or the gamepad) is over the given diamond.</summary>
@@ -250,10 +260,25 @@ namespace CrimeSightRevival.Mods
             return copy.Find(string.Join("/", path));
         }
 
-        // The game also uses ClickTipsButton (its own tips button opens the same screen): the guide only
-        // turns on if the click is on our button: if it was just pressed or if the mouse (or the gamepad) is over it.
+        // The game also uses ClickTipsButton (its own tips button, shown as "Tutorial", opens the same screen): the
+        // guide only turns on if the last button pressed is ours. Before, it went by time and by whether ours was
+        // still selected, and a quick "Tutorial" right after the guide opened the guide again.
+        static IntPtr _lastPressed;
+        static bool _pressSeen;                 // the button press hook works (otherwise, the old way: by time)
         static float _ourClickAt = -100f;
         const float OurClickWindow = 1f;
+
+        static void BeforeButtonPress(Button __instance)
+        {
+            try { _lastPressed = __instance != null ? __instance.Pointer : IntPtr.Zero; } catch { }
+        }
+
+        static bool OurPress()
+        {
+            if (_pressSeen && _lastPressed != IntPtr.Zero)
+                return _copyBtn != null && _lastPressed == _copyBtn.Pointer;
+            return Time.unscaledTime - _ourClickAt <= OurClickWindow || Hot(_copyButton);
+        }
 
         static void OpenFromMenu()
         {
@@ -346,7 +371,7 @@ namespace CrimeSightRevival.Mods
 
         static void BeforeOpenGuide()
         {
-            bool ours = Time.unscaledTime - _ourClickAt <= OurClickWindow || Hot(_copyButton);
+            bool ours = OurPress();
             if (!ours)                                                   // the game's tips screen, not the guide
             {
                 Plugin.L.LogInfo("[Guia] consejos del juego (no la guia)");
