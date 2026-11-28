@@ -32,7 +32,6 @@ GRID_W = 10                  # GridManager: id = x*10 + z (z with x's sign)
 
 DIFFICULTIES = ["normal", "hard", "expert", "nightmare", "easy"]     # order of the cycle when "kicking" an AI
 RANK = {"easy": 0, "normal": 1, "hard": 2, "expert": 3, "nightmare": 4}
-LABEL = {"easy": "Fácil", "normal": "Normal", "hard": "Difícil", "expert": "Experto", "nightmare": "Pesadilla"}
 # Names of the AIs in the host's language (the game's language codes)
 BOT_NAMES = {
     "ES": ("IA", {"easy": "Fácil", "normal": "Normal", "hard": "Difícil", "expert": "Experto", "nightmare": "Pesadilla"}),
@@ -193,9 +192,8 @@ def away_from(view, pid, other):
 # ------------------------------------------------------------------ Moriarty
 def plan_moriarty(view, idx, killer, target, n_orders, difficulty, rng, taken=(), memory=None):
     """Orders for Moriarty's side. Returns (orders, assault?)."""
-    orders, used = [], set(taken) | {target}
     if killer not in view.pawns or target not in view.pawns:
-        return orders, False
+        return [], False
     if difficulty == "nightmare":
         return plan_moriarty_nightmare(view, idx, killer, target, n_orders, rng, taken, memory)
     if difficulty == "expert":
@@ -273,7 +271,7 @@ def plan_moriarty_easy(view, idx, killer, target, n_orders, rng, taken=()):
     - It sometimes assaults even with witnesses (and then usually fails and gets exposed).
     - Its other order is almost always a random move."""
     orders, used = [], set(taken) | {target}
-    k, t = view.pawns[killer], view.pawns[target]
+    k = view.pawns[killer]
     armed = bool(k.get("isHaveWeapon"))
     kgrids = view.grids(killer)
     witnesses = [q for q in view.room_mates(target) if q != killer and awake(view, q)]
@@ -312,8 +310,7 @@ def plan_sherlock(view, idx, n_orders, difficulty, rng, taken=(), memory=None):
         return plan_sherlock_expert(view, idx, n_orders, rng, taken, memory or new_memory())
     if difficulty == "hard":
         return plan_sherlock_hard(view, idx, n_orders, rng, taken, memory or new_memory())
-    orders, used = [], set(taken)
-    pool = [q for q in view.ids() if q not in used and view.grids(q)]
+    pool = [q for q in view.ids() if q not in set(taken) and view.grids(q)]
     if difficulty == "easy":
         return plan_sherlock_easy(view, idx, n_orders, rng, pool)
     return plan_sherlock_normal(view, idx, n_orders, rng, pool, memory or new_memory())
@@ -582,7 +579,6 @@ def _moriarty_hard_core(view, idx, killer, target, n_orders, rng, taken=()):
     - It never makes anyone run (Sherlock suspects whoever runs) and doesn't let the others take
       food."""
     used = set(taken) | {target}
-    orders = []
     k = view.pawns[killer]
     armed = bool(k.get("isHaveWeapon"))
     others = [q for q in view.ids() if q not in (killer, target) and awake(view, q)]

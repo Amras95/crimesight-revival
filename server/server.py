@@ -10,7 +10,9 @@ Usage: python server.py [--host 0.0.0.0] [--port 18080]
 """
 import argparse, asyncio, hashlib, hmac, json, logging, os, secrets, sys, threading, time
 
-from aiohttp import web, WSMsgType
+from urllib.parse import unquote
+
+from aiohttp import web
 
 import cscrypto
 import match
@@ -261,9 +263,6 @@ class Api:
 
     def match_GetStats(self, p, ssid):
         """Points of the last match (results screen)."""
-        pid = self.player(ssid)
-        if self.hub:
-            self.hub.settle_kill(pid)      # if the match ended in a murder, it is recorded now
         return {"stats": self._me(ssid).get("last_result", [])}
 
 
@@ -434,9 +433,7 @@ async def handle_mods_offer(request):
     if (request.content_length or 0) > modpack.MAX_PACK_BYTES:
         return web.json_response({"error": "too_big"}, status=413)
     data = await request.read()
-    from urllib.parse import unquote
     player = unquote(request.headers.get("X-CSR-Player", ""))[:40]
-    import asyncio
     try:
         status = await asyncio.get_running_loop().run_in_executor(None, request.app["room"].offer, data, player)
     except modpack.ModError as e:
@@ -468,7 +465,6 @@ async def handle_models_offer(request):
         return web.json_response({"error": "password"}, status=403)
     try:
         meta = await request.json()
-        from urllib.parse import unquote
         status, oid, need = request.app["models"].offer(meta, unquote(request.headers.get("X-CSR-Player", ""))[:40])
     except (ValueError, TypeError) as e:
         return web.json_response({"error": str(e)[:200]}, status=400)
@@ -585,7 +581,7 @@ async def _idle_reset(app):
     task.cancel()
 
 
-def build_app(port=18080, password="", public_url=None, ai_difficulty="normal", data_dir=None, mods=None,
+def build_app(password="", public_url=None, ai_difficulty="normal", data_dir=None, mods=None,
               mods_dir=None, owner="", player_mods="ask", mod_names=None, stages=None, stages_dir=None,
               idle_reset=False):
     """player_mods: "ask" (the host decides from the launcher), "accept" (accepted automatically) or
@@ -645,7 +641,6 @@ class BackgroundServer:
     """Server on a separate thread (used by the launcher)."""
 
     def __init__(self, host="127.0.0.1", port=18080, **kw):
-        import asyncio
         self.host, self.port, self.kw = host, port, kw
         self.loop = asyncio.new_event_loop()
         self.thread = None
@@ -653,10 +648,9 @@ class BackgroundServer:
         self._ready = threading.Event()
 
     def _run(self):
-        import asyncio
         asyncio.set_event_loop(self.loop)
         try:
-            app = build_app(port=self.port, **self.kw)
+            app = build_app(**self.kw)
             self.app = app
             self.runner = web.AppRunner(app, access_log=None)
             self.loop.run_until_complete(self.runner.setup())
@@ -720,7 +714,7 @@ def main():
     a = ap.parse_args()
     data_dir = a.data_dir or DATA_DIR
     setup_logging(data_dir, a.debug)
-    app = build_app(a.port, a.password, a.public_url, a.ai_difficulty, data_dir, mods_dir=a.mods_dir,
+    app = build_app(a.password, a.public_url, a.ai_difficulty, data_dir, mods_dir=a.mods_dir,
                     player_mods="accept" if a.accept_player_mods else "ignore", stages_dir=a.stages_dir,
                     idle_reset=True)
     log.info("CRIMESIGHT Revival escuchando en http://%s:%d", a.host, a.port)

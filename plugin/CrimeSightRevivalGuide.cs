@@ -73,6 +73,14 @@ namespace CrimeSightRevival.Mods
                 Patch(h, typeof(OutGameTips), "Open", pre: nameof(BeforeTipsOpen), fin: nameof(TipsOpenError));   // the guide's lists or the game's
             }
             catch (Exception e) { Plugin.L.LogWarning("[Guia] " + e.Message); }
+            // which button was pressed last (mouse, gamepad and keyboard all go through these)
+            try
+            {
+                Patch(h, typeof(Button), nameof(Button.OnPointerClick), pre: nameof(BeforeButtonPress));
+                Patch(h, typeof(Button), nameof(Button.OnSubmit), pre: nameof(BeforeButtonPress));
+                _pressSeen = AccessTools.Method(typeof(Button), nameof(Button.OnPointerClick)) != null;
+            }
+            catch (Exception e) { Plugin.L.LogWarning("[Guia] botones: " + e.Message); }
         }
 
         static void Patch(Harmony h, Type t, string method, string pre = null, string post = null, string fin = null)
@@ -107,7 +115,7 @@ namespace CrimeSightRevival.Mods
         static Graphic[] _gs, _gd;
         static CanvasGroup[] _cs, _cd;
         static UnityEngine.Events.UnityAction _onClick;
-        static bool _lateSeen, _lateFailed;
+        static bool _lateFailed;
 
         static float _createAt;
 
@@ -120,7 +128,6 @@ namespace CrimeSightRevival.Mods
                 _menu = __instance;
                 _createAt = 0;
                 if (_btn != null) { try { UnityEngine.Object.Destroy(_btn); } catch { } _btn = null; }
-                Dump(__instance);
             }
             catch (Exception e) { Plugin.L.LogWarning("[Guia] boton: " + e); }
         }
@@ -184,6 +191,7 @@ namespace CrimeSightRevival.Mods
                 try { UIScriptingHelper.SetMouseOverSoundEvent(b); } catch { }     // the copy loses the game's hover sound
             }
             _copyButton = b != null ? b.transform : null;
+            _copyBtn = b;
             var lt = tmp != null ? Find(copy.transform, src, tmp.transform) : null;
             _label = lt != null ? lt.GetComponent<TextMeshProUGUI>() : copy.GetComponentInChildren<TextMeshProUGUI>(true);
             var bt = badge != null ? Find(copy.transform, src, badge.transform) : null;
@@ -216,6 +224,7 @@ namespace CrimeSightRevival.Mods
         }
 
         static Transform _copyButton;
+        static Button _copyBtn;
         static float _hotUntil;
 
         /// <summary>The mouse (or the gamepad) is over the given diamond.</summary>
@@ -241,28 +250,6 @@ namespace CrimeSightRevival.Mods
 
         static T[] ToArr<T>(IEnumerable<T> a) => new List<T>(a).ToArray();
 
-        /// <summary>For the log: where each piece of the menu is (if the button doesn't come out right, you can see
-        /// why).</summary>
-        static void Dump(OutGameSelectGameMenu m)
-        {
-            try
-            {
-                string P(Component c) => c == null ? "-" : P2(c.transform);
-                string P2(Transform t) { var s = ""; for (var x = t; x != null; x = x.parent) s = "/" + x.name + s; return s + (t.gameObject.activeSelf ? "" : " (off)"); }
-                Plugin.L.LogInfo("[Guia] grupo tutorial " + (m.TutorialButtonGroupObject != null ? P2(m.TutorialButtonGroupObject.transform) : "-")
-                    + " | grupo consejos " + (m.TipsButtonGroupObject != null ? P2(m.TipsButtonGroupObject.transform) : "-"));
-                Plugin.L.LogInfo("[Guia] tutorial " + P(m.TutorialButton) + " | texto " + P(m.TutorialTMP) + " | aviso " + (m.TutorialBadge != null ? P2(m.TutorialBadge.transform) : "-"));
-                if (m.TutorialButtonGroupObject != null)
-                    foreach (var t in m.TutorialButtonGroupObject.GetComponentsInChildren<Transform>(true))
-                    {
-                        var names = new List<string>();
-                        foreach (var c in t.GetComponents<Component>()) names.Add(c.GetIl2CppType().Name);
-                        Plugin.L.LogInfo("[Guia]   " + P2(t) + ": " + string.Join(", ", names));
-                    }
-            }
-            catch (Exception e) { Plugin.L.LogWarning("[Guia] dump: " + e.Message); }
-        }
-
         /// <summary>The same object inside the copy (by its path from the original).</summary>
         static Transform Find(Transform copy, Transform root, Transform child)
         {
@@ -273,10 +260,25 @@ namespace CrimeSightRevival.Mods
             return copy.Find(string.Join("/", path));
         }
 
-        // The game also uses ClickTipsButton (its own tips button opens the same screen): the guide only
-        // turns on if the click is on our button: if it was just pressed or if the mouse (or the gamepad) is over it.
+        // The game also uses ClickTipsButton (its own tips button, shown as "Tutorial", opens the same screen): the
+        // guide only turns on if the last button pressed is ours. Before, it went by time and by whether ours was
+        // still selected, and a quick "Tutorial" right after the guide opened the guide again.
+        static IntPtr _lastPressed;
+        static bool _pressSeen;                 // the button press hook works (otherwise, the old way: by time)
         static float _ourClickAt = -100f;
         const float OurClickWindow = 1f;
+
+        static void BeforeButtonPress(Button __instance)
+        {
+            try { _lastPressed = __instance != null ? __instance.Pointer : IntPtr.Zero; } catch { }
+        }
+
+        static bool OurPress()
+        {
+            if (_pressSeen && _lastPressed != IntPtr.Zero)
+                return _copyBtn != null && _lastPressed == _copyBtn.Pointer;
+            return Time.unscaledTime - _ourClickAt <= OurClickWindow || Hot(_copyButton);
+        }
 
         static void OpenFromMenu()
         {
@@ -289,7 +291,6 @@ namespace CrimeSightRevival.Mods
         /// open.</summary>
         public static void Frame(bool late)
         {
-            if (late && !_lateSeen) { _lateSeen = true; Plugin.L.LogInfo("[Guia] LateUpdate activo"); }
             try { GuideFrame(); } catch (Exception e) { if (!_lateFailed) { _lateFailed = true; Plugin.L.LogWarning("[Guia] guia: " + e); } }
             Place();
         }
@@ -370,7 +371,7 @@ namespace CrimeSightRevival.Mods
 
         static void BeforeOpenGuide()
         {
-            bool ours = Time.unscaledTime - _ourClickAt <= OurClickWindow || Hot(_copyButton);
+            bool ours = OurPress();
             if (!ours)                                                   // the game's tips screen, not the guide
             {
                 Plugin.L.LogInfo("[Guia] consejos del juego (no la guia)");
@@ -549,8 +550,6 @@ namespace CrimeSightRevival.Mods
             return _list;
         }
 
-        static readonly HashSet<string> _regexSeen = new();
-
         static void AfterGetTips(string searchDataNameRegex, ref Il2CppSystem.Collections.Generic.List<TipsData> __result)
         {
             if (!Active) return;
@@ -570,7 +569,6 @@ namespace CrimeSightRevival.Mods
                     if (ok) only.Add(d);
                 }
                 __result = only.Count > 0 && only.Count < all.Count ? only : all;
-                if (_regexSeen.Add(searchDataNameRegex ?? "")) Plugin.L.LogInfo($"[Guia] patron '{searchDataNameRegex}' -> {__result.Count}");
             }
             catch (Exception e) { Plugin.L.LogWarning("[Guia] lista: " + e.Message); }
         }

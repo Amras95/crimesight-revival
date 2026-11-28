@@ -464,10 +464,6 @@ class Api:
         core.save_config(self._cfg)
         return self._cursor_apply()
 
-    def cursor_remove(self):
-        core.cursor_remove()
-        return self._cursor_apply()
-
     # hot reload (BepInEx): on by default. The launcher installs it by itself at startup, unless
     # the player removed it (bep_removed in the config, until they turn it on again).
     def _bep_wanted(self):

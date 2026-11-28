@@ -34,7 +34,7 @@ def full_log(direction, pid, data):
     except OSError:
         pass
 
-# Mensajes WAMP
+# WAMP messages
 HELLO, WELCOME, ABORT, GOODBYE, ERROR = 1, 2, 3, 6, 8
 PUBLISH, PUBLISHED, SUBSCRIBE, SUBSCRIBED, UNSUBSCRIBE, UNSUBSCRIBED, EVENT = 16, 17, 32, 33, 34, 35, 36
 CALL, RESULT = 48, 50
@@ -113,6 +113,8 @@ def hazard_window(start, end, base, max_turn):
             hi = mid
     return s, e, (lo + hi) / 2
 COUNTDOWN_SECONDS = 3
+# The game's Quick Match modes: (players, Irenes, Watsons). "No preference" gets one of them at random.
+QUICK_MODES = [(4, 1, 1), (4, 0, 0), (3, 0, 0), (2, 0, 0)]
 SURRENDER_VOTE_SECONDS = 20          # a teammate who is a person has this long to agree to forfeit
 DEFAULT_AI_DIFFICULTY = "normal"   # can be changed with --ai-difficulty
 STAGES = ["Stage_Yokn", "Stage_Yokn_v1030", "Stage_Yokn_v1040", "Stage_Yokn_v1050", "Stage_Yokn_v1060"]
@@ -194,10 +196,7 @@ WATSON_SUSPECT_STAMPS, WATSON_CLEAR_STAMPS = {25}, {24}   # KILLER_SUSPICION / K
 # only "playing" was checked and, from the first turn, the AIs stopped paying attention to pings (Irene's
 # orders, Watson's suspicions, "I'm handling it") and stopped announcing their characters.
 IN_MATCH = ("playing", "command")
-GHOST_CRIMINAL = "csr-moriarty"   # Moriarty AI of the training rooms (it is not a player of the room)  # Watson: "I suspect they're the killer" / "I don't think they're the killer"
-# The game lets you pick "Random" as the stage and sends that name as it is: the official server
-# swapped it for a real one at the start. If it gets "Random", the game tries to load a scene that doesn't
-# exist and stays black.
+GHOST_CRIMINAL = "csr-moriarty"   # Moriarty AI of the training rooms (it is not a player of the room)
 SELECTION_SECONDS = 60
 SELECTION_WAIT = 20             # seconds to wait for everyone to reach the final deduction
 
@@ -214,10 +213,6 @@ SETTING_KEYS = {  # CreateRoom parameter -> (room variable, type)
 
 def rc(result=None):
     return {"resultCode": 200, "result": result if result is not None else {}}
-
-
-def rc_error(code, msg):
-    return {"resultCode": 400, "errorCode": code, "errorMessage": msg}
 
 
 # ------------------------------------------------------------------ WAMP sessions
@@ -253,12 +248,6 @@ class Hub:
         self.deferred = None    # events sent after the RESULT of the current call
 
     # ---------------- router helpers
-    def settle_kill(self, player_id):
-        """The results screen asks for the points: if their match ended in a murder, record it."""
-        for room in list(self.rooms.values()):
-            if player_id in room.members:
-                room.settle_kill()
-
     async def stage_poll(self):
         """Tells the rooms where who has (or not) the chosen custom stage has changed."""
         for room in list(self.rooms.values()):
@@ -279,11 +268,6 @@ class Hub:
         if sid is not None:
             sess.subs.pop(sid, None)
         return sid
-
-    def roster_for(self, pid, remote):
-        """Character draw of a player's room (None if no match has started yet)."""
-        room = self.room_of(pid, remote)
-        return getattr(room, "roster", None) if room is not None else None
 
     def room_of(self, pid, remote):
         """The room a player is in, only if asked from the same place as their game (None otherwise)."""
@@ -412,17 +396,6 @@ class Hub:
             # Private channel of Moriarty and Irene (see private_team): the game sends it to everyone and each game
             # hides it, but replies to it still showed on Sherlock's side. Only Moriarty's side gets it now.
             eligible = room.team_members("moriarty", eligible) | {sess.player_id}
-        if room is not None and "tag" in kw:
-            # Who sees each message is decided by the game with these options: it is noted once per
-            # role, message type and options, to be able to check that the delivery is the original's
-            who = ROLE_KEY.get(room.members.get(sess.player_id, {}).get("role"), "?")
-            sig = (who, kw.get("tag"), json.dumps({k: v for k, v in opts.items() if k != "call"}, sort_keys=True))
-            seen = room.__dict__.setdefault("vis_seen", set())
-            if sig not in seen and len(seen) < 60:
-                seen.add(sig)
-                names = sorted(room.members.get(p, {}).get("name", p) for p in eligible) if eligible is not None else "todos"
-                log.info("Sala %s: %s manda %r %s con %s -> lo ven %s", room.id, who, kw.get("tag"),
-                         kw.get("type"), sig[2], names)
         await self.emit(topic, kw, var=room.vars if room else None, exclude=None if echo else sess, eligible=eligible)
         if room is not None and room.__dict__.pop("redealt", False):
             await room.control("ChangeSettings", None)      # everyone (the sender too) sees the roles dealt again
@@ -553,6 +526,8 @@ class Room:
         self.pending_success = []  # actions that only count if they succeed: (player, action, type, leak/character, room/square, dark)
         self.clashed = set()       # characters where Moriarty has already clashed with a Sherlock order
         self.searched = {}         # furniture (cottage id) -> item that came out
+        self.searched_now = {}     # furniture -> (turn it was searched, memo data): same-turn searches share the item
+        self.picked_now = {}       # item on the floor -> (turn it was picked up, item): the same for pick-ups
         self.drops = {}            # item on the floor (cottage id) -> item index
         self.disabled_objects = set()
         self.bot_orders = {}
@@ -643,11 +618,6 @@ class Room:
         tag = kw.get("tag")
         if not self.bots() or not tag:
             return
-        seen = self.__dict__.setdefault("tags_seen", set())
-        if tag not in seen:
-            seen.add(tag)
-            log.info("Sala %s: primer mensaje %r de los jugadores: %s", self.id, tag,
-                     {k: kw[k] for k in list(kw)[:14]})
         if tag == "stamp":
             if not await self.solo_command(sess, kw, eligible):
                 await self.bot_stamp(sess, kw, eligible)
@@ -1161,18 +1131,6 @@ class Room:
     def counting_down(self):
         return self.phase == "lobby" and self.countdown_task is not None and not self.countdown_task.done()
 
-    def redeal_if_counting(self):
-        """Safety net: if roles still changed during the countdown (they are locked, see apply_var_ops), they are
-        dealt again so nobody ends up with a repeated role: a role asked by two is drawn between them and the one left
-        out gets a free role at random."""
-        if not self.counting_down():
-            return False
-        log.info("Sala %s: cambio de rol durante la cuenta atras: se reparten de nuevo", self.id)
-        self.assign_roles()
-        self.boost_support()
-        self.redealt = True
-        return True
-
     async def control(self, cmd, data=None):
         await self.hub.emit(self.topic, {"Control": {cmd: data}}, var=self.vars)
 
@@ -1254,6 +1212,7 @@ class Room:
     async def p_CreateRoom(self, sess, p):
         for k, v in p.items():
             self.settings[k] = v
+        self.pick_quick_mode()
         self.settings.setdefault("campaign_id", 0)
         if not self.settings.get("stage"):
             self.settings["stage"] = random.choice(STAGES)
@@ -1275,6 +1234,20 @@ class Room:
         else:
             await self.announce_enter(sess)
         return rc(self.settings_result())
+
+    def pick_quick_mode(self):
+        """Quick Match "No preference" asks for a room of any size (capacity 0): the original server put you in
+        whatever room was waiting. Here one of the Quick Match modes is drawn, and the AIs fill its free seats."""
+        try:
+            cap = int(self.settings.get("capacity", 1))
+        except (TypeError, ValueError):
+            cap = 0
+        if not self.settings.get("quick") or cap >= 1:
+            return
+        cap, irene, watson = random.choice(QUICK_MODES)
+        self.settings.update({"capacity": cap, "irene_count": irene, "watson_count": watson})
+        log.info("Sala %s: partida rapida sin preferencia -> %s jugadores (Irene %s, Watson %s)",
+                 self.id, cap, irene, watson)
 
     async def p_ChangeCapacity(self, sess, p):
         self.settings["capacity"] = max(len(self.humans()), min(4, int(p.get("capacity", self.settings["capacity"]))))
@@ -1364,7 +1337,6 @@ class Room:
         for pid, role in zip(p.get("player_ids", []), p.get("roles", [])):
             if pid in self.members:
                 self.members[pid]["role"] = int(role)
-        self.static_data = p.get("static_data")
         self.assign_roles()
         self.boost_support()
         self.current_stage = self.pick_stage()
@@ -1726,7 +1698,7 @@ class Room:
                     self.drops.pop(int(d["id"]), None)
         if isinstance(ref, dict):
             self.reference[sess.player_id] = ref
-            # The plugin adds all the stage's furniture with its square (CrimeSightRevivalSearchMap.cs)
+            # The plugin adds all the stage's furniture with its square (SearchMap in CrimeSightRevivalPartner.cs)
             for row in ref.get("searchMap") or []:      # [furniture, square, x, y, z]
                 try:
                     self.furniture[int(row[0])] = int(row[1])
@@ -1840,9 +1812,6 @@ class Room:
         await self.send_result(True)
         self.conclude("moriarty", {ROLE_CRIMINAL: [ACT_ASSAIL_KILL] if self.assault else []})
 
-    def settle_kill(self):
-        """Compatibility: the murder is already recorded at the time."""
-
     async def p_SetCommandPhase(self, sess, p):
         self.phase = "command"
         self._store("command", sess, p)
@@ -1952,7 +1921,6 @@ class Room:
         self.ai_mem["prof_sherlock"] = prof.get("sherlock")
         self.last_view = view = views["sherlock"]
         rng = random.Random()
-        det_players = self.players_by_role([ROLE_DETECTIVE])
         cri_players = self.players_by_role([ROLE_CRIMINAL])
         # Each side only knows which characters its own team has ordered (and the ones its
         # humans have claimed with a ping this turn)
@@ -2467,10 +2435,24 @@ class Room:
                               else "plan" if item in self.switch_items else "other")
                 c["itemId"] = self.searched[target]
                 self.memo_reveal(c, target)
+                self.searched_now[target] = (self.turn, {k: c[k] for k in ("memoTargetId", "memoItemId") if k in c})
+            elif self.searched_now.get(target, (None,))[0] == self.turn:
+                # Another character searches the same furniture this turn: it gets the same item. The game plays
+                # the searches in its own order: whoever gets there first takes it (with its dialogue) and the rest
+                # find it already searched and just walk there. Giving "nothing" to all but one made the item
+                # vanish when the game played that one first (silent search, then the other only walked).
+                c["itemId"] = self.searched[target]
+                c.update(self.searched_now[target][1])
             else:
-                c["itemId"] = -1   # already searched: nothing left
+                c["itemId"] = -1   # searched in an earlier turn: nothing left
         elif kind == INSTRUCT_PICK and target >= 0:
-            c["itemId"] = self.drops.pop(target, -1)
+            if target in self.drops:
+                c["itemId"] = self.drops.pop(target)
+                self.picked_now[target] = (self.turn, c["itemId"])
+            elif self.picked_now.get(target, (None,))[0] == self.turn:
+                c["itemId"] = self.picked_now[target][1]     # same item on the floor this turn: same rule as searches
+            else:
+                c["itemId"] = -1
         return c
 
     def is_danger(self):
@@ -2597,12 +2579,12 @@ class Room:
             log.exception("Fallo apuntando la partida (%s)", name)
 
     def record_result(self, selections):
+        """End by deduction: if someone on Sherlock's side (Sherlock or Watson) is right, their side wins and Moriarty
+        loses; if nobody is right, it is a draw (there was no murder). Each of them gets their own result, as the
+        game's end screen shows it: whoever accused the villain wins, a teammate who accused someone else draws (seen
+        in a 4-player match). Accusing right also gives the action's points to whoever got it."""
         self.log_call("accusations", [(s["player_id"], s["killer"], self.members.get(s["player_id"], {}).get("bot"))
                                       for s in selections])
-        """Fin por deduccion: si alguien del bando de Sherlock (Sherlock o Watson) acierta, su bando gana y Moriarty
-        pierde; si nadie acierta, empate (no hubo asesinato). Each of them gets their own result, as the game's end
-        screen shows it: whoever accused the villain wins, a teammate who accused someone else draws (seen in a
-        4-player match). Acusar bien da ademas los puntos de la accion a quien acerto."""
         right = [s["player_id"] for s in selections if s["killer"] == self.killer
                  and self.members.get(s["player_id"], {}).get("role") in (ROLE_DETECTIVE, ROLE_WATSON)]
         extra = {pid: [ACT_DEDUCED] for pid in right}
@@ -2765,6 +2747,7 @@ class Room:
         self.refresh_vars()
         self.killer = self.target = -1
         self.object_items, self.searched, self.drops = {}, {}, {}
+        self.searched_now, self.picked_now = {}, {}
         self.disabled_objects = set()
         self.recorded, self.hazard_prob = False, {}
         self.vars["random_seed"] = random.randint(1, 2**31 - 1)

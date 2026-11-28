@@ -21,7 +21,6 @@ MIN_X, MAX_X, MIN_Z, MAX_Z = -6, 6, 0, 9          # limits of the game's grid (1
 DATA = "CrimeSight_Data"
 CATALOG_VERSION = 3
 RAW_SCRIPTS = ("Stage", "Room")                    # components whose data is read by hand
-PIECE_SCRIPTS = ("Door", "OutDoor", "Shelf", "WindowShelf")
 
 
 class StageDataError(RuntimeError):

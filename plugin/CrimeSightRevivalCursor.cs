@@ -23,7 +23,6 @@ namespace CrimeSightRevival.Mods
         static Vector2 _hot;
         static string _sig = "";
         static float _next;
-        static bool _inside;
         static readonly HashSet<string> _logged = new();
 
         public static void Init(Harmony h)
@@ -47,7 +46,6 @@ namespace CrimeSightRevival.Mods
             if (sig == _sig) return;
             _sig = sig;
             Load();
-            _inside = false;
             Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);   // the prefix sets ours (or the game's)
         }
 

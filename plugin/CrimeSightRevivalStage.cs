@@ -641,28 +641,11 @@ namespace CrimeSightRevival.Mods
                 if (!_ready && ++_frames < 600) return;          // waits for Stage.Start (duplicates)
                 _pending = false;
                 if (!_ready) Warn("Stage.Start no ha llegado: sigo sin las piezas duplicadas");
-                Report();
                 if (_cfg.navmesh == "keep") Log("navmesh: sin tocar");
                 else if (!NavRebuild()) Warn("no pude reconstruir la navegacion: los personajes pueden no moverse bien");
                 Probe();
             }
             catch (Exception e) { Plugin.L.LogError(e); }
-        }
-
-        static int PosId(Vector3 p) => GridManager.PositionToId(ref p);
-
-        static void Report()
-        {
-            int rooms = 0, doors = 0, shelves = 0;
-            foreach (var r in _root.GetComponentsInChildren<Room>(false))
-            {
-                rooms++;
-                var p = r.transform.position;
-                Log($"  {r.gameObject.name} en ({p.x:0.#},{p.z:0.#}) giro {r.transform.eulerAngles.y:0} casilla {PosId(p)}");
-            }
-            foreach (var d in _root.GetComponentsInChildren<Door>(false)) doors++;
-            foreach (var s in _root.GetComponentsInChildren<Shelf>(false)) shelves++;
-            Log($"en escena: {rooms} habitaciones (con las interiores), {doors} puertas, {shelves} muebles y ventanas");
         }
 
         static bool NavRebuild()

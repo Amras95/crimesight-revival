@@ -79,21 +79,6 @@ def restore(game_dir):
     return True
 
 
-def current_url(game_dir):
-    """Address the game points to now (None if it can't be read)."""
-    meta = os.path.join(game_dir, META_REL)
-    src = meta + ".original" if os.path.isfile(meta + ".original") else meta
-    if not os.path.isfile(meta):
-        return None
-    hit = find_server_literal(bytearray(open(src, "rb").read()), {ORIGINAL.encode()})
-    if not hit:
-        return None
-    buf = open(meta, "rb").read()
-    _, _, _, data_off = literal_table(buf)
-    length, idx = struct.unpack_from("<Ii", buf, hit[0])
-    return buf[data_off + idx:data_off + idx + length].decode("utf-8", "replace")
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("game_dir")

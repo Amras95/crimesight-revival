@@ -11,7 +11,7 @@
 // AI and sends "CsrReplaced". Here the other players get a short notice at the top of the screen (and a line in the
 // in-game log), and the name in the player list gets the same "(AI)" mark the server now uses for that player.
 //
-// The server also sends "CsrPartnerIcons" here (the room's "Reveal Partner (Detective Team)" setting, see Partner.cs).
+// The server also sends "CsrPartnerIcons" here (the room's "Reveal Partner (Detective Team)" setting, see CrimeSightRevivalPartner.cs).
 using System;
 using System.Collections.Generic;
 using HarmonyLib;
@@ -26,8 +26,6 @@ namespace CrimeSightRevival.Mods
 {
     static class Team
     {
-        public const int VoteSeconds = 20;
-
         public static void Init(Harmony h)
         {
             try

@@ -28,7 +28,6 @@ POINT_IDS = {DETECTIVE: 10, CRIMINAL: 20, IRENE: 30, WATSON: 40}
 # Win by level: easy AI 200, normal 400, hard 800; against other people 1000 (finding a match is
 # very hard now). Draw or loss: half. Quitting: 0.
 WIN_POINTS = {"easy": 200, "normal": 400, "hard": 800, "expert": 1000, "nightmare": 1200, "online": 1000}
-LEVELS = tuple(WIN_POINTS)
 RESULT_POINTS = {"win": 400, "draw": 250, "lose": 250, "abandon": 0}   # old table (old matches)
 RECORD_VERSION = 3
 RESULT_TEXT = "ctg_name_result_match_result_point"            # "Match result points"

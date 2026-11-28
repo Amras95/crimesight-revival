@@ -32,7 +32,6 @@ QUAD_STICKER_NAME = "batsu1_frame"
 AVATAR_TEMPLATE = "CursorAvatarDataIcon_WolfMan"
 QUAD_AVATAR_NAME = "CursorAvatarIcon_SecretSherlock"
 ICON_SETS = {"level3": (11627, "sharedassets3.assets"), "level4": (814, "sharedassets3.assets")}
-DEFAULT_STAMP = 28            # "hello": replaces a mod sticker that is no longer there
 # Version of how the mods are inserted: when it changes, the files are rebuilt even if the mods are the same
 # (2: stickers without a message carry empty texts instead of the "Hello" ones)
 BUILD = 2
@@ -271,10 +270,6 @@ def _save_state(data_dir, st):
         os.remove(path)
 
 
-def current_hash(game_dir):
-    return _state(_data_dir(game_dir)).get("hash", "")
-
-
 def apply(game_dir, rs, log=None):
     """Leaves exactly the mod set 'rs' (modpack.room_set) in the game. Returns True if
     something changed. With an empty set, the original files are put back."""
@@ -323,52 +318,3 @@ def restore(game_dir, fix=True):
     if _state(dd).get("hash") or changed:
         _save_state(dd, {})
     return changed
-
-
-# ------------------------------------------------------------------ the game's saved settings
-def _prefs_key(game_dir):
-    """Registry key where Unity stores the settings (PlayerPrefs): Software\\<company>\\<game>."""
-    try:
-        with open(os.path.join(_data_dir(game_dir), "app.info"), encoding="utf-8") as f:
-            company, product = [ln.strip() for ln in f.read().splitlines()[:2]]
-        return f"Software\\{company}\\{product}"
-    except (OSError, ValueError):
-        return None
-
-
-def fix_prefs(game_dir, stickers, avatars):
-    """(No longer used.) It changed, in the saved settings, the mod stickers/avatar that weren't there.
-    It isn't needed: if one is missing, the game simply shows another in its slot and, when the mod comes back
-    (e.g. when leaving another player's room), yours shows again. Rewriting it made it
-    get lost forever."""
-    if sys.platform != "win32":
-        return 0
-    key = _prefs_key(game_dir)
-    if not key:
-        return 0
-    import winreg
-    fixed = 0
-    try:
-        h = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key, 0, winreg.KEY_READ | winreg.KEY_WRITE)
-    except OSError:
-        return 0
-    with h:
-        i, values = 0, []
-        while True:
-            try:
-                values.append(winreg.EnumValue(h, i))
-            except OSError:
-                break
-            i += 1
-        for name, val, typ in values:
-            if name.startswith("stampTypeMenu") and typ == winreg.REG_DWORD:
-                v = val & 0xFFFFFFFF
-                if (v & 4095) >= modpack.FIRST_TYPE and (v >> 12) == 0 and v not in stickers:
-                    winreg.SetValueEx(h, name, 0, winreg.REG_DWORD, DEFAULT_STAMP)
-                    fixed += 1
-            elif name.startswith("cursorAvatarIconName") and typ == winreg.REG_BINARY:
-                s = bytes(val).rstrip(b"\0").decode("utf-8", "replace")
-                if s.startswith(modpack.AVATAR_PREFIX) and s not in avatars:
-                    winreg.DeleteValue(h, name)        # the game goes back to its default avatar
-                    fixed += 1
-    return fixed

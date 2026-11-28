@@ -146,18 +146,6 @@ namespace CrimeSightRevival.Mods
             oz = m[2] * x + m[6] * y + m[10] * z;
         }
 
-        /// <summary>Handedness change (right-handed glTF <-> left-handed Unity): X changes sign. Works both
-        /// ways.</summary>
-        public static float[] Mirror(float[] m)
-        {
-            var r = (float[])m.Clone();
-            // S * M * S with S = diag(-1, 1, 1, 1): the cells with exactly one X index change sign
-            for (int c = 0; c < 4; c++)
-                for (int rr = 0; rr < 4; rr++)
-                    if ((c == 0) != (rr == 0)) r[c * 4 + rr] = -r[c * 4 + rr];
-            return r;
-        }
-
         // ------------------------------------------------------------ reading
         class Node
         {

@@ -95,7 +95,6 @@ namespace CrimeSightRevival.Mods
                 if (!_warned) { _warned = true; Plugin.L.LogWarning("[Watson] " + e.Message); }
             }
         }
-
     }
 
     /// <summary>The "Reveal Partner (Detective Team)" row (Off / On) in the room's Match Settings window.</summary>
@@ -152,9 +151,8 @@ namespace CrimeSightRevival.Mods
         {
             try
             {
-                if (!Alive() || !_win.gameObject.activeInHierarchy) { _chosen = PartnerIcon.RoomValue; return; }
                 _chosen = PartnerIcon.RoomValue;
-                Show();
+                if (Alive() && _win.gameObject.activeInHierarchy) Show();
             }
             catch { }
         }

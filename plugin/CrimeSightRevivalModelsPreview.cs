@@ -454,32 +454,5 @@ namespace CrimeSightRevival.Mods
             if (pv.holder != null) UnityEngine.Object.Destroy(pv.holder);
             pv.holder = null;
         }
-
-        /// <summary>Copy of a character's original model (PawnTypeData_X / ThreatTypeData_Traitor) on the given
-        /// layer,
-        /// or null if the game hasn't loaded it yet. Its scripts stay off.</summary>
-        internal static GameObject PreviewOriginal(string key, int layer)
-        {
-            GameObject tpl;
-            try { tpl = Template(key); } catch { tpl = null; }
-            if (tpl == null) return null;
-            var holder = new GameObject("CSR_VistaOriginal_" + key);
-            holder.SetActive(false);                                   // that way the copy doesn't start its scripts
-            var go = UnityEngine.Object.Instantiate(tpl, holder.transform, false);
-            foreach (var c in go.GetComponentsInChildren(Il2CppType.Of<MonoBehaviour>(), true))
-            {
-                var mb = c.TryCast<MonoBehaviour>();
-                if (mb != null) mb.enabled = false;
-            }
-            foreach (var c in go.GetComponentsInChildren(Il2CppType.Of<Animator>(), true))
-            {
-                var an = c.TryCast<Animator>();
-                if (an != null) an.enabled = false;
-            }
-            foreach (var t in holder.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer;
-            foreach (var smr in holder.GetComponentsInChildren<SkinnedMeshRenderer>(true)) smr.updateWhenOffscreen = true;
-            holder.SetActive(true);
-            return holder;
-        }
     }
 }

@@ -80,9 +80,6 @@ def exe_dir():
     return os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(HERE)
 
 
-CONFIG_PATH = None
-
-
 def load_config():
     path = os.path.join(app_dir(), "config.json")
     try:
@@ -416,14 +413,6 @@ def restore_game(game_dir):
     a = patch_client.restore(game_dir)
     b = credits_patch.restore(game_dir)
     return a or b or m
-
-
-def game_url(game_dir):
-    import patch_client
-    try:
-        return patch_client.current_url(game_dir)
-    except Exception:  # noqa: BLE001
-        return None
 
 
 # ------------------------------------------------------------------ game
@@ -917,13 +906,6 @@ def cursor_set_hotspot(mode):
         pass
     with open(os.path.join(cursor_dir(), "hotspot.txt"), "w") as f:
         f.write(f"{xy[0]},{xy[1]}\n")
-
-
-def cursor_remove():
-    d = cursor_dir()
-    for f in os.listdir(d):
-        if f.lower().endswith(".png") or f.lower() == "hotspot.txt":
-            os.remove(os.path.join(d, f))
 
 
 def install_cursor(game_dir):
@@ -1443,11 +1425,12 @@ def save_character(c):
              "anims": {k: v for k, v in (c.get("anims") or {}).items() if k in ANIM_KINDS and v},
              "talk": {k: str(v).strip()[:240] for k, v in (c.get("talk") or {}).items() if k in TALK_KEYS and str(v).strip()}}
     old = next((x for x in lst if x.get("id") == cid), None)
-    # a new character of yours: switched on in the launcher (shared with the rooms) and ticked in the game's
-    # Character Selection. Only the characters other players bring start unticked (server ModelRoom._build).
+    # a new character of yours: switched on in the launcher (shared with the rooms) but unticked in the game's
+    # Character Selection, like the ones other players bring (server ModelRoom._build): you tick it when you want it.
     entry["active"] = _char_active(old) if old else True
     if not old:
-        cfg["roster_disabled"] = [x for x in (cfg.get("roster_disabled") or []) if x != cid]
+        off = [x for x in (cfg.get("roster_disabled") or []) if x != cid]
+        cfg["roster_disabled"] = off + [cid]
     lst = [x for x in lst if x.get("id") != cid] + [entry]
     cfg["characters"] = lst
     write_config(cfg)

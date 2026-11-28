@@ -226,8 +226,6 @@ namespace CrimeSightRevival.Mods
         readonly List<StampData> _stamps = new();
         readonly List<CursorAvatarData> _avatars = new();
         readonly Dictionary<string, string[]> _texts = new();
-        readonly HashSet<int> _types = new();
-        readonly HashSet<string> _avatarIds = new();
         static readonly HashSet<string> _silent = new();   // texts of the stickers without a message
 
         [HideFromIl2Cpp]
@@ -323,7 +321,7 @@ namespace CrimeSightRevival.Mods
         void Rebuild(LiveState st)
         {
             var next = new Dictionary<string, Entry>();
-            _stamps.Clear(); _avatars.Clear(); _texts.Clear(); _types.Clear(); _avatarIds.Clear(); _silent.Clear();
+            _stamps.Clear(); _avatars.Clear(); _texts.Clear(); _silent.Clear();
 
             foreach (var s in st.stickers)
             {
@@ -351,7 +349,6 @@ namespace CrimeSightRevival.Mods
                 next[key] = e;
                 var sd = e.Main.Cast<StampData>();
                 _stamps.Add(sd);
-                _types.Add(s.type);
                 if (s.log != null) _texts[sd.LogMsgId] = s.log;
                 if (s.doc != null) _texts[sd.DocMsgId] = s.doc;
                 if (s.log == null)
@@ -382,7 +379,6 @@ namespace CrimeSightRevival.Mods
                 }
                 next[key] = e;
                 _avatars.Add(e.Main.Cast<CursorAvatarData>());
-                _avatarIds.Add(a.id);
             }
             Ensure();                                  // takes out of the lists what no longer belongs (before destroying it)
             foreach (var kv in _cache)
@@ -418,7 +414,6 @@ namespace CrimeSightRevival.Mods
         [HideFromIl2Cpp]
         static bool Ours(StampData d) =>
             d != null && (int)d.FaceType == 0 && (int)d.Type >= FIRST_TYPE;
-
 
         // The sticker wheel stores "position in the list" (not the sticker). When the list changes
         // (another player's mods come in, interleaved when sorting by type), the positions of

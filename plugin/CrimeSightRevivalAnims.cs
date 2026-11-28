@@ -17,7 +17,6 @@ namespace CrimeSightRevival.Mods
 {
     static partial class Models
     {
-        public static readonly string[] AnimKinds = { "idle", "walk", "run" };
         static Dictionary<string, Dictionary<string, string>> _anims = new();
 
         class AnimFile { public string sig; public Glb.Model model; }
@@ -33,11 +32,9 @@ namespace CrimeSightRevival.Mods
             public readonly Dictionary<string, Quaternion> restRot = new();       // rest of each game bone (model space)
             public Vector3 hipsRest; public float hipK = 1f;
             public Humanoid.AnimMap map, fading; public float start, w;
-            public string lastClip;
         }
         static readonly Dictionary<int, Driver> _drivers = new();
         static readonly List<(string game, double[] q)> _rot = new();
-        static int _clipLogs;
 
         static string AnimPath(string name) => Path.Combine(LiveMods.LiveDir, "anims", name + ".glb");
 
@@ -117,7 +114,6 @@ namespace CrimeSightRevival.Mods
         static string Kind(Driver d)
         {
             string best = CurrentClip(d.cmp, out _)?.name;
-            if (best != d.lastClip) { d.lastClip = best; if (_clipLogs++ < 40) Plugin.L.LogInfo("[Animaciones] " + d.key + " hace " + best); }
             if (best == null) return null;
             best = best.ToLowerInvariant();
             if (best.Contains("_nml_i_idl")) return "idle";

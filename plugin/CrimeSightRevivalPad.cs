@@ -159,17 +159,14 @@ namespace CrimeSightRevival.Mods
             // the already built text is touched up too: the keyboard/mouse icons are swapped for the gamepad's.
             // (SetKeyMacroColor isn't touched: its colour reaches the plugin wrong and texts came out in odd colours;
             // Aliases changes those)
-            foreach (var (name, post) in new[] { ("SetKeyMacroText", nameof(AfterMacroText)) })
+            try
             {
-                try
-                {
-                    var m = AccessTools.DeclaredMethod(typeof(KeySettingManager), name);
-                    if (m != null) h.Patch(m, postfix: new HarmonyMethod(typeof(Pad).GetMethod(post,
-                        System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
-                    else Log("KeySettingManager." + name + ": no existe");
-                }
-                catch (Exception e) { Plugin.L.LogWarning("[Mando] " + name + ": " + e.Message); }
+                var m = AccessTools.DeclaredMethod(typeof(KeySettingManager), "SetKeyMacroText");
+                if (m != null) h.Patch(m, postfix: new HarmonyMethod(typeof(Pad).GetMethod(nameof(AfterMacroText),
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
+                else Log("KeySettingManager.SetKeyMacroText: no existe");
             }
+            catch (Exception e) { Plugin.L.LogWarning("[Mando] SetKeyMacroText: " + e.Message); }
         }
 
         static readonly System.Text.RegularExpressions.Regex SpriteTag =
@@ -195,7 +192,7 @@ namespace CrimeSightRevival.Mods
         }
 
         // Already built text -> how it was built (to redo it when switching between gamepad and mouse)
-        struct Macro { public string raw; public bool colored; public Color color; }
+        struct Macro { public string raw; }
         static readonly Dictionary<string, Macro> _macros = new();
 
         static void Remember(string result, Macro m)
@@ -452,15 +449,6 @@ namespace CrimeSightRevival.Mods
             Vector3 off = (t.up * _camVy + t.right * _camVx) * (KeyStep * 60f * dt);
             Vector3 pos = Vector3.zero;
             if (cm.GetTargetPosition(ref off, ref pos)) cam.SetTarget(ref pos);
-        }
-
-        static bool Tick(ref float acc, float amount)
-        {
-            if (amount <= 0) { acc = 0; return false; }
-            acc += amount;
-            if (acc < 1f) return false;
-            acc -= 1f;
-            return true;
         }
 
         static void Release()
@@ -803,8 +791,6 @@ namespace CrimeSightRevival.Mods
         }
 
         // Texts already on screen (bottom bar, notices over the map): their icons are changed.
-        // What was changed by hand is remembered to give it back when returning to the mouse.
-        static readonly Dictionary<string, string> _unswap = new();
         static float _nextFix;
 
         static void FixTexts()
@@ -819,7 +805,7 @@ namespace CrimeSightRevival.Mods
                         var cur = t == null ? null : t.text;
                         if (string.IsNullOrEmpty(cur) || cur.IndexOf("<sprite", StringComparison.Ordinal) < 0) continue;
                         string next = null;
-                        if (_macros.TryGetValue(cur, out var m) && !m.colored)
+                        if (_macros.TryGetValue(cur, out var m))
                         {
                             var raw = m.raw;
                             next = KeySettingManager.SetKeyMacroText(ref raw);
@@ -894,7 +880,6 @@ namespace CrimeSightRevival.Mods
             catch (Exception e) { _steamFailed = true; Log("Steam Input no disponible: " + e.Message); }
         }
 
-        static bool _hidLogged;
         static string DetectStyle()
         {
             if (_styleSetting != "auto") return _styleSetting;
@@ -915,9 +900,7 @@ namespace CrimeSightRevival.Mods
                     var name = sb.ToString().ToUpperInvariant();
                     if (name.Contains("VID_054C") || name.Contains("054C_PID")) sony = true;          // USB and Bluetooth (VID&0002054C_PID)
                     if (name.Contains("VID_057E") || name.Contains("057E_PID")) nintendo = true;
-                    if (!_hidLogged && (name.Contains("VID") )) Log("dispositivo HID: " + name);
                 }
-                _hidLogged = true;
                 return sony ? "ps" : nintendo ? "sw" : "xbox";
             }
             catch { return "xbox"; }
@@ -949,7 +932,7 @@ namespace CrimeSightRevival.Mods
 
         // ------------------------------------------------------------ vibration in time with the scenes
         // The scenes are game Timelines; their time is checked every frame and it vibrates at the right moment
-        // (the times come from the Timelines themselves; see tools or the CLAUDE.md):
+        // (the times come from the Timelines themselves):
         //   p0220_Demo_Timeline   Sherlock detects: one pulse with each wave of the sphere (3.5, 4.333, 4.833) and
         //   one
         //                         stronger at the end (5.5)

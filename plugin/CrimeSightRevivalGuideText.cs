@@ -1,6 +1,6 @@
 // CRIMESIGHT Revival - texts of the Revival Guide (see CrimeSightRevivalGuide.cs).
 //
-// One page per topic (the game's page arrows go with a character's dialogue, which the guide doesn't use).
+// One entry per topic; {PAGE} splits a long topic into pages (turned with the screen's arrows).
 // In the texts:
 //   {A} {B} {X} {Y} {LB} {RB} {LT} {RT} {LBRB} {LTRT} {START} {BACK} {LS} {RS} {DPAD} {DUP} {DDOWN} {DLEFT} {DRIGHT}:
 //   icon of the
@@ -9,7 +9,6 @@
 //   ("Here is your killer", "I suspect they are the killer", "I don't think they are the killer");
 //   {H}...{/H}: highlighted in green.
 // One version per game language, in TextManager order: ja, en, fr, it, de, es, pt, ru, ko, zh-CN, zh-TW.
-// {PAGE} splits a topic into several pages (turned with the screen's arrows).
 // Some pages have a screenshot on top, from side to side, and the text below (see Images and tools/guide_images.py).
 namespace CrimeSightRevival.Mods
 {

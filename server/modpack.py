@@ -76,11 +76,6 @@ def _png(img):
     return buf.getvalue()
 
 
-def normalize(kind, data):
-    """Final PNG ready for the game (the size and placement of the originals)."""
-    return _normalize_img(kind, _open(data))
-
-
 def normalize_many(kind, data):
     """Any image -> list of final PNGs. If it is a sheet with several stickers it is
     split automatically, and if it has no transparency its background is removed (see modimage)."""
@@ -464,18 +459,6 @@ def list_folders(mods_dir):
     out += sorted(os.path.join(mods_dir, d) for d in os.listdir(mods_dir)
                   if os.path.isdir(os.path.join(mods_dir, d)) and not d.startswith((".", "_"))
                   and d.lower() not in set(DIRS.values()) | set(OLD_DIRS))
-    return out
-
-
-def load_all(mods_dir, disabled=(), root_name=None, owner=""):
-    """All the mods of a folder (the disabled ones are returned marked)."""
-    out = []
-    for folder in list_folders(mods_dir):
-        m = load_mod(folder, owner)
-        if os.path.normpath(folder) == os.path.normpath(mods_dir) and root_name:
-            m["name"] = root_name
-        m["enabled"] = os.path.basename(folder) not in set(disabled)
-        out.append(m)
     return out
 
 
