@@ -113,6 +113,8 @@ def hazard_window(start, end, base, max_turn):
             hi = mid
     return s, e, (lo + hi) / 2
 COUNTDOWN_SECONDS = 3
+# The game's Quick Match modes: (players, Irenes, Watsons). "No preference" gets one of them at random.
+QUICK_MODES = [(4, 1, 1), (4, 0, 0), (3, 0, 0), (2, 0, 0)]
 SURRENDER_VOTE_SECONDS = 20          # a teammate who is a person has this long to agree to forfeit
 DEFAULT_AI_DIFFICULTY = "normal"   # can be changed with --ai-difficulty
 STAGES = ["Stage_Yokn", "Stage_Yokn_v1030", "Stage_Yokn_v1040", "Stage_Yokn_v1050", "Stage_Yokn_v1060"]
@@ -1210,6 +1212,7 @@ class Room:
     async def p_CreateRoom(self, sess, p):
         for k, v in p.items():
             self.settings[k] = v
+        self.pick_quick_mode()
         self.settings.setdefault("campaign_id", 0)
         if not self.settings.get("stage"):
             self.settings["stage"] = random.choice(STAGES)
@@ -1231,6 +1234,20 @@ class Room:
         else:
             await self.announce_enter(sess)
         return rc(self.settings_result())
+
+    def pick_quick_mode(self):
+        """Quick Match "No preference" asks for a room of any size (capacity 0): the original server put you in
+        whatever room was waiting. Here one of the Quick Match modes is drawn, and the AIs fill its free seats."""
+        try:
+            cap = int(self.settings.get("capacity", 1))
+        except (TypeError, ValueError):
+            cap = 0
+        if not self.settings.get("quick") or cap >= 1:
+            return
+        cap, irene, watson = random.choice(QUICK_MODES)
+        self.settings.update({"capacity": cap, "irene_count": irene, "watson_count": watson})
+        log.info("Sala %s: partida rapida sin preferencia -> %s jugadores (Irene %s, Watson %s)",
+                 self.id, cap, irene, watson)
 
     async def p_ChangeCapacity(self, sess, p):
         self.settings["capacity"] = max(len(self.humans()), min(4, int(p.get("capacity", self.settings["capacity"]))))
