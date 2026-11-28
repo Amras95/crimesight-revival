@@ -63,10 +63,10 @@ def only_new(block, old_block):
     """From the block, only the lines that weren't there (with their "### language" in front). If lines keep being added
     to the same block over several pushes, each update shows only its own and not everything again."""
     old = {ln.strip() for ln in old_block.split("\n") if ln.strip()}
-    out, header, pending = [], None, []
+    out, header = [], None
     for ln in block.split("\n"):
         if ln.startswith("### "):
-            header, pending = ln, []
+            header = ln
             continue
         if ln.strip() and ln.strip() not in old:
             if header is not None and header not in out:

@@ -1738,7 +1738,6 @@ _lang = "en"
 S["en"].update(
     stage_btn='Scenario Creator',
     stage_title='Scenario Creator',
-    stage_desc="Rearrange the rooms of one of the game's scenarios. Each scenario you save shows up in the game's scenario list as a new one; the game's own scenarios are never changed.",
     stage_reading='Reading the scenarios from your game… {pct}%',
     stage_base='Base scenario',
     stage_name='Name',
@@ -1807,7 +1806,6 @@ S["en"].update(
 S["es"].update(
     stage_btn='Creador de escenarios',
     stage_title='Creador de escenarios',
-    stage_desc='Recoloca las habitaciones de un escenario del juego. Cada escenario que guardes aparece en la lista de escenarios del juego como uno nuevo; los del juego no se tocan nunca.',
     stage_reading='Leyendo los escenarios de tu juego… {pct}%',
     stage_base='Escenario base',
     stage_name='Nombre',
@@ -1876,7 +1874,6 @@ S["es"].update(
 S["fr"].update(
     stage_btn='Créateur de scénarios',
     stage_title='Créateur de scénarios',
-    stage_desc="Réorganisez les pièces d'un des scénarios du jeu. Chaque scénario enregistré apparaît dans la liste des scénarios du jeu comme un nouveau ; ceux du jeu ne sont jamais modifiés.",
     stage_reading='Lecture des scénarios de votre jeu… {pct}%',
     stage_base='Scénario de base',
     stage_name='Nom',
@@ -1945,7 +1942,6 @@ S["fr"].update(
 S["it"].update(
     stage_btn='Creatore di scenari',
     stage_title='Creatore di scenari',
-    stage_desc="Riorganizza le stanze di uno degli scenari del gioco. Ogni scenario che salvi compare nell'elenco degli scenari del gioco come uno nuovo; quelli del gioco non vengono mai modificati.",
     stage_reading='Lettura degli scenari dal tuo gioco… {pct}%',
     stage_base='Scenario di base',
     stage_name='Nome',
@@ -2014,7 +2010,6 @@ S["it"].update(
 S["de"].update(
     stage_btn='Szenario-Editor',
     stage_title='Szenario-Editor',
-    stage_desc='Ordne die Räume eines Szenarios des Spiels neu an. Jedes gespeicherte Szenario erscheint in der Szenarioliste des Spiels als neues; die Szenarien des Spiels werden nie verändert.',
     stage_reading='Szenarien aus deinem Spiel werden gelesen… {pct}%',
     stage_base='Basisszenario',
     stage_name='Name',
@@ -2083,7 +2078,6 @@ S["de"].update(
 S["pt"].update(
     stage_btn='Criador de cenários',
     stage_title='Criador de cenários',
-    stage_desc='Reorganize as salas de um dos cenários do jogo. Cada cenário que você salvar aparece na lista de cenários do jogo como um novo; os do jogo nunca são alterados.',
     stage_reading='Lendo os cenários do seu jogo… {pct}%',
     stage_base='Cenário base',
     stage_name='Nome',
@@ -2152,7 +2146,6 @@ S["pt"].update(
 S["ru"].update(
     stage_btn='Редактор сценариев',
     stage_title='Редактор сценариев',
-    stage_desc='Переставляйте комнаты одного из сценариев игры. Каждый сохранённый сценарий появляется в списке сценариев игры как новый; сценарии самой игры никогда не меняются.',
     stage_reading='Чтение сценариев из вашей игры… {pct}%',
     stage_base='Базовый сценарий',
     stage_name='Название',
@@ -2221,7 +2214,6 @@ S["ru"].update(
 S["ja"].update(
     stage_btn='ステージクリエイター',
     stage_title='ステージクリエイター',
-    stage_desc='ゲームのステージの部屋を並べ替えられます。保存したステージは、ゲームのステージ一覧に新しいステージとして表示されます。ゲーム本来のステージは一切変更されません。',
     stage_reading='ゲームからステージを読み込み中… {pct}%',
     stage_base='ベースのステージ',
     stage_name='名前',
@@ -2290,7 +2282,6 @@ S["ja"].update(
 S["ko"].update(
     stage_btn='스테이지 제작기',
     stage_title='스테이지 제작기',
-    stage_desc='게임 스테이지의 방을 다시 배치합니다. 저장한 스테이지는 게임의 스테이지 목록에 새 스테이지로 나타납니다. 게임의 원래 스테이지는 절대 바뀌지 않습니다.',
     stage_reading='게임에서 스테이지를 읽는 중… {pct}%',
     stage_base='기본 스테이지',
     stage_name='이름',
@@ -2359,7 +2350,6 @@ S["ko"].update(
 S["zh-CN"].update(
     stage_btn='场景编辑器',
     stage_title='场景编辑器',
-    stage_desc='重新摆放游戏中某个场景的房间。你保存的每个场景都会作为新场景出现在游戏的场景列表中；游戏自带的场景绝不会被改动。',
     stage_reading='正在读取你游戏中的场景… {pct}%',
     stage_base='基础场景',
     stage_name='名称',
@@ -2428,7 +2418,6 @@ S["zh-CN"].update(
 S["zh-TW"].update(
     stage_btn='場景編輯器',
     stage_title='場景編輯器',
-    stage_desc='重新擺放遊戲中某個場景的房間。你儲存的每個場景都會以新場景的形式出現在遊戲的場景清單中；遊戲內建的場景絕不會被更動。',
     stage_reading='正在讀取你遊戲中的場景… {pct}%',
     stage_base='基礎場景',
     stage_name='名稱',
