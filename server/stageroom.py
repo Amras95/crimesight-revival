@@ -16,7 +16,6 @@ While someone is missing the chosen stage, the room doesn't allow starting: the 
 import hashlib, json, os, threading, time
 
 PREFIX = "Stage_CSR_"               # stage name in the game: Stage_CSR_<id>
-TEST_STAGE = "Stage_Yokn_CSRTest"   # "Test stage": only for one person
 MAX_STAGES = 20
 MAX_BYTES = 256 * 1024
 FIELDS = ("base", "rooms", "blocked", "byways", "wolves", "gas", "spawns")
@@ -111,7 +110,3 @@ class StageRoom:
                 return "missing"                      # already synced with this list and doesn't have it
             start = max(self.since.setdefault(player, now), self.changed)
             return "sync" if now - start < SYNC_GRACE else "missing"
-
-    def ready(self, stage, players):
-        """All those players have that room stage, and the same one."""
-        return bool(players) and all(self.state(stage, p) == "ok" for p in players)
