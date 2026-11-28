@@ -198,8 +198,9 @@ namespace CrimeSightRevival.Mods
             if (cg.blocksRaycasts == faded) cg.blocksRaycasts = !faded;
         }
 
-        /// <summary>The room's "Online manual" button (by its text, in the game's language).</summary>
         static float _nextWideSearch;
+
+        /// <summary>The room's "Online manual" button (by its text, in the game's language).</summary>
         static RectTransform FindManual()
         {
             try
@@ -408,7 +409,6 @@ namespace CrimeSightRevival.Mods
         static float _angle;
         static int _waiting = -1;
         static readonly HashSet<string> _prepared = new();
-        static bool _dirty;
 
         class Card { public RectTransform rect; public Image bg, box; public RawImage pic, tick; public TextMeshProUGUI name, tag; public Color baseColor; }
         static readonly Card[] _cards = new Card[PerPage];
@@ -503,9 +503,10 @@ namespace CrimeSightRevival.Mods
         };
         static readonly Dictionary<string, Texture2D> _colorCards = new();
 
+        static int _cardFrame;
+
         /// <summary>The game's face, in colour: the colour drawing placed exactly over the black and white one
         /// (same size and framing), with its shape.</summary>
-        static int _cardFrame;
         static Texture2D ColorCard(string key, out bool later)
         {
             later = false;
@@ -627,7 +628,7 @@ namespace CrimeSightRevival.Mods
             {
                 try { _lang = Math.Max(0, Math.Min(10, (int)TextManager.Instance.GetLangType())); } catch { _lang = 1; }
                 _sk = Skin.Get();
-                _page = 0; _hover = -1; _shown = -2; _dirty = false; _hot = -1;
+                _page = 0; _hover = -1; _shown = -2; _hot = -1;
                 _root = new GameObject("CSR_Selector");
                 UnityEngine.Object.DontDestroyOnLoad(_root);
                 var canvas = _root.AddComponent<Canvas>();
@@ -866,7 +867,6 @@ namespace CrimeSightRevival.Mods
             _prevRect.gameObject.SetActive(many); _nextRect.gameObject.SetActive(many); _pageLabel.gameObject.SetActive(many);
         }
 
-        /// <summary>The whole image inside its box, without distorting it (cropping what is left over).</summary>
         // the base of the card's hexagon (measured on screen: the button drawing leaves a margin above and below)
         const float HexBottom = -82f, PicWidth = 200f, PicMaxHeight = 250f;
 
@@ -888,6 +888,7 @@ namespace CrimeSightRevival.Mods
             ri.uvRect = new Rect(0, 0, 1, 1);
         }
 
+        /// <summary>The whole image inside its box, without distorting it (cropping what is left over).</summary>
         static void FitPic(RawImage ri, Texture tex, Vector2 box)
         {
             if (tex == null || tex.width <= 0 || tex.height <= 0) { ri.uvRect = new Rect(0, 0, 1, 1); return; }
@@ -975,7 +976,6 @@ namespace CrimeSightRevival.Mods
             it.enabled = !it.enabled;
             bool on = it.enabled;
             Sfx(() => AudioManager.PlayToggleCheck(on));
-            _dirty = true;
             SetStatus(null);
             Fill();
         }

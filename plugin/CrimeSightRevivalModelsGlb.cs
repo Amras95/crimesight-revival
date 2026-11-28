@@ -352,39 +352,6 @@ namespace CrimeSightRevival.Mods
             }
         }
 
-        /// <summary>In the game's scenes, where the custom model ends up compared to where the original would be (to
-        /// compare): root, hips, head and hands of the game's and the custom one, and the other characters in the
-        /// scene.</summary>
-        static void SceneReport(Applied a)
-        {
-            if (a.root == null) return;
-            bool scene = InScene(a.root.transform);
-            if (!scene) { a.sceneLogAt = -1f; a.sceneLogs = 0; return; }
-            if (a.sceneLogAt < 0f) a.sceneLogAt = Time.unscaledTime;
-            float t = Time.unscaledTime - a.sceneLogAt;
-            if (a.sceneLogs >= 6 || t < a.sceneLogs * 1.0f) return;
-            a.sceneLogs++;
-            var sb = new System.Text.StringBuilder($"[Escena] {a.target} t={t:0.0}s");
-            string P(Vector3 v) => $"({v.x:0.00},{v.y:0.00},{v.z:0.00})";
-            foreach (var bone in new[] { "ROOT_c_hum", "SKL_000_WAIST", "SKL_004_HEAD", "SKL_013_LHAND", "SKL_023_RHAND", "SKL_032_LFOOT" })
-            {
-                Link l = null;
-                foreach (var x in a.links) if (x.game != null && x.game.name == bone) { l = x; break; }
-                if (l == null || l.own == null) continue;
-                var d = l.own.position - l.game.position;
-                sb.Append($" | {bone}: juego {P(l.game.position)} propio {P(l.own.position)} dif {d.magnitude:0.00}");
-            }
-            Plugin.L.LogInfo(sb.ToString());
-            if (a.sceneLogs == 1)
-            {
-                var o = new System.Text.StringBuilder("[Escena] personajes:");
-                foreach (var bt in _sceneBound)
-                    if (bt != null) o.Append($" {bt.name}{P(bt.position)}");
-                o.Append($" | {a.target} raiz {a.root.name}{P(a.root.transform.position)}");
-                Plugin.L.LogInfo(o.ToString());
-            }
-        }
-
         static void LateLinks()
         {
             foreach (var a in _applied.Values)
@@ -414,7 +381,6 @@ namespace CrimeSightRevival.Mods
                         l.own.localPosition = l.ownRest + d + up * (v * (l.k - 1f));
                     }
                 }
-                try { SceneReport(a); } catch (Exception e) { Warn("scenerep", "[Escena] " + e.Message); }
             }
         }
 

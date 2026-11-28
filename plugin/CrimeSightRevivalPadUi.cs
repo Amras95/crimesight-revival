@@ -48,7 +48,7 @@ namespace CrimeSightRevival.Mods
         static readonly List<(Button b, string btn)> _tagOnly = new();        // buttons that only have an icon (something else presses them)
         static bool _uiError, _uiRoom, _slow;
         static Home _home;                                       // home screen (Play / Profile)
-        static GameObject _pawnPanel;                            // match portraits A-F (the D-pad goes from one to another)                           // game notice open / waiting room
+        static GameObject _pawnPanel;                            // match portraits A-F (the D-pad goes from one to another)
         static int _kickFocus, _kickCount;
         static float _minusUntil, _minusNext;
         static RectTransform _uiTalkClose;                       // "Close" of a character's dialogue
@@ -74,7 +74,6 @@ namespace CrimeSightRevival.Mods
         static bool _bConsumed, _gearHeld, _xTaken, _yTaken, _arrowHeld;
         static bool _uiWarned;
 
-        internal static bool Connected => _connected;
         /// <summary>The gamepad is in use (the last thing touched): only then do its icons show.</summary>
         internal static bool Active => _connected && _padMode;
 
@@ -345,14 +344,6 @@ namespace CrimeSightRevival.Mods
                 if (!Shown(play)) HomeTag(h.uiPlayButton, h.playButton, "start");
                 if (!Shown(prof)) HomeTag(h.uiProfileButton, h.profileButton, "back");
                 _slow = true;                                                // the home screen's diamonds need the cursor on them for a while
-                string hk = $"{Shown(play)}{Shown(prof)}{_tagText.Count}{_tag3d.Count}";
-                if (hk != _homeLogKey)
-                {
-                    _homeLogKey = hk;
-                    string D(HomeGlassButton g) { try { return g == null ? "no hay" : $"{g.gameObject.name} activo={g.gameObject.activeInHierarchy} texto={(g.displayText != null ? g.displayText.name : "no")}"; } catch (Exception e) { return e.Message; } }
-                    string U(HomeUiButton u) { try { return u == null || u.titleText == null ? "no" : $"'{u.titleText.text}' activo={u.titleText.gameObject.activeInHierarchy} alfa={u.titleText.color.a:0.00}"; } catch (Exception e) { return e.Message; } }
-                    Log($"inicio: Jugar 3D {D(h.playButton)} | Perfil 3D {D(h.profileButton)} | botones de la interfaz {Shown(play)}/{Shown(prof)} | textos {U(h.uiPlayButton)} / {U(h.uiProfileButton)} | iconos: {_tagText.Count} texto, {_tag3d.Count} 3D");
-                }
                 return "inicio";
             }
             var hud = GetHud();
@@ -866,7 +857,6 @@ namespace CrimeSightRevival.Mods
         // one).
         // If there is only one left to go to, both arrows go under the same portrait.
         static GameObject _portraitL, _portraitR;
-        static bool _portraitLogged;
 
         static void PortraitHints()
         {
@@ -875,11 +865,6 @@ namespace CrimeSightRevival.Mods
             {
                 var row = PawnRow();
                 int next = RowTarget(row, 1), prev = RowTarget(row, -1);
-                if (!_portraitLogged && row.Count > 0)
-                {
-                    _portraitLogged = true;
-                    Log($"retratos: {row.Count} en {_pawnPanel.name} ({string.Join(", ", row.ConvertAll(r => r.card.gameObject.name))})");
-                }
                 if (next >= 0) { if (_portraitR == null) _portraitR = PortraitIcon("dpad_right"); Place(_portraitR, row[next].card); showR = true; }
                 if (prev >= 0) { if (_portraitL == null) _portraitL = PortraitIcon("dpad_left"); Place(_portraitL, row[prev].card); showL = true; }
             }
@@ -980,7 +965,6 @@ namespace CrimeSightRevival.Mods
                 tmp.raycastTarget = false;
                 _ovl.Add((t, btn, tmp));
             }
-            Log($"inicio: {_ovl.Count} iconos sobre los rombos 3D");
             OverlayFrame();
         }
 
@@ -1018,16 +1002,11 @@ namespace CrimeSightRevival.Mods
                             rt.sizeDelta = new Vector2(size * 1.2f, size * 1.2f);
                             rt.anchoredPosition = new Vector2(minX - size * 0.15f, (minY + maxY) / 2f);
                         }
-                        if (!_ovlLogged) { _ovlLogged = true; Log($"inicio: icono 3D con la camara {cam.name} en ({minX:0},{(minY + maxY) / 2f:0})"); }
                     }
-                    else if (!_ovlLogged) { _ovlLogged = true; Log($"inicio: sin camara ({cam != null}) o sin dibujo ({rend != null}) para {t.name}"); }
                 }
                 if (icon.gameObject.activeSelf != ok) icon.gameObject.SetActive(ok);
             }
         }
-
-        static bool _ovlLogged;
-        static string _homeLogKey;
 
         /// <summary>The camera that draws a scene object: the main one if it sees it, otherwise the topmost one that
         /// sees it.</summary>
@@ -1102,7 +1081,7 @@ namespace CrimeSightRevival.Mods
         // anchored (if moving the background moves something inside, it is corrected). Back on the mouse, everything
         // returns.
         static readonly Dictionary<int, (RectTransform rt, Vector2 min0, Vector2 max0, Vector2 min1, Vector2 max1)> _box = new();
-        static bool _boxLogged, _boxOkLogged;
+        static bool _boxLogged;
         static float _boxRetry;
 
         static void BoxGap(Button gear)
@@ -1146,7 +1125,6 @@ namespace CrimeSightRevival.Mods
                 var c = o?.TryCast<Canvas>();
                 if (c != null && c.isRootCanvas && c.enabled && c.gameObject.activeInHierarchy) roots.Add(c.transform);
             }
-            var close = new List<(float dist, string what)>();
             var near = new List<(RectTransform rt, Rect R, bool span)>();
             var seen = new HashSet<int>();
             Transform row = null;                                            // portraits A-F: they move together (not piece by piece)
@@ -1159,11 +1137,6 @@ namespace CrimeSightRevival.Mods
                     if (rt == null || rt.IsChildOf(wrenchT) || wrenchT.IsChildOf(rt) || !seen.Add(rt.GetInstanceID())) continue;
                     if (row != null && (rt.IsChildOf(row) || row.IsChildOf(rt))) continue;
                     var R = ScreenRect(rt);
-                    if (R.width > 0 && R.width < W.width * 12f)
-                    {
-                        float dist = Vector2.Distance(R.center, W.center);
-                        if (dist < W.width * 6f) close.Add((dist, $"{rt.gameObject.name}@{R.center.x - W.center.x:0},{R.center.y - W.center.y:0} {R.width:0}x{R.height:0}"));
-                    }
                     if (R.width < W.width * 0.05f || R.width > W.width * 9f || R.height > W.height * 2.5f) continue;
                     if (R.center.y < W.yMin || R.center.y > W.yMax) continue;
                     if (R.xMin < W.xMin - W.width * 9f || R.xMin >= W.xMin) continue;
@@ -1172,29 +1145,18 @@ namespace CrimeSightRevival.Mods
                     if (span && R.width > widest) { widest = R.width; boxLeft = R.xMin; }   // the box's background
                 }
             var targets = new List<(RectTransform rt, float x0, float x1, int depth)>();
-            var names = new List<string>();
             foreach (var n in near)
             {
                 if (n.R.xMin < boxLeft - W.width * 0.3f) continue;               // outside the box (portraits A-F...)
                 targets.Add((n.rt, n.R.xMin - d, n.span ? n.R.xMax : n.R.xMax - d, Depth(n.rt)));
-                if (names.Count < 16) names.Add(n.rt.gameObject.name + (n.span ? "*" : ""));
             }
             if (targets.Count == 0)
             {
-                if (!_boxLogged)
-                {
-                    _boxLogged = true;
-                    close.Sort((a, b) => a.dist.CompareTo(b.dist));
-                    var sb = new List<string>();
-                    for (int i = 0; i < close.Count && i < 25; i++) sb.Add(close[i].what);
-                    Log($"llave: no encuentro la caja (llave {W}, {roots.Count} lienzos, {near.Count} piezas). Cerca: " + string.Join(" | ", sb));
-                }
+                if (!_boxLogged) { _boxLogged = true; Log("llave: no encuentro la caja"); }
                 _boxRetry = Time.unscaledTime + 3f;
                 return;
             }
-            {
-                targets.Add((grt, W.xMin, W.xMax, Depth(grt)));          // the wrench stays where it is
-            }
+            targets.Add((grt, W.xMin, W.xMax, Depth(grt)));              // the wrench stays where it is
             if (row != null)
             {
                 // the portrait row moves aside the same, so the box (which stretches) doesn't step on it
@@ -1203,7 +1165,6 @@ namespace CrimeSightRevival.Mods
                 {
                     var RR = ScreenRect(rrt);
                     targets.Add((rrt, RR.xMin - d, RR.xMax - d, Depth(rrt)));
-                    names.Add(row.name + " (retratos)");
                 }
             }
             targets.Sort((a, b) => a.depth.CompareTo(b.depth));
@@ -1221,7 +1182,6 @@ namespace CrimeSightRevival.Mods
                 t.rt.offsetMax = t.rt.offsetMax + new Vector2(dr * k, 0f);
                 _box[id] = (t.rt, min0, max0, t.rt.offsetMin, t.rt.offsetMax);
             }
-            if (!_boxOkLogged) { _boxOkLogged = true; Log("llave: aparto " + string.Join(", ", names)); }
         }
 
         /// <summary>A piece's rectangle in screen pixels (each canvas with its camera).</summary>

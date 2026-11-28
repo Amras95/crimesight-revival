@@ -32,7 +32,7 @@ namespace CrimeSightRevival.Mods
         internal const string Traitor = "ThreatTypeData_Traitor";
         static readonly string[] DefaultNames = { "Agatha", "Berkeley", "Catherine", "Dorothy", "Ellery", "Freeman" };
 
-        internal class Entry { public string id, name, image, model, role, animFrom; public Dictionary<string, string> talk = new(), talkImages = new(); }
+        internal class Entry { public string id, name, image, model, animFrom; public Dictionary<string, string> talk = new(), talkImages = new(); }
         internal static readonly Color PortraitBg = new Color(0.16f, 0.17f, 0.22f, 1f);
         class State { public string id = ""; public readonly Entry[] pos = new Entry[6]; public Entry traitor; }
 
@@ -369,7 +369,6 @@ namespace CrimeSightRevival.Mods
         static readonly Dictionary<string, Dictionary<string, Sprite>> _gameSprites = new();   // character -> field -> the game's
         static readonly Dictionary<string, Texture> _gamePanel = new();                         // character -> the game's name plate
         static readonly Dictionary<string, Texture2D> _images = new();      // image (path / "auto:model") -> readable texture
-        static readonly HashSet<string> _imageAsked = new();
         static readonly Dictionary<string, Texture2D> _panels = new();      // "name|w|h" -> plate
         static readonly HashSet<string> _panelAsked = new();
 
@@ -787,8 +786,6 @@ namespace CrimeSightRevival.Mods
             catch (Exception ex) { Warn("img" + path, "[Personajes] " + path + ": " + ex.Message); return null; }
         }
 
-        /// <summary>A sprite of the same size and shape as the original, with the image cropped to fill it (centred
-        /// horizontally, leaning up, where the face usually is) and tinted if it is injured or in a coma.</summary>
         // ------------------------------------------------------------ background of the result photos
         // Result_SSKiller_* / Result_SSTarget_* are the character's figure over a background: grey gradient with the
         // spider
@@ -981,6 +978,8 @@ namespace CrimeSightRevival.Mods
             return f;
         }
 
+        /// <summary>A sprite of the same size and shape as the original, with the image cropped to fill it (centred
+        /// horizontally, leaning up, where the face usually is) and tinted if it is injured or in a coma.</summary>
         static Sprite Fitted(Texture2D img, Sprite orig, int tint, List<UnityEngine.Object> made)
         {
             // the original's shape (its transparency): the new portrait doesn't go outside it
@@ -1268,23 +1267,6 @@ namespace CrimeSightRevival.Mods
             }
             var root = Models.ModelRootOf(owner) ?? owner;
             Models.BakeIdle(key, animGo, clip, root);
-        }
-
-        /// <summary>How much colour an image has (average saturation of what isn't transparent, 0..1).</summary>
-        static float Saturation(Texture2D t)
-        {
-            var px = Pixels(t);
-            _pixels.Remove(t.Pointer);
-            double sum = 0; int n = 0;
-            for (int i = 0; i < px.Length; i += 7)
-            {
-                var c = px[i];
-                if (c.a < 128) continue;
-                int mx = Math.Max(c.r, Math.Max(c.g, c.b)), mn = Math.Min(c.r, Math.Min(c.g, c.b));
-                if (mx > 0) sum += (mx - mn) / (double)mx;
-                n++;
-            }
-            return n > 0 ? (float)(sum / n) : 0f;
         }
 
         internal static Texture2D SpriteToTex(Sprite sp)

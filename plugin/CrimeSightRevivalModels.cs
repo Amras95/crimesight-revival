@@ -47,7 +47,6 @@ namespace CrimeSightRevival.Mods
             public GameObject root; public string target;
             public List<Link> links;                                     // own skeleton (adapted model) or null
             public List<Shoulder> shoulders;                             // its shoulders, which follow the arms
-            public float sceneLogAt = -1f; public int sceneLogs;             // log of positions in the scenes
             public readonly List<Saved> saved = new();
             public readonly List<(Renderer r, bool enabled)> hidden = new();
             public readonly List<GameObject> created = new();

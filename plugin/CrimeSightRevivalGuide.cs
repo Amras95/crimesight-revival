@@ -107,7 +107,7 @@ namespace CrimeSightRevival.Mods
         static Graphic[] _gs, _gd;
         static CanvasGroup[] _cs, _cd;
         static UnityEngine.Events.UnityAction _onClick;
-        static bool _lateSeen, _lateFailed;
+        static bool _lateFailed;
 
         static float _createAt;
 
@@ -120,7 +120,6 @@ namespace CrimeSightRevival.Mods
                 _menu = __instance;
                 _createAt = 0;
                 if (_btn != null) { try { UnityEngine.Object.Destroy(_btn); } catch { } _btn = null; }
-                Dump(__instance);
             }
             catch (Exception e) { Plugin.L.LogWarning("[Guia] boton: " + e); }
         }
@@ -241,28 +240,6 @@ namespace CrimeSightRevival.Mods
 
         static T[] ToArr<T>(IEnumerable<T> a) => new List<T>(a).ToArray();
 
-        /// <summary>For the log: where each piece of the menu is (if the button doesn't come out right, you can see
-        /// why).</summary>
-        static void Dump(OutGameSelectGameMenu m)
-        {
-            try
-            {
-                string P(Component c) => c == null ? "-" : P2(c.transform);
-                string P2(Transform t) { var s = ""; for (var x = t; x != null; x = x.parent) s = "/" + x.name + s; return s + (t.gameObject.activeSelf ? "" : " (off)"); }
-                Plugin.L.LogInfo("[Guia] grupo tutorial " + (m.TutorialButtonGroupObject != null ? P2(m.TutorialButtonGroupObject.transform) : "-")
-                    + " | grupo consejos " + (m.TipsButtonGroupObject != null ? P2(m.TipsButtonGroupObject.transform) : "-"));
-                Plugin.L.LogInfo("[Guia] tutorial " + P(m.TutorialButton) + " | texto " + P(m.TutorialTMP) + " | aviso " + (m.TutorialBadge != null ? P2(m.TutorialBadge.transform) : "-"));
-                if (m.TutorialButtonGroupObject != null)
-                    foreach (var t in m.TutorialButtonGroupObject.GetComponentsInChildren<Transform>(true))
-                    {
-                        var names = new List<string>();
-                        foreach (var c in t.GetComponents<Component>()) names.Add(c.GetIl2CppType().Name);
-                        Plugin.L.LogInfo("[Guia]   " + P2(t) + ": " + string.Join(", ", names));
-                    }
-            }
-            catch (Exception e) { Plugin.L.LogWarning("[Guia] dump: " + e.Message); }
-        }
-
         /// <summary>The same object inside the copy (by its path from the original).</summary>
         static Transform Find(Transform copy, Transform root, Transform child)
         {
@@ -289,7 +266,6 @@ namespace CrimeSightRevival.Mods
         /// open.</summary>
         public static void Frame(bool late)
         {
-            if (late && !_lateSeen) { _lateSeen = true; Plugin.L.LogInfo("[Guia] LateUpdate activo"); }
             try { GuideFrame(); } catch (Exception e) { if (!_lateFailed) { _lateFailed = true; Plugin.L.LogWarning("[Guia] guia: " + e); } }
             Place();
         }
@@ -549,8 +525,6 @@ namespace CrimeSightRevival.Mods
             return _list;
         }
 
-        static readonly HashSet<string> _regexSeen = new();
-
         static void AfterGetTips(string searchDataNameRegex, ref Il2CppSystem.Collections.Generic.List<TipsData> __result)
         {
             if (!Active) return;
@@ -570,7 +544,6 @@ namespace CrimeSightRevival.Mods
                     if (ok) only.Add(d);
                 }
                 __result = only.Count > 0 && only.Count < all.Count ? only : all;
-                if (_regexSeen.Add(searchDataNameRegex ?? "")) Plugin.L.LogInfo($"[Guia] patron '{searchDataNameRegex}' -> {__result.Count}");
             }
             catch (Exception e) { Plugin.L.LogWarning("[Guia] lista: " + e.Message); }
         }
